@@ -1,0 +1,112 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { supabase } from '@/lib/supabaseClient'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { generateSchoolCode } from '@/lib/utils'
+
+export async function POST(request: NextRequest) {
+  try {
+    const {
+      schoolName,
+      address,
+      phone,
+      schoolEmail,
+      adminFirstName,
+      adminLastName,
+      adminEmail,
+      password
+    } = await request.json()
+
+    // Generate unique school code
+    const schoolCode = generateSchoolCode()
+
+    // Create admin user account with email confirmation enabled (admins get auto-confirmed)
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: adminEmail,
+      password: password,
+      email_confirm: true,
+      user_metadata: {
+        first_name: adminFirstName,
+        last_name: adminLastName,
+        role: 'admin'
+      }
+    })
+
+    if (authError) {
+      return NextResponse.json(
+        { message: authError.message },
+        { status: 400 }
+      )
+    }
+
+    if (!authData.user) {
+      return NextResponse.json(
+        { message: 'Failed to create user account' },
+        { status: 400 }
+      )
+    }
+
+    // Create school record using admin client to bypass RLS
+    const { data: schoolData, error: schoolError } = await supabaseAdmin
+      .from('schools')
+      .insert({
+        name: schoolName,
+        address,
+        phone,
+        email: schoolEmail,
+        admin_id: authData.user.id,
+        school_code: schoolCode,
+      })
+      .select()
+      .single()
+
+    if (schoolError) {
+      console.error('School creation error:', schoolError)
+      return NextResponse.json(
+        { message: `Failed to create school record: ${schoolError.message}` },
+        { status: 500 }
+      )
+    }
+
+    // Create admin profile using admin client to bypass RLS
+    const { data: profileData, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .insert({
+        user_id: authData.user.id,
+        first_name: adminFirstName,
+        last_name: adminLastName,
+        role: 'admin',
+        school_id: schoolData.id,
+        xp: 0,
+        gems: 0,
+        level: 1,
+      })
+      .select()
+      .single()
+
+    if (profileError) {
+      console.error('Profile creation error:', profileError)
+      return NextResponse.json(
+        { message: `Failed to create admin profile: ${profileError.message}` },
+        { status: 500 }
+      )
+    }
+
+    console.log('School registration completed:', {
+      schoolId: schoolData.id,
+      adminUserId: authData.user.id,
+      profileCreated: profileData ? 'yes' : 'no',
+      schoolCode
+    })
+
+    return NextResponse.json({
+      schoolCode,
+      message: 'School registered successfully'
+    })
+  } catch (error) {
+    console.error('Register school API error:', error)
+    return NextResponse.json(
+      { message: `Internal server error: ${error instanceof Error ? error.message : 'Unknown error'}` },
+      { status: 500 }
+    )
+  }
+}
