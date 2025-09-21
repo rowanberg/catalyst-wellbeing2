@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
@@ -25,7 +25,8 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const checkId = params.id
+    const resolvedParams = await params
+    const checkId = resolvedParams.id
 
     // Verify the digital safety check belongs to the user's school
     const { data: existingCheck } = await supabase
