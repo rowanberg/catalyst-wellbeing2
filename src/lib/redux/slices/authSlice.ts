@@ -52,7 +52,9 @@ export const signUp = createAsyncThunk(
     firstName,
     lastName,
     role,
-    schoolId
+    schoolId,
+    gradeLevel,
+    className
   }: {
     email: string
     password: string
@@ -60,6 +62,8 @@ export const signUp = createAsyncThunk(
     lastName: string
     role: string
     schoolId: string
+    gradeLevel?: string
+    className?: string
   }) => {
     // Create user and profile via API route (uses admin client)
     const response = await fetch('/api/create-profile', {
@@ -72,6 +76,8 @@ export const signUp = createAsyncThunk(
         lastName,
         role,
         schoolCode: schoolId,
+        gradeLevel,
+        className,
       }),
     })
     

@@ -20,19 +20,22 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        <HydrationProvider>
-          <ErrorBoundary>
-            <Providers>
-              <RealtimeProvider>
-                <ToastProvider>
-                  {children}
-                </ToastProvider>
-              </RealtimeProvider>
-            </Providers>
-          </ErrorBoundary>
-        </HydrationProvider>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var observer=new MutationObserver(function(mutations){mutations.forEach(function(mutation){if(mutation.type==='attributes'&&mutation.attributeName==='bis_skin_checked'){mutation.target.removeAttribute('bis_skin_checked');}});});if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',function(){observer.observe(document.body,{attributes:true,subtree:true,attributeFilter:['bis_skin_checked']});});}else{observer.observe(document.body,{attributes:true,subtree:true,attributeFilter:['bis_skin_checked']});}}catch(e){}})();`,
+          }}
+        />
+      </head>
+      <body className={inter.className} suppressHydrationWarning>
+        <Providers>
+          <RealtimeProvider>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </RealtimeProvider>
+        </Providers>
       </body>
     </html>
   )

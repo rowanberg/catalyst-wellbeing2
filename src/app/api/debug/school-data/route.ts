@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,9 +22,29 @@ export async function GET(request: NextRequest) {
     )
 
     const { data: { user }, error: userError } = await supabaseAuth.auth.getUser()
+    
+    console.log('Authentication debug:', {
+      user: !!user,
+      userError: userError?.message,
+      cookies: Object.keys(cookieStore.getAll().reduce((acc, cookie) => ({ ...acc, [cookie.name]: cookie.value }), {}))
+    })
+    
     if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ 
+        error: 'Unauthorized',
+        debug: {
+          userError: userError?.message,
+          availableCookies: cookieStore.getAll().map(c => c.name),
+          message: 'Auth session missing!'
+        }
+      }, { status: 401 })
     }
+
+    // Create service role client for admin operations
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
     // Get admin profile with school info
     const { data: adminProfile, error: profileError } = await supabaseAdmin
@@ -30,6 +52,7 @@ export async function GET(request: NextRequest) {
       .select(`
         role, 
         school_id,
+        school_code,
         first_name,
         last_name,
         schools!profiles_school_id_fkey (
@@ -55,6 +78,7 @@ export async function GET(request: NextRequest) {
         id,
         student_id,
         school_id,
+        school_code,
         message,
         urgency,
         status,
@@ -67,7 +91,8 @@ export async function GET(request: NextRequest) {
         profiles!help_requests_student_id_fkey (
           first_name,
           last_name,
-          school_id
+          school_id,
+          school_code
         )
       `)
       .order('created_at', { ascending: false })

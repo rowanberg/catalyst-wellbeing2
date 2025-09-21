@@ -1,18 +1,44 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useAppSelector, useAppDispatch } from '@/lib/redux/hooks'
-import { fetchProfile } from '@/lib/redux/slices/authSlice'
-import { AuthGuard } from '@/components/auth/auth-guard'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { 
+  Users, 
+  AlertTriangle, 
+  BarChart3, 
+  Settings, 
+  School,
+  MessageSquare,
+  Megaphone,
+  TrendingUp,
+  Brain,
+  Shield,
+  Vote,
+  Heart,
+  Calendar,
+  UserCheck,
+  Target,
+  Bell,
+  HelpCircle,
+  Activity,
+  Bot
+} from 'lucide-react'
 import { PageLoader } from '@/components/ui/loading-spinner'
-import { useToast } from '@/components/ui/toast'
-import { handleError } from '@/lib/utils/errorHandling'
-import { School, Users, TrendingUp, AlertTriangle, Settings, BarChart3, UserPlus, AlertCircle, Shield, UserCheck, Zap } from 'lucide-react'
-import { supabase } from '@/lib/supabaseClient'
+import { AuthGuard } from '@/components/auth/auth-guard'
 import Link from 'next/link'
-import { MessagingNavButton } from '@/components/ui/messaging-nav-button'
+
+interface SchoolInfo {
+  id: string
+  name: string
+  school_code: string
+  address: string
+  phone: string
+  email: string
+  principal_name: string
+  created_at: string
+}
 
 interface SchoolStats {
   totalStudents: number
@@ -20,449 +46,739 @@ interface SchoolStats {
   totalParents: number
   activeToday: number
   helpRequests: number
-  averageWellbeing: number
-}
-
-interface WellbeingData {
-  overallWellbeing: number
-  gratitudeEntries: number
-  kindnessActs: number
-  courageEntries: number
-  averageStreak: number
-  avgSleepHours: number
-  avgWaterGlasses: number
+  thriving: number
+  needsSupport: number
+  atRisk: number
 }
 
 function AdminDashboardContent() {
-  const dispatch = useAppDispatch()
-  const { user, profile, isLoading } = useAppSelector((state) => state.auth)
+  const [schoolInfo, setSchoolInfo] = useState<SchoolInfo | null>(null)
   const [schoolStats, setSchoolStats] = useState<SchoolStats>({
     totalStudents: 0,
     totalTeachers: 0,
     totalParents: 0,
     activeToday: 0,
     helpRequests: 0,
-    averageWellbeing: 0
+    thriving: 0,
+    needsSupport: 0,
+    atRisk: 0
   })
-  const [schoolInfo, setSchoolInfo] = useState<any>(null)
-  const [wellbeingData, setWellbeingData] = useState<WellbeingData>({
-    overallWellbeing: 0,
-    gratitudeEntries: 0,
-    kindnessActs: 0,
-    courageEntries: 0,
-    averageStreak: 0,
-    avgSleepHours: 0,
-    avgWaterGlasses: 0
-  })
+  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [mounted, setMounted] = useState(false)
-  const [dataLoading, setDataLoading] = useState(true)
-  const { addToast } = useToast()
+  const [featureLoading, setFeatureLoading] = useState<string | null>(null)
 
   useEffect(() => {
-    setMounted(true)
-    if (user && !profile) {
-      dispatch(fetchProfile(user.id))
-        .unwrap()
-        .catch((error) => {
-          const appError = handleError(error, 'profile fetch')
-          setError(appError.message)
-          addToast({
-            type: 'error',
-            title: 'Failed to Load Profile',
-            description: appError.message
-          })
-        })
-    }
-    if (user && profile) {
-      fetchSchoolData()
-    }
-  }, [user, profile, dispatch, addToast])
-
-  const fetchSchoolData = async () => {
-    if (!profile) return
-
-    try {
-      setDataLoading(true)
-      setError(null)
-
-      // Fetch school information via API route to bypass RLS
-      const schoolResponse = await fetch('/api/admin/school-info', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schoolId: profile.school_id }),
-      })
-
-      if (!schoolResponse.ok) {
-        const errorData = await schoolResponse.json()
-        throw new Error(`Failed to fetch school info: ${errorData.message}`)
+    const fetchSchoolData = async () => {
+      try {
+        setIsLoading(true)
+        
+        // Fetch school info
+        const schoolResponse = await fetch('/api/admin/school')
+        if (!schoolResponse.ok) {
+          const errorData = await schoolResponse.json().catch(() => ({ message: 'Unknown error' }))
+          console.error('School API error:', schoolResponse.status, errorData)
+          throw new Error(`Failed to fetch school information: ${errorData.message || schoolResponse.statusText}`)
+        }
+        const schoolData = await schoolResponse.json()
+        console.log('School API response:', schoolData)
+        setSchoolInfo(schoolData.school)
+        
+        // Fetch school statistics
+        const statsResponse = await fetch('/api/admin/stats')
+        if (!statsResponse.ok) {
+          throw new Error('Failed to fetch school statistics')
+        }
+        const statsData = await statsResponse.json()
+        setSchoolStats(statsData.stats)
+        
+      } catch (err) {
+        console.error('Error fetching school data:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load school data')
+      } finally {
+        setIsLoading(false)
       }
-
-      const school = await schoolResponse.json()
-      setSchoolInfo(school)
-
-      // Fetch user statistics via API route
-      const statsResponse = await fetch('/api/admin/stats', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schoolId: profile.school_id }),
-      })
-
-      if (!statsResponse.ok) {
-        const errorData = await statsResponse.json()
-        throw new Error(`Failed to fetch stats: ${errorData.message}`)
-      }
-
-      const stats = await statsResponse.json()
-      setSchoolStats(stats)
-
-      // Fetch wellbeing overview data
-      const wellbeingResponse = await fetch('/api/admin/wellbeing-overview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schoolId: profile.school_id }),
-      })
-
-      if (wellbeingResponse.ok) {
-        const wellbeing = await wellbeingResponse.json()
-        setWellbeingData(wellbeing)
-      }
-    } catch (error) {
-      const appError = handleError(error, 'admin dashboard data fetch')
-      setError(appError.message)
-      addToast({
-        type: 'error',
-        title: 'Failed to Load Dashboard Data',
-        description: appError.message
-      })
-    } finally {
-      setDataLoading(false)
     }
-  }
 
-  if (!mounted || isLoading) {
-    return <PageLoader text="Loading admin dashboard..." />
-  }
+    fetchSchoolData()
+  }, [])
 
-  if (error) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-              <AlertCircle className="h-6 w-6 text-red-600" />
-            </div>
-            <CardTitle>Dashboard Error</CardTitle>
-            <CardDescription>{error}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              onClick={() => {
-                setError(null)
-                fetchSchoolData()
-              }} 
-              className="w-full"
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center">
+          <motion.div
+            className="relative w-16 h-16 mx-auto mb-6"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            {/* Outer ring */}
+            <motion.div
+              className="absolute inset-0 border-4 border-blue-200 rounded-full"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+            />
+            {/* Inner spinning dots */}
+            <motion.div
+              className="absolute inset-2 border-4 border-transparent border-t-blue-500 border-r-purple-500 rounded-full"
+              animate={{ rotate: -360 }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+            />
+            {/* Center logo */}
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center"
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
             >
-              Try Again
-            </Button>
-          </CardContent>
-        </Card>
+              <School className="w-6 h-6 text-blue-600" />
+            </motion.div>
+          </motion.div>
+          <motion.p 
+            className="text-slate-600 font-medium text-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            Loading school dashboard...
+          </motion.p>
+          <motion.div
+            className="flex justify-center mt-3 space-x-1"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+          >
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                className="w-2 h-2 bg-blue-400 rounded-full"
+                animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+                transition={{
+                  duration: 1.5,
+                  repeat: Infinity,
+                  delay: i * 0.2,
+                }}
+              />
+            ))}
+          </motion.div>
+        </div>
       </div>
     )
   }
 
-  if (!profile) {
+  if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle>Profile Not Found</CardTitle>
-            <CardDescription>
-              We couldn't load your profile. Please try logging in again.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              onClick={() => window.location.href = '/login'} 
-              className="w-full"
-            >
-              Go to Login
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-8 h-8 text-red-600" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-800 mb-2">Unable to Load Dashboard</h2>
+          <p className="text-slate-600 mb-4">{error}</p>
+          <Button 
+            onClick={() => window.location.reload()} 
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            Try Again
+          </Button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Professional Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-4 sm:py-6 gap-4">
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative overflow-hidden">
+      {/* Enhanced Background Pattern */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(59,130,246,0.15)_1px,transparent_0)] bg-[length:32px_32px]" />
+      <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-blue-50/20 to-indigo-100/30" />
+      <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_left,rgba(99,102,241,0.1),transparent_50%)]" />
+      <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom_right,rgba(168,85,247,0.08),transparent_50%)]" />
+      
+      {/* Enhanced Professional Header */}
+      <motion.div 
+        className="relative z-10 bg-gradient-to-br from-white/90 via-blue-50/60 to-indigo-50/70 backdrop-blur-xl border-b border-blue-200/40 shadow-xl overflow-hidden"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+      >
+        {/* Decorative elements */}
+        <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-transparent rounded-full blur-2xl" />
+        <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-purple-400/15 to-transparent rounded-full blur-2xl" />
+        
+        <div className="relative z-10 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="py-4 sm:py-6 lg:py-8">
+            
+            {/* Enhanced Header Section */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-4">
+              <div className="flex items-center space-x-3 sm:space-x-4 w-full sm:w-auto">
+                <motion.div 
+                  className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 rounded-2xl shadow-xl flex items-center justify-center ring-4 ring-white/20"
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ duration: 0.8, delay: 0.2 }}
+                  whileHover={{ scale: 1.05, rotate: 5 }}
+                >
+                  <School className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white" />
+                </motion.div>
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-lg sm:text-xl lg:text-3xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent truncate">
+                    {schoolInfo?.name || 'Loading...'}
+                  </h1>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 mt-1">
+                    <span className="text-xs sm:text-sm font-medium text-slate-600 px-2 py-1 bg-white/70 backdrop-blur-sm rounded-full border border-blue-200/50 shadow-sm">
+                      Code: {schoolInfo?.school_code || 'Loading...'}
+                    </span>
+                    <span className="text-xs sm:text-sm font-medium text-slate-700 hidden sm:block">
+                      Administration Dashboard
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">School Administration</h1>
-                <p className="text-xs sm:text-sm text-gray-600 truncate max-w-[200px] sm:max-w-none">{schoolInfo?.name}</p>
+              
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Link href="/admin/messaging" className="flex-1 sm:flex-none">
+                  <Button variant="outline" size="sm" className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white/70 hover:bg-white/90 border-blue-200/50 shadow-sm">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span className="sm:inline">Messages</span>
+                  </Button>
+                </Link>
+                <Button variant="outline" size="sm" className="sm:hidden bg-white/70 hover:bg-white/90 border-blue-200/50 shadow-sm">
+                  <Settings className="h-4 w-4" />
+                </Button>
               </div>
             </div>
-            <div className="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto">
-              <MessagingNavButton userRole="admin" />
-              <Button 
-                variant="outline" 
-                className="border-gray-300 text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-                onClick={() => window.location.href = '/admin/settings'}
+
+            {/* Enhanced Quick Stats Row */}
+            <motion.div 
+              className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <motion.div 
+                className="text-center p-3 sm:p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-blue-200/40 shadow-lg hover:shadow-xl transition-all duration-300"
+                whileHover={{ scale: 1.02, y: -2 }}
+                transition={{ duration: 0.2 }}
               >
-                <Settings className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Settings</span>
-              </Button>
-              <Button 
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2"
-                onClick={() => window.location.href = '/admin/analytics'}
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg mx-auto mb-2 flex items-center justify-center">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                </div>
+                <div className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-1">
+                  {schoolStats?.totalStudents || 0}
+                </div>
+                <div className="text-xs sm:text-sm font-medium text-slate-600">Students</div>
+              </motion.div>
+
+              <motion.div 
+                className="text-center p-3 sm:p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-emerald-200/40 shadow-lg hover:shadow-xl transition-all duration-300"
+                whileHover={{ scale: 1.02, y: -2 }}
+                transition={{ duration: 0.2 }}
               >
-                <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Analytics</span>
-              </Button>
-            </div>
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-emerald-500 to-green-500 rounded-lg mx-auto mb-2 flex items-center justify-center">
+                  <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                </div>
+                <div className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent mb-1">
+                  {schoolStats?.totalTeachers || 0}
+                </div>
+                <div className="text-xs sm:text-sm font-medium text-slate-600">Teachers</div>
+              </motion.div>
+
+              <motion.div 
+                className="text-center p-3 sm:p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-purple-200/40 shadow-lg hover:shadow-xl transition-all duration-300"
+                whileHover={{ scale: 1.02, y: -2 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-500 to-violet-500 rounded-lg mx-auto mb-2 flex items-center justify-center">
+                  <Heart className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                </div>
+                <div className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent mb-1">
+                  {schoolStats?.totalParents || 0}
+                </div>
+                <div className="text-xs sm:text-sm font-medium text-slate-600">Parents</div>
+              </motion.div>
+
+              <motion.div 
+                className="text-center p-3 sm:p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-amber-200/40 shadow-lg hover:shadow-xl transition-all duration-300"
+                whileHover={{ scale: 1.02, y: -2 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg mx-auto mb-2 flex items-center justify-center">
+                  <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                </div>
+                <div className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent mb-1">
+                  {schoolStats?.activeToday || 0}
+                </div>
+                <div className="text-xs sm:text-sm font-medium text-slate-600">Active Today</div>
+              </motion.div>
+            </motion.div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* School Overview Card */}
-        <Card className="mb-6 sm:mb-8 bg-white border border-gray-200 shadow-sm">
-          <CardContent className="p-4 sm:p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              <div className="col-span-1 sm:col-span-2 lg:col-span-1">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Welcome, {profile?.first_name}</h2>
-                <p className="text-gray-600 text-sm sm:text-base">{schoolInfo?.name}</p>
-                <p className="text-xs sm:text-sm text-gray-500 mt-1">{schoolInfo?.address}</p>
-              </div>
-              <div className="text-center sm:text-left lg:text-center">
-                <p className="text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wide">School Code</p>
-                <p className="text-xl sm:text-2xl font-bold text-blue-600 mt-1">{schoolInfo?.school_code}</p>
-              </div>
-              <div className="text-left sm:text-right">
-                <p className="text-xs sm:text-sm font-medium text-gray-500">Contact</p>
-                <p className="text-gray-900 text-sm sm:text-base">{schoolInfo?.email}</p>
-                <p className="text-gray-600 text-xs sm:text-sm">{schoolInfo?.phone}</p>
+      {/* Enhanced Main Content */}
+      <div className="relative z-10 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+        <div className="space-y-4 sm:space-y-6">
+          
+          {/* Core Features Section */}
+          <motion.div 
+            className="mb-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-slate-800">Core Management</h2>
+              <div className="text-sm text-slate-500 bg-white/60 px-3 py-1 rounded-full border border-slate-200/50">
+                8 tools
               </div>
             </div>
-          </CardContent>
-        </Card>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">  
+              {/* User Management */}
+              <motion.div whileHover={{ scale: 1.02, y: -3 }} whileTap={{ scale: 0.98 }}>
+                <Link href="/admin/users" className="block">
+                  <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-0 shadow-md hover:shadow-xl transition-all duration-300 h-full group">
+                    <CardContent className="p-4">
+                      <div className="flex flex-col items-center text-center space-y-3">
+                        <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300">
+                          <Users className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-blue-700 text-sm">User Management</p>
+                          <p className="text-xs text-blue-600 mt-1">Manage accounts</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          <Link href="/admin/analytics" className="block">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-blue-500">
-              <CardContent className="p-4 sm:p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Analytics & Reports</p>
-                    <p className="text-xs text-gray-500 mt-1 hidden sm:block">View detailed insights</p>
-                  </div>
-                  <BarChart3 className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+              {/* Settings */}
+              <motion.div whileHover={{ scale: 1.02, y: -3 }} whileTap={{ scale: 0.98 }}>
+                <Link href="/admin/settings" className="block">
+                  <Card className="bg-gradient-to-br from-slate-50 to-gray-50 border-0 shadow-md hover:shadow-xl transition-all duration-300 h-full group">
+                    <CardContent className="p-4">
+                      <div className="flex flex-col items-center text-center space-y-3">
+                        <div className="p-3 bg-gradient-to-br from-slate-500 to-slate-600 rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300">
+                          <Settings className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-700 text-sm">Settings</p>
+                          <p className="text-xs text-slate-600 mt-1">Configure school</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
 
-          <Link href="/admin/users" className="block">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-green-500">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">User Management</p>
-                    <p className="text-xs text-gray-500 mt-1">Manage all users</p>
-                  </div>
-                  <Users className="h-8 w-8 text-green-500" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+              {/* Messaging */}
+              <motion.div whileHover={{ scale: 1.02, y: -3 }} whileTap={{ scale: 0.98 }}>
+                <Link href="/admin/messaging" className="block">
+                  <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-0 shadow-md hover:shadow-xl transition-all duration-300 h-full group">
+                    <CardContent className="p-4">
+                      <div className="flex flex-col items-center text-center space-y-3">
+                        <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300">
+                          <MessageSquare className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-green-700 text-sm">Messaging</p>
+                          <p className="text-xs text-green-600 mt-1">Communication hub</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
 
-          <Link href="/admin/pending-users" className="block">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-orange-500">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Pending Approvals</p>
-                    <p className="text-xs text-gray-500 mt-1">Review registrations</p>
-                  </div>
-                  <UserCheck className="h-8 w-8 text-orange-500" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+              {/* Communications */}
+              <motion.div whileHover={{ scale: 1.02, y: -3 }} whileTap={{ scale: 0.98 }}>
+                <Link href="/admin/communications" className="block">
+                  <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-0 shadow-md hover:shadow-xl transition-all duration-300 h-full group">
+                    <CardContent className="p-4">
+                      <div className="flex flex-col items-center text-center space-y-3">
+                        <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300">
+                          <MessageSquare className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-blue-700 text-sm">Communications</p>
+                          <p className="text-xs text-blue-600 mt-1">Secure messaging</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
 
-          <Link href="/admin/settings" className="block">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-purple-500">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">School Settings</p>
-                    <p className="text-xs text-gray-500 mt-1">Configure system</p>
-                  </div>
-                  <Settings className="h-8 w-8 text-purple-500" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+              {/* Announcements */}
+              <motion.div whileHover={{ scale: 1.02, y: -3 }} whileTap={{ scale: 0.98 }}>
+                <Link href="/admin/announcements" className="block">
+                  <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-0 shadow-md hover:shadow-xl transition-all duration-300 h-full group">
+                    <CardContent className="p-4">
+                      <div className="flex flex-col items-center text-center space-y-3">
+                        <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300">
+                          <Megaphone className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-green-700 text-sm">Announcements</p>
+                          <p className="text-xs text-green-600 mt-1">School news</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
 
-          <Card className="border-l-4 border-l-gray-500">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Quick Actions</p>
-                  <p className="text-xs text-gray-500 mt-1">Common tasks</p>
-                </div>
-                <Zap className="h-8 w-8 text-gray-500" />
+              {/* Pending Users */}
+              <motion.div whileHover={{ scale: 1.02, y: -3 }} whileTap={{ scale: 0.98 }}>
+                <Link href="/admin/pending-users" className="block">
+                  <Card className="bg-gradient-to-br from-gray-50 to-slate-50 border-0 shadow-md hover:shadow-xl transition-all duration-300 h-full group">
+                    <CardContent className="p-4">
+                      <div className="flex flex-col items-center text-center space-y-3">
+                        <div className="p-3 bg-gradient-to-br from-gray-500 to-gray-600 rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300">
+                          <HelpCircle className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-gray-700 text-sm">Pending Users</p>
+                          <p className="text-xs text-gray-600 mt-1">Approvals needed</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+
+              {/* Help Requests */}
+              <motion.div whileHover={{ scale: 1.02, y: -3 }} whileTap={{ scale: 0.98 }}>
+                <Link href="/admin/help-requests" className="block">
+                  <Card className="bg-gradient-to-br from-red-50 to-rose-50 border-0 shadow-md hover:shadow-xl transition-all duration-300 h-full group">
+                    <CardContent className="p-4">
+                      <div className="flex flex-col items-center text-center space-y-3">
+                        <div className="p-3 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300 relative">
+                          <AlertTriangle className="h-5 w-5 text-white" />
+                          {schoolStats.helpRequests > 0 && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center">
+                              <span className="text-xs font-bold text-white">{schoolStats.helpRequests}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-bold text-red-700 text-sm">Help Requests</p>
+                          <p className="text-xs text-red-600 mt-1">Support needed</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+
+              {/* Analytics */}
+              <motion.div whileHover={{ scale: 1.02, y: -3 }} whileTap={{ scale: 0.98 }}>
+                <Link href="/admin/analytics" className="block">
+                  <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border-0 shadow-md hover:shadow-xl transition-all duration-300 h-full group">
+                    <CardContent className="p-4">
+                      <div className="flex flex-col items-center text-center space-y-3">
+                        <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300">
+                          <BarChart3 className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-purple-700 text-sm">Analytics</p>
+                          <p className="text-xs text-purple-600 mt-1">Data insights</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+
+            </div>
+          </motion.div>
+
+
+          {/* Advanced Features Section */}
+          <motion.div 
+            className="space-y-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+          >
+            <div className="flex items-center justify-between mb-6 p-4 bg-white/60 backdrop-blur-sm rounded-xl border border-slate-200/50">
+              <div>
+                <h2 className="text-xl font-bold text-slate-800">Advanced Features</h2>
+                <p className="text-sm text-slate-600 mt-1">Specialized tools and analytics</p>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+              <div className="text-sm text-slate-500 bg-slate-100 px-3 py-2 rounded-lg">
+                10 tools
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+              
+              {/* Progress Tracking */}
+              <motion.div whileHover={{ scale: 1.02, y: -3 }} whileTap={{ scale: 0.98 }}>
+                <Link href="/admin/progress" className="block">
+                  <Card className="bg-gradient-to-br from-teal-50 to-cyan-50 border-0 shadow-md hover:shadow-xl transition-all duration-300 h-full group">
+                    <CardContent className="p-4">
+                      <div className="flex flex-col items-center text-center space-y-3">
+                        <div className="p-3 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300">
+                          <TrendingUp className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-teal-700 text-sm">Progress Tracking</p>
+                          <p className="text-xs text-teal-600 mt-1">Student analytics</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
 
-        {/* Alert Section */}
-        {schoolStats.helpRequests > 0 && (
-          <Card className="mb-8 border-red-200 bg-red-50">
-            <CardHeader>
-              <CardTitle className="flex items-center text-red-800">
-                <AlertTriangle className="h-5 w-5 mr-2" />
-                Attention Required
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-red-700">
-                There are {schoolStats.helpRequests} pending help requests that need immediate attention.
-              </p>
-              <Button className="mt-3" variant="outline">
-                Review Help Requests
+              {/* Well-being Analytics */}
+              <motion.div whileHover={{ scale: 1.02, y: -3 }} whileTap={{ scale: 0.98 }}>
+                <Link href="/admin/wellbeing-analytics" className="block">
+                  <Card className="bg-gradient-to-br from-emerald-50 to-green-50 border-0 shadow-md hover:shadow-xl transition-all duration-300 h-full group">
+                    <CardContent className="p-4">
+                      <div className="flex flex-col items-center text-center space-y-3">
+                        <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300">
+                          <Heart className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-emerald-700 text-sm">Well-being Analytics</p>
+                          <p className="text-xs text-emerald-600 mt-1">Mental health data</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+
+              {/* Attendance */}
+              <motion.div whileHover={{ scale: 1.02, y: -3 }} whileTap={{ scale: 0.98 }}>
+                <Link href="/admin/attendance" className="block">
+                  <Card className="bg-gradient-to-br from-orange-50 to-amber-50 border-0 shadow-md hover:shadow-lg transition-all duration-300 h-full">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex flex-col items-center text-center space-y-2 sm:space-y-3">
+                        <div className="p-2 sm:p-3 bg-orange-500 rounded-xl shadow-md">
+                          <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-orange-700 text-xs sm:text-sm">Attendance</p>
+                          <p className="text-xs text-orange-600 mt-1">Track presence</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+
+              {/* SEL Programs */}
+              <motion.div whileHover={{ scale: 1.02, y: -3 }} whileTap={{ scale: 0.98 }}>
+                <Link href="/admin/sel-programs" className="block">
+                  <Card className="bg-gradient-to-br from-indigo-50 to-blue-50 border-0 shadow-md hover:shadow-lg transition-all duration-300 h-full">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex flex-col items-center text-center space-y-2 sm:space-y-3">
+                        <div className="p-2 sm:p-3 bg-indigo-500 rounded-xl shadow-md">
+                          <Brain className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-indigo-700 text-xs sm:text-sm">SEL Programs</p>
+                          <p className="text-xs text-indigo-600 mt-1">Social emotional</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+
+              {/* School Goals */}
+              <motion.div whileHover={{ scale: 1.02, y: -3 }} whileTap={{ scale: 0.98 }}>
+                <Link href="/admin/school-goals" className="block">
+                  <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border-0 shadow-md hover:shadow-lg transition-all duration-300 h-full">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex flex-col items-center text-center space-y-2 sm:space-y-3">
+                        <div className="p-2 sm:p-3 bg-purple-500 rounded-xl shadow-md">
+                          <Target className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-purple-700 text-xs sm:text-sm">School Goals</p>
+                          <p className="text-xs text-purple-600 mt-1">Objectives</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+
+              {/* Student Safety */}
+              <motion.div whileHover={{ scale: 1.02, y: -3 }} whileTap={{ scale: 0.98 }}>
+                <Link href="/admin/student-safety" className="block">
+                  <Card className="bg-gradient-to-br from-red-50 to-rose-50 border-0 shadow-md hover:shadow-lg transition-all duration-300 h-full">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex flex-col items-center text-center space-y-2 sm:space-y-3">
+                        <div className="p-2 sm:p-3 bg-red-500 rounded-xl shadow-md">
+                          <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-red-700 text-xs sm:text-sm">Student Safety</p>
+                          <p className="text-xs text-red-600 mt-1">Security tools</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+
+              {/* Activity Monitor */}
+              <motion.div whileHover={{ scale: 1.02, y: -3 }} whileTap={{ scale: 0.98 }}>
+                <Link href="/admin/activity-monitor" className="block">
+                  <Card className="bg-gradient-to-br from-yellow-50 to-amber-50 border-0 shadow-md hover:shadow-lg transition-all duration-300 h-full">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex flex-col items-center text-center space-y-2 sm:space-y-3">
+                        <div className="p-2 sm:p-3 bg-yellow-500 rounded-xl shadow-md">
+                          <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-yellow-700 text-xs sm:text-sm">Activity Monitor</p>
+                          <p className="text-xs text-yellow-600 mt-1">Real-time tracking</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+
+              {/* Polls & Surveys */}
+              <motion.div whileHover={{ scale: 1.02, y: -3 }} whileTap={{ scale: 0.98 }}>
+                <Link href="/admin/polls-surveys" className="block">
+                  <Card className="bg-gradient-to-br from-cyan-50 to-blue-50 border-0 shadow-md hover:shadow-lg transition-all duration-300 h-full">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex flex-col items-center text-center space-y-2 sm:space-y-3">
+                        <div className="p-2 sm:p-3 bg-cyan-500 rounded-xl shadow-md">
+                          <Vote className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-cyan-700 text-xs sm:text-sm">Polls & Surveys</p>
+                          <p className="text-xs text-cyan-600 mt-1">Feedback tools</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+
+              {/* AI Assistant */}
+              <motion.div whileHover={{ scale: 1.02, y: -3 }} whileTap={{ scale: 0.98 }}>
+                <Link href="/admin/ai-assistant" className="block">
+                  <Card className="bg-gradient-to-br from-pink-50 to-purple-50 border-0 shadow-md hover:shadow-lg transition-all duration-300 h-full">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex flex-col items-center text-center space-y-2 sm:space-y-3">
+                        <div className="p-2 sm:p-3 bg-gradient-to-br from-pink-500 to-purple-500 rounded-xl shadow-md">
+                          <Bot className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-purple-700 text-xs sm:text-sm">AI Assistant</p>
+                          <p className="text-xs text-purple-600 mt-1">Smart insights</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+
+              {/* Parent Engagement */}
+              <motion.div whileHover={{ scale: 1.02, y: -3 }} whileTap={{ scale: 0.98 }}>
+                <Link href="/admin/parent-engagement" className="block">
+                  <Card className="bg-gradient-to-br from-violet-50 to-indigo-50 border-0 shadow-md hover:shadow-lg transition-all duration-300 h-full">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex flex-col items-center text-center space-y-2 sm:space-y-3">
+                        <div className="p-2 sm:p-3 bg-gradient-to-br from-violet-500 to-indigo-500 rounded-xl shadow-md">
+                          <Users className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-violet-700 text-xs sm:text-sm">Parent Engagement</p>
+                          <p className="text-xs text-violet-600 mt-1">Family connect</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+
+
+            </div>
+          </motion.div>
+
+          {/* Enhanced Alert Section - Only if help requests exist */}
+          <AnimatePresence>
+            {schoolStats.helpRequests > 0 && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Card className="bg-gradient-to-r from-red-50/90 to-orange-50/90 backdrop-blur-sm border-0 shadow-lg overflow-hidden relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 to-orange-500/10" />
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-orange-500" />
+                  <CardContent className="p-3 sm:p-4 lg:p-5 relative z-10">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                      <motion.div
+                        className="p-2 sm:p-3 bg-red-100 rounded-xl shadow-sm"
+                        animate={{ scale: [1, 1.05, 1] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      >
+                        <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
+                      </motion.div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-red-800 text-sm sm:text-base">Attention Required</h3>
+                        <p className="text-red-700 text-xs sm:text-sm mt-1">
+                          {schoolStats.helpRequests} pending help requests need immediate review
+                        </p>
+                      </div>
+                      <Link href="/admin/help-requests" className="w-full sm:w-auto">
+                        <Button size="sm" className="w-full sm:w-auto bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg">
+                          <AlertTriangle className="h-4 w-4 mr-2" />
+                          Review Now
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
+          {/* Enhanced Mobile Navigation */}
+          <div className="lg:hidden fixed bottom-4 right-4 z-50">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 1, type: "spring", stiffness: 200 }}
+              className="flex flex-col gap-3"
+            >
+              {/* Scroll to top button */}
+              <Button
+                size="lg"
+                className="rounded-full w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-xl"
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              >
+                <School className="h-5 w-5" />
               </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Management Tools */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <UserPlus className="h-5 w-5 mr-2" />
-                User Management
-              </CardTitle>
-              <CardDescription>Manage teachers, students, and parents</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 sm:space-y-3">
-                <Button className="w-full text-xs sm:text-sm py-2" variant="outline">
-                  Add New Teacher
-                </Button>
-                <Button 
-                  className="w-full text-xs sm:text-sm py-2" 
-                  variant="outline"
-                  onClick={() => window.location.href = '/admin/users'}
-                >
-                  View All Users
-                </Button>
-                <Button className="w-full text-xs sm:text-sm py-2" variant="outline">
-                  Bulk Import
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <BarChart3 className="h-5 w-5 mr-2" />
-                Analytics & Reports
-              </CardTitle>
-              <CardDescription>School-wide well-being insights</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <Button className="w-full" variant="outline">
-                  Well-being Report
-                </Button>
-                <Button className="w-full" variant="outline">
-                  Engagement Analytics
-                </Button>
-                <Button className="w-full" variant="outline">
-                  Export Data
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Settings className="h-5 w-5 mr-2" />
-                School Settings
-              </CardTitle>
-              <CardDescription>Configure platform settings</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <Button className="w-full" variant="outline">
-                  School Information
-                </Button>
-                <Button className="w-full" variant="outline">
-                  Privacy Settings
-                </Button>
-                <Button className="w-full" variant="outline">
-                  Notification Preferences
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+              
+              {/* Quick help requests access if any exist */}
+              {schoolStats.helpRequests > 0 && (
+                <Link href="/admin/help-requests">
+                  <Button
+                    size="lg"
+                    className="rounded-full w-12 h-12 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-xl relative"
+                  >
+                    <AlertTriangle className="h-5 w-5" />
+                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-white rounded-full flex items-center justify-center">
+                      <span className="text-xs font-bold text-red-600">{schoolStats.helpRequests}</span>
+                    </div>
+                  </Button>
+                </Link>
+              )}
+            </motion.div>
+          </div>
         </div>
-
-        {/* Well-being Overview */}
-        <Card className="bg-white border border-gray-200 shadow-sm">
-          <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="text-base sm:text-lg font-semibold text-gray-900">School Well-being Overview</CardTitle>
-            <CardDescription className="text-gray-600 text-sm">Real-time mental health and engagement metrics</CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-              <div className="text-center p-3 sm:p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl sm:text-3xl font-bold text-green-600">{wellbeingData.overallWellbeing}%</div>
-                <div className="text-xs sm:text-sm text-gray-600 mt-1">Overall Well-being Score</div>
-              </div>
-              <div className="text-center p-3 sm:p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl sm:text-3xl font-bold text-blue-600">{wellbeingData.gratitudeEntries}</div>
-                <div className="text-xs sm:text-sm text-gray-600 mt-1">Gratitude Entries This Week</div>
-              </div>
-              <div className="text-center p-3 sm:p-4 bg-purple-50 rounded-lg">
-                <div className="text-2xl sm:text-3xl font-bold text-purple-600">{wellbeingData.kindnessActs}</div>
-                <div className="text-xs sm:text-sm text-gray-600 mt-1">Acts of Kindness Logged</div>
-              </div>
-              <div className="text-center p-3 sm:p-4 bg-orange-50 rounded-lg">
-                <div className="text-2xl sm:text-3xl font-bold text-orange-600">{wellbeingData.averageStreak}</div>
-                <div className="text-xs sm:text-sm text-gray-600 mt-1">Days Average Streak</div>
-              </div>
-            </div>
-            <div className="mt-4 sm:mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-              <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
-                <div className="text-lg sm:text-xl font-semibold text-gray-700">{wellbeingData.courageEntries}</div>
-                <div className="text-xs text-gray-500">Courage Entries</div>
-              </div>
-              <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
-                <div className="text-lg sm:text-xl font-semibold text-gray-700">{wellbeingData.avgSleepHours}h</div>
-                <div className="text-xs text-gray-500">Avg Sleep Hours</div>
-              </div>
-              <div className="text-center p-2 sm:p-3 bg-gray-50 rounded-lg">
-                <div className="text-lg sm:text-xl font-semibold text-gray-700">{wellbeingData.avgWaterGlasses}</div>
-                <div className="text-xs text-gray-500">Avg Water Glasses</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   )

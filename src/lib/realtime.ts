@@ -138,7 +138,7 @@ export class RealtimeManager {
     const { data: profile } = await this.supabase
       .from('profiles')
       .select('role')
-      .eq('id', this.userId)
+      .eq('user_id', this.userId)
       .single();
 
     if (profile?.role !== 'admin') return;

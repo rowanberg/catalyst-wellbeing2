@@ -5,6 +5,33 @@ const nextConfig = {
   // Suppress hydration warnings caused by browser extensions
   reactStrictMode: true,
   
+  // Disable static export to allow dynamic API routes
+  // output: 'export',
+  trailingSlash: true,
+  images: {
+    unoptimized: true
+  },
+  
+  // Set the correct workspace root to silence lockfile warning
+  outputFileTracingRoot: __dirname,
+  
+  // Custom headers including CSP
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: process.env.NODE_ENV === 'development' 
+              ? "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co;"
+              : "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co;"
+          },
+        ],
+      },
+    ]
+  },
+  
   // Custom webpack configuration to handle hydration issues
   webpack: (config, { dev, isServer }) => {
     if (dev && !isServer) {

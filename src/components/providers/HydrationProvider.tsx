@@ -18,12 +18,17 @@ export function HydrationProvider({ children }: { children: React.ReactNode }) {
       /There was an error while hydrating/,
       /Text content does not match server-rendered HTML/,
       /A tree hydrated but some attributes of the server rendered HTML didn't match/,
+      /bis_register/i,
       /fdprocessedid/i,
+      /__processed_[a-f0-9-]+__/i,
       /chrome-extension/i,
       /moz-extension/i,
       /browser extension/i,
       /data-windsurf-page-id/i,
       /data-windsurf-extension-id/i,
+      /data-lastpass/i,
+      /data-1p-/i,
+      /grammarly/i,
     ]
 
     const isExtensionError = (message: string) => {

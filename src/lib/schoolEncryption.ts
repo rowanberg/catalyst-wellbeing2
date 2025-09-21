@@ -28,7 +28,7 @@ export function encryptMessage(message: string, schoolKey: string): string {
     // Derive key from school key and salt
     const key = crypto.pbkdf2Sync(schoolKey, salt, ITERATIONS, 32, 'sha512')
     
-    const cipher = crypto.createCipher(ALGORITHM, key)
+    const cipher = crypto.createCipheriv(ALGORITHM, key, iv)
     
     let encrypted = cipher.update(message, 'utf8', 'hex')
     encrypted += cipher.final('hex')
@@ -62,7 +62,7 @@ export function decryptMessage(encryptedData: string, schoolKey: string): string
     // Derive key from school key and salt
     const key = crypto.pbkdf2Sync(schoolKey, salt, ITERATIONS, 32, 'sha512')
     
-    const decipher = crypto.createDecipher(ALGORITHM, key)
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv)
     
     let decrypted = decipher.update(encrypted, undefined, 'utf8')
     decrypted += decipher.final('utf8')

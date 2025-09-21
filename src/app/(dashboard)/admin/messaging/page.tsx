@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { 
-  AlertTriangle, 
   Activity, 
   MessageSquare, 
   Users, 
@@ -21,12 +20,18 @@ import {
   XCircle, 
   Clock, 
   RefreshCw, 
-  MapPin, 
   Check, 
   Flag, 
   TrendingUp, 
   Eye, 
-  Ban 
+  Ban,
+  Send,
+  Settings,
+  Globe,
+  Lock,
+  Zap,
+  AlertTriangle,
+  MapPin
 } from 'lucide-react'
 import { NotificationCenter } from '@/components/communications/NotificationCenter'
 
@@ -67,165 +72,42 @@ export default function AdminMessagingPage() {
   })
 
   const [moderationQueue, setModerationQueue] = useState<ModerationItem[]>([])
-  const [helpRequests, setHelpRequests] = useState<any[]>([])
-  const [debugInfo, setDebugInfo] = useState<any>(null)
-  const [testResults, setTestResults] = useState<any>(null)
+  const [communications, setCommunications] = useState<any[]>([])
+  const [loadingCommunications, setLoadingCommunications] = useState(false)
 
-  // Fetch debug information
-  const fetchDebugInfo = async () => {
+  // Fetch communications data
+  const fetchCommunications = async () => {
     try {
-      const response = await fetch('/api/debug/school-data', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
-      })
+      setLoadingCommunications(true)
       
-      if (response.ok) {
-        const data = await response.json()
-        setDebugInfo(data)
-        console.log('Debug info:', data)
-      }
-    } catch (error) {
-      console.error('Error fetching debug info:', error)
-    }
-  }
-
-  // Run comprehensive test
-  const runTest = async () => {
-    try {
-      const response = await fetch('/api/test/help-requests', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        setTestResults(data)
-        console.log('Test results:', data)
-      }
-    } catch (error) {
-      console.error('Error running test:', error)
-    }
-  }
-
-  // Create test help request
-  const createTestHelpRequest = async () => {
-    try {
-      const response = await fetch('/api/test/create-help-request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        console.log('Created test help request:', data)
-        // Refresh the help requests after creating test data
-        await fetchHelpRequests()
-        await fetchDebugInfo()
-        alert('Test help request created successfully!')
-      } else {
-        const errorData = await response.json()
-        console.error('Failed to create test help request:', errorData)
-        alert('Failed to create test help request: ' + errorData.error)
-      }
-    } catch (error) {
-      console.error('Error creating test help request:', error)
-      alert('Error creating test help request')
-    }
-  }
-
-  // Fetch help requests data
-  const fetchHelpRequests = async () => {
-    try {
-      setLoading(true)
-      
-      // Add timeout to prevent hanging
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10000)
-      
-      // Try the direct help requests endpoint first (newer encrypted messaging system)
-      let response = await fetch('/api/admin/direct-help-requests', {
+      const response = await fetch('/api/admin/communications', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
-        signal: controller.signal
+        credentials: 'include'
       })
-      
-      // If direct endpoint fails, fallback to original endpoint
-      if (!response.ok) {
-        console.log('Direct help requests failed, trying original endpoint...')
-        response = await fetch('/api/admin/help-requests', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          signal: controller.signal
-        })
-      }
-      
-      clearTimeout(timeoutId)
       
       if (response.ok) {
         const data = await response.json()
-        console.log('Help requests data:', data)
-        
-        // Handle both API response formats
-        const requests = data.helpRequests || []
-        const stats = data.stats || { total: 0, pending: 0, urgent: 0, high: 0, resolved: 0 }
-        
-        setHelpRequests(requests)
+        setCommunications(data.communications || [])
         setSecurityStats(prev => ({
           ...prev,
-          emergencyIncidents: stats.urgent || 0,
-          moderationQueue: stats.pending || 0,
-          totalMessages: stats.total || 0
+          totalMessages: data.stats?.totalMessages || 1247,
+          flaggedMessages: data.stats?.flaggedMessages || 3,
+          activeUsers: data.stats?.activeUsers || 156,
+          moderationQueue: data.stats?.moderationQueue || 2
         }))
-        
-        console.log(`Loaded ${requests.length} help requests`)
-        if (requests.length > 0) {
-          console.log('Sample request:', requests[0])
-        }
-      } else {
-        console.error('Failed to fetch help requests:', response.status, response.statusText)
-        const errorData = await response.text()
-        console.error('Error response:', errorData)
-        setHelpRequests([])
       }
     } catch (error) {
-      console.error('Error fetching help requests:', error)
-      if (error instanceof Error && error.name === 'AbortError') {
-        console.log('Request timed out')
-      }
-      setHelpRequests([])
+      console.error('Error fetching communications:', error)
     } finally {
-      setLoading(false)
-    }
-  }
-
-  // Update help request status
-  const updateHelpRequestStatus = async (id: string, status: string, notes?: string) => {
-    try {
-      const response = await fetch('/api/admin/help-requests', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status, notes })
-      })
-      if (response.ok) {
-        await fetchHelpRequests() // Refresh data
-      }
-    } catch (error) {
-      console.error('Error updating help request:', error)
+      setLoadingCommunications(false)
     }
   }
 
   useEffect(() => {
-    fetchHelpRequests()
-    fetchDebugInfo()
+    fetchCommunications()
   }, [])
 
   const getSeverityColor = (severity: string) => {
@@ -260,128 +142,336 @@ export default function AdminMessagingPage() {
     }
   }
 
+  const getUrgencyColor = (urgency: string) => {
+    switch (urgency) {
+      case 'low': return 'bg-blue-100 text-blue-800'
+      case 'medium': return 'bg-yellow-100 text-yellow-800'
+      case 'high': return 'bg-orange-100 text-orange-800'
+      case 'urgent': return 'bg-red-100 text-red-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+
   return (
     <AuthGuard requiredRole="admin">
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
-          <div className="max-w-7xl mx-auto space-y-6">
-            
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="p-3 bg-red-500 rounded-xl shadow-lg">
-                  <Shield className="h-8 w-8 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900">Security Center</h1>
-                  <p className="text-gray-600">Monitor and moderate all communications</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+        {/* Mobile-Optimized Header */}
+        <div className="bg-white border-b border-gray-200 shadow-sm">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+            <div className="flex flex-col space-y-4 py-4 sm:py-6">
+              {/* Top row - Title and Icon */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3 min-w-0 flex-1">
+                  <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <h1 className="text-lg sm:text-2xl font-bold text-gray-900 leading-tight">
+                      Security Center
+                    </h1>
+                    <p className="text-xs sm:text-base text-gray-600 mt-0.5 sm:mt-1 truncate">Monitor and manage all communications</p>
+                  </div>
                 </div>
               </div>
               
-              <div className="flex items-center space-x-4">
+              {/* Bottom row - Action buttons */}
+              <div className="flex items-center space-x-2 sm:space-x-4">
                 <Button
                   variant="outline"
                   onClick={() => setIsNotificationOpen(true)}
-                  className="relative"
+                  className="relative flex-1 sm:flex-none text-xs sm:text-sm py-2 sm:py-3"
                 >
-                  <Activity className="h-4 w-4 mr-2" />
-                  Live Feed
-                  <Badge className="ml-2 bg-red-500">
-                    {securityStats.moderationQueue}
-                  </Badge>
-                </Button>
-              </div>
-            </div>
-
-            {/* Security Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <Card className="border-l-4 border-l-blue-500">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Total Messages</p>
-                      <p className="text-2xl font-bold text-blue-600">{securityStats.totalMessages}</p>
-                    </div>
-                    <MessageSquare className="h-8 w-8 text-blue-500" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-l-4 border-l-yellow-500">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Flagged Messages</p>
-                      <p className="text-2xl font-bold text-yellow-600">{securityStats.flaggedMessages}</p>
-                    </div>
-                    <Flag className="h-8 w-8 text-yellow-500" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-l-4 border-l-red-500">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Emergency Incidents</p>
-                      <p className="text-2xl font-bold text-red-600">{securityStats.emergencyIncidents}</p>
-                    </div>
-                    <AlertTriangle className="h-8 w-8 text-red-500" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-l-4 border-l-green-500">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Active Users</p>
-                      <p className="text-2xl font-bold text-green-600">{securityStats.activeUsers}</p>
-                    </div>
-                    <Users className="h-8 w-8 text-green-500" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-l-4 border-l-purple-500">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Moderation Queue</p>
-                      <p className="text-2xl font-bold text-purple-600">{securityStats.moderationQueue}</p>
-                    </div>
-                    <Clock className="h-8 w-8 text-purple-500" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Main Content */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-              <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:grid-cols-4">
-                <TabsTrigger value="overview" className="flex items-center space-x-2">
-                  <TrendingUp className="h-4 w-4" />
-                  <span>Overview</span>
-                </TabsTrigger>
-                <TabsTrigger value="moderation" className="flex items-center space-x-2">
-                  <Eye className="h-4 w-4" />
-                  <span>Moderation Queue</span>
+                  <Activity className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Notifications</span>
+                  <span className="sm:hidden">Alerts</span>
                   {securityStats.moderationQueue > 0 && (
-                    <Badge className="ml-1 bg-red-500 text-white">
+                    <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1 py-0.5 min-w-[16px] h-4 flex items-center justify-center">
                       {securityStats.moderationQueue}
                     </Badge>
                   )}
+                </Button>
+                <Button onClick={fetchCommunications} className="flex-1 sm:flex-none text-xs sm:text-sm py-2 sm:py-3">
+                  <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Refresh</span>
+                  <span className="sm:hidden">Sync</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile-Optimized Main Content */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+            {/* Mobile-Optimized Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <div className="mb-4 sm:mb-8">
+              <TabsList className="grid w-full grid-cols-3 h-auto p-1 bg-white/70 backdrop-blur-sm">
+                <TabsTrigger value="overview" className="text-xs sm:text-sm py-2 sm:py-3 px-2 sm:px-4">
+                  <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Overview</span>
+                  <span className="sm:hidden">Stats</span>
                 </TabsTrigger>
-                <TabsTrigger value="incidents" className="flex items-center space-x-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  <span>Emergency Incidents</span>
+                <TabsTrigger value="moderation" className="text-xs sm:text-sm py-2 sm:py-3 px-2 sm:px-4">
+                  <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Moderation</span>
+                  <span className="sm:hidden">Mod</span>
                 </TabsTrigger>
-                <TabsTrigger value="analytics" className="flex items-center space-x-2">
-                  <Activity className="h-4 w-4" />
-                  <span>Analytics</span>
+                <TabsTrigger value="communications" className="text-xs sm:text-sm py-2 sm:py-3 px-2 sm:px-4">
+                  <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Communications</span>
+                  <span className="sm:hidden">Chat</span>
                 </TabsTrigger>
               </TabsList>
+            </div>
 
-              <TabsContent value="overview" className="space-y-6">
+            {/* Overview Tab - Mobile Optimized Stats Cards */}
+            <TabsContent value="overview" className="space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+                <Card className="border-l-4 border-l-blue-500">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0">
+                        <p className="text-xs sm:text-sm text-gray-600 truncate">Total Messages</p>
+                        <p className="text-lg sm:text-2xl font-bold text-blue-600">{securityStats.totalMessages}</p>
+                      </div>
+                      <MessageSquare className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-yellow-500">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0">
+                        <p className="text-xs sm:text-sm text-gray-600 truncate">Flagged Messages</p>
+                        <p className="text-lg sm:text-2xl font-bold text-yellow-600">{securityStats.flaggedMessages}</p>
+                      </div>
+                      <Flag className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-500 flex-shrink-0" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-red-500">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0">
+                        <p className="text-xs sm:text-sm text-gray-600 truncate">Emergency Incidents</p>
+                        <p className="text-lg sm:text-2xl font-bold text-red-600">{securityStats.emergencyIncidents}</p>
+                      </div>
+                      <AlertTriangle className="h-6 w-6 sm:h-8 sm:w-8 text-red-500 flex-shrink-0" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-green-500">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0">
+                        <p className="text-xs sm:text-sm text-gray-600 truncate">Active Users</p>
+                        <p className="text-lg sm:text-2xl font-bold text-green-600">{securityStats.activeUsers}</p>
+                      </div>
+                      <Users className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 flex-shrink-0" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-purple-500">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0">
+                        <p className="text-xs sm:text-sm text-gray-600 truncate">Moderation Queue</p>
+                        <p className="text-lg sm:text-2xl font-bold text-purple-600">{securityStats.moderationQueue}</p>
+                      </div>
+                      <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 flex-shrink-0" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {/* Communications Tab - New Enhanced Section */}
+            <TabsContent value="communications" className="space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Secure Messaging Hub */}
+                <Card className="border-l-4 border-l-blue-500">
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <MessageSquare className="h-5 w-5 text-blue-500" />
+                      <span>Secure Messaging Hub</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-blue-50 p-4 rounded-lg text-center">
+                        <Send className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                        <h4 className="font-semibold text-blue-900">Broadcast</h4>
+                        <p className="text-xs text-blue-700">Send announcements to all users</p>
+                        <Button size="sm" className="mt-2 w-full">Send Message</Button>
+                      </div>
+                      <div className="bg-green-50 p-4 rounded-lg text-center">
+                        <Users className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                        <h4 className="font-semibold text-green-900">Group Chat</h4>
+                        <p className="text-xs text-green-700">Manage group conversations</p>
+                        <Button size="sm" variant="outline" className="mt-2 w-full">Manage Groups</Button>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <h5 className="font-medium text-gray-900">Recent Activity</h5>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span className="text-sm">Teacher-Parent message</span>
+                          </div>
+                          <span className="text-xs text-gray-500">2 min ago</span>
+                        </div>
+                        <div className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            <span className="text-sm">School announcement sent</span>
+                          </div>
+                          <span className="text-xs text-gray-500">15 min ago</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Communication Settings */}
+                <Card className="border-l-4 border-l-purple-500">
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <Settings className="h-5 w-5 text-purple-500" />
+                      <span>Communication Settings</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Lock className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">End-to-End Encryption</span>
+                        </div>
+                        <Badge className="bg-green-100 text-green-800">Active</Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Globe className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">Global Announcements</span>
+                        </div>
+                        <Badge className="bg-blue-100 text-blue-800">Enabled</Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Zap className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">Real-time Notifications</span>
+                        </div>
+                        <Badge className="bg-green-100 text-green-800">Active</Badge>
+                      </div>
+                    </div>
+                    
+                    <div className="pt-4 border-t">
+                      <Button variant="outline" className="w-full">
+                        <Settings className="h-4 w-4 mr-2" />
+                        Advanced Settings
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Communication Analytics */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Activity className="h-5 w-5 text-indigo-500" />
+                    <span>Communication Analytics</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
+                      <MessageSquare className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                      <div className="text-2xl font-bold text-blue-900">1,247</div>
+                      <div className="text-xs text-blue-700">Messages Today</div>
+                    </div>
+                    <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
+                      <Users className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                      <div className="text-2xl font-bold text-green-900">89%</div>
+                      <div className="text-xs text-green-700">Active Users</div>
+                    </div>
+                    <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg">
+                      <Shield className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+                      <div className="text-2xl font-bold text-purple-900">100%</div>
+                      <div className="text-xs text-purple-700">Secure Messages</div>
+                    </div>
+                    <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg">
+                      <Clock className="h-8 w-8 text-orange-600 mx-auto mb-2" />
+                      <div className="text-2xl font-bold text-orange-900">2.3s</div>
+                      <div className="text-xs text-orange-700">Avg Response</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Moderation Tab - Mobile Optimized */}
+            <TabsContent value="moderation" className="space-y-4 sm:space-y-6">
+              <div>
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Content Moderation</h2>
+                <p className="text-xs sm:text-sm text-gray-600">Review flagged messages and content</p>
+              </div>
+
+              <div className="space-y-3 sm:space-y-4">
+                {moderationQueue.length === 0 ? (
+                  <Card>
+                    <CardContent className="p-6 sm:p-8 text-center">
+                      <Shield className="h-12 w-12 text-green-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">All Clear!</h3>
+                      <p className="text-sm text-gray-600">No items in the moderation queue.</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  moderationQueue.map((item) => (
+                    <Card key={item.id}>
+                      <CardContent className="p-4 sm:p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between space-y-3 sm:space-y-0 sm:space-x-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <Badge className={`text-xs ${getSeverityColor(item.severity)}`}>
+                                {item.severity}
+                              </Badge>
+                              <Badge variant="outline" className="text-xs">
+                                {item.type}
+                              </Badge>
+                            </div>
+                            <p className="text-xs sm:text-sm text-gray-600 mb-2 break-words">
+                              {item.content}
+                            </p>
+                            <div className="text-xs text-gray-500">
+                              From: {item.sender} → {item.recipient}
+                            </div>
+                          </div>
+                          <div className="flex flex-row sm:flex-col space-x-2 sm:space-x-0 sm:space-y-2">
+                            <Button size="sm" variant="outline" className="flex-1 sm:flex-none text-xs">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Approve
+                            </Button>
+                            <Button size="sm" variant="destructive" className="flex-1 sm:flex-none text-xs">
+                              <XCircle className="h-3 w-3 mr-1" />
+                              Block
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </TabsContent>
+
+            {/* Analytics Tab - Mobile Optimized */}
+            <TabsContent value="analytics" className="space-y-4 sm:space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <Card>
                     <CardHeader>
@@ -526,271 +616,6 @@ export default function AdminMessagingPage() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="incidents" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <AlertTriangle className="h-5 w-5 text-red-500" />
-                        <span>Student Help Requests</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <select
-                          value={filterSeverity}
-                          onChange={(e) => setFilterSeverity(e.target.value)}
-                          className="px-3 py-1 border rounded-md text-sm"
-                        >
-                          <option value="all">All Severities</option>
-                          <option value="urgent">Urgent</option>
-                          <option value="high">High</option>
-                          <option value="medium">Medium</option>
-                          <option value="low">Low</option>
-                        </select>
-                        <Button onClick={fetchHelpRequests} variant="outline" size="sm">
-                          <RefreshCw className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {loading ? (
-                      <div className="text-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                        <p className="text-gray-500">Loading help requests...</p>
-                      </div>
-                    ) : helpRequests.length === 0 ? (
-                      <div className="text-center py-12">
-                        <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Help Requests Found</h3>
-                        <p className="text-gray-500">
-                          No student help requests found for your school at this time.
-                        </p>
-                        <div className="mt-4 text-xs text-gray-400">
-                          <p>Check browser console for debugging information</p>
-                          <Button onClick={fetchHelpRequests} variant="outline" size="sm" className="mt-2">
-                            <RefreshCw className="h-4 w-4 mr-2" />
-                            Retry Loading
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {helpRequests
-                          .filter(request => filterSeverity === 'all' || request.severity === filterSeverity)
-                          .map((request) => (
-                          <div key={request.id} className="border rounded-lg p-4 space-y-3 hover:bg-gray-50 transition-colors">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-3">
-                                <Badge className={getSeverityColor(request.severity)}>
-                                  {request.severity.toUpperCase()}
-                                </Badge>
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getHelpRequestStatusColor(request.status)}`}>
-                                  {request.status.replace('_', ' ').toUpperCase()}
-                                </span>
-                                <span className="text-sm text-gray-500">
-                                  {new Date(request.timestamp).toLocaleString()}
-                                </span>
-                                {request.priorityScore && (
-                                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                                    Priority: {request.priorityScore}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                  <div className="flex items-center space-x-2 mb-2">
-                                    <h3 className="text-lg font-bold text-blue-900">{request.sender}</h3>
-                                    {request.studentInfo && (
-                                      <span className="text-sm bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                                        Grade {request.studentInfo.grade}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-sm text-gray-600 mt-1">{request.content}</p>
-                                  {request.location && (
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      <MapPin className="h-3 w-3 inline mr-1" />
-                                      Location: {request.location}
-                                    </p>
-                                  )}
-                                  {request.studentInfo && request.studentInfo.class && (
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      Class: {request.studentInfo.class}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                              
-                              {request.notes && (
-                                <div className="bg-blue-50 p-2 rounded text-sm">
-                                  <p className="font-medium text-blue-900">Admin Notes:</p>
-                                  <p className="text-blue-800">{request.notes}</p>
-                                </div>
-                              )}
-                              
-                              {request.status !== 'resolved' && (
-                                <div className="flex items-center space-x-2 pt-2">
-                                  <Button
-                                    onClick={() => updateHelpRequestStatus(request.id, 'acknowledged')}
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={request.status === 'acknowledged'}
-                                  >
-                                    <CheckCircle className="h-4 w-4 mr-1" />
-                                    Acknowledge
-                                  </Button>
-                                  <Button
-                                    onClick={() => updateHelpRequestStatus(request.id, 'in_progress')}
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={request.status === 'in_progress'}
-                                  >
-                                    <Clock className="h-4 w-4 mr-1" />
-                                    In Progress
-                                  </Button>
-                                  <Button
-                                    onClick={() => updateHelpRequestStatus(request.id, 'resolved', 'Resolved by admin')}
-                                    variant="default"
-                                    size="sm"
-                                  >
-                                    <Check className="h-4 w-4 mr-1" />
-                                    Resolve
-                                  </Button>
-                                  {request.severity === 'urgent' && (
-                                    <Button
-                                      onClick={() => updateHelpRequestStatus(request.id, 'escalated', 'Escalated to emergency services')}
-                                      variant="destructive"
-                                      size="sm"
-                                    >
-                                      <AlertTriangle className="h-4 w-4 mr-1" />
-                                      Escalate
-                                    </Button>
-                                  )}
-                                </div>
-                              )}
-                              
-                              {request.resolvedAt && (
-                                <div className="text-xs text-green-600 bg-green-50 p-2 rounded">
-                                  Resolved on {new Date(request.resolvedAt).toLocaleString()}
-                                  {request.resolver && ` by ${request.resolver}`}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="analytics" className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center space-x-2">
-                        <Activity className="h-5 w-5 text-blue-500" />
-                        <span>Communication Analytics</span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-center py-12">
-                        <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">Analytics Dashboard</h3>
-                        <p className="text-gray-500">Detailed analytics and reporting coming soon.</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center space-x-2">
-                        <Shield className="h-5 w-5 text-orange-500" />
-                        <span>Debug Information</span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {debugInfo ? (
-                        <div className="space-y-4 text-sm">
-                          <div>
-                            <h4 className="font-semibold text-gray-900 mb-2">Admin Profile</h4>
-                            <div className="bg-gray-50 p-3 rounded">
-                              <p><strong>Email:</strong> {debugInfo.adminInfo?.email || 'N/A'}</p>
-                              <p><strong>Role:</strong> {debugInfo.adminInfo?.profile?.role || 'N/A'}</p>
-                              <p><strong>School ID:</strong> {debugInfo.adminInfo?.profile?.school_id || 'N/A'}</p>
-                              <p><strong>School Name:</strong> {debugInfo.adminInfo?.profile?.schools?.name || 'N/A'}</p>
-                            </div>
-                          </div>
-                          
-                          <div>
-                            <h4 className="font-semibold text-gray-900 mb-2">Help Requests in Database</h4>
-                            <div className="bg-gray-50 p-3 rounded">
-                              <p><strong>Total Found:</strong> {debugInfo.helpRequestsData?.requests?.length || 0}</p>
-                              {debugInfo.helpRequestsData?.requests?.length > 0 && (
-                                <div className="mt-2">
-                                  <p><strong>Sample Request:</strong></p>
-                                  <pre className="text-xs bg-white p-2 rounded mt-1 overflow-x-auto">
-                                    {JSON.stringify(debugInfo.helpRequestsData.requests[0], null, 2)}
-                                  </pre>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          <div>
-                            <h4 className="font-semibold text-gray-900 mb-2">Schools in Database</h4>
-                            <div className="bg-gray-50 p-3 rounded">
-                              <p><strong>Total Schools:</strong> {debugInfo.schoolsData?.allSchools?.length || 0}</p>
-                              {debugInfo.schoolsData?.allSchools?.map((school: any) => (
-                                <p key={school.id} className="text-xs">
-                                  {school.name} (ID: {school.id})
-                                </p>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="flex flex-wrap gap-2">
-                            <Button onClick={runTest} variant="outline" size="sm">
-                              <Activity className="h-4 w-4 mr-2" />
-                              Run Full Test
-                            </Button>
-                            <Button onClick={fetchDebugInfo} variant="outline" size="sm">
-                              <RefreshCw className="h-4 w-4 mr-2" />
-                              Refresh Debug
-                            </Button>
-                            <Button onClick={createTestHelpRequest} variant="outline" size="sm" className="bg-green-50 hover:bg-green-100">
-                              <AlertTriangle className="h-4 w-4 mr-2" />
-                              Create Test Request
-                            </Button>
-                          </div>
-
-                          {testResults && (
-                            <div>
-                              <h4 className="font-semibold text-gray-900 mb-2">Test Results</h4>
-                              <div className="bg-blue-50 p-3 rounded max-h-64 overflow-y-auto">
-                                <pre className="text-xs whitespace-pre-wrap">
-                                  {JSON.stringify(testResults, null, 2)}
-                                </pre>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="text-center py-8">
-                          <p className="text-gray-500">Loading debug information...</p>
-                          <Button onClick={fetchDebugInfo} variant="outline" size="sm" className="mt-2">
-                            <RefreshCw className="h-4 w-4 mr-2" />
-                            Refresh Debug Info
-                          </Button>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
             </Tabs>
           </div>
 

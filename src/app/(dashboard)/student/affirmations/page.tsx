@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Home, Heart, Sparkles, RefreshCw, Star } from 'lucide-react'
@@ -40,11 +40,38 @@ export default function AffirmationsPage() {
   const [isRevealed, setIsRevealed] = useState(false)
   const [completedToday, setCompletedToday] = useState(false)
   const [sessionCount, setSessionCount] = useState(0)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [celebrationMessages] = useState([
+    "🌟 You're absolutely radiant! Your positive energy is contagious!",
+    "💫 You're a shining star! Keep believing in yourself!",
+    "🌈 Your self-love creates beautiful rainbows in the world!",
+    "🦋 You're as beautiful as a butterfly spreading joy!",
+    "🌸 Your confidence blooms like the most beautiful flower!",
+    "✨ You sparkle with inner strength and beauty!"
+  ])
 
   useEffect(() => {
     // Set initial affirmation
     setCurrentAffirmation(affirmations[0])
+    
+    // Fetch today's progress
+    fetchTodayProgress()
   }, [])
+
+  const fetchTodayProgress = async () => {
+    try {
+      const response = await fetch('/api/student/affirmations')
+      if (response.ok) {
+        const data = await response.json()
+        setSessionCount(data.sessionsCompleted)
+        if (data.sessionsCompleted >= 3) {
+          setCompletedToday(true)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching affirmation progress:', error)
+    }
+  }
 
   const getNewAffirmation = () => {
     const newIndex = Math.floor(Math.random() * affirmations.length)
@@ -58,14 +85,43 @@ export default function AffirmationsPage() {
   }
 
   const completeSession = async () => {
-    setSessionCount(prev => prev + 1)
-    
-    // Award XP and gems for completing affirmation session
-    dispatch(updateXP(15))
-    dispatch(updateGems(3))
-    
-    if (sessionCount >= 2) { // After 3 sessions (0, 1, 2)
-      setCompletedToday(true)
+    try {
+      const response = await fetch('/api/student/affirmations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionCompleted: true })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setSessionCount(data.sessionsCompleted)
+        
+        // Update Redux store with actual values from backend
+        dispatch(updateXP(data.xpGained || 15))
+        dispatch(updateGems(data.gemsGained || 3))
+        
+        // Show success animation
+        setShowSuccess(true)
+        
+        // Hide success message after 3 seconds
+        setTimeout(() => {
+          setShowSuccess(false)
+          
+          if (data.sessionsCompleted >= 3) {
+            setCompletedToday(true)
+          }
+        }, 3000)
+      }
+    } catch (error) {
+      console.error('Error completing affirmation session:', error)
+      // Fallback to local state update
+      setSessionCount(prev => prev + 1)
+      dispatch(updateXP(15))
+      dispatch(updateGems(3))
+      
+      if (sessionCount >= 2) {
+        setCompletedToday(true)
+      }
     }
   }
 
@@ -131,35 +187,37 @@ export default function AffirmationsPage() {
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-100">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Positive Affirmations</h1>
-              <p className="text-gray-600">Build confidence and self-love with daily affirmations</p>
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4 sm:py-6">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">Positive Affirmations</h1>
+              <p className="text-sm sm:text-base text-gray-600 hidden sm:block">Build confidence and self-love with daily affirmations</p>
+              <p className="text-xs text-gray-600 sm:hidden">Daily confidence building</p>
             </div>
-            <Button onClick={() => router.push('/student')} variant="outline">
-              <Home className="h-4 w-4 mr-2" />
-              Dashboard
+            <Button onClick={() => router.push('/student')} variant="outline" size="sm" className="ml-3">
+              <Home className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Dashboard</span>
+              <span className="sm:hidden">Home</span>
             </Button>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Progress */}
-        <Card className="mb-8 bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-purple-800">Today's Progress</h3>
-              <div className="flex items-center space-x-2">
-                <Star className="h-5 w-5 text-yellow-500" />
-                <span className="text-purple-700 font-medium">{sessionCount}/3 Sessions</span>
+        <Card className="mb-4 sm:mb-8 bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h3 className="text-base sm:text-lg font-semibold text-purple-800">Today's Progress</h3>
+              <div className="flex items-center space-x-1 sm:space-x-2">
+                <Star className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+                <span className="text-sm sm:text-base text-purple-700 font-medium">{sessionCount}/3 Sessions</span>
               </div>
             </div>
-            <div className="w-full bg-purple-200 rounded-full h-3">
+            <div className="w-full bg-purple-200 rounded-full h-2 sm:h-3">
               <div 
-                className="bg-gradient-to-r from-purple-500 to-pink-500 h-3 rounded-full transition-all duration-500"
+                className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 sm:h-3 rounded-full transition-all duration-500"
                 style={{ width: `${(sessionCount / 3) * 100}%` }}
               />
             </div>
@@ -171,46 +229,71 @@ export default function AffirmationsPage() {
           key={affirmationIndex}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className="mb-4 sm:mb-8"
         >
-          <Card className="bg-gradient-to-br from-white to-purple-50 border-purple-200 shadow-lg">
-            <CardHeader className="text-center">
+          <Card className="bg-gradient-to-br from-white to-purple-50 border-purple-200 shadow-lg relative overflow-hidden">
+            <AnimatePresence>
+              {showSuccess && (
+                <motion.div
+                  initial={{ opacity: 0, y: -50 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -50 }}
+                  className="absolute top-0 left-0 right-0 bg-gradient-to-r from-purple-500 to-pink-600 text-white p-4 z-10"
+                >
+                  <div className="text-center space-y-2">
+                    <div className="flex items-center justify-center space-x-2">
+                      <Sparkles className="h-5 w-5 animate-pulse" />
+                      <span className="font-bold text-base sm:text-lg">🌟 Self-Love Champion! 🌟</span>
+                      <Sparkles className="h-5 w-5 animate-pulse" />
+                    </div>
+                    <div className="text-sm sm:text-base">
+                      You earned <strong>+15 XP</strong> and <strong>+3 Gems</strong>!
+                    </div>
+                    <div className="text-xs sm:text-sm opacity-90">
+                      {celebrationMessages[Math.floor(Math.random() * celebrationMessages.length)]}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
+            <CardHeader className={`text-center px-4 sm:px-6 ${showSuccess ? 'pt-20' : ''}`}>
               <motion.div
                 animate={{ scale: [1, 1.1, 1] }}
                 transition={{ duration: 2, repeat: Infinity }}
-                className="text-4xl mb-4"
+                className="text-3xl sm:text-4xl mb-3 sm:mb-4"
               >
                 💖
               </motion.div>
-              <CardTitle className="text-xl text-purple-800">Your Affirmation</CardTitle>
-              <CardDescription>Take a deep breath and repeat this to yourself</CardDescription>
+              <CardTitle className="text-lg sm:text-xl text-purple-800">Your Affirmation</CardTitle>
+              <CardDescription className="text-sm sm:text-base">Take a deep breath and repeat this to yourself</CardDescription>
             </CardHeader>
-            <CardContent className="text-center space-y-6">
+            <CardContent className="text-center space-y-4 sm:space-y-6 px-4 sm:px-6">
               <motion.div
-                className="min-h-[100px] flex items-center justify-center"
+                className="min-h-[80px] sm:min-h-[100px] flex items-center justify-center px-2"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: isRevealed ? 1 : 0.3 }}
               >
-                <p className="text-2xl font-semibold text-gray-800 leading-relaxed max-w-2xl">
+                <p className="text-lg sm:text-2xl font-semibold text-gray-800 leading-relaxed max-w-2xl">
                   {isRevealed ? currentAffirmation : "Click 'Reveal Affirmation' to see your positive message"}
                 </p>
               </motion.div>
 
-              <div className="flex justify-center space-x-4">
+              <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
                 {!isRevealed ? (
-                  <Button onClick={revealAffirmation} size="lg" className="bg-purple-500 hover:bg-purple-600">
-                    <Sparkles className="h-5 w-5 mr-2" />
-                    Reveal Affirmation
+                  <Button onClick={revealAffirmation} size="lg" className="bg-purple-500 hover:bg-purple-600 w-full sm:w-auto">
+                    <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                    <span className="text-sm sm:text-base">Reveal Affirmation</span>
                   </Button>
                 ) : (
                   <>
-                    <Button onClick={completeSession} size="lg" className="bg-green-500 hover:bg-green-600">
-                      <Heart className="h-5 w-5 mr-2" />
-                      I Believe This! (+15 XP, +3 Gems)
+                    <Button onClick={completeSession} size="lg" className="bg-green-500 hover:bg-green-600 w-full sm:w-auto">
+                      <Heart className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                      <span className="text-sm sm:text-base">I Believe This! (+15 XP, +3 Gems)</span>
                     </Button>
-                    <Button onClick={getNewAffirmation} size="lg" variant="outline">
-                      <RefreshCw className="h-5 w-5 mr-2" />
-                      New Affirmation
+                    <Button onClick={getNewAffirmation} size="lg" variant="outline" className="w-full sm:w-auto">
+                      <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                      <span className="text-sm sm:text-base">New Affirmation</span>
                     </Button>
                   </>
                 )}
@@ -220,22 +303,22 @@ export default function AffirmationsPage() {
         </motion.div>
 
         {/* Affirmation Categories */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Affirmation Categories</CardTitle>
-            <CardDescription>Different types of positive thoughts to explore</CardDescription>
+        <Card className="mb-4 sm:mb-8">
+          <CardHeader className="px-4 sm:px-6">
+            <CardTitle className="text-lg sm:text-xl">Affirmation Categories</CardTitle>
+            <CardDescription className="text-sm sm:text-base">Different types of positive thoughts to explore</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <CardContent className="px-4 sm:px-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
               {affirmationCategories.map((category, index) => (
                 <motion.div
                   key={category.name}
                   whileHover={{ scale: 1.05 }}
-                  className={`p-4 rounded-lg bg-gradient-to-br ${category.color} border-2 border-transparent hover:border-purple-300 cursor-pointer transition-all`}
+                  className={`p-3 sm:p-4 rounded-lg bg-gradient-to-br ${category.color} border-2 border-transparent hover:border-purple-300 cursor-pointer transition-all`}
                 >
                   <div className="text-center">
-                    <div className="text-3xl mb-2">{category.emoji}</div>
-                    <div className="font-semibold text-gray-800">{category.name}</div>
+                    <div className="text-2xl sm:text-3xl mb-1 sm:mb-2">{category.emoji}</div>
+                    <div className="font-semibold text-gray-800 text-sm sm:text-base">{category.name}</div>
                   </div>
                 </motion.div>
               ))}

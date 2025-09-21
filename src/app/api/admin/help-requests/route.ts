@@ -3,8 +3,13 @@ import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-export async function GET(request: NextRequest) {
+export const dynamic = 'force-dynamic'
+
+export async function GET(request: Request) {
   try {
+    // Parse URL parameters
+    const { searchParams } = new URL(request.url)
+    const statusFilter = searchParams.get('status') || 'active' // 'active', 'resolved', or 'all'
     // Check environment variables first to avoid hanging
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
       console.error('Missing Supabase environment variables:', {
@@ -69,6 +74,7 @@ export async function GET(request: NextRequest) {
       .from('profiles')
       .select(`
         role, 
+        school_code,
         school_id,
         schools!profiles_school_id_fkey (
           id,
@@ -90,21 +96,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
     }
 
-    if (!adminProfile.school_id || !adminProfile.schools) {
+    // Check if admin has school_code (preferred) or fallback to school_id
+    let adminSchoolCode = adminProfile.school_code
+    if (!adminSchoolCode && adminProfile.schools) {
+      adminSchoolCode = (adminProfile.schools as any).school_code
+    }
+    
+    if (!adminSchoolCode) {
       console.log('Admin has no school association:', adminProfile)
       return NextResponse.json({ error: 'Admin not associated with a school' }, { status: 400 })
     }
 
-    const adminSchool = adminProfile.schools as any
-    console.log('Admin school info:', { id: adminSchool.id, code: adminSchool.school_code, name: adminSchool.name })
+    console.log('Admin school code:', adminSchoolCode)
     
     // Add timeout to prevent hanging
     const timeoutPromise = new Promise((_, reject) => 
       setTimeout(() => reject(new Error('Request timeout')), 10000)
     )
     
-    // Get help requests only from students in the admin's school
-    const helpRequestsQuery = supabaseAdmin
+    // Build query based on status filter
+    let helpRequestsQuery = supabaseAdmin
       .from('help_requests')
       .select(`
         id,
@@ -115,26 +126,38 @@ export async function GET(request: NextRequest) {
         updated_at,
         student_id,
         school_id,
-        profiles!help_requests_student_id_fkey (
-          user_id,
-          first_name,
-          last_name,
-          grade_level,
-          class_name,
-          school_id
-        )
+        school_code,
+        resolved_at,
+        resolver,
+        notes
       `)
-      .eq('school_id', adminSchool.id)
+      .eq('school_code', adminSchoolCode)
       .order('created_at', { ascending: false })
 
-    const { data: helpRequests, error: helpRequestsError } = await Promise.race([
+    // Apply status filter
+    if (statusFilter === 'resolved') {
+      helpRequestsQuery = helpRequestsQuery.eq('status', 'resolved')
+    } else if (statusFilter === 'active') {
+      helpRequestsQuery = helpRequestsQuery.neq('status', 'resolved')
+    }
+    // 'all' means no additional filter
+
+    let { data: helpRequests, error: helpRequestsError } = await Promise.race([
       helpRequestsQuery,
       timeoutPromise
     ]) as any
 
     console.log('Help requests query result:', {
       count: helpRequests?.length || 0,
-      error: helpRequestsError?.message
+      error: helpRequestsError?.message,
+      adminSchoolCode,
+      sampleRequest: helpRequests?.[0]
+    })
+
+    // No need to filter in JavaScript since we're now filtering in SQL by help_requests.school_code
+    console.log('Help requests filtered by school_code in SQL:', { 
+      schoolCode: adminSchoolCode, 
+      count: helpRequests?.length || 0 
     })
 
     if (helpRequestsError) {
@@ -147,17 +170,13 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // Transform data for frontend - student profiles are now included in the query
+    // Transform data for frontend - simplified without profile joins
     const transformedRequests = helpRequests?.map((request: any) => {
-      const studentProfile = request.profiles
-
       return {
         id: request.id,
         type: 'help_request',
         content: request.message,
-        sender: studentProfile ? 
-          `${studentProfile.first_name} ${studentProfile.last_name} (Grade ${studentProfile.grade_level})` : 
-          `Student ID: ${request.student_id}`,
+        sender: `Student ID: ${request.student_id}`,
         recipient: 'Support Team',
         timestamp: request.created_at,
         severity: request.urgency,
@@ -169,11 +188,10 @@ export async function GET(request: NextRequest) {
         followUpRequired: request.urgency === 'high',
         notes: null,
         resolvedAt: null,
-        studentInfo: studentProfile ? {
-          grade: studentProfile.grade_level,
-          class: studentProfile.class_name,
-          school: studentProfile.school_id
-        } : null,
+        studentInfo: {
+          school_code: request.school_code,
+          school_id: request.school_id
+        },
         resolver: null
       }
     }) || []
@@ -210,6 +228,11 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    console.log('=== PATCH HELP REQUEST START ===')
+    
+    const body = await request.json()
+    console.log('Request body:', body)
+    
     // Create client for user authentication
     const cookieStore = await cookies()
     const supabaseAuth = createServerClient(
@@ -232,18 +255,34 @@ export async function PATCH(request: NextRequest) {
     
     // Get current user and verify admin role
     const { data: { user }, error: userError } = await supabaseAuth.auth.getUser()
+    console.log('User auth result:', { user: !!user, error: userError })
+    
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get admin profile to verify role and school
+    // Get admin profile to verify role and school (matching GET endpoint structure)
     const { data: adminProfile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('role, school_id')
+      .select(`
+        role,
+        school_code,
+        school_id,
+        first_name,
+        last_name,
+        schools!profiles_school_id_fkey (
+          id,
+          name,
+          school_code
+        )
+      `)
       .eq('user_id', user.id)
       .single()
 
+    console.log('Admin profile result:', { adminProfile, error: profileError })
+
     if (profileError || !adminProfile || adminProfile.role !== 'admin') {
+      console.log('Admin access denied:', { profileError, role: adminProfile?.role })
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
     }
 
@@ -251,9 +290,10 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Admin not associated with a school' }, { status: 400 })
     }
 
-    const { id, status, notes, followUpRequired } = await request.json()
+    const { id, status, notes, followUpRequired } = body
 
     if (!id || !status) {
+      console.log('Missing required fields:', { id, status })
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -272,26 +312,21 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Help request not found' }, { status: 404 })
     }
 
-    // Get admin's school info for verification
-    const { data: adminSchoolInfo, error: schoolError } = await supabaseAdmin
-      .from('profiles')
-      .select(`
-        schools!profiles_school_id_fkey (
-          id,
-          school_code
-        )
-      `)
-      .eq('user_id', user.id)
-      .single()
+    // Use school_code from admin profile for verification
+    const adminSchoolCode = adminProfile.school_code
 
-    if (schoolError || !adminSchoolInfo?.schools) {
-      return NextResponse.json({ error: 'Admin school not found' }, { status: 403 })
+    if (!adminSchoolCode) {
+      return NextResponse.json({ error: 'Admin school code not found' }, { status: 403 })
     }
 
-    const adminSchoolData = adminSchoolInfo.schools as any
-    
-    // Verify the help request belongs to the admin's school
-    if (helpRequest.school_id !== adminSchoolData.id) {
+    // Verify the help request belongs to the admin's school using school_code
+    const { data: helpRequestWithSchool, error: schoolVerifyError } = await supabaseAdmin
+      .from('help_requests')
+      .select('school_code')
+      .eq('id', id)
+      .single()
+
+    if (schoolVerifyError || !helpRequestWithSchool || helpRequestWithSchool.school_code !== adminSchoolCode) {
       return NextResponse.json({ error: 'Forbidden - Cannot access help requests from other schools' }, { status: 403 })
     }
 
@@ -304,6 +339,17 @@ export async function PATCH(request: NextRequest) {
     if (status === 'resolved') {
       updateData.resolved_by = user.id
       updateData.resolved_at = new Date().toISOString()
+      
+      // Get admin name for resolver field
+      const { data: adminProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('first_name, last_name')
+        .eq('id', user.id)
+        .single()
+      
+      if (adminProfile) {
+        updateData.resolver = `${adminProfile.first_name} ${adminProfile.last_name}`.trim()
+      }
     }
 
     if (notes !== undefined) {
@@ -334,3 +380,4 @@ export async function PATCH(request: NextRequest) {
     )
   }
 }
+

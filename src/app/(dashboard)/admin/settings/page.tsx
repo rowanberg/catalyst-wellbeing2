@@ -22,8 +22,10 @@ import {
   Phone,
   MapPin,
   Save,
-  RefreshCw
+  RefreshCw,
+  Calendar
 } from 'lucide-react'
+import { AdvancedGradeLevelManager } from '@/components/admin/AdvancedGradeLevelManager'
 
 interface SchoolSettings {
   id: string
@@ -172,370 +174,444 @@ function SchoolSettingsContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Settings className="w-6 h-6 text-white" />
+      {/* Mobile-Optimized Header */}
+      <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-4 sm:py-6 space-y-3 sm:space-y-0">
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Settings className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">School Settings</h1>
-                <p className="text-sm text-gray-600">Configure your school's platform settings</p>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">School Settings</h1>
+                <p className="text-xs sm:text-sm text-gray-600 hidden sm:block">Configure your school's platform settings</p>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
-              <Button variant="outline" onClick={fetchSettings}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Reset
+            <div className="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto">
+              <Button 
+                variant="outline" 
+                onClick={fetchSettings}
+                size="sm"
+                className="flex-1 sm:flex-none"
+              >
+                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="text-xs sm:text-sm">Reset</span>
               </Button>
               <Button 
                 onClick={saveSettings} 
                 disabled={saving}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700 text-white flex-1 sm:flex-none"
               >
-                <Save className="h-4 w-4 mr-2" />
-                {saving ? 'Saving...' : 'Save Changes'}
+                <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="text-xs sm:text-sm">{saving ? 'Saving...' : 'Save'}</span>
               </Button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* School Information */}
+      {/* Mobile-Optimized Main Content */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+        {/* Grade Level Management - MOVED TO TOP */}
+        <Card className="mb-6 sm:mb-8 bg-white border border-gray-200 shadow-sm">
+          <CardHeader className="pb-4 sm:pb-6">
+            <CardTitle className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center">
+              <Users className="h-5 w-5 mr-2 text-blue-600 flex-shrink-0" />
+              <span className="truncate">Grade Level Management</span>
+            </CardTitle>
+            <CardDescription className="text-sm sm:text-base text-gray-600">
+              Create and manage grade levels and sections for your school
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <AdvancedGradeLevelManager schoolId={profile?.school_id} />
+          </CardContent>
+        </Card>
+
+        {/* Settings Grid - Mobile-First Responsive */}
+        <div className="space-y-6 sm:space-y-8 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0 xl:gap-8">
+          {/* School Information - Mobile Optimized */}
           <Card className="bg-white border border-gray-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center text-lg font-semibold text-gray-900">
-                <School className="h-5 w-5 mr-2" />
-                School Information
+            <CardHeader className="pb-4 sm:pb-6">
+              <CardTitle className="flex items-center text-base sm:text-lg font-semibold text-gray-900">
+                <School className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-600 flex-shrink-0" />
+                <span className="truncate">School Information</span>
               </CardTitle>
-              <CardDescription className="text-gray-600">
+              <CardDescription className="text-sm sm:text-base text-gray-600">
                 Basic school details and contact information
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="school-name">School Name</Label>
-                <Input
-                  id="school-name"
-                  value={settings.name}
-                  onChange={(e) => updateSettings('name', e.target.value)}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="school-code">School Code</Label>
-                <Input
-                  id="school-code"
-                  value={settings.school_code}
-                  disabled
-                  className="mt-1 bg-gray-50"
-                />
-              </div>
-              <div>
-                <Label htmlFor="address">Address</Label>
-                <Textarea
-                  id="address"
-                  value={settings.address}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => updateSettings('address', e.target.value)}
-                  className="mt-1"
-                  rows={3}
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="space-y-4 sm:space-y-6 pt-0">
+              <div className="space-y-4">
                 <div>
-                  <Label htmlFor="phone">Phone</Label>
+                  <Label htmlFor="school-name" className="text-sm font-medium">School Name</Label>
                   <Input
-                    id="phone"
-                    value={settings.phone}
-                    onChange={(e) => updateSettings('phone', e.target.value)}
-                    className="mt-1"
+                    id="school-name"
+                    value={settings.name}
+                    onChange={(e) => updateSettings('name', e.target.value)}
+                    className="mt-1.5 text-sm sm:text-base"
+                    placeholder="Enter school name"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="school-code" className="text-sm font-medium">School Code</Label>
                   <Input
-                    id="email"
-                    type="email"
-                    value={settings.email}
-                    onChange={(e) => updateSettings('email', e.target.value)}
-                    className="mt-1"
+                    id="school-code"
+                    value={settings.school_code}
+                    disabled
+                    className="mt-1.5 bg-gray-50 text-sm sm:text-base"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">This code cannot be changed</p>
+                </div>
+                <div>
+                  <Label htmlFor="address" className="text-sm font-medium">Address</Label>
+                  <Textarea
+                    id="address"
+                    value={settings.address}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => updateSettings('address', e.target.value)}
+                    className="mt-1.5 text-sm sm:text-base resize-none"
+                    rows={3}
+                    placeholder="Enter school address"
                   />
                 </div>
-              </div>
-              <div>
-                <Label htmlFor="website">Website (Optional)</Label>
-                <Input
-                  id="website"
-                  value={settings.website || ''}
-                  onChange={(e) => updateSettings('website', e.target.value)}
-                  className="mt-1"
-                  placeholder="https://www.yourschool.edu"
-                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="phone" className="text-sm font-medium">
+                      <Phone className="h-3 w-3 inline mr-1" />
+                      Phone
+                    </Label>
+                    <Input
+                      id="phone"
+                      value={settings.phone}
+                      onChange={(e) => updateSettings('phone', e.target.value)}
+                      className="mt-1.5 text-sm sm:text-base"
+                      placeholder="+1 (555) 123-4567"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="email" className="text-sm font-medium">
+                      <Mail className="h-3 w-3 inline mr-1" />
+                      Email
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={settings.email}
+                      onChange={(e) => updateSettings('email', e.target.value)}
+                      className="mt-1.5 text-sm sm:text-base"
+                      placeholder="contact@school.edu"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="website" className="text-sm font-medium">Website (Optional)</Label>
+                  <Input
+                    id="website"
+                    value={settings.website || ''}
+                    onChange={(e) => updateSettings('website', e.target.value)}
+                    className="mt-1.5 text-sm sm:text-base"
+                    placeholder="https://www.yourschool.edu"
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Notification Settings */}
+          {/* Notification Settings - Mobile Optimized */}
           <Card className="bg-white border border-gray-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center text-lg font-semibold text-gray-900">
-                <Bell className="h-5 w-5 mr-2" />
-                Notification Settings
+            <CardHeader className="pb-4 sm:pb-6">
+              <CardTitle className="flex items-center text-base sm:text-lg font-semibold text-gray-900">
+                <Bell className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-600 flex-shrink-0" />
+                <span className="truncate">Notification Settings</span>
               </CardTitle>
-              <CardDescription className="text-gray-600">
+              <CardDescription className="text-sm sm:text-base text-gray-600">
                 Configure how and when notifications are sent
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="email-notifications">Email Notifications</Label>
-                  <p className="text-sm text-gray-500">Send notifications via email</p>
+            <CardContent className="space-y-4 sm:space-y-6 pt-0">
+              <div className="space-y-4">
+                <div className="flex items-start justify-between gap-3 py-2">
+                  <div className="flex-1 min-w-0">
+                    <Label htmlFor="email-notifications" className="text-sm font-medium cursor-pointer">
+                      <Mail className="h-3 w-3 inline mr-1" />
+                      Email Notifications
+                    </Label>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Send notifications via email</p>
+                  </div>
+                  <Switch
+                    id="email-notifications"
+                    checked={settings.notification_settings.email_notifications}
+                    onCheckedChange={(checked: boolean) => 
+                      updateSettings('notification_settings.email_notifications', checked)
+                    }
+                    className="flex-shrink-0"
+                  />
                 </div>
-                <Switch
-                  id="email-notifications"
-                  checked={settings.notification_settings.email_notifications}
-                  onCheckedChange={(checked: boolean) => 
-                    updateSettings('notification_settings.email_notifications', checked)
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="sms-notifications">SMS Notifications</Label>
-                  <p className="text-sm text-gray-500">Send urgent alerts via SMS</p>
+                <div className="flex items-start justify-between gap-3 py-2">
+                  <div className="flex-1 min-w-0">
+                    <Label htmlFor="sms-notifications" className="text-sm font-medium cursor-pointer">
+                      <Phone className="h-3 w-3 inline mr-1" />
+                      SMS Notifications
+                    </Label>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Send urgent alerts via SMS</p>
+                  </div>
+                  <Switch
+                    id="sms-notifications"
+                    checked={settings.notification_settings.sms_notifications}
+                    onCheckedChange={(checked: boolean) => 
+                      updateSettings('notification_settings.sms_notifications', checked)
+                    }
+                    className="flex-shrink-0"
+                  />
                 </div>
-                <Switch
-                  id="sms-notifications"
-                  checked={settings.notification_settings.sms_notifications}
-                  onCheckedChange={(checked: boolean) => 
-                    updateSettings('notification_settings.sms_notifications', checked)
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="push-notifications">Push Notifications</Label>
-                  <p className="text-sm text-gray-500">Send push notifications to mobile apps</p>
+                <div className="flex items-start justify-between gap-3 py-2">
+                  <div className="flex-1 min-w-0">
+                    <Label htmlFor="push-notifications" className="text-sm font-medium cursor-pointer">
+                      <Bell className="h-3 w-3 inline mr-1" />
+                      Push Notifications
+                    </Label>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Send push notifications to mobile apps</p>
+                  </div>
+                  <Switch
+                    id="push-notifications"
+                    checked={settings.notification_settings.push_notifications}
+                    onCheckedChange={(checked: boolean) => 
+                      updateSettings('notification_settings.push_notifications', checked)
+                    }
+                    className="flex-shrink-0"
+                  />
                 </div>
-                <Switch
-                  id="push-notifications"
-                  checked={settings.notification_settings.push_notifications}
-                  onCheckedChange={(checked: boolean) => 
-                    updateSettings('notification_settings.push_notifications', checked)
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="weekly-reports">Weekly Reports</Label>
-                  <p className="text-sm text-gray-500">Send weekly wellbeing reports</p>
+                <div className="flex items-start justify-between gap-3 py-2">
+                  <div className="flex-1 min-w-0">
+                    <Label htmlFor="weekly-reports" className="text-sm font-medium cursor-pointer">Weekly Reports</Label>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Send weekly wellbeing reports</p>
+                  </div>
+                  <Switch
+                    id="weekly-reports"
+                    checked={settings.notification_settings.weekly_reports}
+                    onCheckedChange={(checked: boolean) => 
+                      updateSettings('notification_settings.weekly_reports', checked)
+                    }
+                    className="flex-shrink-0"
+                  />
                 </div>
-                <Switch
-                  id="weekly-reports"
-                  checked={settings.notification_settings.weekly_reports}
-                  onCheckedChange={(checked: boolean) => 
-                    updateSettings('notification_settings.weekly_reports', checked)
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="urgent-alerts">Urgent Alerts</Label>
-                  <p className="text-sm text-gray-500">Immediate alerts for crisis situations</p>
+                <div className="flex items-start justify-between gap-3 py-2">
+                  <div className="flex-1 min-w-0">
+                    <Label htmlFor="urgent-alerts" className="text-sm font-medium cursor-pointer">
+                      <Shield className="h-3 w-3 inline mr-1 text-red-500" />
+                      Urgent Alerts
+                    </Label>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Immediate alerts for crisis situations</p>
+                  </div>
+                  <Switch
+                    id="urgent-alerts"
+                    checked={settings.notification_settings.urgent_alerts}
+                    onCheckedChange={(checked: boolean) => 
+                      updateSettings('notification_settings.urgent_alerts', checked)
+                    }
+                    className="flex-shrink-0"
+                  />
                 </div>
-                <Switch
-                  id="urgent-alerts"
-                  checked={settings.notification_settings.urgent_alerts}
-                  onCheckedChange={(checked: boolean) => 
-                    updateSettings('notification_settings.urgent_alerts', checked)
-                  }
-                />
               </div>
             </CardContent>
           </Card>
 
-          {/* Privacy Settings */}
+          {/* Privacy Settings - Mobile Optimized */}
           <Card className="bg-white border border-gray-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center text-lg font-semibold text-gray-900">
-                <Shield className="h-5 w-5 mr-2" />
-                Privacy & Security
+            <CardHeader className="pb-4 sm:pb-6">
+              <CardTitle className="flex items-center text-base sm:text-lg font-semibold text-gray-900">
+                <Shield className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-600 flex-shrink-0" />
+                <span className="truncate">Privacy & Security</span>
               </CardTitle>
-              <CardDescription className="text-gray-600">
+              <CardDescription className="text-sm sm:text-base text-gray-600">
                 Data protection and privacy controls
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="data-retention">Data Retention (Days)</Label>
-                <Input
-                  id="data-retention"
-                  type="number"
-                  value={settings.privacy_settings.data_retention_days}
-                  onChange={(e) => 
-                    updateSettings('privacy_settings.data_retention_days', parseInt(e.target.value))
-                  }
-                  className="mt-1"
-                  min="30"
-                  max="2555"
-                />
-                <p className="text-sm text-gray-500 mt-1">How long to keep user data (30-2555 days)</p>
-              </div>
-              <div className="flex items-center justify-between">
+            <CardContent className="space-y-4 sm:space-y-6 pt-0">
+              <div className="space-y-4">
                 <div>
-                  <Label htmlFor="allow-analytics">Allow Analytics</Label>
-                  <p className="text-sm text-gray-500">Enable platform analytics and insights</p>
+                  <Label htmlFor="data-retention" className="text-sm font-medium">Data Retention (Days)</Label>
+                  <Input
+                    id="data-retention"
+                    type="number"
+                    value={settings.privacy_settings.data_retention_days}
+                    onChange={(e) => 
+                      updateSettings('privacy_settings.data_retention_days', parseInt(e.target.value))
+                    }
+                    className="mt-1.5 text-sm sm:text-base"
+                    min="30"
+                    max="2555"
+                    placeholder="365"
+                  />
+                  <p className="text-xs sm:text-sm text-gray-500 mt-1">How long to keep user data (30-2555 days)</p>
                 </div>
-                <Switch
-                  id="allow-analytics"
-                  checked={settings.privacy_settings.allow_analytics}
-                  onCheckedChange={(checked: boolean) => 
-                    updateSettings('privacy_settings.allow_analytics', checked)
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="share-anonymous">Share Anonymous Data</Label>
-                  <p className="text-sm text-gray-500">Help improve the platform with anonymous usage data</p>
+                <div className="flex items-start justify-between gap-3 py-2">
+                  <div className="flex-1 min-w-0">
+                    <Label htmlFor="allow-analytics" className="text-sm font-medium cursor-pointer">Allow Analytics</Label>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Enable platform analytics and insights</p>
+                  </div>
+                  <Switch
+                    id="allow-analytics"
+                    checked={settings.privacy_settings.allow_analytics}
+                    onCheckedChange={(checked: boolean) => 
+                      updateSettings('privacy_settings.allow_analytics', checked)
+                    }
+                    className="flex-shrink-0"
+                  />
                 </div>
-                <Switch
-                  id="share-anonymous"
-                  checked={settings.privacy_settings.share_anonymous_data}
-                  onCheckedChange={(checked: boolean) => 
-                    updateSettings('privacy_settings.share_anonymous_data', checked)
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="parent-consent">Require Parent Consent</Label>
-                  <p className="text-sm text-gray-500">Require explicit parent consent for student data</p>
+                <div className="flex items-start justify-between gap-3 py-2">
+                  <div className="flex-1 min-w-0">
+                    <Label htmlFor="share-anonymous" className="text-sm font-medium cursor-pointer">Share Anonymous Data</Label>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Help improve the platform with anonymous usage data</p>
+                  </div>
+                  <Switch
+                    id="share-anonymous"
+                    checked={settings.privacy_settings.share_anonymous_data}
+                    onCheckedChange={(checked: boolean) => 
+                      updateSettings('privacy_settings.share_anonymous_data', checked)
+                    }
+                    className="flex-shrink-0"
+                  />
                 </div>
-                <Switch
-                  id="parent-consent"
-                  checked={settings.privacy_settings.require_parent_consent}
-                  onCheckedChange={(checked: boolean) => 
-                    updateSettings('privacy_settings.require_parent_consent', checked)
-                  }
-                />
+                <div className="flex items-start justify-between gap-3 py-2">
+                  <div className="flex-1 min-w-0">
+                    <Label htmlFor="parent-consent" className="text-sm font-medium cursor-pointer">Require Parent Consent</Label>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Require explicit parent consent for student data</p>
+                  </div>
+                  <Switch
+                    id="parent-consent"
+                    checked={settings.privacy_settings.require_parent_consent}
+                    onCheckedChange={(checked: boolean) => 
+                      updateSettings('privacy_settings.require_parent_consent', checked)
+                    }
+                    className="flex-shrink-0"
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Wellbeing Settings */}
+          {/* Wellbeing Settings - Mobile Optimized */}
           <Card className="bg-white border border-gray-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center text-lg font-semibold text-gray-900">
-                <Users className="h-5 w-5 mr-2" />
-                Wellbeing Features
+            <CardHeader className="pb-4 sm:pb-6">
+              <CardTitle className="flex items-center text-base sm:text-lg font-semibold text-gray-900">
+                <Users className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-600 flex-shrink-0" />
+                <span className="truncate">Wellbeing Features</span>
               </CardTitle>
-              <CardDescription className="text-gray-600">
+              <CardDescription className="text-sm sm:text-base text-gray-600">
                 Configure wellbeing and mental health features
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="daily-checkins">Daily Check-ins</Label>
-                  <p className="text-sm text-gray-500">Enable daily wellbeing check-ins for students</p>
+            <CardContent className="space-y-4 sm:space-y-6 pt-0">
+              <div className="space-y-4">
+                <div className="flex items-start justify-between gap-3 py-2">
+                  <div className="flex-1 min-w-0">
+                    <Label htmlFor="daily-checkins" className="text-sm font-medium cursor-pointer">Daily Check-ins</Label>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Enable daily wellbeing check-ins for students</p>
+                  </div>
+                  <Switch
+                    id="daily-checkins"
+                    checked={settings.wellbeing_settings.daily_check_ins}
+                    onCheckedChange={(checked: boolean) => 
+                      updateSettings('wellbeing_settings.daily_check_ins', checked)
+                    }
+                    className="flex-shrink-0"
+                  />
                 </div>
-                <Switch
-                  id="daily-checkins"
-                  checked={settings.wellbeing_settings.daily_check_ins}
-                  onCheckedChange={(checked: boolean) => 
-                    updateSettings('wellbeing_settings.daily_check_ins', checked)
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="anonymous-reporting">Anonymous Reporting</Label>
-                  <p className="text-sm text-gray-500">Allow anonymous incident reporting</p>
+                <div className="flex items-start justify-between gap-3 py-2">
+                  <div className="flex-1 min-w-0">
+                    <Label htmlFor="anonymous-reporting" className="text-sm font-medium cursor-pointer">Anonymous Reporting</Label>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Allow anonymous incident reporting</p>
+                  </div>
+                  <Switch
+                    id="anonymous-reporting"
+                    checked={settings.wellbeing_settings.anonymous_reporting}
+                    onCheckedChange={(checked: boolean) => 
+                      updateSettings('wellbeing_settings.anonymous_reporting', checked)
+                    }
+                    className="flex-shrink-0"
+                  />
                 </div>
-                <Switch
-                  id="anonymous-reporting"
-                  checked={settings.wellbeing_settings.anonymous_reporting}
-                  onCheckedChange={(checked: boolean) => 
-                    updateSettings('wellbeing_settings.anonymous_reporting', checked)
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="crisis-intervention">Crisis Intervention</Label>
-                  <p className="text-sm text-gray-500">Enable automatic crisis intervention protocols</p>
+                <div className="flex items-start justify-between gap-3 py-2">
+                  <div className="flex-1 min-w-0">
+                    <Label htmlFor="crisis-intervention" className="text-sm font-medium cursor-pointer">
+                      <Shield className="h-3 w-3 inline mr-1 text-red-500" />
+                      Crisis Intervention
+                    </Label>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Enable automatic crisis intervention protocols</p>
+                  </div>
+                  <Switch
+                    id="crisis-intervention"
+                    checked={settings.wellbeing_settings.crisis_intervention}
+                    onCheckedChange={(checked: boolean) => 
+                      updateSettings('wellbeing_settings.crisis_intervention', checked)
+                    }
+                    className="flex-shrink-0"
+                  />
                 </div>
-                <Switch
-                  id="crisis-intervention"
-                  checked={settings.wellbeing_settings.crisis_intervention}
-                  onCheckedChange={(checked: boolean) => 
-                    updateSettings('wellbeing_settings.crisis_intervention', checked)
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="counselor-access">Counselor Access</Label>
-                  <p className="text-sm text-gray-500">Allow school counselors to access wellbeing data</p>
+                <div className="flex items-start justify-between gap-3 py-2">
+                  <div className="flex-1 min-w-0">
+                    <Label htmlFor="counselor-access" className="text-sm font-medium cursor-pointer">Counselor Access</Label>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Allow school counselors to access wellbeing data</p>
+                  </div>
+                  <Switch
+                    id="counselor-access"
+                    checked={settings.wellbeing_settings.counselor_access}
+                    onCheckedChange={(checked: boolean) => 
+                      updateSettings('wellbeing_settings.counselor_access', checked)
+                    }
+                    className="flex-shrink-0"
+                  />
                 </div>
-                <Switch
-                  id="counselor-access"
-                  checked={settings.wellbeing_settings.counselor_access}
-                  onCheckedChange={(checked: boolean) => 
-                    updateSettings('wellbeing_settings.counselor_access', checked)
-                  }
-                />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Academic Year Settings */}
-        <Card className="mt-8 bg-white border border-gray-200 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-gray-900">Academic Year</CardTitle>
-            <CardDescription className="text-gray-600">
+        {/* Academic Year Settings - Mobile Optimized */}
+        <Card className="mt-6 sm:mt-8 bg-white border border-gray-200 shadow-sm">
+          <CardHeader className="pb-4 sm:pb-6">
+            <CardTitle className="flex items-center text-base sm:text-lg font-semibold text-gray-900">
+              <Calendar className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-600 flex-shrink-0" />
+              <span className="truncate">Academic Year</span>
+            </CardTitle>
+            <CardDescription className="text-sm sm:text-base text-gray-600">
               Set the academic year dates for proper data organization
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               <div>
-                <Label htmlFor="academic-start">Academic Year Start</Label>
+                <Label htmlFor="academic-start" className="text-sm font-medium">Academic Year Start</Label>
                 <Input
                   id="academic-start"
                   type="date"
                   value={settings.academic_year_start}
                   onChange={(e) => updateSettings('academic_year_start', e.target.value)}
-                  className="mt-1"
+                  className="mt-1.5 text-sm sm:text-base"
                 />
               </div>
               <div>
-                <Label htmlFor="academic-end">Academic Year End</Label>
+                <Label htmlFor="academic-end" className="text-sm font-medium">Academic Year End</Label>
                 <Input
                   id="academic-end"
                   type="date"
                   value={settings.academic_year_end}
                   onChange={(e) => updateSettings('academic_year_end', e.target.value)}
-                  className="mt-1"
+                  className="mt-1.5 text-sm sm:text-base"
                 />
               </div>
-              <div>
-                <Label htmlFor="timezone">Timezone</Label>
+              <div className="sm:col-span-2 lg:col-span-1">
+                <Label htmlFor="timezone" className="text-sm font-medium">Timezone</Label>
                 <Input
                   id="timezone"
                   value={settings.timezone}
                   onChange={(e) => updateSettings('timezone', e.target.value)}
-                  className="mt-1"
+                  className="mt-1.5 text-sm sm:text-base"
                   placeholder="America/New_York"
                 />
+                <p className="text-xs text-gray-500 mt-1">e.g., America/New_York, Europe/London</p>
               </div>
             </div>
           </CardContent>

@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get user profile with school info
+    // Get user profile with school info and actual class name
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select(`
@@ -100,6 +100,7 @@ export async function GET(request: NextRequest) {
         last_name,
         role,
         school_id,
+        school_code,
         avatar_url,
         xp,
         gems,
@@ -117,27 +118,140 @@ export async function GET(request: NextRequest) {
         pet_happiness,
         pet_name,
         created_at,
-        updated_at,
-        schools (
-          id,
-          name,
-          school_code,
-          address,
-          phone,
-          email
-        )
+        updated_at
       `)
       .eq('user_id', user.id)
       .single()
 
-    if (profileError || !profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+    if (profileError) {
+      console.error('Profile fetch error:', profileError)
+      return NextResponse.json(
+        { message: 'Profile not found' },
+        { status: 404 }
+      )
     }
+
+    // Get actual class name - always try to resolve from database
+    let actualClassName = profile.class_name
+    let gradeLevel = profile.grade_level
+    
+    console.log('Original profile class_name:', profile.class_name)
+    console.log('User ID:', user.id)
+    
+    // Method 1: Try to get class info from student_class_assignments table
+    const { data: studentClass, error: studentClassError } = await supabase
+      .from('student_class_assignments')
+      .select(`
+        classes (
+          id,
+          class_name,
+          class_code,
+          subject,
+          grade_levels (
+            grade_level
+          )
+        )
+      `)
+      .eq('student_id', user.id)
+      .eq('is_active', true)
+      .single()
+    
+    console.log('Student class assignment result:', { studentClass, studentClassError })
+    
+    if (!studentClassError && studentClass?.classes) {
+      const classInfo = Array.isArray(studentClass.classes) ? studentClass.classes[0] : studentClass.classes
+      if (classInfo) {
+        actualClassName = classInfo.class_name
+        if (classInfo.grade_levels && classInfo.grade_levels.length > 0) {
+          gradeLevel = classInfo.grade_levels[0].grade_level
+        }
+        console.log('Found class from student_class_assignments:', actualClassName)
+      }
+    } 
+    
+    // Method 2: If class_name looks like a UUID, try direct lookup
+    if (profile.class_name && (
+      profile.class_name.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i) ||
+      profile.class_name === '55ac5f2c-7e1c-420f-ac92-4bfc1693a8ff'
+    )) {
+      console.log('Class name appears to be UUID, fetching from classes table')
+      
+      const { data: classData, error: classError } = await supabase
+        .from('classes')
+        .select(`
+          class_name,
+          class_code,
+          subject,
+          grade_level_id,
+          grade_levels (
+            grade_level
+          )
+        `)
+        .eq('id', profile.class_name)
+        .single()
+      
+      console.log('Direct class lookup result:', { classData, classError })
+      
+      if (!classError && classData) {
+        actualClassName = classData.class_name
+        if (classData.grade_levels && classData.grade_levels.length > 0) {
+          gradeLevel = classData.grade_levels[0].grade_level
+        }
+        console.log('Found class from direct lookup:', actualClassName)
+      } else {
+        // Method 3: Try without JOIN to grade_levels
+        const { data: simpleClassData, error: simpleClassError } = await supabase
+          .from('classes')
+          .select('class_name, class_code, subject')
+          .eq('id', profile.class_name)
+          .single()
+        
+        console.log('Simple class lookup result:', { simpleClassData, simpleClassError })
+        
+        if (!simpleClassError && simpleClassData) {
+          actualClassName = simpleClassData.class_name
+          console.log('Found class from simple lookup:', actualClassName)
+        }
+      }
+    }
+    
+    console.log('Final actualClassName:', actualClassName)
+
+    // Get school info using school_id from profile
+    let schoolData = null
+    if (profile.school_id) {
+      const { data: school, error: schoolError } = await supabase
+        .from('schools')
+        .select('id, name, school_code, address, phone, email')
+        .eq('id', profile.school_id)
+        .single()
+
+      if (!schoolError && school) {
+        schoolData = school
+      }
+    } else if (profile.school_code) {
+      // Fallback to school_code if school_id is not available
+      const { data: school, error: schoolError } = await supabase
+        .from('schools')
+        .select('id, name, school_code, address, phone, email')
+        .eq('school_code', profile.school_code)
+        .single()
+
+      if (!schoolError && school) {
+        schoolData = school
+        // Update profile with school_id for future use
+        await supabase
+          .from('profiles')
+          .update({ school_id: school.id })
+          .eq('user_id', user.id)
+      }
+    }
+
 
     // Get today's date
     const today = new Date().toISOString().split('T')[0]
 
-    // Get today's mood
+    // Get today's mood from mood_tracking table
     const { data: todayMood } = await supabase
       .from('mood_tracking')
       .select('*')
@@ -145,12 +259,70 @@ export async function GET(request: NextRequest) {
       .eq('date', today)
       .single()
 
-    // Get today's quests
-    const { data: todayQuests } = await supabase
-      .from('daily_quests')
+    // If no mood_tracking table exists, fall back to profile current_mood
+    let moodData = null
+    if (todayMood) {
+      moodData = {
+        current: todayMood.mood,
+        energy: 50,
+        stress: 30,
+        lastUpdated: todayMood.created_at
+      }
+    } else {
+      // Check if user has current_mood in profile
+      moodData = {
+        current: profile.current_mood || '',
+        energy: 50,
+        stress: 30,
+        lastUpdated: profile.updated_at || ''
+      }
+    }
+
+    // Check quest completion status by looking at actual feature tables
+    
+    // Check gratitude quest - completed if there's an entry today
+    const { data: todayGratitude } = await supabase
+      .from('gratitude_entries')
+      .select('id')
+      .eq('user_id', user.id)
+      .gte('created_at', `${today}T00:00:00.000Z`)
+      .lt('created_at', `${today}T23:59:59.999Z`)
+      .limit(1)
+
+    // Check courage quest - completed if there's an entry today
+    const { data: todayCourage } = await supabase
+      .from('courage_log')
+      .select('id')
+      .eq('user_id', user.id)
+      .gte('created_at', `${today}T00:00:00.000Z`)
+      .lt('created_at', `${today}T23:59:59.999Z`)
+      .limit(1)
+
+    // Check kindness quest - completed if there's an entry today
+    const { data: todayKindness } = await supabase
+      .from('kindness_counter')
+      .select('last_updated')
+      .eq('user_id', user.id)
+      .gte('last_updated', `${today}T00:00:00.000Z`)
+      .lt('last_updated', `${today}T23:59:59.999Z`)
+      .limit(1)
+
+    // Check breathing quest - completed if there's a session today
+    const { data: todayBreathing } = await supabase
+      .from('breathing_sessions')
+      .select('id')
+      .eq('user_id', user.id)
+      .gte('created_at', `${today}T00:00:00.000Z`)
+      .lt('created_at', `${today}T23:59:59.999Z`)
+      .limit(1)
+
+    // Check habit tracker for today (water and sleep)
+    const { data: todayHabits } = await supabase
+      .from('habit_tracker')
       .select('*')
       .eq('user_id', user.id)
       .eq('date', today)
+      .single()
 
     // Get recent gratitude entries (last 3)
     const { data: gratitudeEntries } = await supabase
@@ -168,14 +340,6 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(3)
 
-    // Get habit tracker for today
-    const { data: todayHabits } = await supabase
-      .from('habit_tracker')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('date', today)
-      .single()
-
     // Get kindness counter
     const { data: kindnessData } = await supabase
       .from('kindness_counter')
@@ -191,27 +355,33 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(5)
 
-    // Calculate quest completion stats
+    // Calculate quest completion stats based on actual data
     const questTypes = ['gratitude', 'kindness', 'courage', 'breathing', 'water', 'sleep']
-    const completedQuests = todayQuests?.filter((q: any) => q.completed) || []
-    const questProgress = {
-      completed: completedQuests.length,
-      total: questTypes.length,
-      percentage: Math.round((completedQuests.length / questTypes.length) * 100)
+    
+    // Determine completion status for each quest
+    const questsStatus = {
+      gratitude: todayGratitude && todayGratitude.length > 0,
+      kindness: todayKindness && todayKindness.length > 0,
+      courage: todayCourage && todayCourage.length > 0,
+      breathing: todayBreathing && todayBreathing.length > 0,
+      water: todayHabits && todayHabits.water_glasses && todayHabits.water_glasses >= 6,
+      sleep: todayHabits && todayHabits.sleep_hours && todayHabits.sleep_hours >= 7
     }
 
-    // Create quests status object
-    const questsStatus = questTypes.reduce((acc, type) => {
-      const quest = todayQuests?.find((q: any) => q.quest_type === type)
-      acc[type] = quest?.completed || false
-      return acc
-    }, {} as Record<string, boolean>)
+    // Count completed quests
+    const completedCount = Object.values(questsStatus).filter(Boolean).length
+    
+    const questProgress = {
+      completed: completedCount,
+      total: questTypes.length,
+      percentage: Math.round((completedCount / questTypes.length) * 100)
+    }
 
     // Calculate streak data
     const streakData = {
       current: profile.streak_days || 0,
       best: profile.streak_days || 0, // You might want to track this separately
-      lastCompleted: completedQuests.length > 0 ? today : ""
+      lastCompleted: completedCount > 0 ? today : ""
     }
 
     // Calculate additional stats for enhanced dashboard
@@ -222,18 +392,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       profile: {
         ...profile,
-        school: profile.schools || null
+        class_name: actualClassName,
+        grade_level: gradeLevel,
+        school_id: profile.school_id || schoolData?.id,
+        school: schoolData
       },
-      mood: todayMood || {
-        current: '',
-        energy: 50,
-        stress: 30,
-        lastUpdated: ''
-      },
+      mood: moodData,
       quests: {
         status: questsStatus,
         progress: questProgress,
-        data: todayQuests || [],
+        data: [],
         streakData
       },
       activities: {

@@ -21,22 +21,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // First check if any schools exist at all
-    const { data: allSchools, error: countError } = await supabaseAdmin
-      .from('schools')
-      .select('school_code, name')
-      .limit(5)
-
-    console.log('All schools in database:', allSchools)
-    console.log('Count query error:', countError)
-
     const { data: school, error } = await supabaseAdmin
       .from('schools')
-      .select('name')
+      .select('id, name')
       .eq('school_code', schoolId)
       .single()
-
-    console.log('School query result:', { school, error })
 
     if (error) {
       console.error('Database error:', error)
@@ -61,6 +50,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       schoolName: school.name,
+      schoolUuid: school.id,
       verified: true
     })
   } catch (error) {

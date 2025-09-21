@@ -23,12 +23,32 @@ export async function GET(request: NextRequest) {
       query = query.eq('role', role)
     }
 
-    const { data: users, error } = await query.order('created_at', { ascending: false })
+    const { data: profiles, error } = await query.order('created_at', { ascending: false })
 
     if (error) {
       console.error('Error fetching users:', error)
       return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 })
     }
+
+    // Get emails from auth.users table
+    const userIds = profiles?.map(profile => profile.id) || []
+    const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers()
+    
+    if (authError) {
+      console.error('Error fetching auth users:', authError)
+      return NextResponse.json({ error: 'Failed to fetch user emails' }, { status: 500 })
+    }
+
+    // Merge profile data with email from auth users
+    const users = profiles?.map(profile => {
+      const authUser = authUsers.users.find(user => user.id === profile.user_id)
+      return {
+        ...profile,
+        email: authUser?.email || 'No email'
+      }
+    })
+
+    console.log('🔍 Users API - Returning user IDs:', users?.map(u => ({ id: u.id, user_id: u.user_id, name: `${u.first_name} ${u.last_name}` })))
 
     return NextResponse.json({ users })
   } catch (error) {

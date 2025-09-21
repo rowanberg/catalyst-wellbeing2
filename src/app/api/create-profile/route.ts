@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, firstName, lastName, role, schoolCode, email, password } = await request.json()
+    const { userId, firstName, lastName, role, schoolCode, email, password, gradeLevel, className } = await request.json()
 
     let user = null
     let shouldCreateUser = false
@@ -55,18 +55,29 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the user profile
+    const profileData: any = {
+      user_id: user.id,
+      first_name: firstName,
+      last_name: lastName,
+      role,
+      school_id: school.id,
+      school_code: schoolCode,
+      xp: 0,
+      gems: 0,
+      level: 1,
+    }
+
+    // Add student-specific fields if provided
+    if (gradeLevel) {
+      profileData.grade_level = gradeLevel
+    }
+    if (className) {
+      profileData.class_name = className
+    }
+
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .insert({
-        user_id: user.id,
-        first_name: firstName,
-        last_name: lastName,
-        role,
-        school_id: school.id,
-        xp: 0,
-        gems: 0,
-        level: 1,
-      })
+      .insert(profileData)
       .select()
       .single()
 
@@ -76,6 +87,49 @@ export async function POST(request: NextRequest) {
         { message: `Failed to create profile: ${profileError.message}` },
         { status: 500 }
       )
+    }
+
+    // If this is a student with a selected class, assign them to the class
+    if (role === 'student' && className && gradeLevel) {
+      try {
+        // className now contains the class ID (UUID) from the frontend
+        const classId = className;
+        
+        // Verify the class exists and belongs to the school
+        const { data: classData, error: classError } = await supabaseAdmin
+          .from('classes')
+          .select('id, class_name')
+          .eq('school_id', school.id)
+          .eq('id', classId)
+          .single()
+
+        if (classError) {
+          console.error('Class lookup error:', classError)
+          // Don't fail the entire registration if class assignment fails
+          console.warn(`Warning: Could not find class with ID "${classId}" for student ${firstName} ${lastName}`)
+        } else if (classData) {
+          // Create student class assignment
+          const { error: assignmentError } = await supabaseAdmin
+            .from('student_class_assignments')
+            .insert({
+              student_id: user.id,
+              class_id: classData.id,
+              school_id: school.id,
+              is_active: true
+            })
+
+          if (assignmentError) {
+            console.error('Student class assignment error:', assignmentError)
+            // Don't fail the entire registration if class assignment fails
+            console.warn(`Warning: Could not assign student ${firstName} ${lastName} to class "${classData.class_name}"`)
+          } else {
+            console.log(`Successfully assigned student ${firstName} ${lastName} to class "${classData.class_name}"`)
+          }
+        }
+      } catch (classAssignmentError) {
+        console.error('Error during class assignment:', classAssignmentError)
+        // Continue with successful profile creation even if class assignment fails
+      }
     }
 
     return NextResponse.json({ 

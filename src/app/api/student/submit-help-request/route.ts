@@ -63,18 +63,26 @@ export async function POST(request: NextRequest) {
     const studentSchool = studentProfile.schools
     const schoolEncryptionKey = studentSchool.messaging_encryption_key
 
-    // Encrypt the message using school's encryption key
-    const encryptedMessage = encryptMessage(message, schoolEncryptionKey)
+    // Encrypt the message using school's encryption key (if key exists)
+    let encryptedMessage = null
+    if (schoolEncryptionKey) {
+      try {
+        encryptedMessage = encryptMessage(message, schoolEncryptionKey)
+      } catch (error) {
+        console.error('Encryption failed, proceeding without encryption:', error)
+      }
+    }
 
-    // Create help request with encrypted message
+    // Create help request with encrypted message and school_code
     const { data: helpRequest, error: helpRequestError } = await supabaseAdmin
       .from('help_requests')
       .insert({
         student_id: user.id,
         school_id: studentSchool.id,
+        school_code: studentProfile.school_code,
         message: message, // Store plain text for fallback
         encrypted_message: encryptedMessage,
-        school_encryption_key: schoolEncryptionKey,
+        school_encryption_key: schoolEncryptionKey || null,
         urgency: urgency,
         status: 'pending'
       })

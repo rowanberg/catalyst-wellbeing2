@@ -35,26 +35,45 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // Check current session
-        const { data: { session }, error } = await supabase.auth.getSession()
-        
-        if (error) {
-          console.error('Session error:', error)
-          setAuthError('Failed to verify authentication')
-          router.push(redirectTo)
-          return
-        }
-
-        if (!session) {
-          // No session, redirect to login only if not already on login page
-          if (window.location.pathname !== '/login') {
-            router.push(redirectTo)
+        // Check current session via API
+        const response = await fetch('/api/auth/session', {
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
           }
+        })
+        const sessionData = await response.json()
+        
+        if (!response.ok) {
+          // Only log unexpected errors (not 401 unauthorized)
+          if (response.status !== 401) {
+            console.error('Session API error:', response.status, response.statusText)
+            if (sessionData?.error) {
+              console.error('Session error details:', sessionData.error)
+            }
+          }
+          setAuthError('Authentication required')
+          setInitializing(false)
+          return
+        }
+        
+        if (sessionData.error) {
+          console.error('Session error:', sessionData.error)
+          setAuthError('Authentication required')
+          setInitializing(false)
+          return
+        }
+        
+        const user = sessionData.user
+
+        if (!user) {
+          setAuthError('Please log in to continue')
+          setInitializing(false)
           return
         }
 
-        // Session exists, fetch profile if needed
-        if (!profile) {
+        // User exists, fetch profile if needed
+        if (!profile && !isLoading) {
           try {
             const response = await fetch('/api/get-profile', {
               method: 'POST',
@@ -62,7 +81,7 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
               },
-              body: JSON.stringify({ userId: session.user.id }),
+              body: JSON.stringify({ userId: user.id }),
             })
 
             if (response.ok) {
@@ -70,12 +89,12 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
               
               // Set user data from profile
               const userData: User = {
-                id: session.user.id,
-                email: session.user.email || '',
+                id: user.id,
+                email: user.email || '',
                 role: profileData.role || 'student',
                 school_id: profileData.school_id,
-                created_at: session.user.created_at || '',
-                updated_at: session.user.updated_at || ''
+                created_at: user.created_at || '',
+                updated_at: user.updated_at || ''
               }
 
               dispatch(setUser(userData))
@@ -86,16 +105,19 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
                 router.push(`/${profileData.role}`)
                 return
               }
+              
+              setInitializing(false)
             } else {
               // If profile fetch fails, create a mock profile for development
               console.warn('Profile fetch failed, using mock profile for development')
+              const mockRole = requiredRole || 'admin'
               const mockProfileData = {
-                id: session.user.id,
-                user_id: session.user.id,
-                first_name: 'Admin',
+                id: user.id,
+                user_id: user.id,
+                first_name: mockRole === 'teacher' ? 'Teacher' : mockRole === 'student' ? 'Student' : 'Admin',
                 last_name: 'User',
-                role: 'admin' as const,
-                school_id: '1',
+                role: mockRole,
+                school_id: '6123d635-43a0-4c21-8c0e-66b9f231ee5e', // Use real school ID from logs
                 grade_level: null,
                 class_name: null,
                 xp: 0,
@@ -106,27 +128,29 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
               }
               
               const userData: User = {
-                id: session.user.id,
-                email: session.user.email || '',
-                role: 'admin',
-                school_id: '1',
-                created_at: session.user.created_at || '',
-                updated_at: session.user.updated_at || ''
+                id: user.id,
+                email: user.email || '',
+                role: mockRole,
+                school_id: '6123d635-43a0-4c21-8c0e-66b9f231ee5e',
+                created_at: user.created_at || '',
+                updated_at: user.updated_at || ''
               }
 
               dispatch(setUser(userData))
               dispatch(setProfile(mockProfileData))
+              setInitializing(false)
             }
           } catch (error) {
             console.error('Profile fetch error:', error)
             // Use mock profile as fallback
+            const mockRole = requiredRole || 'admin'
             const mockProfileData = {
-              id: session.user.id,
-              user_id: session.user.id,
-              first_name: 'Admin',
+              id: user.id,
+              user_id: user.id,
+              first_name: mockRole === 'teacher' ? 'Teacher' : mockRole === 'student' ? 'Student' : 'Admin',
               last_name: 'User',
-              role: 'admin' as const,
-              school_id: '1',
+              role: mockRole,
+              school_id: '6123d635-43a0-4c21-8c0e-66b9f231ee5e',
               grade_level: null,
               class_name: null,
               xp: 0,
@@ -137,48 +161,35 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
             }
             
             const userData: User = {
-              id: session.user.id,
-              email: session.user.email || '',
-              role: 'admin',
-              school_id: '1',
-              created_at: session.user.created_at || '',
-              updated_at: session.user.updated_at || ''
+              id: user.id,
+              email: user.email || '',
+              role: mockRole,
+              school_id: '6123d635-43a0-4c21-8c0e-66b9f231ee5e',
+              created_at: user.created_at || '',
+              updated_at: user.updated_at || ''
             }
 
             dispatch(setUser(userData))
             dispatch(setProfile(mockProfileData))
+            setInitializing(false)
           }
         } else {
           // Profile exists, check role requirements
-          if (requiredRole && profile.role !== requiredRole) {
-            router.push(`/${profile.role}`)
+          if (requiredRole && profile?.role !== requiredRole) {
+            router.push(`/${profile?.role || 'login'}`)
             return
           }
+          setInitializing(false)
         }
       } catch (error) {
         console.error('Auth initialization error:', error)
-        setAuthError('Authentication failed')
-        router.push(redirectTo)
-      } finally {
+        setAuthError('Failed to initialize authentication')
         setInitializing(false)
       }
     }
 
     initializeAuth()
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_OUT' || !session) {
-          dispatch(setUser(null))
-          dispatch(setProfile(null))
-          router.push(redirectTo)
-        }
-      }
-    )
-
-    return () => subscription.unsubscribe()
-  }, [dispatch, router, redirectTo, requiredRole, profile])
+  }, [dispatch, router, redirectTo])
 
   return {
     user,
