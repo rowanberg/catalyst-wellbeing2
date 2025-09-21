@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
@@ -24,6 +24,7 @@ export async function GET(
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
+    const resolvedParams = await params
     const { data: badge, error } = await supabase
       .from('quest_badges')
       .select(`
@@ -36,7 +37,7 @@ export async function GET(
           reason
         )
       `)
-      .eq('id', params.id)
+      .eq('id', resolvedParams.id)
       .eq('school_id', profile.school_id)
       .single()
 
@@ -53,7 +54,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
@@ -74,6 +75,7 @@ export async function PUT(
     }
 
     const body = await request.json()
+    const resolvedParams = await params
 
     if (!body.name || !body.description) {
       return NextResponse.json({ error: 'Name and description are required' }, { status: 400 })
@@ -101,7 +103,7 @@ export async function PUT(
     const { data: badge, error } = await supabase
       .from('quest_badges')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', resolvedParams.id)
       .eq('school_id', profile.school_id)
       .select()
       .single()
@@ -124,7 +126,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
@@ -144,10 +146,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
+    const resolvedParams = await params
     const { data: existingBadge } = await supabase
       .from('quest_badges')
       .select('id')
-      .eq('id', params.id)
+      .eq('id', resolvedParams.id)
       .eq('school_id', profile.school_id)
       .single()
 
@@ -158,7 +161,7 @@ export async function DELETE(
     const { error } = await supabase
       .from('quest_badges')
       .delete()
-      .eq('id', params.id)
+      .eq('id', resolvedParams.id)
       .eq('school_id', profile.school_id)
 
     if (error) {

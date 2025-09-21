@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
@@ -24,6 +24,7 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
+    const resolvedParams = await params
     const { data: incident, error } = await supabase
       .from('safety_incidents')
       .select(`
@@ -58,7 +59,7 @@ export async function GET(
           )
         )
       `)
-      .eq('id', params.id)
+      .eq('id', resolvedParams.id)
       .eq('school_id', profile.school_id)
       .single()
 
@@ -75,7 +76,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
@@ -95,6 +96,8 @@ export async function PUT(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
+    const resolvedParams = await params
+    const incidentId = resolvedParams.id
     const body = await request.json()
 
     const updateData: any = {
@@ -126,7 +129,7 @@ export async function PUT(
     const { data: incident, error } = await supabase
       .from('safety_incidents')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', resolvedParams.id)
       .eq('school_id', profile.school_id)
       .select(`
         *,
@@ -161,7 +164,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
@@ -181,10 +184,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
+    const resolvedParams = await params
     const { error } = await supabase
       .from('safety_incidents')
       .delete()
-      .eq('id', params.id)
+      .eq('id', resolvedParams.id)
       .eq('school_id', profile.school_id)
 
     if (error) {

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
@@ -24,6 +24,7 @@ export async function GET(
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
+    const resolvedParams = await params
     const { data: quest, error } = await supabase
       .from('quests')
       .select(`
@@ -37,7 +38,7 @@ export async function GET(
           progress
         )
       `)
-      .eq('id', params.id)
+      .eq('id', resolvedParams.id)
       .eq('school_id', profile.school_id)
       .single()
 
@@ -54,7 +55,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
@@ -75,6 +76,7 @@ export async function PUT(
     }
 
     const body = await request.json()
+    const resolvedParams = await params
 
     // Validate required fields
     if (!body.title || !body.description) {
@@ -109,7 +111,7 @@ export async function PUT(
     const { data: quest, error } = await supabase
       .from('quests')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', resolvedParams.id)
       .eq('school_id', profile.school_id)
       .select()
       .single()
@@ -132,7 +134,7 @@ export async function PUT(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
@@ -142,6 +144,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const resolvedParams = await params
     const { data: profile } = await supabase
       .from('profiles')
       .select('role, school_id')
@@ -160,7 +163,7 @@ export async function PATCH(
         ...body,
         updated_at: new Date().toISOString()
       })
-      .eq('id', params.id)
+      .eq('id', resolvedParams.id)
       .eq('school_id', profile.school_id)
       .select()
       .single()
@@ -183,7 +186,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
@@ -193,6 +196,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const resolvedParams = await params
     const { data: profile } = await supabase
       .from('profiles')
       .select('role, school_id')
@@ -207,7 +211,7 @@ export async function DELETE(
     const { data: existingQuest } = await supabase
       .from('quests')
       .select('id')
-      .eq('id', params.id)
+      .eq('id', resolvedParams.id)
       .eq('school_id', profile.school_id)
       .single()
 
@@ -219,7 +223,7 @@ export async function DELETE(
     const { error } = await supabase
       .from('quests')
       .delete()
-      .eq('id', params.id)
+      .eq('id', resolvedParams.id)
       .eq('school_id', profile.school_id)
 
     if (error) {
