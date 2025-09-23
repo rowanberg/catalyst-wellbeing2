@@ -194,6 +194,7 @@ const StudentDashboardContent = () => {
   const { addToast } = useToast()
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<any>(null)
+  const [schoolInfo, setSchoolInfo] = useState<any>(null)
   
   // State for dashboard components
   const [stats, setStats] = useState<DashboardStats>({
@@ -384,16 +385,28 @@ const StudentDashboardContent = () => {
     await fetchAnnouncementsWithSchoolId(profile.school_id)
   }, [profile?.school_id, fetchAnnouncementsWithSchoolId])
 
+  // Fetch school information for footer
+  const fetchSchoolInfo = useCallback(async () => {
+    try {
+      const response = await fetch('/api/student/school-info')
+      if (response.ok) {
+        const data = await response.json()
+        console.log('School info API response:', data)
+        setSchoolInfo(data.schoolInfo)
+      } else {
+        console.log('Failed to fetch school info:', response.status)
+      }
+    } catch (error) {
+      console.error('Error fetching school info:', error)
+    }
+  }, [])
+
   // Fetch dashboard data
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/student/dashboard', {
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
-      })
+      
+      const response = await fetch('/api/student/dashboard')
       if (response.ok) {
         const data = await response.json()
         console.log('Dashboard API response:', data)
@@ -496,7 +509,8 @@ const StudentDashboardContent = () => {
 
   useEffect(() => {
     fetchDashboardData()
-  }, [fetchDashboardData])
+    fetchSchoolInfo()
+  }, [])
 
   // Quest toggle handler
   const handleQuestToggle = async (questType: keyof QuestStatus) => {
@@ -2122,7 +2136,7 @@ const StudentDashboardContent = () => {
                 </div>
               </div>
               <h3 className="text-2xl sm:text-3xl font-bold mb-2">
-                Student of {profile?.school?.name || 'Your School'}
+                Student of {schoolInfo?.name || profile?.school?.name || 'Your School'}
               </h3>
               <p className="text-white/80 text-sm sm:text-base">
                 Your educational journey continues here
@@ -2147,7 +2161,7 @@ const StudentDashboardContent = () => {
                 <h4 className="font-semibold text-white">School Address</h4>
               </div>
               <p className="text-white/80 text-sm leading-relaxed">
-                {profile?.school?.address || "123 Education Street, Learning City, LC 12345"}
+                {schoolInfo?.address || profile?.school?.address || "Address not available"}
               </p>
             </motion.div>
 
@@ -2166,8 +2180,11 @@ const StudentDashboardContent = () => {
                 <h4 className="font-semibold text-white">Contact Info</h4>
               </div>
               <div className="space-y-2 text-sm text-white/80">
-                <p>📞 {profile?.school?.phone || "(555) 123-4567"}</p>
-                <p>📧 {profile?.school?.email || "info@school.edu"}</p>
+                <p>📞 {schoolInfo?.phone || profile?.school?.phone || "Phone not available"}</p>
+                <p>📧 {schoolInfo?.email || profile?.school?.email || "Email not available"}</p>
+                {schoolInfo?.website && (
+                  <p>🌐 <a href={schoolInfo.website} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">{schoolInfo.website}</a></p>
+                )}
               </div>
             </motion.div>
 
@@ -2186,9 +2203,13 @@ const StudentDashboardContent = () => {
                 <h4 className="font-semibold text-white">School Hours</h4>
               </div>
               <div className="space-y-1 text-sm text-white/80">
-                <p>Monday - Friday</p>
-                <p className="font-medium">8:00 AM - 3:30 PM</p>
-                <p className="text-xs text-white/60">Office: 7:30 AM - 4:00 PM</p>
+                <p>{schoolInfo?.schoolHours?.operatingDays?.join(' - ') || 'Monday - Friday'}</p>
+                <p className="font-medium">
+                  {schoolInfo?.schoolHours?.start ? `${schoolInfo.schoolHours.start} - ${schoolInfo.schoolHours.end}` : '8:00 AM - 3:30 PM'}
+                </p>
+                <p className="text-xs text-white/60">
+                  Office: {schoolInfo?.schoolHours?.officeStart ? `${schoolInfo.schoolHours.officeStart} - ${schoolInfo.schoolHours.officeEnd}` : '7:30 AM - 4:00 PM'}
+                </p>
               </div>
             </motion.div>
 
@@ -2207,44 +2228,37 @@ const StudentDashboardContent = () => {
                 <h4 className="font-semibold text-white">Emergency</h4>
               </div>
               <div className="space-y-1 text-sm text-white/80">
-                <p>🚨 Emergency: 911</p>
-                <p>🏥 School Nurse: Ext. 123</p>
-                <p>👮 Security: Ext. 456</p>
+                <p>🚨 Emergency: {schoolInfo?.emergency?.general || '911'}</p>
+                <p>🏥 School Nurse: {schoolInfo?.emergency?.nurse || 'Ext. 123'}</p>
+                <p>👮 Security: {schoolInfo?.emergency?.security || 'Ext. 456'}</p>
+                {schoolInfo?.emergency?.contact && (
+                  <p>📞 {schoolInfo.emergency.contact}: {schoolInfo.emergency.contactPhone}</p>
+                )}
               </div>
             </motion.div>
           </div>
 
-          {/* Quick Links */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
-            viewport={{ once: true }}
-            className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 mb-8"
-          >
-            <h4 className="text-lg font-semibold text-white mb-4 text-center">Quick Links</h4>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              {[
-                { icon: BookOpen, label: 'Library', href: '/student/library' },
-                { icon: Calendar, label: 'Schedule', href: '/student/schedule' },
-                { icon: Trophy, label: 'Achievements', href: '/student/achievements' },
-                { icon: HelpCircle, label: 'Help Center', href: '/student/help' },
-                { icon: MessageCircle, label: 'Support', href: '/student/messaging' },
-                { icon: Bell, label: 'Notifications', href: '/student/announcements' }
-              ].map((link, index) => (
-                <motion.button
-                  key={link.label}
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="flex flex-col items-center p-3 bg-white/10 hover:bg-white/20 rounded-lg transition-all duration-200 border border-white/20 hover:border-white/40"
-                  onClick={() => window.location.href = link.href}
-                >
-                  <link.icon className="w-5 h-5 text-white mb-2" />
-                  <span className="text-xs text-white/90 font-medium">{link.label}</span>
-                </motion.button>
-              ))}
-            </div>
-          </motion.div>
+          {/* School Mission/Motto Section */}
+          {schoolInfo?.motto && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              viewport={{ once: true }}
+              className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 mb-8 text-center"
+            >
+              <div className="flex items-center justify-center mb-4">
+                <div className="p-3 bg-yellow-500/20 rounded-2xl backdrop-blur-sm">
+                  <Star className="w-6 h-6 text-yellow-400" />
+                </div>
+              </div>
+              <h4 className="text-lg font-semibold text-white mb-3">School Motto</h4>
+              <p className="text-white/90 font-medium text-lg mb-2">"{schoolInfo.motto}"</p>
+              {schoolInfo.mission && (
+                <p className="text-white/70 text-sm leading-relaxed">{schoolInfo.mission}</p>
+              )}
+            </motion.div>
+          )}
 
           {/* Footer Bottom */}
           <motion.div
@@ -2263,7 +2277,7 @@ const StudentDashboardContent = () => {
               </div>
               
               <div className="text-sm text-white/60">
-                <p>© 2024 {profile?.school?.name || 'Your School'}. All rights reserved.</p>
+                <p>© 2024 {schoolInfo?.name || profile?.school?.name || 'Your School'}. All rights reserved.</p>
               </div>
               
               <div className="flex items-center space-x-4 text-sm text-white/80">

@@ -23,7 +23,8 @@ import {
   Bell,
   HelpCircle,
   Activity,
-  Bot
+  Bot,
+  Clock
 } from 'lucide-react'
 import { PageLoader } from '@/components/ui/loading-spinner'
 import { AuthGuard } from '@/components/auth/auth-guard'
@@ -40,6 +41,14 @@ interface SchoolInfo {
   created_at: string
 }
 
+interface SchoolDetails {
+  setup_completed: boolean
+  school_name: string
+  primary_email: string
+  primary_phone: string
+  street_address: string
+}
+
 interface SchoolStats {
   totalStudents: number
   totalTeachers: number
@@ -53,6 +62,7 @@ interface SchoolStats {
 
 function AdminDashboardContent() {
   const [schoolInfo, setSchoolInfo] = useState<SchoolInfo | null>(null)
+  const [schoolDetails, setSchoolDetails] = useState<SchoolDetails | null>(null)
   const [schoolStats, setSchoolStats] = useState<SchoolStats>({
     totalStudents: 0,
     totalTeachers: 0,
@@ -66,11 +76,16 @@ function AdminDashboardContent() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [featureLoading, setFeatureLoading] = useState<string | null>(null)
+  const [showSetupBanner, setShowSetupBanner] = useState(false)
 
   useEffect(() => {
     const fetchSchoolData = async () => {
       try {
         setIsLoading(true)
+        
+        // Check URL parameters for setup completion
+        const urlParams = new URLSearchParams(window.location.search)
+        const setupCompleted = urlParams.get('setup') === 'completed'
         
         // Fetch school info
         const schoolResponse = await fetch('/api/admin/school')
@@ -82,6 +97,64 @@ function AdminDashboardContent() {
         const schoolData = await schoolResponse.json()
         console.log('School API response:', schoolData)
         setSchoolInfo(schoolData.school)
+        
+        // Fetch school details to check setup completion
+        console.log('Fetching school details from API...')
+        
+        // Simple approach - let the API handle authentication via cookies
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json'
+        }
+        
+        const detailsResponse = await fetch('/api/admin/school-details', { headers })
+        console.log('School details response status:', detailsResponse.status)
+        
+        if (detailsResponse.ok) {
+          const detailsData = await detailsResponse.json()
+          console.log('=== FULL SCHOOL DETAILS RESPONSE ===')
+          console.log('Raw API response:', JSON.stringify(detailsData, null, 2))
+          console.log('detailsData.details:', detailsData.details)
+          console.log('detailsData.status:', detailsData.status)
+          console.log('detailsData.setup_completed:', detailsData.setup_completed)
+          console.log('=====================================')
+          
+          setSchoolDetails(detailsData.details)
+          
+          // Use the status field for more precise control
+          const setupStatus = detailsData.status || 'not_completed'
+          const urlSetupCompleted = setupCompleted
+          
+          console.log('=== BANNER LOGIC DEBUG ===')
+          console.log('Setup status from API:', setupStatus)
+          console.log('URL setup completed:', urlSetupCompleted)
+          console.log('Current showSetupBanner state:', showSetupBanner)
+          
+          // Show banner based on status
+          if (setupStatus === 'completed') {
+            // Setup is completed - hide banner
+            setShowSetupBanner(false)
+            console.log('✅ DECISION: Setup completed - HIDING banner')
+          } else if (urlSetupCompleted) {
+            // Just completed setup (URL param) - hide banner temporarily
+            setShowSetupBanner(false)
+            console.log('✅ DECISION: Just completed via URL - HIDING banner temporarily')
+          } else {
+            // Setup not completed or in progress - show banner
+            setShowSetupBanner(true)
+            console.log('🚨 DECISION: Setup not completed - SHOWING banner')
+          }
+          console.log('========================')
+        } else {
+          const errorText = await detailsResponse.text()
+          console.log('School details API failed with status:', detailsResponse.status)
+          console.log('Error response:', errorText)
+          console.log('URL setup completed:', setupCompleted)
+          
+          // If API fails, show banner unless URL says just completed
+          const shouldShowBanner = !setupCompleted
+          setShowSetupBanner(shouldShowBanner)
+          console.log('🚨 API FAILED - Setting banner to:', shouldShowBanner)
+        }
         
         // Fetch school statistics
         const statsResponse = await fetch('/api/admin/stats')
@@ -246,6 +319,73 @@ function AdminDashboardContent() {
                 </Button>
               </div>
             </div>
+
+            {/* School Setup Banner */}
+            <AnimatePresence>
+              {showSetupBanner && (
+                <motion.div
+                  initial={{ opacity: 0, y: -20, height: 0 }}
+                  animate={{ opacity: 1, y: 0, height: 'auto' }}
+                  exit={{ opacity: 0, y: -20, height: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="mb-6"
+                >
+                  <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-red-50 border-l-4 border-orange-400 rounded-lg p-4 sm:p-6 shadow-lg">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="flex items-start space-x-3">
+                        <div className="flex-shrink-0">
+                          <div className="w-10 h-10 bg-gradient-to-r from-orange-400 to-red-400 rounded-lg flex items-center justify-center">
+                            <Settings className="w-5 h-5 text-white" />
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                            Complete Your School Setup
+                          </h3>
+                          <p className="text-sm text-gray-700 mb-2">
+                            Welcome to Catalyst! To provide the best experience for your students and staff, 
+                            please complete your school's detailed setup including contact information, 
+                            operating hours, and academic details.
+                          </p>
+                          <div className="flex items-center space-x-4 text-xs text-gray-600">
+                            <span className="flex items-center">
+                              <School className="w-3 h-3 mr-1" />
+                              School Information
+                            </span>
+                            <span className="flex items-center">
+                              <Clock className="w-3 h-3 mr-1" />
+                              Operating Hours
+                            </span>
+                            <span className="flex items-center">
+                              <Users className="w-3 h-3 mr-1" />
+                              Contact Details
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                        <Button
+                          onClick={() => setShowSetupBanner(false)}
+                          variant="outline"
+                          size="sm"
+                          className="w-full sm:w-auto text-gray-600 border-gray-300 hover:bg-gray-50"
+                        >
+                          Remind Later
+                        </Button>
+                        <Link href="/admin/setup" className="w-full sm:w-auto">
+                          <Button
+                            size="sm"
+                            className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg"
+                          >
+                            Complete Setup
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Enhanced Quick Stats Row */}
             <motion.div 
