@@ -11,7 +11,7 @@ import { AuthGuard } from '@/components/auth/auth-guard'
 import { 
   Heart, Star, Zap, Target, Brain, HelpCircle, X, AlertTriangle, MessageCircle, Trophy, Crown,
   Sparkles, Shield, Wind, Droplets, Moon, AlertCircle, BookOpen, Calendar, TrendingUp, 
-  GraduationCap, BarChart3, Clock, Award, ChevronRight, Bell, User
+  GraduationCap, BarChart3, Clock, Award, ChevronRight, Bell, User, MapPin, Phone
 } from 'lucide-react'
 import { MessagingNavButton } from '@/components/ui/messaging-nav-button'
 import { AdvancedSettingsDropdown } from '@/components/ui/advanced-settings-dropdown-fixed'
@@ -2096,6 +2096,191 @@ const StudentDashboardContent = () => {
           </div>
         </div>
       )}
+
+      {/* Professional Student Footer */}
+      <footer className="mt-12 bg-gradient-to-r from-indigo-900 via-purple-900 to-blue-900 text-white relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0" style={{
+            backgroundImage: `radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.3) 1px, transparent 0)`,
+            backgroundSize: '24px 24px'
+          }}></div>
+        </div>
+        
+        <div className="relative z-10 container mx-auto px-4 py-8 sm:py-12">
+          {/* School Information Header */}
+          <div className="text-center mb-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              viewport={{ once: true }}
+            >
+              <div className="flex items-center justify-center mb-4">
+                <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-sm">
+                  <GraduationCap className="w-8 h-8 text-yellow-400" />
+                </div>
+              </div>
+              <h3 className="text-2xl sm:text-3xl font-bold mb-2">
+                Student of {profile?.school?.name || 'Your School'}
+              </h3>
+              <p className="text-white/80 text-sm sm:text-base">
+                Your educational journey continues here
+              </p>
+            </motion.div>
+          </div>
+
+          {/* School Information Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {/* School Address */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              viewport={{ once: true }}
+              className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20"
+            >
+              <div className="flex items-center mb-3">
+                <div className="p-2 bg-blue-500/20 rounded-lg mr-3">
+                  <MapPin className="w-5 h-5 text-blue-300" />
+                </div>
+                <h4 className="font-semibold text-white">School Address</h4>
+              </div>
+              <p className="text-white/80 text-sm leading-relaxed">
+                {profile?.school?.address || "123 Education Street, Learning City, LC 12345"}
+              </p>
+            </motion.div>
+
+            {/* Contact Information */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              viewport={{ once: true }}
+              className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20"
+            >
+              <div className="flex items-center mb-3">
+                <div className="p-2 bg-green-500/20 rounded-lg mr-3">
+                  <Phone className="w-5 h-5 text-green-300" />
+                </div>
+                <h4 className="font-semibold text-white">Contact Info</h4>
+              </div>
+              <div className="space-y-2 text-sm text-white/80">
+                <p>📞 {profile?.school?.phone || "(555) 123-4567"}</p>
+                <p>📧 {profile?.school?.email || "info@school.edu"}</p>
+              </div>
+            </motion.div>
+
+            {/* School Hours */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              viewport={{ once: true }}
+              className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20"
+            >
+              <div className="flex items-center mb-3">
+                <div className="p-2 bg-yellow-500/20 rounded-lg mr-3">
+                  <Clock className="w-5 h-5 text-yellow-300" />
+                </div>
+                <h4 className="font-semibold text-white">School Hours</h4>
+              </div>
+              <div className="space-y-1 text-sm text-white/80">
+                <p>Monday - Friday</p>
+                <p className="font-medium">8:00 AM - 3:30 PM</p>
+                <p className="text-xs text-white/60">Office: 7:30 AM - 4:00 PM</p>
+              </div>
+            </motion.div>
+
+            {/* Emergency Contact */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              viewport={{ once: true }}
+              className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20"
+            >
+              <div className="flex items-center mb-3">
+                <div className="p-2 bg-red-500/20 rounded-lg mr-3">
+                  <AlertTriangle className="w-5 h-5 text-red-300" />
+                </div>
+                <h4 className="font-semibold text-white">Emergency</h4>
+              </div>
+              <div className="space-y-1 text-sm text-white/80">
+                <p>🚨 Emergency: 911</p>
+                <p>🏥 School Nurse: Ext. 123</p>
+                <p>👮 Security: Ext. 456</p>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Quick Links */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+            viewport={{ once: true }}
+            className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 mb-8"
+          >
+            <h4 className="text-lg font-semibold text-white mb-4 text-center">Quick Links</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {[
+                { icon: BookOpen, label: 'Library', href: '/student/library' },
+                { icon: Calendar, label: 'Schedule', href: '/student/schedule' },
+                { icon: Trophy, label: 'Achievements', href: '/student/achievements' },
+                { icon: HelpCircle, label: 'Help Center', href: '/student/help' },
+                { icon: MessageCircle, label: 'Support', href: '/student/messaging' },
+                { icon: Bell, label: 'Notifications', href: '/student/announcements' }
+              ].map((link, index) => (
+                <motion.button
+                  key={link.label}
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex flex-col items-center p-3 bg-white/10 hover:bg-white/20 rounded-lg transition-all duration-200 border border-white/20 hover:border-white/40"
+                  onClick={() => window.location.href = link.href}
+                >
+                  <link.icon className="w-5 h-5 text-white mb-2" />
+                  <span className="text-xs text-white/90 font-medium">{link.label}</span>
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Footer Bottom */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+            viewport={{ once: true }}
+            className="border-t border-white/20 pt-6 text-center"
+          >
+            <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-lg flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-white font-semibold">Catalyst Wellbeing</span>
+              </div>
+              
+              <div className="text-sm text-white/60">
+                <p>© 2024 {profile?.school?.name || 'Your School'}. All rights reserved.</p>
+              </div>
+              
+              <div className="flex items-center space-x-4 text-sm text-white/80">
+                <button className="hover:text-white transition-colors">Privacy Policy</button>
+                <span>•</span>
+                <button className="hover:text-white transition-colors">Terms of Use</button>
+                <span>•</span>
+                <button className="hover:text-white transition-colors">Support</button>
+              </div>
+            </div>
+            
+            <div className="mt-4 text-xs text-white/50">
+              <p>Need help? Contact your teacher or visit the Help Center for assistance.</p>
+            </div>
+          </motion.div>
+        </div>
+      </footer>
     </div>
   )
 }

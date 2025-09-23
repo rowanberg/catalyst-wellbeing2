@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { useAppSelector } from '@/lib/redux/hooks'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -145,9 +146,158 @@ export default function GradeBasedStudentRoster() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <LoadingSpinner className="h-8 w-8" />
-        <span className="ml-2">Loading your classes...</span>
+      <div className="space-y-6">
+        {/* Modern Loading Animation */}
+        <div className="flex flex-col items-center justify-center py-16">
+          <motion.div
+            className="relative w-20 h-20 mb-8"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6 }}
+          >
+            {/* Outer rotating ring */}
+            <motion.div
+              className="absolute inset-0 border-4 border-gradient-to-r from-emerald-200 via-blue-200 to-purple-200 rounded-full"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+            />
+            {/* Middle pulsing ring */}
+            <motion.div
+              className="absolute inset-2 border-3 border-transparent border-t-emerald-500 border-r-blue-500 border-b-purple-500 rounded-full"
+              animate={{ rotate: -360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            />
+            {/* Inner fast ring */}
+            <motion.div
+              className="absolute inset-4 border-2 border-transparent border-t-emerald-400 border-l-blue-400 rounded-full"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            />
+            {/* Center icon with pulse */}
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center"
+              animate={{ 
+                scale: [1, 1.2, 1],
+                rotate: [0, 180, 360]
+              }}
+              transition={{ 
+                scale: { duration: 2, repeat: Infinity },
+                rotate: { duration: 4, repeat: Infinity, ease: "linear" }
+              }}
+            >
+              <GraduationCap className="w-8 h-8 text-emerald-600" />
+            </motion.div>
+          </motion.div>
+
+          {/* Animated text */}
+          <motion.div
+            className="text-center space-y-3"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.6 }}
+          >
+            <motion.h3 
+              className="text-xl font-semibold bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent"
+              animate={{ opacity: [0.7, 1, 0.7] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              Loading Your Classes
+            </motion.h3>
+            <motion.p 
+              className="text-slate-600"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+            >
+              Gathering student information...
+            </motion.p>
+          </motion.div>
+
+          {/* Floating dots animation */}
+          <motion.div
+            className="flex justify-center space-x-2 mt-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.9 }}
+          >
+            {[0, 1, 2, 3, 4].map((i) => (
+              <motion.div
+                key={i}
+                className="w-2 h-2 rounded-full bg-gradient-to-r from-emerald-400 to-blue-400"
+                animate={{ 
+                  y: [0, -10, 0],
+                  scale: [1, 1.2, 1],
+                  opacity: [0.5, 1, 0.5]
+                }}
+                transition={{
+                  duration: 1.5,
+                  repeat: Infinity,
+                  delay: i * 0.1,
+                  ease: "easeInOut"
+                }}
+              />
+            ))}
+          </motion.div>
+
+          {/* Progress indicator */}
+          <motion.div
+            className="w-64 h-1 bg-slate-200 rounded-full overflow-hidden mt-8"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 1.2 }}
+          >
+            <motion.div
+              className="h-full bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-500 rounded-full"
+              animate={{ x: ['-100%', '100%'] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            />
+          </motion.div>
+        </div>
+
+        {/* Loading skeleton cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <motion.div
+              key={i}
+              className="bg-white/60 backdrop-blur-sm border border-white/20 rounded-xl p-6 shadow-lg"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 * i, duration: 0.6 }}
+            >
+              <div className="space-y-4">
+                <div className="flex items-center space-x-3">
+                  <motion.div 
+                    className="w-10 h-10 bg-gradient-to-r from-slate-200 to-slate-300 rounded-full"
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 2, repeat: Infinity, delay: i * 0.2 }}
+                  />
+                  <div className="space-y-2 flex-1">
+                    <motion.div 
+                      className="h-4 bg-gradient-to-r from-slate-200 to-slate-300 rounded-md"
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 }}
+                    />
+                    <motion.div 
+                      className="h-3 bg-gradient-to-r from-slate-200 to-slate-300 rounded-md w-2/3"
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 2, repeat: Infinity, delay: i * 0.4 }}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {[1, 2, 3].map((j) => (
+                    <motion.div 
+                      key={j}
+                      className="h-2 bg-gradient-to-r from-slate-200 to-slate-300 rounded-md"
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 2, repeat: Infinity, delay: (i * 0.2) + (j * 0.1) }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
       </div>
     )
   }
@@ -291,9 +441,148 @@ export default function GradeBasedStudentRoster() {
           </CardHeader>
           <CardContent>
             {loadingStudents ? (
-              <div className="flex items-center justify-center py-12">
-                <LoadingSpinner className="h-6 w-6" />
-                <span className="ml-2">Loading students...</span>
+              <div className="space-y-8">
+                {/* Modern student loading animation */}
+                <div className="flex flex-col items-center justify-center py-12">
+                  <motion.div
+                    className="relative w-16 h-16 mb-6"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    {/* Animated rings */}
+                    <motion.div
+                      className="absolute inset-0 border-3 border-emerald-200 rounded-full"
+                      animate={{ rotate: 360, scale: [1, 1.1, 1] }}
+                      transition={{ 
+                        rotate: { duration: 2, repeat: Infinity, ease: "linear" },
+                        scale: { duration: 1.5, repeat: Infinity }
+                      }}
+                    />
+                    <motion.div
+                      className="absolute inset-2 border-2 border-transparent border-t-emerald-500 border-r-blue-500 rounded-full"
+                      animate={{ rotate: -360 }}
+                      transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                    />
+                    {/* Center icon */}
+                    <motion.div
+                      className="absolute inset-0 flex items-center justify-center"
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      <Users className="w-6 h-6 text-emerald-600" />
+                    </motion.div>
+                  </motion.div>
+
+                  <motion.div
+                    className="text-center space-y-2"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    <motion.h4 
+                      className="text-lg font-semibold text-emerald-700"
+                      animate={{ opacity: [0.7, 1, 0.7] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      Loading Students
+                    </motion.h4>
+                    <p className="text-slate-600">Fetching student data...</p>
+                  </motion.div>
+
+                  {/* Bouncing dots */}
+                  <motion.div
+                    className="flex space-x-1 mt-4"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.6 }}
+                  >
+                    {[0, 1, 2].map((i) => (
+                      <motion.div
+                        key={i}
+                        className="w-2 h-2 bg-emerald-500 rounded-full"
+                        animate={{ 
+                          y: [0, -8, 0],
+                          scale: [1, 1.2, 1]
+                        }}
+                        transition={{
+                          duration: 1,
+                          repeat: Infinity,
+                          delay: i * 0.2,
+                          ease: "easeInOut"
+                        }}
+                      />
+                    ))}
+                  </motion.div>
+                </div>
+
+                {/* Student loading skeleton cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <motion.div
+                      key={i}
+                      className="bg-white/70 backdrop-blur-sm border border-white/30 rounded-xl p-4 shadow-md"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 * i, duration: 0.5 }}
+                    >
+                      <div className="space-y-3">
+                        {/* Header skeleton */}
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center space-x-3">
+                            <motion.div 
+                              className="w-10 h-10 bg-gradient-to-r from-emerald-200 to-blue-200 rounded-full"
+                              animate={{ opacity: [0.4, 0.8, 0.4] }}
+                              transition={{ duration: 2, repeat: Infinity, delay: i * 0.1 }}
+                            />
+                            <div className="space-y-2">
+                              <motion.div 
+                                className="h-4 w-24 bg-gradient-to-r from-slate-200 to-slate-300 rounded"
+                                animate={{ opacity: [0.4, 0.8, 0.4] }}
+                                transition={{ duration: 2, repeat: Infinity, delay: i * 0.15 }}
+                              />
+                              <motion.div 
+                                className="h-3 w-16 bg-gradient-to-r from-slate-200 to-slate-300 rounded"
+                                animate={{ opacity: [0.4, 0.8, 0.4] }}
+                                transition={{ duration: 2, repeat: Infinity, delay: i * 0.2 }}
+                              />
+                            </div>
+                          </div>
+                          <motion.div 
+                            className="w-8 h-8 bg-gradient-to-r from-yellow-200 to-orange-200 rounded-full"
+                            animate={{ opacity: [0.4, 0.8, 0.4] }}
+                            transition={{ duration: 2, repeat: Infinity, delay: i * 0.25 }}
+                          />
+                        </div>
+
+                        {/* Stats skeleton */}
+                        <div className="space-y-2">
+                          {[1, 2, 3, 4].map((j) => (
+                            <div key={j} className="flex justify-between items-center">
+                              <motion.div 
+                                className="h-2 w-16 bg-gradient-to-r from-slate-200 to-slate-300 rounded"
+                                animate={{ opacity: [0.4, 0.8, 0.4] }}
+                                transition={{ duration: 2, repeat: Infinity, delay: (i * 0.1) + (j * 0.05) }}
+                              />
+                              <motion.div 
+                                className="h-2 w-8 bg-gradient-to-r from-slate-200 to-slate-300 rounded"
+                                animate={{ opacity: [0.4, 0.8, 0.4] }}
+                                transition={{ duration: 2, repeat: Infinity, delay: (i * 0.1) + (j * 0.05) + 0.1 }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Button skeleton */}
+                        <motion.div 
+                          className="h-8 w-full bg-gradient-to-r from-slate-200 to-slate-300 rounded-md mt-3"
+                          animate={{ opacity: [0.4, 0.8, 0.4] }}
+                          transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 }}
+                        />
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
               </div>
             ) : students.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

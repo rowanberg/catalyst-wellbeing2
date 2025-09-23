@@ -105,6 +105,7 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
                 router.push(`/${profileData.role}`)
                 return
               }
+
               
               setInitializing(false)
             } else {
