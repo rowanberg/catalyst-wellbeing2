@@ -66,17 +66,17 @@ export async function GET(request: NextRequest) {
 
     const summary = {
       total: stats?.length || 0,
-      byType: {},
-      bySeverity: {},
+      byType: {} as Record<string, number>,
+      bySeverity: {} as Record<string, number>,
       followUpRequired: 0
     }
 
     if (stats) {
       stats.forEach(incident => {
         // Count by type
-        summary.byType[incident.incident_type] = (summary.byType[incident.incident_type] || 0) + 1
+        summary.byType[incident.incident_type as string] = (summary.byType[incident.incident_type as string] || 0) + 1
         // Count by severity
-        summary.bySeverity[incident.severity_level] = (summary.bySeverity[incident.severity_level] || 0) + 1
+        summary.bySeverity[incident.severity_level as string] = (summary.bySeverity[incident.severity_level as string] || 0) + 1
       })
     }
 

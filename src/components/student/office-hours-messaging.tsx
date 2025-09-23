@@ -392,7 +392,7 @@ export default function OfficeHoursMessaging() {
                             <div className="flex items-center ml-2">
                               {message.status === 'read' && <CheckCircle className="h-3 w-3" />}
                               {message.isModerated && (
-                                <Shield className="h-3 w-3 ml-1" title="Message moderated" />
+                                <Shield className="h-3 w-3 ml-1" />
                               )}
                             </div>
                           )}

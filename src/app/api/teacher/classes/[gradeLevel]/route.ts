@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
-export async function GET(request: NextRequest, { params }: { params: { gradeLevel: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ gradeLevel: string }> }) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
     
@@ -27,7 +27,8 @@ export async function GET(request: NextRequest, { params }: { params: { gradeLev
       return NextResponse.json({ error: 'Access denied. Teacher role required.' }, { status: 403 })
     }
 
-    const { gradeLevel } = params
+    const resolvedParams = await params
+    const { gradeLevel } = resolvedParams
 
     // Get the grade level ID first
     const { data: gradeLevelData, error: gradeLevelError } = await supabase

@@ -175,7 +175,7 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
@@ -195,7 +195,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const alertId = params.id
+    const resolvedParams = await params
+    const alertId = resolvedParams.id
 
     // Verify the alert belongs to the user's school
     const { data: existingAlert } = await supabase
