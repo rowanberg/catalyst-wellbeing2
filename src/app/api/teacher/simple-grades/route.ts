@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
       gradesMap.get(gradeLevel.id).total_classes += 1
     })
 
-    const grades = Array.from(gradesMap.values()).sort((a, b) => a.grade_level - b.grade_level)
+    const grades = Array.from(gradesMap.values()).sort((a: any, b: any) => a.grade_level - b.grade_level)
     
     console.log('Simple grades: Processed grades:', grades.length)
 

@@ -751,7 +751,7 @@ export default function PollsSurveysPage() {
                           </CardHeader>
                           <CardContent>
                             <div className="space-y-3">
-                              {Object.entries(pollAnalytics.demographics.byGrade).map(([grade, count]) => (
+                              {Object.entries(pollAnalytics.demographics.byGrade).map(([grade, count]: [string, any]) => (
                                 <div key={grade} className="flex items-center justify-between">
                                   <span className="text-sm font-medium">{grade}</span>
                                   <div className="flex items-center space-x-2">
@@ -777,7 +777,7 @@ export default function PollsSurveysPage() {
                           </CardHeader>
                           <CardContent>
                             <div className="space-y-3">
-                              {Object.entries(pollAnalytics.demographics.byRole).map(([role, count]) => (
+                              {Object.entries(pollAnalytics.demographics.byRole).map(([role, count]: [string, any]) => (
                                 <div key={role} className="flex items-center justify-between">
                                   <span className="text-sm font-medium capitalize">{role}</span>
                                   <div className="flex items-center space-x-2">

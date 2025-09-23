@@ -268,7 +268,7 @@ export default function OfficeHoursMessaging() {
                     <div className="mt-2">
                       <h4 className="text-xs font-medium text-gray-700 mb-1">Office Hours:</h4>
                       <div className="space-y-1">
-                        {teacher.officeHours.map((hours, index) => (
+                        {teacher.officeHours.map((hours: any, index: number) => (
                           <div key={index} className="text-xs text-gray-600 flex items-center">
                             <Calendar className="h-3 w-3 mr-1" />
                             {hours.day}: {hours.startTime} - {hours.endTime}
@@ -417,7 +417,7 @@ export default function OfficeHoursMessaging() {
                   <div className="flex-1 relative">
                     <textarea
                       value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewMessage(e.target.value)}
                       onKeyPress={handleKeyPress}
                       placeholder="Type your message... (Press Enter to send)"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"

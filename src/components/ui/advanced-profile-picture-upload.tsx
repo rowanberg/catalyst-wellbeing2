@@ -421,7 +421,7 @@ export const AdvancedProfilePictureUpload = ({
                               max="3"
                               step="0.1"
                               value={cropData.zoom}
-                              onChange={(e) => handleCropChange('zoom', parseFloat(e.target.value))}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleCropChange('zoom', parseFloat(e.target.value))}
                               className="w-full"
                             />
                           </div>

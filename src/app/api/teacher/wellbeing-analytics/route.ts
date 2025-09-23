@@ -108,10 +108,10 @@ export async function GET(request: NextRequest) {
     const olderMoods = moodData?.filter(m => new Date(m.created_at) < midPoint) || []
     
     const recentAvg = recentMoods.length > 0 
-      ? recentMoods.reduce((sum, m) => sum + (moodScores[m.mood_emoji as keyof typeof moodScores] || 5), 0) / recentMoods.length
+      ? recentMoods.reduce((sum: number, m: any) => sum + (moodScores[m.mood_emoji as keyof typeof moodScores] || 5), 0) / recentMoods.length
       : classAverage
     const olderAvg = olderMoods.length > 0
-      ? olderMoods.reduce((sum, m) => sum + (moodScores[m.mood_emoji as keyof typeof moodScores] || 5), 0) / olderMoods.length
+      ? olderMoods.reduce((sum: number, m: any) => sum + (moodScores[m.mood_emoji as keyof typeof moodScores] || 5), 0) / olderMoods.length
       : classAverage
 
     const trendPercentage = olderAvg > 0 ? Math.abs(((recentAvg - olderAvg) / olderAvg) * 100) : 0
@@ -154,7 +154,7 @@ export async function GET(request: NextRequest) {
       
       const recentMoods = studentMoods.slice(0, 5).map(m => m.mood_emoji)
       const studentScore = studentMoods.length > 0
-        ? studentMoods.reduce((sum, m) => sum + (moodScores[m.mood_emoji as keyof typeof moodScores] || 5), 0) / studentMoods.length
+        ? studentMoods.reduce((sum: number, m: any) => sum + (moodScores[m.mood_emoji as keyof typeof moodScores] || 5), 0) / studentMoods.length
         : 7.0
 
       const negativeMoodCount = studentMoods.filter(m => negativeMoods.includes(m.mood_emoji)).length
@@ -187,8 +187,8 @@ export async function GET(request: NextRequest) {
         lastCheckIn: studentMoods[0]?.created_at || new Date().toISOString()
       }
     }).filter(student => student.riskLevel === 'high' || student.concerns.length > 0)
-      .sort((a, b) => {
-        const riskOrder = { high: 3, medium: 2, low: 1 }
+      .sort((a: any, b: any) => {
+        const riskOrder: Record<string, number> = { high: 3, medium: 2, low: 1 }
         return riskOrder[b.riskLevel] - riskOrder[a.riskLevel]
       }) || []
 

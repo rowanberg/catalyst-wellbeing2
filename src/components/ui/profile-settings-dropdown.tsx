@@ -172,7 +172,7 @@ export const ProfileSettingsDropdown = ({
 
                 {/* Settings Options */}
                 <div className="py-2">
-                  {settingsOptions.map((option, index) => {
+                  {settingsOptions.map((option: any, index: number) => {
                     if (option.type === 'divider') {
                       return <div key={option.id} className="border-t border-gray-100 my-2" />
                     }

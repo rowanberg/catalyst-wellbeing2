@@ -41,7 +41,7 @@ export function encryptMessage(message: string, schoolKey: string): string {
     ])
     
     return combined.toString('base64')
-  } catch (error) {
+  } catch (error: any) {
     console.error('Encryption error:', error)
     throw new Error('Failed to encrypt message')
   }
@@ -68,7 +68,7 @@ export function decryptMessage(encryptedData: string, schoolKey: string): string
     decrypted += decipher.final('utf8')
     
     return decrypted
-  } catch (error) {
+  } catch (error: any) {
     console.error('Decryption error:', error)
     throw new Error('Failed to decrypt message - invalid key or corrupted data')
   }

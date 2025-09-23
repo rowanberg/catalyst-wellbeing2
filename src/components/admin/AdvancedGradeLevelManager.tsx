@@ -460,13 +460,13 @@ export function AdvancedGradeLevelManager({ schoolId }: GradeLevelManagerProps) 
               <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1">
                 <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
                 <span className="text-sm font-medium">
-                  {gradeLevels.reduce((sum, grade) => sum + (grade.student_count || 0), 0)} Students
+                  {gradeLevels.reduce((sum: number, grade: any) => sum + (grade.student_count || 0), 0)} Students
                 </span>
               </div>
               <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1">
                 <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
                 <span className="text-sm font-medium">
-                  {gradeLevels.reduce((sum, grade) => sum + (grade.class_count || 0), 0)} Classes
+                  {gradeLevels.reduce((sum: number, grade: any) => sum + (grade.class_count || 0), 0)} Classes
                 </span>
               </div>
             </div>

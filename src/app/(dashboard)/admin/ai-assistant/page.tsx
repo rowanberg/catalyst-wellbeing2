@@ -1363,7 +1363,7 @@ I can analyze this data to provide insights, answer questions about school perfo
                               placeholder="Ask me anything about your school... (Press Shift+Enter for new line)"
                               value={newMessage}
                               onChange={(e) => setNewMessage(e.target.value)}
-                              onKeyPress={(e) => {
+                              onKeyPress={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
                                 if (e.key === 'Enter' && !e.shiftKey) {
                                   e.preventDefault()
                                   handleSendMessage()

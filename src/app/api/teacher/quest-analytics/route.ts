@@ -68,10 +68,10 @@ export async function GET(request: NextRequest) {
         totalAttempts: attempts.length,
         successRate: Math.round(successRate),
         averageCompletionTime: completed.length > 0 
-          ? Math.round(completed.reduce((sum, a) => sum + (a.time_spent || 0), 0) / completed.length)
+          ? Math.round(completed.reduce((sum: number, a: any) => sum + (a.time_spent || 0), 0) / completed.length)
           : 0
       }
-    }).sort((a, b) => b.successRate - a.successRate).slice(0, 5) || []
+    }).sort((a: any, b: any) => b.successRate - a.successRate).slice(0, 5) || []
 
     const analytics = {
       ...analyticsResult,

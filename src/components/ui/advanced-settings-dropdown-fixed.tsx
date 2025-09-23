@@ -443,7 +443,7 @@ export const AdvancedSettingsDropdown = ({
                         type="text"
                         placeholder="Search settings..."
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 bg-white/20 border border-white/30 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent"
                       />
                     </div>
@@ -475,7 +475,7 @@ export const AdvancedSettingsDropdown = ({
                   <div className="max-h-[50vh] overflow-y-auto">
                     <div className="p-4 space-y-3">
                       <AnimatePresence>
-                        {filteredSettings.map((option, index) => (
+                        {filteredSettings.map((option: any, index: number) => (
                           <motion.div
                             key={option.id}
                             initial={{ opacity: 0, y: 10 }}
@@ -511,7 +511,7 @@ export const AdvancedSettingsDropdown = ({
                                 <select 
                                   className="w-full p-2 border border-gray-200 rounded-lg bg-white"
                                   defaultValue={option.value as string}
-                                  onChange={(e) => option.onChange && option.onChange(e.target.value)}
+                                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => option.onChange && option.onChange(e.target.value)}
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   {option.options?.map((opt: string) => (
@@ -537,7 +537,7 @@ export const AdvancedSettingsDropdown = ({
                                   max={option.max}
                                   defaultValue={option.value as number}
                                   className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-                                  onChange={(e) => option.onChange && option.onChange(parseInt(e.target.value))}
+                                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => option.onChange && option.onChange(parseInt(e.target.value))}
                                   onClick={(e) => e.stopPropagation()}
                                 />
                               </div>

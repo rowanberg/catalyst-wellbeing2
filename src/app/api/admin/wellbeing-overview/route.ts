@@ -56,8 +56,8 @@ export async function POST(request: NextRequest) {
     let avgSleep = 0
     let avgWater = 0
     if (habitData && habitData.length > 0) {
-      avgSleep = habitData.reduce((sum, entry) => sum + (entry.sleep_hours || 0), 0) / habitData.length
-      avgWater = habitData.reduce((sum, entry) => sum + (entry.water_glasses || 0), 0) / habitData.length
+      avgSleep = habitData.reduce((sum: number, entry: any) => sum + (entry.sleep_hours || 0), 0) / habitData.length
+      avgWater = habitData.reduce((sum: number, entry: any) => sum + (entry.water_glasses || 0), 0) / habitData.length
     }
 
     // Calculate overall wellbeing score (weighted average)
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
 
     let averageStreak = 0
     if (students && students.length > 0) {
-      averageStreak = students.reduce((sum, student) => sum + (student.current_streak || 0), 0) / students.length
+      averageStreak = students.reduce((sum: number, student: any) => sum + (student.current_streak || 0), 0) / students.length
     }
 
     const wellbeingData = {

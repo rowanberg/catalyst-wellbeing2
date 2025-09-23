@@ -344,7 +344,7 @@ export const AdvancedSettingsDropdown = ({
                     type="text"
                     placeholder="Search settings..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 bg-white/20 rounded-xl text-white placeholder-white/60 border border-white/30 focus:border-white/50 focus:outline-none transition-all"
                   />
                 </div>
@@ -376,7 +376,7 @@ export const AdvancedSettingsDropdown = ({
               <div className="max-h-[50vh] overflow-y-auto">
                 <div className="p-4 space-y-3">
                   <AnimatePresence>
-                    {filteredSettings.map((option, index) => (
+                    {filteredSettings.map((option: any, index: number) => (
                       <motion.div
                         key={option.id}
                         initial={{ opacity: 0, y: 10 }}

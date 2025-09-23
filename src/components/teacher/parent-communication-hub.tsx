@@ -184,7 +184,7 @@ export const ParentCommunicationHub = ({ teacherId, schoolId }: ParentCommunicat
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
+      <Tabs value={activeTab} onValueChange={(value: string) => setActiveTab(value as any)}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="inbox" className="flex items-center gap-2">
             <MessageSquare className="w-4 h-4" />

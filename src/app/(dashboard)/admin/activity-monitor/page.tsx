@@ -477,7 +477,7 @@ export default function ActivityMonitorPage() {
                             <p className="text-gray-700">{activity.description}</p>
                             {activity.metadata && (
                               <div className="mt-2 text-xs text-gray-600">
-                                {Object.entries(activity.metadata).map(([key, value]) => (
+                                {Object.entries(activity.metadata).map(([key, value]: [string, any]) => (
                                   <span key={key} className="mr-3">
                                     {key}: {String(value)}
                                   </span>

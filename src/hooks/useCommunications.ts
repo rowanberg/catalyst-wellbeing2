@@ -72,7 +72,7 @@ export function useCommunications(): UseCommunicationsReturn {
       
       const data = await response.json();
       setChannels(data.channels || []);
-    } catch (err) {
+    } catch (err: any) {
       setError(err instanceof Error ? err.message : 'Failed to load channels');
       console.error('Error loading channels:', err);
     } finally {
@@ -117,7 +117,7 @@ export function useCommunications(): UseCommunicationsReturn {
           }];
         });
       });
-    } catch (err) {
+    } catch (err: any) {
       setError(err instanceof Error ? err.message : 'Failed to load messages');
       console.error('Error loading messages:', err);
     } finally {
@@ -134,7 +134,7 @@ export function useCommunications(): UseCommunicationsReturn {
 
     try {
       await realtimeSendMessage(channelId, content, messageType);
-    } catch (err) {
+    } catch (err: any) {
       setError(err instanceof Error ? err.message : 'Failed to send message');
       console.error('Error sending message:', err);
       throw err;

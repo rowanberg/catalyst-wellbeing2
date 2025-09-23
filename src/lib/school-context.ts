@@ -440,7 +440,7 @@ export class SchoolContextService {
 
       // Calculate average mood score
       const avgMood = moodData?.length 
-        ? moodData.reduce((sum, checkin) => sum + (checkin.mood_score || 7), 0) / moodData.length
+        ? moodData.reduce((sum: number, checkin: any) => sum + (checkin.mood_score || 7), 0) / moodData.length
         : 7.5
 
       // Get engagement from quest completions or daily quests with school filtering

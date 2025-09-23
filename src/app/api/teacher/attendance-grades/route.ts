@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    const processedGrades = Array.from(gradesMap.values()).sort((a, b) => a.grade_level - b.grade_level)
+    const processedGrades = Array.from(gradesMap.values()).sort((a: any, b: any) => a.grade_level - b.grade_level)
 
     return NextResponse.json({
       grades: processedGrades,

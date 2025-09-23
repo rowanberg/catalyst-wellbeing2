@@ -119,7 +119,7 @@ export default function StudentAnnouncementsPage() {
       }
 
       // Convert responses to the format expected by the API
-      const answers = Object.entries(pollResponses).map(([questionId, value]) => ({
+      const answers = Object.entries(pollResponses).map(([questionId, value]: [string, any]) => ({
         questionId,
         value
       }))

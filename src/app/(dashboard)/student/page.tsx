@@ -311,7 +311,7 @@ const StudentDashboardContent = () => {
     if (!selectedPoll) return
 
     try {
-      const answers = Object.entries(pollResponses).map(([questionId, value]) => ({
+      const answers = Object.entries(pollResponses).map(([questionId, value]: [string, any]) => ({
         questionId,
         value
       }))
@@ -1612,7 +1612,7 @@ const StudentDashboardContent = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
-                {Object.entries(questIcons).map(([questType, icon]) => {
+                {Object.entries(questIcons).map(([questType, icon]: [string, any]) => {
                   const questEmojis = {
                     gratitude: '🙏',
                     kindness: '💝',
@@ -1712,7 +1712,7 @@ const StudentDashboardContent = () => {
                 <h3 className="text-lg sm:text-xl font-bold text-gray-800">How are you feeling?</h3>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-2 sm:gap-3">
-                {Object.entries(moodEmojis).map(([moodType, emoji]) => {
+                {Object.entries(moodEmojis).map(([moodType, emoji]: [string, any]) => {
                   const isSelected = mood.current === moodType
                   const isLocked = mood.current && mood.current !== ''
                   

@@ -116,7 +116,7 @@ export async function GET(
           }
         })
 
-        analytics.optionDistribution = Object.entries(optionCounts).map(([option, count]) => ({
+        analytics.optionDistribution = Object.entries(optionCounts).map(([option, count]: [string, any]) => ({
           option,
           count,
           percentage: questionAnswers.length > 0 ? (count / questionAnswers.length) * 100 : 0
@@ -186,7 +186,7 @@ export async function GET(
       responseRate: Math.round(responseRate * 100) / 100,
       completionRate: responseRate,
       questionAnalytics,
-      responseTimeline: Object.entries(responseTimeline).map(([date, count]) => ({
+      responseTimeline: Object.entries(responseTimeline).map(([date, count]: [string, any]) => ({
         date,
         count
       })).sort((a, b) => a.date.localeCompare(b.date)),

@@ -498,7 +498,7 @@ function TeacherCommunicationsContent() {
                               value={newMessage}
                               onChange={(e) => setNewMessage(e.target.value)}
                               className="flex-1 min-h-[60px] resize-none"
-                              onKeyPress={(e) => {
+                              onKeyPress={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
                                 if (e.key === 'Enter' && !e.shiftKey) {
                                   e.preventDefault();
                                   sendMessage();

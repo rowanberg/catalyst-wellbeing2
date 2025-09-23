@@ -34,7 +34,7 @@ export function DataVisualizationChart({
   if (type === 'bar') {
     return (
       <div className={`space-y-3 ${className}`}>
-        {data.map((item, index) => (
+        {data.map((item: any, index: number) => (
           <motion.div
             key={item.label}
             className="flex items-center gap-3"
@@ -73,7 +73,7 @@ export function DataVisualizationChart({
   }
 
   if (type === 'donut') {
-    const total = data.reduce((sum, item) => sum + item.value, 0)
+    const total = data.reduce((sum: number, item: any) => sum + item.value, 0)
     let cumulativePercentage = 0
 
     return (
@@ -87,7 +87,7 @@ export function DataVisualizationChart({
             stroke="#e5e7eb"
             strokeWidth="10"
           />
-          {data.map((item, index) => {
+          {data.map((item: any, index: number) => {
             const percentage = (item.value / total) * 100
             const strokeDasharray = `${percentage * 3.14} 314`
             const strokeDashoffset = -cumulativePercentage * 3.14

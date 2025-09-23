@@ -162,7 +162,7 @@ export const WellbeingAnalyticsDashboard = ({ teacherId, schoolId }: WellbeingAn
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
+      <Tabs value={activeTab} onValueChange={(value: string) => setActiveTab(value as any)}>
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart3 className="w-4 h-4" />
@@ -230,7 +230,7 @@ export const WellbeingAnalyticsDashboard = ({ teacherId, schoolId }: WellbeingAn
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {Object.entries(metrics.moodDistribution).map(([mood, count]) => (
+                    {Object.entries(metrics.moodDistribution).map(([mood, count]: [string, any]) => (
                       <div key={mood} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div className="flex items-center gap-2">
                           {getMoodIcon(mood)}
@@ -558,7 +558,7 @@ const InterventionToolkit = ({ suggestions, riskLevel }: any) => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {suggestions.map((suggestion, index) => (
+              {suggestions.map((suggestion: any, index: number) => (
                 <div key={index} className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
                   <Brain className="w-5 h-5 text-blue-600 mt-0.5" />
                   <p className="text-sm text-blue-800">{suggestion}</p>

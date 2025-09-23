@@ -162,7 +162,7 @@ export default function InterventionToolkit() {
 
     const sorted = scored
       .filter(s => s.relevanceScore > 10)
-      .sort((a, b) => b.relevanceScore - a.relevanceScore)
+      .sort((a: any, b: any) => b.relevanceScore - a.relevanceScore)
       .slice(0, 6)
 
     setSuggestions(sorted)
@@ -407,7 +407,7 @@ export default function InterventionToolkit() {
                     <span className="ml-1">{activity.category}</span>
                   </div>
                   <div className="flex items-center">
-                    {Array.from({ length: activity.effectiveness }).map((_, i) => (
+                    {Array.from({ length: activity.effectiveness }).map((_: any, i: number) => (
                       <Star key={i} className="h-3 w-3 text-yellow-400 fill-current" />
                     ))}
                   </div>

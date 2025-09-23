@@ -25,7 +25,7 @@ export async function createClient() {
               sameSite: 'lax',
               secure: process.env.NODE_ENV === 'production'
             })
-          } catch (error) {
+          } catch (error: any) {
             // Handle cookie setting errors in server context
             console.warn('Could not set cookie in server context:', key)
           }
@@ -36,7 +36,7 @@ export async function createClient() {
               path: '/',
               expires: new Date(0)
             })
-          } catch (error) {
+          } catch (error: any) {
             // Handle cookie removal errors in server context
             console.warn('Could not remove cookie in server context:', key)
           }

@@ -273,7 +273,7 @@ export async function GET(request: NextRequest) {
     console.log('Records with status=completed for current school:', completedByStatus?.length || 0)
     if (completedByStatus && completedByStatus.length > 0) {
       console.log('=== FOUND COMPLETED SETUP RECORDS ===')
-      completedByStatus.forEach((record, index) => {
+      completedByStatus.forEach((record: any, index: number) => {
         console.log(`Record ${index + 1}:`)
         console.log(`  School Name: ${record.school_name}`)
         console.log(`  School ID: ${record.school_id}`)

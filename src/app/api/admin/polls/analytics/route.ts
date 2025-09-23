@@ -213,7 +213,7 @@ export async function GET(request: NextRequest) {
             submittedAt: responses.find(r => r.id === a.response_id)?.submitted_at
           }))
           .filter(r => r.response && r.response.trim())
-          .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+          .sort((a: any, b: any) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
       }
 
       return analytics
@@ -256,7 +256,7 @@ export async function GET(request: NextRequest) {
       demographics,
       questionAnalytics,
       recentResponses: responses
-        .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
+        .sort((a: any, b: any) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
         .slice(0, 10)
         .map(r => ({
           id: r.id,

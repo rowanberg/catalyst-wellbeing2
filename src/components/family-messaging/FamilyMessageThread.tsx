@@ -220,14 +220,14 @@ export function FamilyMessageThread({
               <p className="text-sm text-gray-400">Send a message to begin chatting</p>
             </div>
           ) : (
-            Object.entries(messageGroups).map(([dateKey, dayMessages]) => (
+            Object.entries(messageGroups).map(([dateKey, dayMessages]: [string, any]) => (
               <div key={dateKey}>
                 <div className="flex justify-center mb-4">
                   <Badge variant="outline" className="text-xs text-gray-500">
                     {formatDate(dayMessages[0].created_at)}
                   </Badge>
                 </div>
-                {dayMessages.map((message) => {
+                {dayMessages.map((message: any) => {
                   const isCurrentUser = message.sender.id === currentUserId
                   return (
                     <div

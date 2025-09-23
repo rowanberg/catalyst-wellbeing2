@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
     // Get counts for each grade level
     const gradeLevelsWithCounts = await Promise.all(
-      (gradeLevels || []).map(async (grade) => {
+      (gradeLevels || []).map(async (grade: any) => {
         // Get student count from profiles table
         const { count: studentCount } = await supabaseAdmin
           .from('profiles')

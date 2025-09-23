@@ -386,8 +386,8 @@ const CreateIncidentModal = ({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Student *
                 </label>
-                <Select value={formData.student_id} onValueChange={(value) => 
-                  setFormData(prev => ({ ...prev, student_id: value }))
+                <Select value={formData.student_id} onValueChange={(value: string) => 
+                  setFormData((prev: any) => ({ ...prev, student_id: value }))
                 }>
                   <SelectTrigger>
                     <SelectValue placeholder="Select student" />
@@ -406,8 +406,8 @@ const CreateIncidentModal = ({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Incident Type *
                 </label>
-                <Select value={formData.incident_type} onValueChange={(value) => 
-                  setFormData(prev => ({ ...prev, incident_type: value }))
+                <Select value={formData.incident_type} onValueChange={(value: string) => 
+                  setFormData((prev: any) => ({ ...prev, incident_type: value }))
                 }>
                   <SelectTrigger>
                     <SelectValue placeholder="Select type" />
@@ -428,8 +428,8 @@ const CreateIncidentModal = ({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Severity Level *
                 </label>
-                <Select value={formData.severity_level} onValueChange={(value) => 
-                  setFormData(prev => ({ ...prev, severity_level: value }))
+                <Select value={formData.severity_level} onValueChange={(value: string) => 
+                  setFormData((prev: any) => ({ ...prev, severity_level: value }))
                 }>
                   <SelectTrigger>
                     <SelectValue placeholder="Select severity" />
@@ -450,7 +450,7 @@ const CreateIncidentModal = ({
                 </label>
                 <Input
                   value={formData.location}
-                  onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                  onChange={(e) => setFormData((prev: any) => ({ ...prev, location: e.target.value }))}
                   placeholder="e.g., Classroom 5A, Playground"
                 />
               </div>
@@ -462,7 +462,7 @@ const CreateIncidentModal = ({
               </label>
               <Input
                 value={formData.title}
-                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                onChange={(e) => setFormData((prev: any) => ({ ...prev, title: e.target.value }))}
                 placeholder="Brief summary of the incident"
               />
             </div>
@@ -473,7 +473,7 @@ const CreateIncidentModal = ({
               </label>
               <Textarea
                 value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                onChange={(e) => setFormData((prev: any) => ({ ...prev, description: e.target.value }))}
                 placeholder="Detailed description of what happened..."
                 rows={4}
               />
@@ -485,7 +485,7 @@ const CreateIncidentModal = ({
               </label>
               <Textarea
                 value={formData.action_taken}
-                onChange={(e) => setFormData(prev => ({ ...prev, action_taken: e.target.value }))}
+                onChange={(e) => setFormData((prev: any) => ({ ...prev, action_taken: e.target.value }))}
                 placeholder="What actions were taken to address the incident..."
                 rows={3}
               />
@@ -496,7 +496,7 @@ const CreateIncidentModal = ({
                 type="checkbox"
                 id="follow_up_required"
                 checked={formData.follow_up_required}
-                onChange={(e) => setFormData(prev => ({ ...prev, follow_up_required: e.target.checked }))}
+                onChange={(e) => setFormData((prev: any) => ({ ...prev, follow_up_required: e.target.checked }))}
                 className="rounded border-gray-300"
               />
               <label htmlFor="follow_up_required" className="text-sm font-medium text-gray-700">
@@ -512,7 +512,7 @@ const CreateIncidentModal = ({
                 <Input
                   type="date"
                   value={formData.follow_up_date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, follow_up_date: e.target.value }))}
+                  onChange={(e) => setFormData((prev: any) => ({ ...prev, follow_up_date: e.target.value }))}
                 />
               </div>
             )}
