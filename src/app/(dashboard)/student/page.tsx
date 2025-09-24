@@ -1,13 +1,20 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
-import { useAppSelector } from '@/lib/redux/hooks'
+import React, { useState, useEffect, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
-import { PageLoader } from '@/components/ui/loading-spinner'
-import { useToast } from '@/components/ui/toast'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+// Note: Using local Badge and Progress components defined below
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useAuth } from '@/lib/hooks/useAuth'
+import { useAppDispatch, useAppSelector } from '@/lib/redux/hooks'
+import { updateXP, updateGems } from '@/lib/redux/slices/authSlice'
+import { cn } from '@/lib/utils'
+import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { AuthGuard } from '@/components/auth/auth-guard'
+import { useToast } from '@/components/ui/toast'
 import { 
   Heart, Star, Zap, Target, Brain, HelpCircle, X, AlertTriangle, MessageCircle, Trophy, Crown,
   Sparkles, Shield, Wind, Droplets, Moon, AlertCircle, BookOpen, Calendar, TrendingUp, 
@@ -15,6 +22,7 @@ import {
 } from 'lucide-react'
 import { MessagingNavButton } from '@/components/ui/messaging-nav-button'
 import { AdvancedSettingsDropdown } from '@/components/ui/advanced-settings-dropdown-fixed'
+import { ProfessionalLoader } from '@/components/ui/professional-loader'
 
 // Enhanced Progress Component with animations
 const Progress = ({ value = 0, className = "", animated = true }: { 
@@ -712,7 +720,11 @@ const StudentDashboardContent = () => {
   }
 
   if (loading) {
-    return <PageLoader />
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <ProfessionalLoader />
+      </div>
+    )
   }
 
   const moodEmojis = {
@@ -762,9 +774,11 @@ const StudentDashboardContent = () => {
                   <div className="relative">
                     <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center text-2xl backdrop-blur-sm border-2 border-white/40 shadow-lg overflow-hidden">
                       {profile?.profile_picture_url ? (
-                        <img
+                        <Image
                           src={profile.profile_picture_url}
                           alt={`${profile?.first_name || 'Student'}'s profile`}
+                          width={64}
+                          height={64}
                           className="w-full h-full object-cover"
                         />
                       ) : (
@@ -847,9 +861,11 @@ const StudentDashboardContent = () => {
               <div className="relative flex-shrink-0">
                 <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white/20 rounded-full flex items-center justify-center text-3xl sm:text-4xl backdrop-blur-sm border-3 border-white/40 shadow-lg overflow-hidden">
                   {profile?.profile_picture_url ? (
-                    <img
+                    <Image
                       src={profile.profile_picture_url}
                       alt={`${profile?.first_name || 'Student'}'s profile`}
+                      width={96}
+                      height={96}
                       className="w-full h-full object-cover"
                     />
                   ) : (

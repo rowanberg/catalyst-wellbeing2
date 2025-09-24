@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Upload, X, ImageIcon, Crop, Sparkles, ZoomIn, ZoomOut, RotateCw, Camera, Palette, Scissors, Check } from 'lucide-react'
 import { Button } from './button'
+import NextImage from 'next/image'
 
 interface AdvancedProfilePictureUploadProps {
   currentImage?: string
@@ -115,7 +116,7 @@ export const AdvancedProfilePictureUpload = ({
     if (!ctx) return previewImage
 
     return new Promise((resolve) => {
-      const img = new Image()
+      const img = new window.Image()
       img.onload = () => {
         // Set canvas size for profile picture (400x400)
         canvas.width = 400
@@ -385,9 +386,11 @@ export const AdvancedProfilePictureUpload = ({
                     <div className="flex justify-center">
                       <div className="relative">
                         <div className="w-64 h-64 rounded-2xl overflow-hidden border-4 border-purple-200 shadow-xl">
-                          <img
+                          <NextImage
                             src={previewImage}
                             alt="Profile preview"
+                            width={256}
+                            height={256}
                             className="w-full h-full object-cover"
                             style={{
                               filter: filters.find(f => f.name === selectedFilter)?.style.replace('filter: ', '') || 'none',
@@ -468,9 +471,11 @@ export const AdvancedProfilePictureUpload = ({
                               }`}
                             >
                               <div className="w-12 h-12 rounded-lg overflow-hidden mx-auto mb-2">
-                                <img
+                                <NextImage
                                   src={previewImage}
                                   alt={filter.label}
+                                  width={48}
+                                  height={48}
                                   className="w-full h-full object-cover"
                                   style={{ filter: filter.style.replace('filter: ', '') }}
                                 />

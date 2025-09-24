@@ -1,9 +1,12 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { motion } from 'framer-motion'
-import { Camera, Upload, X, Check } from 'lucide-react'
+import React, { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Upload, X, User, Camera, Check } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import Image from 'next/image'
+import { motion } from 'framer-motion'
 import { useToast } from '@/components/ui/toast'
 
 interface ProfilePictureUploadProps {
@@ -18,7 +21,7 @@ export const ProfilePictureUpload = ({
   className = "" 
 }: ProfilePictureUploadProps) => {
   const [isUploading, setIsUploading] = useState(false)
-  const [previewImage, setPreviewImage] = useState<string | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [showUploadModal, setShowUploadModal] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { addToast } = useToast()
@@ -50,19 +53,19 @@ export const ProfilePictureUpload = ({
     // Create preview
     const reader = new FileReader()
     reader.onload = (e) => {
-      setPreviewImage(e.target?.result as string)
+      setPreviewUrl(e.target?.result as string)
       setShowUploadModal(true)
     }
     reader.readAsDataURL(file)
   }
 
   const handleUpload = async () => {
-    if (!previewImage) return
+    if (!previewUrl) return
 
     setIsUploading(true)
     try {
       // Convert data URL to blob
-      const response = await fetch(previewImage)
+      const response = await fetch(previewUrl)
       const blob = await response.blob()
 
       // Create form data
@@ -79,7 +82,7 @@ export const ProfilePictureUpload = ({
         const data = await uploadResponse.json()
         onImageUpdate(data.imageUrl)
         setShowUploadModal(false)
-        setPreviewImage(null)
+        setPreviewUrl(null)
         addToast({
           title: "Profile Picture Updated!",
           description: "Your new profile picture has been saved successfully.",
@@ -102,7 +105,7 @@ export const ProfilePictureUpload = ({
 
   const handleCancel = () => {
     setShowUploadModal(false)
-    setPreviewImage(null)
+    setPreviewUrl(null)
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -121,31 +124,29 @@ export const ProfilePictureUpload = ({
         />
 
         {/* Upload button overlay */}
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+        <button
           onClick={() => fileInputRef.current?.click()}
           className="absolute -bottom-2 -right-2 w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-300 z-10"
         >
           <Camera className="w-4 h-4" />
-        </motion.button>
+        </button>
       </div>
 
       {/* Upload Modal */}
       {showUploadModal && (
         <motion.div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={handleCancel}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          onClick={handleCancel}
         >
           <motion.div
+            className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-gray-800">Update Profile Picture</h3>
@@ -162,9 +163,11 @@ export const ProfilePictureUpload = ({
             {/* Preview */}
             <div className="flex justify-center mb-6">
               <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-purple-200 shadow-lg">
-                <img
-                  src={previewImage || ''}
+                <Image
+                  src={previewUrl || ''}
                   alt="Profile preview"
+                  width={128}
+                  height={128}
                   className="w-full h-full object-cover"
                 />
               </div>

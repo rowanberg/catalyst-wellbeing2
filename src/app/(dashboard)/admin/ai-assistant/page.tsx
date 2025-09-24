@@ -1,131 +1,77 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { AuthGuard } from '@/components/auth/auth-guard'
+import Link from 'next/link'
+import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { AuthGuard } from '@/components/auth/auth-guard'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Progress } from '@/components/ui/progress'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import ReactMarkdown from 'react-markdown'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart as RechartsLineChart, Line, PieChart as RechartsPieChart, Pie, Cell } from 'recharts'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Progress } from '@/components/ui/progress'
 import { 
-  Bot, 
-  Lightbulb, 
-  RefreshCw, 
   Send, 
+  Bot, 
+  User, 
   Sparkles, 
-  AlertTriangle, 
+  Brain, 
+  TrendingUp, 
   Users, 
-  BookOpen, 
-  Heart, 
-  Target, 
-  Star, 
-  Zap,
-  Activity,
-  Calendar,
-  Clock,
-  Download,
-  Filter,
-  Globe,
-  GraduationCap,
-  Home,
-  Info,
-  Mail,
-  Phone,
-  Shield,
-  Smile,
-  ThumbsUp,
-  Trash2,
-  UserCheck,
-  Wifi,
-  X,
-  MoreVertical,
-  Search,
-  User,
-  ThumbsDown,
-  Copy,
-  Brain,
+  MessageSquare, 
   BarChart3,
-  LineChart,
-  PieChart,
-  Mic,
-  MicOff,
+  Lightbulb,
+  Target,
+  Heart,
+  Shield,
+  Zap,
+  RefreshCw,
+  Download,
+  Share,
+  Settings,
+  HelpCircle,
+  ChevronDown,
+  Copy,
+  Check,
+  AlertTriangle,
+  BookOpen,
+  Search,
+  Trash2,
+  ThumbsUp,
+  ThumbsDown,
   Volume2,
   VolumeX,
+  Mic,
+  MicOff,
+  LineChart,
+  Clock,
+  Star,
+  Calendar,
+  GraduationCap,
   Maximize2,
-  Minimize2,
-  Settings,
-  Star as StarIcon,
-  Heart as HeartIcon,
-  Zap as ZapIcon
+  Minimize2
 } from 'lucide-react'
+import HuggingFaceService, { SchoolContext } from '@/lib/huggingface-api'
+import SchoolContextService from '@/lib/school-context'
+import AISettingsComponent from '@/components/admin/ai-settings'
+import { toast } from 'sonner'
 
-// Rich Content Renderer Component
+// Rich Content Renderer Component (simplified without charts for now)
 const RichContentRenderer = ({ content }: { content: any }) => {
-  const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#00ff00', '#0088fe']
-  
   switch (content.type) {
     case 'chart':
-      if (content.data.chartType === 'bar') {
-        return (
-          <div className="w-full h-64 my-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={content.data.data}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value" fill="#8884d8" />
-              </BarChart>
-            </ResponsiveContainer>
+      return (
+        <div className="w-full h-64 my-4 flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border-2 border-dashed border-gray-300">
+          <div className="text-center">
+            <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600">Chart: {content.data.chartType}</p>
+            <p className="text-sm text-gray-500">Chart library integration needed</p>
           </div>
-        )
-      } else if (content.data.chartType === 'line') {
-        return (
-          <div className="w-full h-64 my-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <RechartsLineChart data={content.data.data}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="value" stroke="#8884d8" strokeWidth={2} />
-              </RechartsLineChart>
-            </ResponsiveContainer>
-          </div>
-        )
-      } else if (content.data.chartType === 'pie') {
-        return (
-          <div className="w-full h-64 my-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <RechartsPieChart>
-                <Pie
-                  data={content.data.data}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {content.data.data.map((entry: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </RechartsPieChart>
-            </ResponsiveContainer>
-          </div>
-        )
-      }
-      break
+        </div>
+      )
     
     case 'table':
       return (
@@ -177,9 +123,11 @@ const RichContentRenderer = ({ content }: { content: any }) => {
     case 'image':
       return (
         <div className="my-4">
-          <img 
+          <Image 
             src={content.data.url} 
             alt={content.data.alt || 'AI Generated Image'} 
+            width={800}
+            height={600}
             className="max-w-full h-auto rounded-lg shadow-md"
           />
           {content.data.caption && (
@@ -194,11 +142,6 @@ const RichContentRenderer = ({ content }: { content: any }) => {
       return <div className="text-gray-500 italic">Unsupported content type</div>
   }
 }
-import Link from 'next/link'
-import HuggingFaceService, { SchoolContext } from '@/lib/huggingface-api'
-import SchoolContextService from '@/lib/school-context'
-import AISettingsComponent from '@/components/admin/ai-settings'
-import { toast } from 'sonner'
 
 interface AIInsight {
   id: string
@@ -1174,78 +1117,9 @@ I can analyze this data to provide insights, answer questions about school perfo
                               {message.richContent ? (
                                 <RichContentRenderer content={message.richContent} />
                               ) : (
-                                <ReactMarkdown
-                                  components={{
-                                    table: ({ children }) => (
-                                      <div className="overflow-x-auto my-4 rounded-lg border border-gray-200 shadow-sm">
-                                        <table className="min-w-full divide-y divide-gray-200">
-                                          {children}
-                                        </table>
-                                      </div>
-                                    ),
-                                    thead: ({ children }) => (
-                                      <thead className="bg-gradient-to-r from-gray-50 to-gray-100">{children}</thead>
-                                    ),
-                                    th: ({ children }) => (
-                                      <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider border-r border-gray-200 last:border-r-0">
-                                        {children}
-                                      </th>
-                                    ),
-                                    td: ({ children }) => (
-                                      <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-700 border-r border-gray-200 last:border-r-0 whitespace-nowrap">
-                                        {children}
-                                      </td>
-                                    ),
-                                    tbody: ({ children }) => (
-                                      <tbody className="bg-white divide-y divide-gray-200">{children}</tbody>
-                                    ),
-                                    tr: ({ children }) => (
-                                      <tr className="hover:bg-gray-50 transition-colors duration-150">{children}</tr>
-                                    ),
-                                    ul: ({ children }) => (
-                                      <ul className="list-disc list-inside space-y-1 my-2">
-                                        {children}
-                                      </ul>
-                                    ),
-                                    ol: ({ children }) => (
-                                      <ol className="list-decimal list-inside space-y-1 my-2">
-                                        {children}
-                                      </ol>
-                                    ),
-                                    h1: ({ children }) => (
-                                      <h1 className="text-sm sm:text-lg font-bold mt-3 sm:mt-4 mb-2 text-gray-900">
-                                        {children}
-                                      </h1>
-                                    ),
-                                    h2: ({ children }) => (
-                                      <h2 className="text-sm sm:text-md font-semibold mt-2 sm:mt-3 mb-1 sm:mb-2 text-gray-800">
-                                        {children}
-                                      </h2>
-                                    ),
-                                    h3: ({ children }) => (
-                                      <h3 className="text-xs sm:text-sm font-medium mt-2 mb-1 text-gray-700">
-                                        {children}
-                                      </h3>
-                                    ),
-                                    code: ({ children }) => (
-                                      <code className="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">
-                                        {children}
-                                      </code>
-                                    ),
-                                    pre: ({ children }) => (
-                                      <pre className="bg-gray-100 p-3 rounded-lg overflow-x-auto text-xs font-mono my-2">
-                                        {children}
-                                      </pre>
-                                    ),
-                                    blockquote: ({ children }) => (
-                                      <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-600 my-2">
-                                        {children}
-                                      </blockquote>
-                                    )
-                                  }}
-                                >
+                                <div className="whitespace-pre-wrap">
                                   {message.content}
-                                </ReactMarkdown>
+                                </div>
                               )}
                             </div>
                             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-2 sm:mt-3 space-y-2 sm:space-y-0">
@@ -1308,7 +1182,7 @@ I can analyze this data to provide insights, answer questions about school perfo
                                       toast.success('Added to favorites!')
                                     }}
                                   >
-                                    <StarIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-yellow-600" />
+                                    <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-yellow-600" />
                                   </Button>
                                 </div>
                               )}

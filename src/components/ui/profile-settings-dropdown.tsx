@@ -1,24 +1,37 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import React, { useState, useRef } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+// Note: Separator component not available, using manual dividers
+import Image from 'next/image'
 import { 
   Settings, 
-  Camera, 
-  Palette, 
+  User, 
   Bell, 
   Shield, 
-  User, 
-  Moon, 
+  HelpCircle, 
+  LogOut, 
+  ChevronDown,
+  Edit3,
+  Camera,
+  Save,
+  X,
+  Crown,
+  Star,
+  Trophy,
+  Target,
+  Zap,
+  Moon,
   Sun,
   Volume2,
   VolumeX,
   Eye,
-  EyeOff,
-  LogOut,
-  ChevronDown
+  EyeOff
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { motion, AnimatePresence } from 'framer-motion'
+import { cn } from '@/lib/utils'
 import { ProfilePictureUpload } from '@/components/ui/profile-picture-upload'
 import { useToast } from '@/components/ui/toast'
 
@@ -248,9 +261,11 @@ export const ProfileSettingsDropdown = ({
             <div className="flex justify-center mb-6">
               <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-purple-200 shadow-lg">
                 {profile?.profile_picture_url ? (
-                  <img
-                    src={profile.profile_picture_url}
-                    alt="Current profile"
+                  <Image
+                    src={profile?.profile_picture_url}
+                    alt="Profile"
+                    width={40}
+                    height={40}
                     className="w-full h-full object-cover"
                   />
                 ) : (
