@@ -42,7 +42,7 @@ export default function AnnouncementsSection() {
         }
         
         setAnnouncements(data.announcements || [])
-      } catch (err) {
+      } catch (err: any) {
         setError(err instanceof Error ? err.message : 'Failed to load announcements')
       } finally {
         setLoading(false)

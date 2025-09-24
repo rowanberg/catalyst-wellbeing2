@@ -19,7 +19,7 @@ async function cleanupOldMessages() {
     } else {
       console.log(`Cleaned up messages older than ${oneMonthAgo.toISOString()}`)
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in cleanup function:', error)
   }
 }
@@ -273,7 +273,7 @@ export async function GET(request: NextRequest) {
       userRole: profile.role
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in family messaging GET:', error)
     console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
     return NextResponse.json({ 
@@ -457,7 +457,7 @@ export async function POST(request: NextRequest) {
     await cleanupOldMessages()
 
     return NextResponse.json({ message, conversationId: finalConversationId })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Family messaging POST error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
@@ -503,7 +503,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Family messaging PATCH error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

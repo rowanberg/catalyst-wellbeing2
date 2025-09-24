@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     let parsedBody
     try {
       parsedBody = JSON.parse(body)
-    } catch (parseError) {
+    } catch (parseError: any) {
       console.error('JSON parse error:', parseError)
       return NextResponse.json({ error: 'Invalid JSON in request body' }, { status: 400 })
     }
@@ -148,7 +148,7 @@ export async function POST(request: Request) {
       relationships: insertData
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('=== CRITICAL ERROR in parent-child relationships API ===')
     console.error('Error type:', typeof error)
     console.error('Error object:', error)

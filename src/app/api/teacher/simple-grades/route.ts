@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
       success: true
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in simple grades GET:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

@@ -264,7 +264,7 @@ function TeacherMessagingContent() {
           setWellbeingAnalytics(data.wellbeingAnalytics || wellbeingAnalytics)
           setInterventionSuggestions(data.interventionSuggestions || interventionSuggestions)
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to fetch teacher data:', error)
       } finally {
         setLoading(false)
@@ -281,7 +281,7 @@ function TeacherMessagingContent() {
           setInterventionCategories(data.categories || [])
           setMoodFilters(data.moodFilters || [])
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to fetch intervention toolkit:', error)
       } finally {
         setInterventionLoading(false)
@@ -1218,7 +1218,7 @@ function TeacherMessagingContent() {
                             const errorData = await response.json()
                             setShoutOutError(errorData.error || 'Failed to send shout-out')
                           }
-                        } catch (error) {
+                        } catch (error: any) {
                           setShoutOutError('Network error. Please try again.')
                         } finally {
                           setShoutOutLoading(false)

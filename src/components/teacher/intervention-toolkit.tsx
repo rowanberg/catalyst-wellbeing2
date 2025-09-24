@@ -80,7 +80,7 @@ export default function InterventionToolkit() {
         const data = await response.json()
         setClassAnalytics(data.analytics)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching class analytics:', error)
     }
   }
@@ -92,7 +92,7 @@ export default function InterventionToolkit() {
         const data = await response.json()
         setActivities(data.activities)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching activities:', error)
     } finally {
       setLoading(false)
@@ -184,7 +184,7 @@ export default function InterventionToolkit() {
           setImplementing(null)
         }, 2000)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error implementing activity:', error)
       setImplementing(null)
     }

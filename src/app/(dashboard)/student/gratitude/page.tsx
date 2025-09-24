@@ -73,7 +73,7 @@ export default function GratitudeJournalPage() {
         const data = await response.json()
         setEntries(data.entries || [])
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching gratitude entries:', error)
     }
   }
@@ -116,7 +116,7 @@ export default function GratitudeJournalPage() {
         console.error('API Error:', response.status, errorData)
         throw new Error(`Failed to save gratitude entry: ${response.status}`)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving gratitude entry:', error)
     } finally {
       setIsLoading(false)

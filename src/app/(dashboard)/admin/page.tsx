@@ -164,7 +164,7 @@ function AdminDashboardContent() {
         const statsData = await statsResponse.json()
         setSchoolStats(statsData.stats)
         
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching school data:', err)
         setError(err instanceof Error ? err.message : 'Failed to load school data')
       } finally {

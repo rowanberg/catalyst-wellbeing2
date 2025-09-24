@@ -65,7 +65,7 @@ export class SchoolContextService {
 
       console.log('✅ SchoolContextService: Final context:', context)
       return context
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ SchoolContextService: Error gathering school context:', error)
       console.log('🔄 SchoolContextService: Using fallback context')
       return this.getFallbackContext()
@@ -165,7 +165,7 @@ export class SchoolContextService {
       // Final fallback
       console.log('⚠️ No user or no school data found, using fallback')
       return { name: 'Your School' }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error getting school info:', error)
       return { name: 'Your School' }
     }
@@ -242,7 +242,7 @@ export class SchoolContextService {
         count: 0,
         grades: ['K', '1', '2', '3', '4', '5']
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error fetching student stats:', error)
       return {
         count: 0,
@@ -303,7 +303,7 @@ export class SchoolContextService {
       // If no data found, return default structure instead of throwing error
       console.log('No teacher data found in database, using defaults')
       return { count: 0 }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching teacher stats:', error)
       return { count: 0 }
     }
@@ -378,7 +378,7 @@ export class SchoolContextService {
       })
 
       return activities.slice(0, 15) // Return most recent 15 activities
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching recent activities:', error)
       return []
     }
@@ -497,7 +497,7 @@ export class SchoolContextService {
         helpRequests: helpRequests?.length || 0,
         engagementLevel: Math.round(engagementLevel)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching wellbeing metrics:', error)
       return {
         averageMoodScore: 7.5,
@@ -581,7 +581,7 @@ export class SchoolContextService {
         strugglingStudents,
         subjects
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching academic metrics:', error)
       // Return realistic fallback data
       return {
@@ -658,7 +658,7 @@ export class SchoolContextService {
         interventionsNeeded,
         blackMarks: blackMarksCount
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching behavioral metrics:', error)
       return {
         positiveInteractions: 45,
@@ -720,7 +720,7 @@ export class SchoolContextService {
       // If no data found, return default structure instead of throwing error
       console.log('No parent data found in database, using defaults')
       return { count: 0 }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching parent stats:', error)
       return { count: 0 }
     }
@@ -802,7 +802,7 @@ export class SchoolContextService {
           notes: entry.notes || ''
         }
       }) || []
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching mood logging data:', error)
       return []
     }
@@ -888,7 +888,7 @@ export class SchoolContextService {
           completed: entryAny.completed !== undefined ? entryAny.completed : true
         }
       }) || []
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching today\'s adventures data:', error)
       return []
     }

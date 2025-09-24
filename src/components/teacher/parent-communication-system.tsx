@@ -139,7 +139,7 @@ export default function ParentCommunicationSystem() {
           await fetchMeetingSlots()
           break
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching data:', error)
     } finally {
       setLoading(false)
@@ -185,7 +185,7 @@ export default function ParentCommunicationSystem() {
         setMessageForm({ parent_id: '', student_id: '', subject: '', message: '', priority: 'normal' })
         fetchMessages()
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending message:', error)
     }
   }
@@ -211,7 +211,7 @@ export default function ParentCommunicationSystem() {
         })
         fetchAnnouncements()
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating announcement:', error)
     }
   }
@@ -239,7 +239,7 @@ export default function ParentCommunicationSystem() {
         })
         fetchMeetingSlots()
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating meeting slot:', error)
     }
   }

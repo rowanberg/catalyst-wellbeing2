@@ -93,7 +93,7 @@ function ParentDashboardContent() {
       })
 
       fetchChildrenData()
-    } catch (error) {
+    } catch (error: any) {
       const appError = handleError(error, 'acknowledge help request')
       addToast({
         type: 'error',
@@ -174,7 +174,7 @@ function ParentDashboardContent() {
         
         setHelpRequests(requestsData || [])
       }
-    } catch (error) {
+    } catch (error: any) {
       const appError = handleError(error, 'parent dashboard data fetch')
       setError(appError.message)
       addToast({

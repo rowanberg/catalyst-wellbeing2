@@ -240,7 +240,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
             const studentsData = await studentsResponse.json()
             setStudents(studentsData.students || [])
           }
-        } catch (studentsError) {
+        } catch (studentsError: any) {
           console.log('Could not fetch detailed student data:', studentsError)
           // Set empty students array if detailed data fails
           setStudents([])
@@ -267,7 +267,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
         })
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching class data:', error)
       // Set default analytics on error
       setAnalytics({

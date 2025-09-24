@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
             console.log(`✅ Found user from ${cookieName}:`, currentUserId)
             break
           }
-        } catch (e) {
+        } catch (e: any) {
           console.log(`${cookieName} failed:`, e)
         }
       }
@@ -199,7 +199,7 @@ export async function GET(request: NextRequest) {
       schoolInfo: null
     }, { status: 404 })
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('School info API error:', error)
     return NextResponse.json({ 
       error: 'Failed to fetch school information',

@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
         .select('id')
         .limit(1)
       tests.push({ name: 'Safety Incidents Table', status: 'pass', message: 'Table accessible' })
-    } catch (error) {
+    } catch (error: any) {
       tests.push({ name: 'Safety Incidents Table', status: 'fail', message: 'Table not found or inaccessible' })
     }
 
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
         .select('id')
         .limit(1)
       tests.push({ name: 'Digital Safety Checks Table', status: 'pass', message: 'Table accessible' })
-    } catch (error) {
+    } catch (error: any) {
       tests.push({ name: 'Digital Safety Checks Table', status: 'fail', message: 'Table not found or inaccessible' })
     }
 
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
         .select('id')
         .limit(1)
       tests.push({ name: 'Safety Alerts Table', status: 'pass', message: 'Table accessible' })
-    } catch (error) {
+    } catch (error: any) {
       tests.push({ name: 'Safety Alerts Table', status: 'fail', message: 'Table not found or inaccessible' })
     }
 
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
           p_end_date: null
         })
       tests.push({ name: 'Safety Metrics Function', status: 'pass', message: 'Function callable' })
-    } catch (error) {
+    } catch (error: any) {
       tests.push({ name: 'Safety Metrics Function', status: 'fail', message: 'Function not found or error' })
     }
 
@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
             message: `${apiTest.method} request failed with status ${testResponse.status}` 
           })
         }
-      } catch (error) {
+      } catch (error: any) {
         tests.push({ 
           name: `API ${apiTest.endpoint}`, 
           status: 'fail', 
@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
         stored_functions: tests.filter(t => t.name.includes('Function')).every(t => t.status === 'pass')
       }
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in safety system test:', error)
     return NextResponse.json({ 
       error: 'Test execution failed', 

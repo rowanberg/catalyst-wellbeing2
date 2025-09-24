@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     if (schoolEncryptionKey) {
       try {
         encryptedMessage = encryptMessage(message, schoolEncryptionKey)
-      } catch (error) {
+      } catch (error: any) {
         console.error('Encryption failed, proceeding without encryption:', error)
       }
     }
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
       }
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Submit help request API error:', error)
     return NextResponse.json(
       { 

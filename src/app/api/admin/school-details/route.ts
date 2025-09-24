@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
         console.log('🚨 USING JEBIN DIRECTLY:', currentUserId)
         console.log('🚨 JEBIN SCHOOL:', currentSchoolId)
       }
-    } catch (e) {
+    } catch (e: any) {
       console.log('🚨 JEBIN LOOKUP FAILED:', e)
     }
     
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
           } else {
             console.log(`${cookieName} invalid:`, error?.message)
           }
-        } catch (e) {
+        } catch (e: any) {
           console.log(`${cookieName} failed:`, e)
         }
       }
@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
         } else {
           console.log('❌ Could not find JEBIN user in profiles')
         }
-      } catch (lookupError) {
+      } catch (lookupError: any) {
         console.log('❌ Direct lookup failed:', lookupError)
       }
     }
@@ -223,7 +223,7 @@ export async function GET(request: NextRequest) {
               console.log('✅ Found school from auth header profile:', currentSchoolId)
             }
           }
-        } catch (e) {
+        } catch (e: any) {
           console.log('Auth header failed:', e)
         }
       }
@@ -435,7 +435,7 @@ export async function GET(request: NextRequest) {
       status: actualStatus
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('School details API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

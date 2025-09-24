@@ -121,7 +121,7 @@ export default function BreathingExercise() {
         dispatch(updateGems(2))
         setShowSuccess(true) // Still show success for user experience
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving breathing session:', error)
       // Fallback to local rewards
       dispatch(updateXP(10))

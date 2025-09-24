@@ -121,7 +121,7 @@ function TeacherCommunicationsContent() {
         { id: '2', dayOfWeek: 3, startTime: '14:00', endTime: '15:00', isActive: true },
         { id: '3', dayOfWeek: 5, startTime: '11:00', endTime: '12:00', isActive: true }
       ]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading communication data:', error);
     } finally {
       setLoading(false);
@@ -183,7 +183,7 @@ function TeacherCommunicationsContent() {
         }
       ];
       setMessages(mockMessages);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading messages:', error);
     }
   };
@@ -234,7 +234,7 @@ function TeacherCommunicationsContent() {
           )
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending message:', error);
     }
   };
@@ -244,7 +244,7 @@ function TeacherCommunicationsContent() {
       // In production, this would report to admin
       console.log('Reporting conversation:', conversationId);
       // Show success message
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error reporting conversation:', error);
     }
   };
@@ -254,7 +254,7 @@ function TeacherCommunicationsContent() {
       // In production, this would send to all parents in class
       console.log('Sending class announcement:', announcement);
       // Show success message
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending announcement:', error);
     }
   };

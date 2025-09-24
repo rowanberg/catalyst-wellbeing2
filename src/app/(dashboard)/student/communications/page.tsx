@@ -98,7 +98,7 @@ function StudentCommunicationsContent() {
           isAvailable: true
         }
       ]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading communication data:', error);
     } finally {
       setLoading(false);
@@ -148,7 +148,7 @@ function StudentCommunicationsContent() {
         }
       ];
       setMessages(mockMessages);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading messages:', error);
     }
   };
@@ -204,7 +204,7 @@ function StudentCommunicationsContent() {
         setNewMessage('');
         setContentAnalysis(null);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending message:', error);
     }
   };
@@ -240,7 +240,7 @@ function StudentCommunicationsContent() {
         // Show success message
         alert('Your safety report has been sent to school administrators. You are safe now.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating emergency incident:', error);
     }
   };

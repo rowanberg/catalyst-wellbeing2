@@ -61,7 +61,7 @@ export default function RequestHelpPage() {
       } else {
         setSubmissionError(result.error || 'Failed to submit help request')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting help request:', error)
       setSubmissionError('Network error. Please try again.')
     } finally {

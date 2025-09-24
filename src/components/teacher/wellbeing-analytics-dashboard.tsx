@@ -83,7 +83,7 @@ export const WellbeingAnalyticsDashboard = ({ teacherId, schoolId }: WellbeingAn
         setMetrics(data.metrics)
         setStudentInsights(data.studentInsights || [])
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching wellbeing data:', error)
     } finally {
       setIsLoading(false)

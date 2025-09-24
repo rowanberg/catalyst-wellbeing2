@@ -114,7 +114,7 @@ export default function WellbeingAnalyticsPage() {
       const data = await response.json()
       setAnalytics(data.analytics)
       setError(null)
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching analytics:', err)
       setError(err instanceof Error ? err.message : 'Failed to load analytics')
     } finally {

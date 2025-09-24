@@ -67,7 +67,7 @@ export default function CourageLogPage() {
         const data = await response.json()
         setEntries(data.entries || [])
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching courage entries:', error)
     }
   }
@@ -109,7 +109,7 @@ export default function CourageLogPage() {
         console.error('API Error:', response.status, errorData)
         throw new Error(`Failed to save courage entry: ${response.status}`)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving courage entry:', error)
     } finally {
       setIsLoading(false)

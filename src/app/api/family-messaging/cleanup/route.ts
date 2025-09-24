@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       message: `Deleted ${deletedCount} messages older than 1 month`
     })
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in cleanup endpoint:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

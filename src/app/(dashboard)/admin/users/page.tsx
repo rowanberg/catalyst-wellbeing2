@@ -246,7 +246,7 @@ function UserManagementContent() {
         }
         setStats(userStats)
         
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching users:', err)
         setError(err instanceof Error ? err.message : 'Failed to fetch users')
         setUsers([])
@@ -420,7 +420,7 @@ function UserManagementContent() {
       setMessageRecipient(null)
       setMessageSubject('')
       setMessageContent('')
-    } catch (error) {
+    } catch (error: any) {
       addToast('Failed to send message', 'error')
     }
   }
@@ -434,7 +434,7 @@ function UserManagementContent() {
       // TODO: Implement actual delete API
       console.log('Deleting user:', user.id)
       addToast(`User ${user.first_name} ${user.last_name} has been deleted`, 'success')
-    } catch (error) {
+    } catch (error: any) {
       addToast('Failed to delete user', 'error')
     }
   }
@@ -445,7 +445,7 @@ function UserManagementContent() {
       // TODO: Implement actual status toggle API
       console.log('Toggling user status:', user.id, 'to', newStatus)
       addToast(`User ${user.first_name} ${user.last_name} is now ${newStatus}`, 'success')
-    } catch (error) {
+    } catch (error: any) {
       addToast('Failed to update user status', 'error')
     }
   }
@@ -498,7 +498,7 @@ function UserManagementContent() {
         console.error('Save failed:', data)
         throw new Error(data.error || data.details || 'Failed to save user')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Save error:', error)
       const errorMessage = error instanceof Error ? error.message : 'Failed to update user'
       handleError(errorMessage)

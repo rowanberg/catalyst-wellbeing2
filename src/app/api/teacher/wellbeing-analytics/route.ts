@@ -207,7 +207,7 @@ export async function GET(request: NextRequest) {
       studentInsights: studentInsights.slice(0, 20) // Limit to top 20 students needing attention
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unexpected error in wellbeing analytics API:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

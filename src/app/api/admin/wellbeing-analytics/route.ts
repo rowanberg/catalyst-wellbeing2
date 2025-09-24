@@ -318,7 +318,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, analytics })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Wellbeing analytics API error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },

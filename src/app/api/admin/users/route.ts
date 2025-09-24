@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Users API - Returning user IDs:', users?.map(u => ({ id: u.id, user_id: u.user_id, name: `${u.first_name} ${u.last_name}` })))
 
     return NextResponse.json({ users })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Admin users API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ user: authData.user, profile })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create user error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

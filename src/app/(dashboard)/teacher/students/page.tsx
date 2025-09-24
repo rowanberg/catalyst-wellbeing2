@@ -145,7 +145,7 @@ function StudentSetupComponent() {
           const data = await response.json()
           setGradeLevels(data.gradeLevels || [])
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error loading grade levels:', error)
       } finally {
         setLoading(false)
@@ -164,7 +164,7 @@ function StudentSetupComponent() {
           const data = await response.json()
           setCurrentAssignments(data.assignments || [])
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error loading current assignments:', error)
       }
     }
@@ -189,7 +189,7 @@ function StudentSetupComponent() {
             .map((cls: any) => cls.id)
           setSelectedClasses(assignedClasses)
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error loading classes:', error)
       } finally {
         setLoadingClasses(false)
@@ -235,7 +235,7 @@ function StudentSetupComponent() {
       } else {
         alert('Failed to update assignments')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving assignments:', error)
       alert('Error saving assignments')
     } finally {

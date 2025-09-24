@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
       total: students.length
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Error fetching students:', error)
     return NextResponse.json(
       { message: 'Internal server error' },

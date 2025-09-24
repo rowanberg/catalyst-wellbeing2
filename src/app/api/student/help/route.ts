@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, data })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Help request API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

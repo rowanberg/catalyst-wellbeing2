@@ -173,7 +173,7 @@ export default function TeacherAttendancePage() {
       } else {
         throw new Error(`Failed to fetch assigned classes: ${response.status}`)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading assigned classes:', error)
       setError('Failed to load assigned classes. Please try again.')
       setClasses([])
@@ -199,7 +199,7 @@ export default function TeacherAttendancePage() {
       } else {
         console.error('Failed to fetch grades:', response.status, response.statusText)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching grades:', error)
     } finally {
       setLoading(false)
@@ -283,7 +283,7 @@ export default function TeacherAttendancePage() {
         setStudents(studentsWithAttendance)
         setCurrentView('students')
         
-      } catch (attendanceError) {
+      } catch (attendanceError: any) {
         console.error('Error fetching attendance data:', attendanceError)
         // Still show students with default attendance status
         const studentsWithDefaultAttendance = validStudents.map((student: any) => ({
@@ -294,7 +294,7 @@ export default function TeacherAttendancePage() {
         setCurrentView('students')
       }
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching students:', error)
       setStudents([])
     } finally {

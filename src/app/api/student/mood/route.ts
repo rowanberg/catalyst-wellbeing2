@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
       message: 'Mood saved successfully! Your mood is now locked for today.'
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Mood API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

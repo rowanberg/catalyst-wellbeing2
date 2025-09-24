@@ -426,7 +426,7 @@ export async function GET(request: NextRequest) {
       }
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Dashboard API error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },

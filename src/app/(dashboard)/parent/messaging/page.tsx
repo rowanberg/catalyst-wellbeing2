@@ -136,7 +136,7 @@ function SimpleChildMessages({ conversationId, currentUserId, childName, refresh
           }
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching child messages:', error)
     } finally {
       setIsLoading(false)
@@ -302,7 +302,7 @@ function SimpleParentMessageInput({ conversationId, participantId, currentUserId
       } else {
         console.error('Failed to send message:', response.status)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending message:', error)
     } finally {
       setIsSending(false)
@@ -387,7 +387,7 @@ function ParentQuickMessageButton({ message, conversationId, participantId, curr
       } else {
         console.error('Failed to send quick message:', response.status)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending quick message:', error)
     } finally {
       setIsSending(false)
@@ -483,7 +483,7 @@ function ParentMessagingContent() {
 
         setChildren(transformedChildren)
         setFamilyConversations(data.conversations || [])
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching family data:', error)
         setChildren([])
         setFamilyConversations([])
@@ -531,7 +531,7 @@ function ParentMessagingContent() {
         setSelectedFamilyConversation(data.conversationId)
         setSelectedContact(null) // Clear other selections
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error starting family conversation:', error)
     }
   }
@@ -582,7 +582,7 @@ function ParentMessagingContent() {
       try {
         const responseText = await relationshipResponse.text()
         relationshipData = JSON.parse(responseText)
-      } catch (parseError) {
+      } catch (parseError: any) {
         console.error('Failed to parse API response:', parseError)
         setAddChildError('Invalid response from server')
         return
@@ -622,7 +622,7 @@ function ParentMessagingContent() {
         setFamilyConversations(data.conversations || [])
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding child:', error)
       setAddChildError('Network error. Please try again.')
     } finally {

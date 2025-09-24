@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
     // In a real application, these could be customized per school
     return NextResponse.json({ templates: shoutOutTemplates })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unexpected error in shout-out templates API:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

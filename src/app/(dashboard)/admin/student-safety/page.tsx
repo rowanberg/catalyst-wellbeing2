@@ -121,7 +121,7 @@ export default function StudentSafetyPage() {
         setDigitalChecks(formattedDigitalChecks)
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching safety data:', error)
       // Fallback to empty arrays on error
       setIncidents([])
@@ -148,7 +148,7 @@ export default function StudentSafetyPage() {
       } else {
         console.error('Failed to update incident status')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating incident status:', error)
     }
   }
@@ -169,7 +169,7 @@ export default function StudentSafetyPage() {
       } else {
         console.error('Failed to update parent notification')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error contacting parent:', error)
     }
   }
@@ -180,7 +180,7 @@ export default function StudentSafetyPage() {
       // For now, we'll just log the action
       console.log('Reviewing digital safety check:', checkId)
       // In a full implementation, this would open a modal with detailed content review
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error reviewing digital safety check:', error)
     }
   }
@@ -202,7 +202,7 @@ export default function StudentSafetyPage() {
       } else {
         console.error('Failed to notify parent')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error notifying parent:', error)
     }
   }

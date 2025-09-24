@@ -94,7 +94,7 @@ export default function BlackMarksView() {
         const data = await response.json()
         setBlackMarks(data.blackMarks)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching black marks:', error)
     } finally {
       setLoading(false)
@@ -126,7 +126,7 @@ export default function BlackMarksView() {
         const error = await response.json()
         alert(error.error || 'Failed to submit remedy')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting remedy:', error)
       alert('Failed to submit remedy')
     } finally {

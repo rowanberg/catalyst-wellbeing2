@@ -56,7 +56,7 @@ export default function KindnessCounterPage() {
         ) || []
         setTodayCount(todayEntries.length)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching kindness data:', error)
     }
   }
@@ -103,7 +103,7 @@ export default function KindnessCounterPage() {
       setShowSuccess(true)
       setTimeout(() => setShowSuccess(false), 3000)
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting kindness act:', error)
     } finally {
       setIsLoading(false)

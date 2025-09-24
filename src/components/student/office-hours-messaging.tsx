@@ -78,7 +78,7 @@ export default function OfficeHoursMessaging() {
         const data = await response.json()
         setTeachers(data.teachers)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching teachers:', error)
     } finally {
       setLoading(false)
@@ -92,7 +92,7 @@ export default function OfficeHoursMessaging() {
         const data = await response.json()
         setConversations(data.conversations)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching conversations:', error)
     }
   }
@@ -104,7 +104,7 @@ export default function OfficeHoursMessaging() {
         const data = await response.json()
         setMessages(data.messages)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching messages:', error)
     }
   }
@@ -163,7 +163,7 @@ export default function OfficeHoursMessaging() {
         fetchConversations()
         fetchMessages(data.conversationId)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error starting conversation:', error)
     }
   }
@@ -187,7 +187,7 @@ export default function OfficeHoursMessaging() {
         fetchMessages(selectedConversation)
         fetchConversations()
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending message:', error)
     } finally {
       setSending(false)

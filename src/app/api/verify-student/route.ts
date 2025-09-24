@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       }
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('=== CRITICAL ERROR in verify-student API ===')
     console.error('Error type:', typeof error)
     console.error('Error object:', error)

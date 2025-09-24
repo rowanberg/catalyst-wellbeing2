@@ -77,7 +77,7 @@ export default function ShoutOutsSystem() {
         const data = await response.json()
         setStudents(data.students)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching students:', error)
     }
   }
@@ -89,7 +89,7 @@ export default function ShoutOutsSystem() {
         const data = await response.json()
         setShoutOuts(data.shoutOuts)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching shout-outs:', error)
     } finally {
       setLoading(false)
@@ -103,7 +103,7 @@ export default function ShoutOutsSystem() {
         const data = await response.json()
         setTemplates(data.templates)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching templates:', error)
     }
   }
@@ -133,7 +133,7 @@ export default function ShoutOutsSystem() {
         fetchShoutOuts()
         fetchStudents() // Refresh to update recent shout-out counts
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending shout-out:', error)
     } finally {
       setSending(false)

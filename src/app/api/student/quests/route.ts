@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
       gemsGained: gemsEarned
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Quest API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

@@ -157,7 +157,7 @@ function ParentCommunicationsContent() {
           isRead: true
         }
       ]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading communication data:', error);
     } finally {
       setLoading(false);
@@ -200,7 +200,7 @@ function ParentCommunicationsContent() {
         }
       ];
       setMessages(mockMessages);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading messages:', error);
     }
   };
@@ -251,7 +251,7 @@ function ParentCommunicationsContent() {
           )
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending message:', error);
     }
   };
@@ -264,7 +264,7 @@ function ParentCommunicationsContent() {
           msg.id === messageId ? { ...msg, isRead: true } : msg
         )
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error acknowledging message:', error);
     }
   };

@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ students: formattedStudents })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching teacher students overview:', error)
     return NextResponse.json({ students: [] })
   }

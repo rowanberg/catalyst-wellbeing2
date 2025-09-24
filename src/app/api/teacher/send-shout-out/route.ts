@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
       xpAwarded: xpReward
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unexpected error in send shout-out API:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

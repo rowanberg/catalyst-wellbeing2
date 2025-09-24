@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ teachers: formattedTeachers })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unexpected error in office hours teachers API:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

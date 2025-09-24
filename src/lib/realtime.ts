@@ -213,7 +213,7 @@ export class RealtimeManager {
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending message:', error);
       throw error;
     }
@@ -229,7 +229,7 @@ export class RealtimeManager {
       if (error) {
         console.error('Error marking notification as read:', error);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error marking notification as read:', error);
     }
   }
@@ -250,7 +250,7 @@ export class RealtimeManager {
       }
 
       return count || 0;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting unread notification count:', error);
       return 0;
     }
@@ -278,7 +278,7 @@ export class RealtimeManager {
       if (error) {
         console.error('Error creating notification:', error);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating notification:', error);
     }
   }
@@ -362,7 +362,7 @@ export const playEmergencySound = () => {
     
     oscillator.start(audioContext.currentTime);
     oscillator.stop(audioContext.currentTime + 1.5);
-  } catch (error) {
+  } catch (error: any) {
     console.warn('Could not play emergency sound:', error);
   }
 };

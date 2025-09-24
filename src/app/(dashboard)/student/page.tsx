@@ -295,7 +295,7 @@ const StudentDashboardContent = () => {
         const errorData = await response.json().catch(() => ({}))
         console.error('Error details:', errorData)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching polls:', error)
     }
   }, [])
@@ -339,7 +339,7 @@ const StudentDashboardContent = () => {
         const error = await response.json()
         addToast({ title: 'Error', description: error.error || 'Failed to submit response', type: 'error' })
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting poll response:', error)
       addToast({ title: 'Error', description: 'Failed to submit response', type: 'error' })
     }
@@ -368,7 +368,7 @@ const StudentDashboardContent = () => {
         console.error('Failed to fetch announcements:', response.status, await response.text())
         setAnnouncements([])
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch announcements:', error)
       setAnnouncements([])
     }
@@ -396,7 +396,7 @@ const StudentDashboardContent = () => {
       } else {
         console.log('Failed to fetch school info:', response.status)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching school info:', error)
     }
   }, [])
@@ -459,14 +459,14 @@ const StudentDashboardContent = () => {
               const announcementData = await response.json()
               setAnnouncements(announcementData.announcements || [])
             }
-          } catch (error) {
+          } catch (error: any) {
             console.error('Failed to fetch announcements with school_code:', error)
           }
         } else {
           console.log('No school_id or school_code in profile, cannot fetch announcements')
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       // Fallback to Redux profile and mock data on error
       setProfile(reduxProfile)
       setStats({
@@ -620,7 +620,7 @@ const StudentDashboardContent = () => {
           type: "error"
         })
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating quest:', error)
     }
   }
@@ -642,7 +642,7 @@ const StudentDashboardContent = () => {
           type: "success"
         })
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating mood:', error)
     }
   }
@@ -669,7 +669,7 @@ const StudentDashboardContent = () => {
           type: "success"
         })
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error completing mindfulness session:', error)
     }
   }
@@ -690,7 +690,7 @@ const StudentDashboardContent = () => {
           type: "success"
         })
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending help request:', error)
     }
   }

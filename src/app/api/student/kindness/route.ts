@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
       recent_entries: mockRecentEntries
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Kindness GET API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
       gemsGained: 3
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Kindness POST API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

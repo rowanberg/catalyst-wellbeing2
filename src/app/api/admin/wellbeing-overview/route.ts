@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(wellbeingData)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Wellbeing overview API error:', error)
     return NextResponse.json(
       { message: `Internal server error: ${error instanceof Error ? error.message : 'Unknown error'}` },

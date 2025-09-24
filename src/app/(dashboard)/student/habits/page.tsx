@@ -55,7 +55,7 @@ export default function HabitsPage() {
         setTodayHabits(data.todayHabits)
         setWeeklyData(data.weeklyData)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching habits:', error)
     }
   }
@@ -92,7 +92,7 @@ export default function HabitsPage() {
       } else {
         console.error('Failed to update habits')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating habits:', error)
     } finally {
       setIsLoading(false)

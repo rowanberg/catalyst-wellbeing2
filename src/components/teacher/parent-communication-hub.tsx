@@ -91,7 +91,7 @@ export const ParentCommunicationHub = ({ teacherId, schoolId }: ParentCommunicat
         const data = await response.json()
         setParents(data.parents || [])
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching parents:', error)
     } finally {
       setIsLoading(false)
@@ -105,7 +105,7 @@ export const ParentCommunicationHub = ({ teacherId, schoolId }: ParentCommunicat
         const data = await response.json()
         setMessages(data.messages || [])
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching messages:', error)
     }
   }
@@ -138,7 +138,7 @@ export const ParentCommunicationHub = ({ teacherId, schoolId }: ParentCommunicat
         })
         await fetchMessages()
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending message:', error)
     } finally {
       setIsLoading(false)
@@ -502,7 +502,7 @@ const AnnouncementCenter = ({ parents, teacherId, onAnnouncementSent }: any) => 
         })
         onAnnouncementSent()
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending announcement:', error)
     } finally {
       setIsLoading(false)

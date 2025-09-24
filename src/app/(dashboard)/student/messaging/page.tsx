@@ -111,7 +111,7 @@ function SimpleFamilyMessages({ conversationId, currentUserId, participantName, 
           }
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching family messages:', error)
     } finally {
       setIsLoading(false)
@@ -277,7 +277,7 @@ function SimpleFamilyMessageInput({ conversationId, participantId, currentUserId
       } else {
         console.error('Failed to send message:', response.status)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending message:', error)
     } finally {
       setIsSending(false)
@@ -362,7 +362,7 @@ function QuickMessageButton({ message, conversationId, participantId, currentUse
       } else {
         console.error('Failed to send quick message:', response.status)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending quick message:', error)
     } finally {
       setIsSending(false)
@@ -529,7 +529,7 @@ function StudentMessagingContent() {
         setSelectedParent(parentId)
         setSelectedTeacher(null) // Clear other selections
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error starting family conversation:', error)
     }
   }
@@ -558,7 +558,7 @@ function StudentMessagingContent() {
         console.error('Error response:', errorText)
         setTeachers([])
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching assigned teachers:', error)
       setTeachers([])
     } finally {
@@ -605,7 +605,7 @@ function StudentMessagingContent() {
           console.error('API Error Response:', errorData)
           console.error('Failed to fetch family data:', response.status, response.statusText)
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching family data:', error)
         setFamilyConversations([])
         setParents([])
