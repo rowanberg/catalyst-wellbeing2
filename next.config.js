@@ -5,6 +5,13 @@ const nextConfig = {
   // Suppress hydration warnings caused by browser extensions
   reactStrictMode: true,
   
+  // ESLint configuration
+  eslint: {
+    // Disable img-element rule during build
+    ignoreDuringBuilds: false,
+    dirs: ['src']
+  },
+  
   // Disable static export to allow dynamic API routes
   // output: 'export',
   trailingSlash: true,

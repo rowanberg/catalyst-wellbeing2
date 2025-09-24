@@ -1,14 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// Create Supabase client with fallback for build time
+function createSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key'
+  
+  return createClient(supabaseUrl, supabaseKey)
+}
+
+const supabaseAdmin = createSupabaseAdmin()
 
 export async function POST(request: NextRequest) {
   try {
     console.log('=== School Setup API Called ===')
+    
+    // Check if we have real Supabase credentials
+    const hasRealCredentials = process.env.NEXT_PUBLIC_SUPABASE_URL && 
+      process.env.NEXT_PUBLIC_SUPABASE_URL !== 'https://placeholder.supabase.co' &&
+      process.env.SUPABASE_SERVICE_ROLE_KEY && 
+      process.env.SUPABASE_SERVICE_ROLE_KEY !== 'placeholder-key'
+    
+    if (!hasRealCredentials) {
+      return NextResponse.json({ 
+        error: 'Service configuration required',
+        details: 'Please configure Supabase credentials'
+      }, { status: 503 })
+    }
     
     // Get the user from the request body (temporary solution)
     const body = await request.json()
@@ -271,7 +289,7 @@ export async function POST(request: NextRequest) {
       message: 'School setup completed successfully'
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('School setup API error:', error)
     console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
     return NextResponse.json({ 
