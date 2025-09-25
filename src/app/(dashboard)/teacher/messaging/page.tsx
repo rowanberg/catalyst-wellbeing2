@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAppSelector } from '@/lib/redux/hooks'
+import { ClientWrapper } from '@/components/providers/ClientWrapper'
 import { AuthGuard } from '@/components/auth/auth-guard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -468,31 +469,35 @@ function TeacherMessagingContent() {
                   </CardTitle>
                   <div className="flex flex-wrap gap-2 mt-3">
                     {/* Category Filters */}
-                    {interventionCategories.map((category) => (
-                      <Button
-                        key={category.id}
-                        size="sm"
-                        variant={selectedCategory === category.id ? "default" : "outline"}
-                        onClick={() => setSelectedCategory(category.id)}
-                        className="text-xs"
-                      >
-                        {category.name} ({category.count})
-                      </Button>
-                    ))}
+                    <ClientWrapper>
+                      {interventionCategories.map((category) => (
+                        <Button
+                          key={category.id}
+                          size="sm"
+                          variant={selectedCategory === category.id ? "default" : "outline"}
+                          onClick={() => setSelectedCategory(category.id)}
+                          className="text-xs"
+                        >
+                          {category.name} ({category.count})
+                        </Button>
+                      ))}
+                    </ClientWrapper>
                   </div>
                   <div className="flex flex-wrap gap-2 mt-2">
                     {/* Mood Filters */}
-                    {moodFilters.slice(0, 6).map((mood) => (
-                      <Button
-                        key={mood.id}
-                        size="sm"
-                        variant={selectedMood === mood.id ? "default" : "outline"}
-                        onClick={() => setSelectedMood(mood.id)}
-                        className="text-xs"
-                      >
-                        {mood.emoji} {mood.name}
-                      </Button>
-                    ))}
+                    <ClientWrapper>
+                      {moodFilters.slice(0, 6).map((mood) => (
+                        <Button
+                          key={mood.id}
+                          size="sm"
+                          variant={selectedMood === mood.id ? "default" : "outline"}
+                          onClick={() => setSelectedMood(mood.id)}
+                          className="text-xs"
+                        >
+                          {mood.emoji} {mood.name}
+                        </Button>
+                      ))}
+                    </ClientWrapper>
                   </div>
                 </CardHeader>
                 <CardContent>

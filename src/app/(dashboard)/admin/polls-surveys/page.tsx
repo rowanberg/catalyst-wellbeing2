@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { ClientWrapper } from '@/components/providers/ClientWrapper'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,7 +10,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ClientWrapper } from '@/components/providers/ClientWrapper'
 // import { Checkbox } from '@/components/ui/checkbox' // Component not available, using HTML checkbox
 import { 
   BarChart3, 
@@ -538,47 +538,49 @@ export default function PollsSurveysPage() {
                       </div>
                       
                       <div className="flex items-center space-x-2 mt-4">
-                        <Button size="sm" variant="outline" onClick={() => handleViewPoll(poll)}>
-                          <Eye className="w-4 h-4 mr-2" />
-                          View
-                        </Button>
-                        {poll.status === 'draft' && (
+                        <ClientWrapper>
+                          <Button size="sm" variant="outline" onClick={() => handleViewPoll(poll)}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            View
+                          </Button>
+                          {poll.status === 'draft' && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleUpdatePollStatus(poll.id, 'active')}
+                              className="text-green-600 hover:text-green-700"
+                            >
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                              Activate
+                            </Button>
+                          )}
+                          {poll.status === 'active' && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleUpdatePollStatus(poll.id, 'completed')}
+                              className="text-blue-600 hover:text-blue-700"
+                            >
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                              Complete
+                            </Button>
+                          )}
                           <Button 
                             size="sm" 
                             variant="outline"
-                            onClick={() => handleUpdatePollStatus(poll.id, 'active')}
-                            className="text-green-600 hover:text-green-700"
+                            onClick={() => handleDeletePoll(poll.id)}
+                            className="text-red-600 hover:text-red-700"
                           >
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                            Activate
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete
                           </Button>
-                        )}
-                        {poll.status === 'active' && (
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handleUpdatePollStatus(poll.id, 'completed')}
-                            className="text-blue-600 hover:text-blue-700"
-                          >
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                            Complete
-                          </Button>
-                        )}
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleDeletePoll(poll.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Delete
-                        </Button>
-                        {poll.status === 'completed' && (
-                          <Button size="sm" variant="outline">
-                            <Download className="w-4 h-4 mr-2" />
-                            Export
-                          </Button>
-                        )}
+                          {poll.status === 'completed' && (
+                            <Button size="sm" variant="outline">
+                              <Download className="w-4 h-4 mr-2" />
+                              Export
+                            </Button>
+                          )}
+                        </ClientWrapper>
                       </div>
                     </CardContent>
                   </Card>
