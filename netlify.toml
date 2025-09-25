@@ -3,7 +3,7 @@
   publish = "out"
 
 [build.environment]
-  NODE_VERSION = "18"
+  NODE_VERSION = "20"
   NPM_FLAGS = "--production=false"
   NEXT_TELEMETRY_DISABLED = "1"
 
@@ -26,6 +26,10 @@
 
 [functions]
   node_bundler = "esbuild"
+
+# Build plugins for caching
+[[plugins]]
+  package = "./netlify/plugins/build-cache"
 
 [[headers]]
   for = "/*"

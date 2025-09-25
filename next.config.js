@@ -90,15 +90,14 @@ const nextConfig = {
   
   // Enable build caching for faster builds
   experimental: {
-    // Enable build cache
-    buildCache: true,
     // Optimize CSS
     optimizeCss: true,
-    // Enable turbo mode for faster builds
-    turbo: {
-      loaders: {
-        '.svg': ['@svgr/webpack'],
-      },
+  },
+  
+  // Turbopack configuration (updated syntax)
+  turbo: {
+    rules: {
+      '*.svg': ['@svgr/webpack'],
     },
   },
   
