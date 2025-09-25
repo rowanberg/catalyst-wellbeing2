@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Progress } from '@/components/ui/progress'
+import { ClientWrapper } from '@/components/providers/ClientWrapper'
 import { 
   ArrowLeft, 
   Brain, 
@@ -205,14 +206,16 @@ export default function StudyPlanPage() {
         <div className="px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Button
-                onClick={() => router.back()}
-                variant="ghost"
-                size="sm"
-                className="p-2"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
+              <ClientWrapper>
+                <Button
+                  onClick={() => router.back()}
+                  variant="ghost"
+                  size="sm"
+                  className="p-2"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+              </ClientWrapper>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Create Study Plan</h1>
                 <p className="text-sm text-gray-600">Build your personalized learning journey</p>
@@ -291,13 +294,15 @@ export default function StudyPlanPage() {
                     rows={3}
                   />
                 </div>
-                <Button 
-                  onClick={() => setCurrentStep(2)}
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                  disabled={!studyPlan.name}
-                >
-                  Continue to Subjects
-                </Button>
+                <ClientWrapper>
+                  <Button 
+                    onClick={() => setCurrentStep(2)}
+                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                    disabled={!studyPlan.name}
+                  >
+                    Continue to Subjects
+                  </Button>
+                </ClientWrapper>
               </CardContent>
             </FloatingCard>
           )}
@@ -378,10 +383,12 @@ export default function StudyPlanPage() {
                     </div>
                   </div>
                   
-                  <Button onClick={addSubject} className="w-full" variant="outline">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Subject
-                  </Button>
+                  <ClientWrapper>
+                    <Button onClick={addSubject} className="w-full" variant="outline">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Subject
+                    </Button>
+                  </ClientWrapper>
                 </CardContent>
               </FloatingCard>
 

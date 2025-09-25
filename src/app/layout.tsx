@@ -29,13 +29,17 @@ export default function RootLayout({
         />
       </head>
       <body className={inter.className} suppressHydrationWarning>
-        <Providers>
-          <RealtimeProvider>
-            <ToastProvider>
-              {children}
-            </ToastProvider>
-          </RealtimeProvider>
-        </Providers>
+        <ErrorBoundary>
+          <HydrationProvider>
+            <Providers>
+              <RealtimeProvider>
+                <ToastProvider>
+                  {children}
+                </ToastProvider>
+              </RealtimeProvider>
+            </Providers>
+          </HydrationProvider>
+        </ErrorBoundary>
       </body>
     </html>
   )

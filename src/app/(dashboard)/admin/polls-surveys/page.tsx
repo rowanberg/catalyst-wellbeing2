@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ClientWrapper } from '@/components/providers/ClientWrapper'
 // import { Checkbox } from '@/components/ui/checkbox' // Component not available, using HTML checkbox
 import { 
   BarChart3, 
@@ -394,13 +395,15 @@ export default function PollsSurveysPage() {
             </motion.div>
             
             <div className="flex items-center space-x-3">
-              <Button 
-                onClick={() => setShowCreateModal(true)}
-                className="bg-indigo-600 hover:bg-indigo-700"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Create Poll/Survey
-              </Button>
+              <ClientWrapper>
+                <Button 
+                  onClick={() => setShowCreateModal(true)}
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Poll/Survey
+                </Button>
+              </ClientWrapper>
               <Link href="/admin">
                 <Button variant="outline" className="bg-white/50 backdrop-blur-sm hover:bg-white/80">
                   Back to Dashboard

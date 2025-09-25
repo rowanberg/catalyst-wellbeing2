@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { ClientWrapper } from '@/components/providers/ClientWrapper'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Home, Smile, Plus, Send, Sparkles, Heart, Calendar, Star } from 'lucide-react'
@@ -145,11 +146,13 @@ export default function GratitudeJournalPage() {
               <p className="text-sm sm:text-base text-gray-600 hidden sm:block">Focus on the positive and cultivate thankfulness</p>
               <p className="text-xs text-gray-600 sm:hidden">Cultivate thankfulness</p>
             </div>
-            <Button onClick={() => router.push('/student')} variant="outline" size="sm" className="ml-3">
-              <Home className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Dashboard</span>
-              <span className="sm:hidden">Home</span>
-            </Button>
+            <ClientWrapper>
+              <Button onClick={() => router.push('/student')} variant="outline" size="sm" className="ml-3">
+                <Home className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Dashboard</span>
+                <span className="sm:hidden">Home</span>
+              </Button>
+            </ClientWrapper>
           </div>
         </div>
       </div>
@@ -163,17 +166,19 @@ export default function GratitudeJournalPage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <Button 
-                onClick={() => setShowForm(true)} 
-                size="lg" 
-                className="w-full sm:w-auto bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white shadow-lg"
-              >
-                <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                <span className="text-sm sm:text-base">Add Gratitude Entry</span>
-                <Badge className="bg-white/20 text-white border-white/30 ml-2 text-xs">
-                  +15 XP, +3 Gems
-                </Badge>
-              </Button>
+              <ClientWrapper>
+                <Button 
+                  onClick={() => setShowForm(true)} 
+                  size="lg" 
+                  className="w-full sm:w-auto bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white shadow-lg"
+                >
+                  <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                  <span className="text-sm sm:text-base">Add Gratitude Entry</span>
+                  <Badge className="bg-white/20 text-white border-white/30 ml-2 text-xs">
+                    +15 XP, +3 Gems
+                  </Badge>
+                </Button>
+              </ClientWrapper>
             </motion.div>
           </div>
         )}
@@ -238,12 +243,13 @@ export default function GratitudeJournalPage() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                  <Button 
-                    type="submit" 
-                    disabled={isLoading || !watchedContent.trim()}
-                    size="lg"
-                    className="w-full sm:w-auto bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white"
-                  >
+                  <ClientWrapper>
+                    <Button 
+                      type="submit" 
+                      disabled={isLoading || !watchedContent.trim()}
+                      size="lg"
+                      className="w-full sm:w-auto bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white"
+                    >
                     {isLoading ? (
                       <div className="flex items-center space-x-2">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -258,20 +264,23 @@ export default function GratitudeJournalPage() {
                         </Badge>
                       </div>
                     )}
-                  </Button>
-                  <Button 
-                    type="button" 
-                    variant="outline"
-                    size="lg"
-                    className="w-full sm:w-auto"
-                    onClick={() => {
-                      setShowForm(false)
-                      setGratitudeText('')
-                      reset()
-                    }}
-                  >
-                    Cancel
-                  </Button>
+                    </Button>
+                  </ClientWrapper>
+                  <ClientWrapper>
+                    <Button 
+                      type="button" 
+                      variant="outline"
+                      size="lg"
+                      className="w-full sm:w-auto"
+                      onClick={() => {
+                        setShowForm(false)
+                        setGratitudeText('')
+                        reset()
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </ClientWrapper>
                 </div>
               </form>
             </CardContent>
@@ -307,7 +316,8 @@ export default function GratitudeJournalPage() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  <span className="text-sm sm:text-base text-gray-700 leading-relaxed">{prompt}</span>
+                  <Smile className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500 mb-2" />
+                  <p className="text-sm sm:text-base text-gray-700 leading-relaxed">{prompt}</p>
                 </motion.div>
               ))}
             </div>
@@ -334,10 +344,12 @@ export default function GratitudeJournalPage() {
                 <p className="text-gray-500 mb-4">
                   Start your gratitude practice by writing your first entry!
                 </p>
-                <Button onClick={() => setShowForm(true)} className="bg-yellow-500 hover:bg-yellow-600">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Write Your First Entry
-                </Button>
+                <ClientWrapper>
+                  <Button onClick={() => setShowForm(true)} className="bg-yellow-500 hover:bg-yellow-600">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Write Your First Entry
+                  </Button>
+                </ClientWrapper>
               </CardContent>
             </Card>
           ) : (

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
+import { ClientWrapper } from '@/components/providers/ClientWrapper'
 import { 
   Activity, 
   MessageSquare, 
@@ -175,25 +176,27 @@ export default function AdminMessagingPage() {
               
               {/* Bottom row - Action buttons */}
               <div className="flex items-center space-x-2 sm:space-x-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsNotificationOpen(true)}
-                  className="relative flex-1 sm:flex-none text-xs sm:text-sm py-2 sm:py-3"
-                >
-                  <Activity className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Notifications</span>
-                  <span className="sm:hidden">Alerts</span>
-                  {securityStats.moderationQueue > 0 && (
-                    <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1 py-0.5 min-w-[16px] h-4 flex items-center justify-center">
-                      {securityStats.moderationQueue}
-                    </Badge>
-                  )}
-                </Button>
-                <Button onClick={fetchCommunications} className="flex-1 sm:flex-none text-xs sm:text-sm py-2 sm:py-3">
-                  <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Refresh</span>
-                  <span className="sm:hidden">Sync</span>
-                </Button>
+                <ClientWrapper>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsNotificationOpen(true)}
+                    className="relative flex-1 sm:flex-none text-xs sm:text-sm py-2 sm:py-3"
+                  >
+                    <Activity className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Notifications</span>
+                    <span className="sm:hidden">Alerts</span>
+                    {securityStats.moderationQueue > 0 && (
+                      <Badge className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1 py-0.5 min-w-[16px] h-4 flex items-center justify-center">
+                        {securityStats.moderationQueue}
+                      </Badge>
+                    )}
+                  </Button>
+                  <Button onClick={fetchCommunications} className="flex-1 sm:flex-none text-xs sm:text-sm py-2 sm:py-3">
+                    <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Refresh</span>
+                    <span className="sm:hidden">Sync</span>
+                  </Button>
+                </ClientWrapper>
               </div>
             </div>
           </div>

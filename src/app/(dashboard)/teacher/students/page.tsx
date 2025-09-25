@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ClientWrapper } from '@/components/providers/ClientWrapper'
 import { 
   Users, 
   GraduationCap, 
@@ -300,22 +301,24 @@ function StudentSetupComponent() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {gradeLevels.map((grade) => (
-              <Button
-                key={grade.id}
-                variant={selectedGrade === grade.grade_level ? 'default' : 'outline'}
-                className={`h-16 flex flex-col items-center justify-center ${
-                  selectedGrade === grade.grade_level 
-                    ? 'bg-blue-600 hover:bg-blue-700' 
-                    : 'hover:bg-blue-50'
-                }`}
-                onClick={() => setSelectedGrade(grade.grade_level)}
-              >
-                <BookOpen className="h-4 w-4 mb-1" />
-                <span className="text-sm font-medium">Grade {grade.grade_level}</span>
-                <span className="text-xs opacity-75">{grade.grade_name}</span>
-              </Button>
-            ))}
+            <ClientWrapper>
+              {gradeLevels.map((grade) => (
+                <Button
+                  key={grade.id}
+                  variant={selectedGrade === grade.grade_level ? 'default' : 'outline'}
+                  className={`h-16 flex flex-col items-center justify-center ${
+                    selectedGrade === grade.grade_level 
+                      ? 'bg-blue-600 hover:bg-blue-700' 
+                      : 'hover:bg-blue-50'
+                  }`}
+                  onClick={() => setSelectedGrade(grade.grade_level)}
+                >
+                  <BookOpen className="h-4 w-4 mb-1" />
+                  <span className="text-sm font-medium">Grade {grade.grade_level}</span>
+                  <span className="text-xs opacity-75">{grade.grade_name}</span>
+                </Button>
+              ))}
+            </ClientWrapper>
           </div>
         </CardContent>
       </Card>

@@ -1,3 +1,5 @@
+'use client'
+
 import { cn } from '@/lib/utils'
 import { School } from 'lucide-react'
 import { motion } from 'framer-motion'

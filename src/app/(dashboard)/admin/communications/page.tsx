@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { ClientWrapper } from '@/components/providers/ClientWrapper';
 import { 
   Shield, 
   AlertTriangle, 

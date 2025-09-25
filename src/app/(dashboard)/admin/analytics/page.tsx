@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { PageLoader } from '@/components/ui/loading-spinner'
 import { useToast } from '@/components/ui/toast'
 import { handleError } from '@/lib/utils/errorHandling'
+import { ClientWrapper } from '@/components/providers/ClientWrapper'
 import { 
   BarChart3, 
   TrendingUp, 
@@ -143,14 +144,16 @@ function AnalyticsContent() {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <Button variant="outline" onClick={() => fetchAnalytics()}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
-              </Button>
-              <Button onClick={exportData} className="bg-blue-600 hover:bg-blue-700 text-white">
-                <Download className="h-4 w-4 mr-2" />
-                Export Data
-              </Button>
+              <ClientWrapper>
+                <Button variant="outline" onClick={() => fetchAnalytics()}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
+                <Button onClick={exportData} className="bg-blue-600 hover:bg-blue-700 text-white">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Data
+                </Button>
+              </ClientWrapper>
             </div>
           </div>
         </div>
@@ -163,17 +166,19 @@ function AnalyticsContent() {
           <Filter className="h-5 w-5 text-gray-500" />
           <span className="text-sm font-medium text-gray-700">Time Range:</span>
           <div className="flex space-x-2">
-            {['week', 'month', 'quarter', 'year'].map((range) => (
-              <Button
-                key={range}
-                variant={timeRange === range ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setTimeRange(range)}
-                className={timeRange === range ? 'bg-blue-600 text-white' : ''}
-              >
-                {range.charAt(0).toUpperCase() + range.slice(1)}
-              </Button>
-            ))}
+            <ClientWrapper>
+              {['week', 'month', 'quarter', 'year'].map((range) => (
+                <Button
+                  key={range}
+                  variant={timeRange === range ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTimeRange(range)}
+                  className={timeRange === range ? 'bg-blue-600 text-white' : ''}
+                >
+                  {range.charAt(0).toUpperCase() + range.slice(1)}
+                </Button>
+              ))}
+            </ClientWrapper>
           </div>
         </div>
 
@@ -338,8 +343,10 @@ function AnalyticsContent() {
 
 export default function AnalyticsPage() {
   return (
-    <AuthGuard requiredRole="admin">
-      <AnalyticsContent />
-    </AuthGuard>
+    <ClientWrapper>
+      <AuthGuard requiredRole="admin">
+        <AnalyticsContent />
+      </AuthGuard>
+    </ClientWrapper>
   )
 }

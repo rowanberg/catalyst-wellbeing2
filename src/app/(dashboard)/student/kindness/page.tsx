@@ -12,6 +12,7 @@ import { useAppDispatch, useAppSelector } from '@/lib/redux/hooks'
 import { updateXP, updateGems } from '@/lib/redux/slices/authSlice'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { motion, AnimatePresence } from 'framer-motion'
+import { ClientWrapper } from '@/components/providers/ClientWrapper'
 
 interface KindnessData {
   count: number
@@ -134,11 +135,13 @@ export default function KindnessCounterPage() {
               <p className="text-sm sm:text-base text-gray-600 hidden sm:block">Track your acts of kindness and spread positivity</p>
               <p className="text-xs text-gray-600 sm:hidden">Track kindness acts</p>
             </div>
-            <Button onClick={() => router.push('/student')} variant="outline" size="sm" className="ml-3">
-              <Home className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Dashboard</span>
-              <span className="sm:hidden">Home</span>
-            </Button>
+            <ClientWrapper>
+              <Button onClick={() => router.push('/student')} variant="outline" size="sm" className="ml-3">
+                <Home className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Dashboard</span>
+                <span className="sm:hidden">Home</span>
+              </Button>
+            </ClientWrapper>
           </div>
         </div>
       </div>
@@ -216,27 +219,29 @@ export default function KindnessCounterPage() {
               </div>
             </div>
             
-            <Button 
-              onClick={submitKindnessAct}
-              disabled={isLoading || !kindnessDescription.trim()}
-              size="lg"
-              className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white"
-            >
-              {isLoading ? (
-                <div className="flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span>Saving...</span>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-2">
-                  <Send className="h-4 w-4" />
-                  <span>Submit Kindness Act</span>
-                  <Badge className="bg-white/20 text-white border-white/30 ml-2">
-                    +15 XP, +3 Gems
-                  </Badge>
-                </div>
-              )}
-            </Button>
+            <ClientWrapper>
+              <Button 
+                onClick={submitKindnessAct}
+                disabled={isLoading || !kindnessDescription.trim()}
+                size="lg"
+                className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white"
+              >
+                {isLoading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Saving...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <Send className="h-4 w-4" />
+                    <span>Submit Kindness Act</span>
+                    <Badge className="bg-white/20 text-white border-white/30 ml-2">
+                      +15 XP, +3 Gems
+                    </Badge>
+                  </div>
+                )}
+              </Button>
+            </ClientWrapper>
           </CardContent>
         </Card>
 
@@ -296,19 +301,21 @@ export default function KindnessCounterPage() {
           </CardHeader>
           <CardContent className="px-4 sm:px-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-              {kindnessIdeas.map((idea, index) => (
-                <motion.div 
-                  key={index} 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="flex items-center space-x-2 sm:space-x-3 p-3 sm:p-4 bg-gradient-to-r from-pink-50 to-rose-50 rounded-lg border border-pink-100 hover:shadow-sm transition-shadow cursor-pointer"
-                  onClick={() => setKindnessDescription(idea)}
-                >
-                  <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-pink-500 flex-shrink-0" />
-                  <span className="text-sm sm:text-base text-gray-700 leading-relaxed">{idea}</span>
-                </motion.div>
-              ))}
+              <ClientWrapper>
+                {kindnessIdeas.map((idea, index) => (
+                  <motion.div 
+                    key={index} 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="flex items-center space-x-2 sm:space-x-3 p-3 sm:p-4 bg-gradient-to-r from-pink-50 to-rose-50 rounded-lg border border-pink-100 hover:shadow-sm transition-shadow cursor-pointer"
+                    onClick={() => setKindnessDescription(idea)}
+                  >
+                    <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-pink-500 flex-shrink-0" />
+                    <span className="text-sm sm:text-base text-gray-700 leading-relaxed">{idea}</span>
+                  </motion.div>
+                ))}
+              </ClientWrapper>
             </div>
             <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
               <p className="text-xs sm:text-sm text-blue-700 text-center">

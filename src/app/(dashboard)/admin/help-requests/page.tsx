@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ClientWrapper } from '@/components/providers/ClientWrapper'
 import { 
   AlertTriangle, 
   Clock, 
@@ -432,35 +433,41 @@ export default function HelpRequestsPage() {
                   
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-0">
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
-                      <Button
-                        size="sm"
-                        onClick={() => setSelectedRequest(request)}
-                        className="bg-blue-600 hover:bg-blue-700 h-9 text-sm"
-                      >
-                        <MessageSquare className="w-4 h-4 mr-2" />
-                        Respond
-                      </Button>
-                      
-                      {request.status === 'pending' && (
+                      <ClientWrapper>
                         <Button
                           size="sm"
-                          variant="outline"
-                          onClick={() => handleStatusUpdate(request.id, 'in_progress')}
-                          className="h-9 text-sm"
+                          onClick={() => setSelectedRequest(request)}
+                          className="bg-blue-600 hover:bg-blue-700 h-9 text-sm"
                         >
-                          Start Review
+                          <MessageSquare className="w-4 h-4 mr-2" />
+                          Respond
                         </Button>
+                      </ClientWrapper>
+                      
+                      {request.status === 'pending' && (
+                        <ClientWrapper>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleStatusUpdate(request.id, 'in_progress')}
+                            className="h-9 text-sm"
+                          >
+                            Start Review
+                          </Button>
+                        </ClientWrapper>
                       )}
                       
                       {request.status === 'in_progress' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleStatusUpdate(request.id, 'resolved')}
-                          className="text-green-600 border-green-600 hover:bg-green-50 h-9 text-sm"
-                        >
-                          Mark Resolved
-                        </Button>
+                        <ClientWrapper>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleStatusUpdate(request.id, 'resolved')}
+                            className="text-green-600 border-green-600 hover:bg-green-50 h-9 text-sm"
+                          >
+                            Mark Resolved
+                          </Button>
+                        </ClientWrapper>
                       )}
                     </div>
                     
@@ -519,20 +526,22 @@ export default function HelpRequestsPage() {
             </div>
             
             <div className="p-4 sm:p-6 border-t flex flex-col sm:flex-row items-stretch sm:items-center justify-end space-y-2 sm:space-y-0 sm:space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => setSelectedRequest(null)}
-                className="w-full sm:w-auto"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSendResponse}
-                disabled={!responseMessage.trim()}
-                className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
-              >
-                Send Response
-              </Button>
+              <ClientWrapper>
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedRequest(null)}
+                  className="w-full sm:w-auto"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSendResponse}
+                  disabled={!responseMessage.trim()}
+                  className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+                >
+                  Send Response
+                </Button>
+              </ClientWrapper>
             </div>
           </motion.div>
         </div>
@@ -545,13 +554,15 @@ export default function HelpRequestsPage() {
           animate={{ scale: 1 }}
           transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
         >
-          <Button
-            size="lg"
-            className="rounded-full w-14 h-14 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 shadow-xl"
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          >
-            <AlertTriangle className="h-6 w-6" />
-          </Button>
+          <ClientWrapper>
+            <Button
+              size="lg"
+              className="rounded-full w-14 h-14 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 shadow-xl"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            >
+              <AlertTriangle className="h-6 w-6" />
+            </Button>
+          </ClientWrapper>
         </motion.div>
       </div>
     </div>

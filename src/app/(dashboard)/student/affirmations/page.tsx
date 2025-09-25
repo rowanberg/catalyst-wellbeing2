@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Home, Heart, Sparkles, RefreshCw, Star } from 'lucide-react'
 import { useAppDispatch } from '@/lib/redux/hooks'
 import { updateXP, updateGems } from '@/lib/redux/slices/authSlice'
+import { ClientWrapper } from '@/components/providers/ClientWrapper'
 
 const affirmations = [
   "I am brave and can handle anything that comes my way.",
@@ -167,14 +168,16 @@ export default function AffirmationsPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Button onClick={() => router.push('/student')} className="w-full">
-                  <Home className="h-4 w-4 mr-2" />
-                  Back to Dashboard
-                </Button>
-                <Button onClick={() => setCompletedToday(false)} variant="outline" className="w-full">
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Practice More
-                </Button>
+                <ClientWrapper>
+                  <Button onClick={() => router.push('/student')} className="w-full">
+                    <Home className="h-4 w-4 mr-2" />
+                    Back to Dashboard
+                  </Button>
+                  <Button onClick={() => setCompletedToday(false)} variant="outline" className="w-full">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Practice More
+                  </Button>
+                </ClientWrapper>
               </div>
             </CardContent>
           </Card>
@@ -194,11 +197,13 @@ export default function AffirmationsPage() {
               <p className="text-sm sm:text-base text-gray-600 hidden sm:block">Build confidence and self-love with daily affirmations</p>
               <p className="text-xs text-gray-600 sm:hidden">Daily confidence building</p>
             </div>
-            <Button onClick={() => router.push('/student')} variant="outline" size="sm" className="ml-3">
-              <Home className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Dashboard</span>
-              <span className="sm:hidden">Home</span>
-            </Button>
+            <ClientWrapper>
+              <Button onClick={() => router.push('/student')} variant="outline" size="sm" className="ml-3">
+                <Home className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Dashboard</span>
+                <span className="sm:hidden">Home</span>
+              </Button>
+            </ClientWrapper>
           </div>
         </div>
       </div>
@@ -280,23 +285,25 @@ export default function AffirmationsPage() {
               </motion.div>
 
               <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
-                {!isRevealed ? (
-                  <Button onClick={revealAffirmation} size="lg" className="bg-purple-500 hover:bg-purple-600 w-full sm:w-auto">
-                    <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                    <span className="text-sm sm:text-base">Reveal Affirmation</span>
-                  </Button>
-                ) : (
-                  <>
-                    <Button onClick={completeSession} size="lg" className="bg-green-500 hover:bg-green-600 w-full sm:w-auto">
-                      <Heart className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                      <span className="text-sm sm:text-base">I Believe This! (+15 XP, +3 Gems)</span>
+                <ClientWrapper>
+                  {!isRevealed ? (
+                    <Button onClick={revealAffirmation} size="lg" className="bg-purple-500 hover:bg-purple-600 w-full sm:w-auto">
+                      <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                      <span className="text-sm sm:text-base">Reveal Affirmation</span>
                     </Button>
-                    <Button onClick={getNewAffirmation} size="lg" variant="outline" className="w-full sm:w-auto">
-                      <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                      <span className="text-sm sm:text-base">New Affirmation</span>
-                    </Button>
-                  </>
-                )}
+                  ) : (
+                    <>
+                      <Button onClick={completeSession} size="lg" className="bg-green-500 hover:bg-green-600 w-full sm:w-auto">
+                        <Heart className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                        <span className="text-sm sm:text-base">I Believe This! (+15 XP, +3 Gems)</span>
+                      </Button>
+                      <Button onClick={getNewAffirmation} size="lg" variant="outline" className="w-full sm:w-auto">
+                        <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                        <span className="text-sm sm:text-base">New Affirmation</span>
+                      </Button>
+                    </>
+                  )}
+                </ClientWrapper>
               </div>
             </CardContent>
           </Card>

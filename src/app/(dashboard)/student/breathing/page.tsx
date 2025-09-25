@@ -8,6 +8,7 @@ import { Play, Pause, RotateCcw, Home, Sparkles } from 'lucide-react'
 import { useAppDispatch } from '@/lib/redux/hooks'
 import { updateXP, updateGems } from '@/lib/redux/slices/authSlice'
 import { motion, AnimatePresence } from 'framer-motion'
+import { ClientWrapper } from '@/components/providers/ClientWrapper'
 
 export default function BreathingExercise() {
   const router = useRouter()
@@ -198,14 +199,16 @@ export default function BreathingExercise() {
               </div>
             </div>
             <div className="space-y-2">
-              <Button onClick={() => router.push('/student')} className="w-full">
-                <Home className="h-4 w-4 mr-2" />
-                Back to Dashboard
-              </Button>
-              <Button onClick={handleReset} variant="outline" className="w-full">
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Do Another Session
-              </Button>
+              <ClientWrapper>
+                <Button onClick={() => router.push('/student')} className="w-full">
+                  <Home className="h-4 w-4 mr-2" />
+                  Back to Dashboard
+                </Button>
+                <Button onClick={handleReset} variant="outline" className="w-full">
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Do Another Session
+                </Button>
+              </ClientWrapper>
             </div>
           </CardContent>
         </Card>
@@ -233,16 +236,18 @@ export default function BreathingExercise() {
               <p className="text-blue-100 text-sm sm:text-base hidden sm:block">Find your inner peace through guided breathing exercises</p>
               <p className="text-blue-100 text-xs sm:hidden">Find inner peace</p>
             </div>
-            <Button 
-              onClick={() => router.push('/student')} 
-              variant="outline"
-              className="ml-3 bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm rounded-xl"
-              size="sm"
-            >
-              <Home className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Dashboard</span>
-              <span className="sm:hidden">Home</span>
-            </Button>
+            <ClientWrapper>
+              <Button 
+                onClick={() => router.push('/student')} 
+                variant="outline"
+                className="ml-3 bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm rounded-xl"
+                size="sm"
+              >
+                <Home className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Dashboard</span>
+                <span className="sm:hidden">Home</span>
+              </Button>
+            </ClientWrapper>
           </div>
         </div>
       </div>
@@ -414,41 +419,43 @@ export default function BreathingExercise() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
             >
-              {!isActive ? (
+              <ClientWrapper>
+                {!isActive ? (
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button 
+                      onClick={handleStart} 
+                      size="lg" 
+                      className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg"
+                    >
+                      <Play className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                      <span className="text-sm sm:text-base font-semibold">Start Breathing</span>
+                    </Button>
+                  </motion.div>
+                ) : (
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button 
+                      onClick={handlePause} 
+                      size="lg" 
+                      variant="outline" 
+                      className="w-full sm:w-auto border-blue-300 text-blue-600 hover:bg-blue-50"
+                    >
+                      <Pause className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                      <span className="text-sm sm:text-base">Pause</span>
+                    </Button>
+                  </motion.div>
+                )}
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                   <Button 
-                    onClick={handleStart} 
-                    size="lg" 
-                    className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg"
-                  >
-                    <Play className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                    <span className="text-sm sm:text-base font-semibold">Start Breathing</span>
-                  </Button>
-                </motion.div>
-              ) : (
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button 
-                    onClick={handlePause} 
+                    onClick={handleReset} 
                     size="lg" 
                     variant="outline" 
-                    className="w-full sm:w-auto border-blue-300 text-blue-600 hover:bg-blue-50"
+                    className="w-full sm:w-auto border-gray-300 text-gray-600 hover:bg-gray-50"
                   >
-                    <Pause className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                    <span className="text-sm sm:text-base">Pause</span>
+                    <RotateCcw className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                    <span className="text-sm sm:text-base">Reset</span>
                   </Button>
                 </motion.div>
-              )}
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button 
-                  onClick={handleReset} 
-                  size="lg" 
-                  variant="outline" 
-                  className="w-full sm:w-auto border-gray-300 text-gray-600 hover:bg-gray-50"
-                >
-                  <RotateCcw className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                  <span className="text-sm sm:text-base">Reset</span>
-                </Button>
-              </motion.div>
+              </ClientWrapper>
             </motion.div>
 
             {/* Tips */}

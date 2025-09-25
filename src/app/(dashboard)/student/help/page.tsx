@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Home, AlertCircle, CheckCircle, Heart, Shield, Users } from 'lucide-react'
 import { useAppSelector } from '@/lib/redux/hooks'
+import { ClientWrapper } from '@/components/providers/ClientWrapper'
 
 const helpRequestSchema = z.object({
   urgency: z.enum(['low', 'medium', 'high']),
@@ -92,11 +93,13 @@ export default function RequestHelpPage() {
                     <p className="text-xs sm:text-base text-gray-600 mt-0.5 sm:mt-2 truncate">You're brave for reaching out - we're here to support you</p>
                   </div>
                 </div>
-                <Button onClick={() => router.push('/student')} variant="outline" className="flex-shrink-0 text-xs sm:text-sm py-2 sm:py-3 px-3 sm:px-4">
-                  <Home className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Dashboard</span>
-                  <span className="sm:hidden">Home</span>
-                </Button>
+                <ClientWrapper>
+                  <Button onClick={() => router.push('/student')} variant="outline" className="flex-shrink-0 text-xs sm:text-sm py-2 sm:py-3 px-3 sm:px-4">
+                    <Home className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Dashboard</span>
+                    <span className="sm:hidden">Home</span>
+                  </Button>
+                </ClientWrapper>
               </div>
             </div>
           </div>
@@ -295,10 +298,12 @@ export default function RequestHelpPage() {
               </p>
             </div>
             <div className="flex flex-col space-y-2">
-              <Button onClick={handleSuccessDialogClose} className="w-full" size="lg">
-                <Home className="h-4 w-4 mr-2" />
-                Return to Dashboard
-              </Button>
+              <ClientWrapper>
+                <Button onClick={handleSuccessDialogClose} className="w-full" size="lg">
+                  <Home className="h-4 w-4 mr-2" />
+                  Return to Dashboard
+                </Button>
+              </ClientWrapper>
             </div>
           </div>
         </DialogContent>

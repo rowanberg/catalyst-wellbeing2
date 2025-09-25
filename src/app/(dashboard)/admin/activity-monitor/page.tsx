@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ClientWrapper } from '@/components/providers/ClientWrapper'
 import { 
   Activity, 
   Users, 
@@ -265,14 +266,16 @@ export default function ActivityMonitorPage() {
             </motion.div>
             
             <div className="flex items-center space-x-3">
-              <Button variant="outline" className="bg-white/50 backdrop-blur-sm hover:bg-white/80">
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Refresh
-              </Button>
-              <Button variant="outline" className="bg-white/50 backdrop-blur-sm hover:bg-white/80">
-                <BarChart3 className="w-4 h-4 mr-2" />
-                Export Report
-              </Button>
+              <ClientWrapper>
+                <Button variant="outline" className="bg-white/50 backdrop-blur-sm hover:bg-white/80">
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Refresh
+                </Button>
+                <Button variant="outline" className="bg-white/50 backdrop-blur-sm hover:bg-white/80">
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  Export Report
+                </Button>
+              </ClientWrapper>
               <Link href="/admin">
                 <Button variant="outline" className="bg-white/50 backdrop-blur-sm hover:bg-white/80">
                   Back to Dashboard
@@ -575,10 +578,12 @@ export default function ActivityMonitorPage() {
                   <TrendingUp className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">Advanced Analytics</h3>
                   <p className="text-gray-600 mb-6">Detailed behavioral analytics and predictive insights coming soon.</p>
-                  <Button className="bg-cyan-600 hover:bg-cyan-700">
-                    <BarChart3 className="w-4 h-4 mr-2" />
-                    Enable Advanced Analytics
-                  </Button>
+                  <ClientWrapper>
+                    <Button className="bg-cyan-600 hover:bg-cyan-700">
+                      <BarChart3 className="w-4 h-4 mr-2" />
+                      Enable Advanced Analytics
+                    </Button>
+                  </ClientWrapper>
                 </div>
               </CardContent>
             </Card>

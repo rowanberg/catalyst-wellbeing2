@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { PageLoader } from '@/components/ui/loading-spinner'
 import { useToast } from '@/components/ui/toast'
 import { handleError } from '@/lib/utils/errorHandling'
+import { ClientWrapper } from '@/components/providers/ClientWrapper'
 import { 
   Settings, 
   School, 
@@ -162,10 +163,12 @@ function SchoolSettingsContent() {
           <CardContent className="p-6 text-center">
             <Settings className="h-12 w-12 mx-auto mb-4 text-gray-400" />
             <p className="text-gray-600">No settings found</p>
-            <Button onClick={fetchSettings} className="mt-4">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Retry
-            </Button>
+            <ClientWrapper>
+              <Button onClick={fetchSettings} className="mt-4">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Retry
+              </Button>
+            </ClientWrapper>
           </CardContent>
         </Card>
       </div>
@@ -188,24 +191,26 @@ function SchoolSettingsContent() {
               </div>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto">
-              <Button 
-                variant="outline" 
-                onClick={fetchSettings}
-                size="sm"
-                className="flex-1 sm:flex-none"
-              >
-                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="text-xs sm:text-sm">Reset</span>
-              </Button>
-              <Button 
-                onClick={saveSettings} 
-                disabled={saving}
-                size="sm"
-                className="bg-blue-600 hover:bg-blue-700 text-white flex-1 sm:flex-none"
-              >
-                <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="text-xs sm:text-sm">{saving ? 'Saving...' : 'Save'}</span>
-              </Button>
+              <ClientWrapper>
+                <Button 
+                  variant="outline" 
+                  onClick={fetchSettings}
+                  size="sm"
+                  className="flex-1 sm:flex-none"
+                >
+                  <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="text-xs sm:text-sm">Reset</span>
+                </Button>
+                <Button 
+                  onClick={saveSettings} 
+                  disabled={saving}
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white flex-1 sm:flex-none"
+                >
+                  <Save className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="text-xs sm:text-sm">{saving ? 'Saving...' : 'Save'}</span>
+                </Button>
+              </ClientWrapper>
             </div>
           </div>
         </div>

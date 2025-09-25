@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
+import { ClientWrapper } from '@/components/providers/ClientWrapper'
 import { 
   Send, 
   Bot, 
@@ -882,12 +883,13 @@ I can analyze this data to provide insights, answer questions about school perfo
                       <option value="medium">Medium Priority</option>
                       <option value="low">Low Priority</option>
                     </select>
-                    <Button 
-                      variant="outline"
-                      onClick={() => setGeneratingInsights(true)}
-                      disabled={generatingInsights}
-                      className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 w-full sm:w-auto text-sm"
-                    >
+                    <ClientWrapper>
+                      <Button 
+                        variant="outline"
+                        onClick={() => setGeneratingInsights(true)}
+                        disabled={generatingInsights}
+                        className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 w-full sm:w-auto text-sm"
+                      >
                       {generatingInsights ? (
                         <>
                           <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-2 animate-spin" />
@@ -901,7 +903,8 @@ I can analyze this data to provide insights, answer questions about school perfo
                           <span className="sm:hidden">Generate</span>
                         </>
                       )}
-                    </Button>
+                      </Button>
+                    </ClientWrapper>
                   </div>
                 </div>
 
@@ -973,20 +976,22 @@ I can analyze this data to provide insights, answer questions about school perfo
                           
                           {insight.actionable && (
                             <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
-                              <Button 
-                                size="sm" 
-                                className="bg-purple-600 hover:bg-purple-700 text-xs sm:text-sm"
-                                onClick={() => {
-                                  if (insight.title === 'Configure AI Assistant') {
-                                    setActiveTab('settings')
-                                  } else {
-                                    toast.info('Action functionality coming soon!')
-                                  }
-                                }}
-                              >
-                                <Zap className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                                {insight.title === 'Configure AI Assistant' ? 'Configure Now' : 'Take Action'}
-                              </Button>
+                              <ClientWrapper>
+                                <Button 
+                                  size="sm" 
+                                  className="bg-purple-600 hover:bg-purple-700 text-xs sm:text-sm"
+                                  onClick={() => {
+                                    if (insight.title === 'Configure AI Assistant') {
+                                      setActiveTab('settings')
+                                    } else {
+                                      toast.info('Action functionality coming soon!')
+                                    }
+                                  }}
+                                >
+                                  <Zap className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                                  {insight.title === 'Configure AI Assistant' ? 'Configure Now' : 'Take Action'}
+                                </Button>
+                              </ClientWrapper>
                               <Button variant="outline" size="sm" className="text-xs sm:text-sm">
                                 View Details
                               </Button>
@@ -1012,18 +1017,20 @@ I can analyze this data to provide insights, answer questions about school perfo
                   onChange={(e) => setChatFilter(e.target.value)}
                   className="w-full sm:w-64 text-sm"
                 />
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setChatMessages([])
-                    toast.success('Chat history cleared')
-                  }}
-                  className="w-full sm:w-auto text-sm"
-                >
-                  <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                  <span className="hidden sm:inline">Clear History</span>
-                  <span className="sm:hidden">Clear</span>
-                </Button>
+                <ClientWrapper>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setChatMessages([])
+                      toast.success('Chat history cleared')
+                    }}
+                    className="w-full sm:w-auto text-sm"
+                  >
+                    <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                    <span className="hidden sm:inline">Clear History</span>
+                    <span className="sm:hidden">Clear</span>
+                  </Button>
+                </ClientWrapper>
               </div>
             </div>
 

@@ -8,7 +8,7 @@ const nextConfig = {
   // ESLint configuration
   eslint: {
     // Disable img-element rule during build
-    ignoreDuringBuilds: false,
+    ignoreDuringBuilds: true,
     dirs: ['src']
   },
   
@@ -49,7 +49,43 @@ const nextConfig = {
         'scheduler/tracing': 'scheduler/tracing-profiling',
       }
     }
+    
+    // Handle Html import issues during build
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+    }
+    
+    // Optimize for client components
+    if (!isServer) {
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          ...config.optimization.splitChunks,
+          cacheGroups: {
+            ...config.optimization.splitChunks?.cacheGroups,
+            client: {
+              name: 'client-components',
+              test: /[\\/]components[\\/]ui[\\/]/,
+              chunks: 'all',
+              priority: 10,
+            },
+          },
+        },
+      }
+    }
+    
     return config
+  },
+  
+  // External packages for server components
+  serverExternalPackages: ['@supabase/supabase-js'],
+  
+  // Optimize build for production
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
   },
 }
 

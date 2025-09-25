@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Calendar } from '@/components/ui/calendar'
+import { ClientWrapper } from '@/components/providers/ClientWrapper'
 import { 
   Users, 
   UserCheck, 
@@ -271,14 +272,16 @@ export default function AttendancePage() {
             </motion.div>
             
             <div className="flex items-center space-x-3">
-              <Button variant="outline" className="bg-white/50 backdrop-blur-sm hover:bg-white/80">
-                <Download className="w-4 h-4 mr-2" />
-                Export Report
-              </Button>
-              <Button variant="outline" className="bg-white/50 backdrop-blur-sm hover:bg-white/80">
-                <Bell className="w-4 h-4 mr-2" />
-                Send Notifications
-              </Button>
+              <ClientWrapper>
+                <Button variant="outline" className="bg-white/50 backdrop-blur-sm hover:bg-white/80">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export Report
+                </Button>
+                <Button variant="outline" className="bg-white/50 backdrop-blur-sm hover:bg-white/80">
+                  <Bell className="w-4 h-4 mr-2" />
+                  Send Notifications
+                </Button>
+              </ClientWrapper>
               <Link href="/admin">
                 <Button variant="outline" className="bg-white/50 backdrop-blur-sm hover:bg-white/80">
                   Back to Dashboard
@@ -468,10 +471,12 @@ export default function AttendancePage() {
                       
                       {!record.parentNotified && record.status !== 'present' && (
                         <div className="mt-4 pt-4 border-t">
-                          <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700">
-                            <Phone className="w-4 h-4 mr-2" />
-                            Notify Parent
-                          </Button>
+                          <ClientWrapper>
+                            <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700">
+                              <Phone className="w-4 h-4 mr-2" />
+                              Notify Parent
+                            </Button>
+                          </ClientWrapper>
                         </div>
                       )}
                     </CardContent>
@@ -570,17 +575,19 @@ export default function AttendancePage() {
                       <p className="text-gray-700 mb-4">{alert.message}</p>
                       
                       <div className="flex items-center space-x-2">
-                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                          <Phone className="w-4 h-4 mr-2" />
-                          Contact Parent
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          <Mail className="w-4 h-4 mr-2" />
-                          Send Email
-                        </Button>
-                        <Button size="sm" variant="outline">
-                          View Details
-                        </Button>
+                        <ClientWrapper>
+                          <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                            <Phone className="w-4 h-4 mr-2" />
+                            Contact Parent
+                          </Button>
+                          <Button size="sm" variant="outline">
+                            <Mail className="w-4 h-4 mr-2" />
+                            Send Email
+                          </Button>
+                          <Button size="sm" variant="outline">
+                            View Details
+                          </Button>
+                        </ClientWrapper>
                       </div>
                     </CardContent>
                   </Card>
@@ -600,10 +607,12 @@ export default function AttendancePage() {
                   <CalendarIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">Advanced Reporting</h3>
                   <p className="text-gray-600 mb-6">Comprehensive attendance reports and trend analysis tools.</p>
-                  <Button className="bg-blue-600 hover:bg-blue-700">
-                    <TrendingUp className="w-4 h-4 mr-2" />
-                    Generate Report
-                  </Button>
+                  <ClientWrapper>
+                    <Button className="bg-blue-600 hover:bg-blue-700">
+                      <TrendingUp className="w-4 h-4 mr-2" />
+                      Generate Report
+                    </Button>
+                  </ClientWrapper>
                 </div>
               </CardContent>
             </Card>

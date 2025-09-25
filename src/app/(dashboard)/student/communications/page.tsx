@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { ClientWrapper } from '@/components/providers/ClientWrapper';
 import { 
   MessageSquare, 
   Send, 
@@ -309,20 +310,21 @@ function StudentCommunicationsContent() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {teachers.map((teacher) => (
-                  <motion.div
-                    key={teacher.id}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                      selectedTeacher === teacher.id
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300 bg-white'
-                    }`}
-                    onClick={() => {
-                      setSelectedTeacher(teacher.id);
-                      loadMessages(teacher.id);
-                    }}
+                <ClientWrapper>
+                  {teachers.map((teacher) => (
+                    <motion.div
+                      key={teacher.id}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                        selectedTeacher === teacher.id
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                      }`}
+                      onClick={() => {
+                        setSelectedTeacher(teacher.id);
+                        loadMessages(teacher.id);
+                      }}
                   >
                     <div className="flex items-center justify-between mb-3">
                       <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
@@ -339,8 +341,9 @@ function StudentCommunicationsContent() {
                     <p className="text-xs text-gray-500 mt-2">
                       {teacher.isAvailable && isOfficeHours ? 'Available now' : 'Not available'}
                     </p>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  ))}
+                </ClientWrapper>
               </div>
             </CardContent>
           </Card>

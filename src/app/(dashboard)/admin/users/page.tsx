@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { ClientWrapper } from '@/components/providers/ClientWrapper'
 import { 
   Users, 
   Search, 
@@ -609,10 +610,12 @@ function UserManagementContent() {
             <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Users</h3>
             <p className="text-gray-600 mb-6">{error}</p>
-            <Button onClick={() => window.location.reload()} className="bg-gradient-to-r from-blue-600 to-purple-600">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Try Again
-            </Button>
+            <ClientWrapper>
+              <Button onClick={() => window.location.reload()} className="bg-gradient-to-r from-blue-600 to-purple-600">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Try Again
+              </Button>
+            </ClientWrapper>
           </CardContent>
         </Card>
       </div>
