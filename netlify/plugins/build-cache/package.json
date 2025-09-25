@@ -1,9 +1,0 @@
-{
-  "name": "netlify-plugin-build-cache",
-  "version": "1.0.0",
-  "description": "Netlify build plugin for Next.js cache optimization",
-  "main": "index.js",
-  "keywords": ["netlify", "plugin", "nextjs", "cache"],
-  "author": "Catalyst Team",
-  "license": "MIT"
-}

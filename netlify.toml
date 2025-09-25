@@ -27,10 +27,6 @@
 [functions]
   node_bundler = "esbuild"
 
-# Build plugins for caching
-[[plugins]]
-  package = "./netlify/plugins/build-cache"
-
 [[headers]]
   for = "/*"
   [headers.values]
