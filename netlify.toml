@@ -1,9 +1,23 @@
 [build]
-  command = "npm run build"
+  command = "npm run build:netlify"
   publish = "out"
 
 [build.environment]
   NODE_VERSION = "18"
+  NPM_FLAGS = "--production=false"
+  NEXT_TELEMETRY_DISABLED = "1"
+
+# Build cache configuration
+[build.processing]
+  skip_processing = false
+
+[build.processing.css]
+  bundle = true
+  minify = true
+
+[build.processing.js]
+  bundle = true
+  minify = true
 
 [[redirects]]
   from = "/*"
