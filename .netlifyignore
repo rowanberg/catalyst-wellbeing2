@@ -1,0 +1,31 @@
+# Netlify ignore file
+# Exclude cache files and sensitive directories from deployment
+
+# Next.js cache
+.next/cache/
+.netlify/.next/cache/
+
+# Node modules (already handled by Netlify)
+node_modules/
+
+# Environment files (use Netlify environment variables instead)
+.env
+.env.local
+.env.production
+
+# Git files
+.git/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts that shouldn't be deployed
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
