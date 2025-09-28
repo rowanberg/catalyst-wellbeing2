@@ -70,7 +70,7 @@ interface SchoolStats {
 function AdminDashboardContent() {
   const router = useRouter()
   const dispatch = useAppDispatch()
-  const { profile } = useAppSelector((state) => state.auth)
+  const { user, profile } = useAppSelector((state) => state.auth)
   
   const [schoolInfo, setSchoolInfo] = useState<SchoolInfo | null>(null)
   const [schoolDetails, setSchoolDetails] = useState<SchoolDetails | null>(null)
@@ -350,7 +350,7 @@ function AdminDashboardContent() {
                         <User className="h-4 w-4 mr-2" />
                         <div className="flex flex-col">
                           <span className="text-sm font-medium">{profile?.first_name} {profile?.last_name}</span>
-                          <span className="text-xs text-gray-500">{profile?.email}</span>
+                          <span className="text-xs text-gray-500">{user?.email}</span>
                         </div>
                       </div>
                     </DropdownMenuItem>
