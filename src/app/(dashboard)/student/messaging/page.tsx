@@ -1,0 +1,2186 @@
+'use client'
+
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { useAppSelector } from '@/lib/redux/hooks'
+import { AuthGuard } from '@/components/auth/auth-guard'
+import { AIStudyPlanner } from '@/components/student/tools/ai-study-planner'
+import { GradeAnalytics } from '@/components/student/tools/grade-analytics'
+import { AIHomeworkHelper } from '@/components/student/tools/ai-homework-helper'
+import { StudyGroups } from '@/components/student/tools/study-groups'
+import { PeerTutoring } from '@/components/student/tools/peer-tutoring'
+import { SchoolEventsHub } from '@/components/student/tools/school-events'
+import { AchievementCenter } from '@/components/student/tools/achievement-center'
+import { LearningGames } from '@/components/student/tools/learning-games'
+import { DigitalPortfolio } from '@/components/student/tools/digital-portfolio'
+import { ProjectShowcase } from '@/components/student/tools/project-showcase'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { toast } from 'sonner'
+import { motion, AnimatePresence } from 'framer-motion'
+import { 
+  MessageCircle, 
+  Users, 
+  Heart, 
+  BookOpen,
+  Search,
+  Plus,
+  Clock,
+  Star,
+  HelpCircle,
+  Lightbulb,
+  Eye,
+  EyeOff,
+  Copy,
+  Check,
+  Send,
+  Smile,
+  Paperclip,
+  ArrowLeft,
+  MoreHorizontal,
+  Phone,
+  Video,
+  Info,
+  Camera,
+  Mic,
+  Image as ImageIcon,
+  Zap,
+  ThumbsUp,
+  Laugh,
+  Angry,
+  Shield,
+  School,
+  Crown,
+  Calendar,
+  FileText,
+  TrendingUp,
+  Award,
+  Target,
+  Brain,
+  Gamepad2,
+  Trophy,
+  Sparkles,
+  Rocket,
+  Settings,
+  BarChart3,
+  PieChart,
+  Activity,
+  Compass,
+  Map,
+  Bookmark,
+  Bell,
+  Gift,
+  Megaphone,
+  Users2,
+  MessageSquare,
+  Vote,
+  Briefcase,
+  GraduationCap,
+  Palette,
+  Music,
+  Camera as CameraIcon,
+  Scissors,
+  Paintbrush
+} from 'lucide-react'
+
+interface Teacher {
+  id: string
+  name: string
+  subject: string
+  avatar: string
+  isOnline: boolean
+  lastSeen?: string
+  classes?: any[]
+}
+
+interface Parent {
+  id: string
+  name: string
+  email?: string
+  avatar?: string
+  isOnline?: boolean
+  lastSeen?: string
+}
+
+interface FamilyMessage {
+  id: string
+  message_text: string
+  sender_id: string
+  receiver_id: string
+  created_at: string
+  is_read: boolean
+}
+
+interface Conversation {
+  id: string
+  participantId: string
+  participantName: string
+  participantRole: 'parent' | 'teacher'
+  lastMessage?: string
+  lastMessageTime?: string
+  unreadCount: number
+  isOnline?: boolean
+  avatar?: string
+}
+
+// Cache for API responses
+const apiCache = new globalThis.Map<string, { data: any; timestamp: number; ttl: number }>()
+
+// Utility function for caching API responses
+const getCachedData = (key: string) => {
+  const cached = apiCache.get(key)
+  if (cached && Date.now() - cached.timestamp < cached.ttl) {
+    return cached.data
+  }
+  return null
+}
+
+const setCachedData = (key: string, data: any, ttl: number = 30000) => {
+  apiCache.set(key, { data, timestamp: Date.now(), ttl })
+}
+
+// Instagram-style Message Bubble Component
+function InstagramMessageBubble({ message, isFromCurrentUser, participantName, showAvatar, isLastInGroup }: {
+  message: FamilyMessage
+  isFromCurrentUser: boolean
+  participantName: string
+  showAvatar: boolean
+  isLastInGroup: boolean
+}) {
+  const [showReactions, setShowReactions] = useState(false)
+  const [selectedReaction, setSelectedReaction] = useState<string | null>(null)
+  
+  const reactions = ['👍', '❤️', '😂', '😮', '😢', '😡']
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`flex items-end space-x-2 group ${isFromCurrentUser ? 'justify-end' : 'justify-start'} mb-1`}
+    >
+      {/* Avatar for received messages */}
+      {!isFromCurrentUser && (
+        <Avatar className={`w-6 h-6 ${showAvatar ? 'opacity-100' : 'opacity-0'}`}>
+          <AvatarFallback className="bg-gradient-to-r from-pink-400 to-rose-400 text-white text-xs font-semibold">
+            {showAvatar ? participantName.charAt(0) : ''}
+          </AvatarFallback>
+        </Avatar>
+      )}
+      
+      <div className={`max-w-[75%] ${isFromCurrentUser ? 'ml-12' : 'mr-12'} relative`}>
+        {/* Message bubble with Instagram styling */}
+        <div
+          className={`px-4 py-2.5 text-sm leading-relaxed break-words relative ${
+            isFromCurrentUser
+              ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl rounded-br-md shadow-md'
+              : 'bg-gray-100 text-gray-900 rounded-2xl rounded-bl-md border border-gray-200'
+          }`}
+          onDoubleClick={() => setShowReactions(!showReactions)}
+        >
+          {message.message_text}
+          
+          {/* Reaction overlay */}
+          <AnimatePresence>
+            {showReactions && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                className="absolute -top-12 left-0 right-0 flex justify-center"
+              >
+                <div className="bg-white rounded-full shadow-lg border border-gray-200 px-2 py-1 flex space-x-1">
+                  {reactions.map((reaction) => (
+                    <button
+                      key={reaction}
+                      onClick={() => {
+                        setSelectedReaction(reaction)
+                        setShowReactions(false)
+                      }}
+                      className="hover:scale-125 transition-transform duration-200 text-lg"
+                    >
+                      {reaction}
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+        
+        {/* Selected reaction */}
+        {selectedReaction && (
+          <div className={`absolute -bottom-2 ${isFromCurrentUser ? 'right-2' : 'left-2'} bg-white rounded-full shadow-md border border-gray-200 px-1.5 py-0.5 text-xs`}>
+            {selectedReaction}
+          </div>
+        )}
+        
+        {/* Timestamp - Instagram style */}
+        {isLastInGroup && (
+          <div className={`text-xs text-gray-500 mt-1 px-1 ${isFromCurrentUser ? 'text-right' : 'text-left'}`}>
+            {new Date(message.created_at).toLocaleTimeString([], { 
+              hour: 'numeric', 
+              minute: '2-digit'
+            })}
+          </div>
+        )}
+      </div>
+    </motion.div>
+  )
+}
+
+// Instagram-style Messages Container
+function InstagramMessagesContainer({ conversationId, currentUserId, participantName, refreshTrigger, onOptimisticMessage }: {
+  conversationId: string
+  currentUserId: string
+  participantName: string
+  refreshTrigger?: number
+  onOptimisticMessage?: (callback: (message: any) => void) => void
+}) {
+  const [messages, setMessages] = useState<FamilyMessage[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isRealTimeSync, setIsRealTimeSync] = useState(false)
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true)
+  const [userHasScrolled, setUserHasScrolled] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const previousMessageCount = useRef(0)
+  const lastMessageId = useRef<string>('')
+  const scrollTimeout = useRef<ReturnType<typeof setTimeout>>()
+  const [isTyping, setIsTyping] = useState(false)
+
+  // Handle optimistic message updates
+  const handleOptimisticMessage = useCallback((messageUpdate: any) => {
+    // Add null/undefined check
+    if (!messageUpdate) {
+      console.warn('handleOptimisticMessage called with undefined messageUpdate')
+      return
+    }
+
+    if (messageUpdate.removeId) {
+      // Remove optimistic message
+      setMessages(prev => prev.filter(msg => msg.id !== messageUpdate.removeId))
+    } else if (messageUpdate.replaceId) {
+      // Replace optimistic message with real message
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageUpdate.replaceId ? { ...messageUpdate, id: messageUpdate.id } : msg
+      ))
+    } else if (messageUpdate.id || messageUpdate.message_text) {
+      // Add new optimistic message (only if it has valid data)
+      setMessages(prev => [...prev, messageUpdate])
+      // INSTANT scroll to show new message (immediate)
+      messagesEndRef.current?.scrollIntoView({ behavior: 'instant' })
+    } else {
+      console.warn('handleOptimisticMessage called with invalid messageUpdate:', messageUpdate)
+    }
+  }, [])
+
+  // Expose optimistic message handler
+  useEffect(() => {
+    if (onOptimisticMessage && typeof onOptimisticMessage === 'function') {
+      onOptimisticMessage(handleOptimisticMessage)
+    }
+  }, [onOptimisticMessage, handleOptimisticMessage])
+
+  // Simple cache functions
+  const clearCache = (key: string) => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(key)
+    }
+  }
+
+  useEffect(() => {
+    const handleTyping = (event: any) => {
+      if (event.detail?.isTyping) {
+        setIsTyping(event.detail.isTyping)
+      }
+    }
+    window.addEventListener('typing', handleTyping)
+    return () => window.removeEventListener('typing', handleTyping)
+  }, [])
+
+  const fetchMessages = useCallback(async (isRealTime: boolean = false) => {
+    if (!conversationId) return
+    
+    // Check cache first for non-real-time requests (but not for forced refreshes)
+    if (!isRealTime) {
+      const cacheKey = `messages_${conversationId}`
+      const cachedData = getCachedData(cacheKey)
+      if (cachedData) {
+        setMessages(cachedData)
+        setIsLoading(false)
+        return
+      }
+    }
+    
+    // Clear cache for real-time requests to ensure fresh data
+    if (isRealTime) {
+      clearCache(`messages_${conversationId}`)
+    }
+    
+    try {
+      const response = await fetch(`/api/family-messaging?conversation_id=${conversationId}`, {
+        headers: {
+          'Cache-Control': isRealTime ? 'no-cache' : 'max-age=30',
+        }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        const newMessages = data.messages || []
+        
+        // Smart refresh: Only update if there are actually new messages (but always update for real-time/forced refreshes)
+        const hasNewMessages = newMessages.length > messages.length || 
+          (newMessages.length > 0 && newMessages[newMessages.length - 1]?.id !== lastMessageId.current)
+        
+        // Always update for real-time requests (forced refreshes) or when there are new messages
+        if (isRealTime || hasNewMessages) {
+          const wasAtBottom = isAtBottom()
+          setMessages(newMessages)
+          
+          // Cache the data
+          if (!isRealTime) {
+            setCachedData(`messages_${conversationId}`, newMessages, 30000)
+          }
+          
+          // Update tracking variables
+          if (newMessages.length > 0) {
+            lastMessageId.current = newMessages[newMessages.length - 1].id
+          }
+          previousMessageCount.current = newMessages.length
+          
+          // Only show sync indicator for real-time updates when there are new messages
+          if (isRealTime && hasNewMessages) {
+            setIsRealTimeSync(true)
+            setTimeout(() => setIsRealTimeSync(false), 1200)
+          }
+          
+          // Auto-scroll only if user was at bottom or it's a new conversation
+          if (wasAtBottom || !userHasScrolled) {
+            setTimeout(() => {
+              messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+            }, 100)
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error('Error fetching family messages:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [conversationId, messages.length, userHasScrolled])
+
+  // Check if user is at bottom of scroll area
+  const isAtBottom = () => {
+    if (!scrollContainerRef.current) return true
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current
+    return scrollHeight - scrollTop - clientHeight < 100 // Increased threshold for mobile
+  }
+
+  // Handle scroll events - improved for mobile
+  const handleScroll = () => {
+    if (scrollTimeout.current) {
+      clearTimeout(scrollTimeout.current)
+    }
+    
+    scrollTimeout.current = setTimeout(() => {
+      setUserHasScrolled(true)
+      setShouldAutoScroll(isAtBottom())
+    }, 150) // Debounce scroll events
+  }
+
+  useEffect(() => {
+    fetchMessages()
+    setUserHasScrolled(false) // Reset scroll state for new conversations
+  }, [conversationId, fetchMessages])
+
+  // Separate effect for refresh trigger to force fresh data
+  useEffect(() => {
+    if (refreshTrigger && refreshTrigger > 0) {
+      // Force fresh fetch when refresh is triggered (after sending message)
+      fetchMessages(true) // Pass true to bypass cache and smart refresh
+    }
+  }, [refreshTrigger, fetchMessages])
+
+  // Optimized real-time sync with adaptive frequency
+  useEffect(() => {
+    if (!conversationId) return
+
+    let interval: ReturnType<typeof setInterval>
+    let retryCount = 0
+    const maxRetries = 3
+    const baseInterval = 10000 // Increased to 10 seconds since we have optimistic UI
+    
+    const startPolling = () => {
+      const currentInterval = Math.min(baseInterval * Math.pow(1.5, retryCount), 30000) // Max 30 seconds
+      
+      interval = setInterval(async () => {
+        try {
+          // Only sync if no optimistic messages are pending
+          const hasOptimisticMessages = messages.some(msg => (msg as any).isOptimistic)
+          if (!hasOptimisticMessages) {
+            await fetchMessages(true)
+          }
+          retryCount = 0 // Reset on success
+        } catch (error) {
+          retryCount = Math.min(retryCount + 1, maxRetries)
+          console.warn(`Real-time sync failed, retry ${retryCount}/${maxRetries}`)
+        }
+      }, currentInterval)
+    }
+    
+    startPolling()
+    return () => clearInterval(interval)
+  }, [conversationId, fetchMessages, messages])
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 space-y-4">
+        <div className="relative">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-200 border-t-blue-500"></div>
+          <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-pink-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+        </div>
+        <div className="text-center">
+          <p className="text-gray-600 text-sm font-medium">Loading conversation...</p>
+          <p className="text-gray-400 text-xs mt-1">Getting your messages ready</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (messages.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 space-y-4">
+        <div className="relative">
+          <div className="w-16 h-16 bg-gradient-to-r from-pink-100 to-blue-100 rounded-full flex items-center justify-center">
+            <MessageCircle className="h-8 w-8 text-pink-500" />
+          </div>
+          <div className="absolute -top-1 -right-1 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+            <Heart className="h-3 w-3 text-white" />
+          </div>
+        </div>
+        <div className="text-center space-y-2">
+          <h3 className="text-gray-900 font-semibold">Start your conversation</h3>
+          <p className="text-gray-500 text-sm">Send a message to {participantName}</p>
+          <p className="text-gray-400 text-xs">Your messages are private and secure</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div 
+      ref={scrollContainerRef}
+      onScroll={handleScroll}
+      className="h-full overflow-y-auto px-4 py-4 bg-gradient-to-b from-gray-50/30 to-white"
+      style={{ 
+        WebkitOverflowScrolling: 'touch',
+        overscrollBehavior: 'contain'
+      }}
+    >
+      {/* New message indicator - Instagram style */}
+      <AnimatePresence>
+        {isRealTimeSync && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="flex justify-center mb-4"
+          >
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full px-4 py-2 text-xs font-medium shadow-lg flex items-center space-x-2">
+              <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+              <span>New message</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Typing indicator */}
+      <AnimatePresence>
+        {isTyping && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="flex items-center space-x-2 mb-4"
+          >
+            <Avatar className="w-6 h-6">
+              <AvatarFallback className="bg-gradient-to-r from-pink-400 to-rose-400 text-white text-xs">
+                {participantName.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="bg-gray-100 rounded-2xl px-4 py-2 flex items-center space-x-1">
+              <div className="flex space-x-1">
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      <div className="space-y-2">
+        {messages.map((message, index) => {
+          const isFromCurrentUser = message.sender_id === currentUserId
+          const showAvatar = !isFromCurrentUser && (index === 0 || messages[index - 1]?.sender_id !== message.sender_id)
+          const isLastInGroup = index === messages.length - 1 || messages[index + 1]?.sender_id !== message.sender_id
+          
+          return (
+            <InstagramMessageBubble
+              key={message.id}
+              message={message}
+              isFromCurrentUser={isFromCurrentUser}
+              participantName={participantName}
+              showAvatar={showAvatar}
+              isLastInGroup={isLastInGroup}
+            />
+          )
+        })}
+      </div>
+      
+      <div ref={messagesEndRef} className="h-4" />
+    </div>
+  )
+}
+
+// Instagram-style Message Input Component
+function InstagramMessageInput({ teacherId, placeholder, onMessageSent }: {
+  teacherId?: string
+  placeholder: string
+  onMessageSent?: () => void
+}) {
+  const [message, setMessage] = useState('')
+  const [isSending, setIsSending] = useState(false)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+
+  const sendMessage = async () => {
+    if (!message.trim() || isSending || !teacherId) return
+
+    setIsSending(true)
+    try {
+      // Simulate API call - replace with actual teacher messaging API
+      console.log('Sending message to teacher:', { teacherId, message })
+      await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate delay
+      
+      setMessage('')
+      if (onMessageSent) {
+        onMessageSent()
+      }
+    } catch (error: any) {
+      console.error('Error sending message:', error)
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      sendMessage()
+    }
+  }
+
+  return (
+    <div className="flex items-end space-x-3 bg-white border-t border-gray-100 p-4">
+      <div className="flex-1 relative">
+        <div className="flex items-center bg-gray-50 rounded-full border border-gray-200 focus-within:border-blue-500 focus-within:bg-white transition-all">
+          <Input
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder={placeholder}
+            className="flex-1 border-0 bg-transparent focus:ring-0 rounded-full py-3 px-4 text-sm"
+            disabled={isSending}
+            style={{ fontSize: '16px' }}
+          />
+          <div className="flex items-center space-x-1 pr-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="p-2 hover:bg-gray-100 rounded-full"
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            >
+              <Smile className="h-4 w-4 text-gray-500" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="p-2 hover:bg-gray-100 rounded-full"
+            >
+              <Paperclip className="h-4 w-4 text-gray-500" />
+            </Button>
+          </div>
+        </div>
+        
+        {/* Quick emoji reactions */}
+        <AnimatePresence>
+          {showEmojiPicker && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="absolute bottom-full mb-2 left-0 bg-white rounded-2xl shadow-lg border border-gray-200 p-3"
+            >
+              <div className="flex space-x-2">
+                {['😊', '👍', '❤️', '😂', '😮', '😢'].map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => {
+                      setMessage(prev => prev + emoji)
+                      setShowEmojiPicker(false)
+                    }}
+                    className="hover:scale-125 transition-transform duration-200 text-xl p-1"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+      
+      <Button
+        onClick={sendMessage}
+        disabled={!message.trim() || isSending}
+        className="rounded-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-3 min-h-[44px] min-w-[44px] shadow-lg transition-all duration-200"
+        size="sm"
+      >
+        {isSending ? (
+          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+        ) : (
+          <Send className="h-4 w-4" />
+        )}
+      </Button>
+    </div>
+  )
+}
+
+// Simple Family Message Input - No nested components
+function SimpleFamilyMessageInput({ conversationId, participantId, currentUserId, onMessageSent }: {
+  conversationId: string
+  participantId: string
+  currentUserId: string
+  onMessageSent?: () => void
+}) {
+  const [message, setMessage] = useState('')
+  const [isSending, setIsSending] = useState(false)
+
+  const sendMessage = async () => {
+    if (!message.trim() || isSending) return
+    
+    setIsSending(true)
+    try {
+      const response = await fetch('/api/family-messaging', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          participantId,
+          messageText: message.trim(),
+          conversationId
+        }),
+      })
+
+      if (response.ok) {
+        setMessage('')
+        onMessageSent?.()
+        toast.success('Message sent!')
+      } else {
+        const errorData = await response.json()
+        toast.error(errorData.error || 'Failed to send message')
+      }
+    } catch (error) {
+      console.error('Error sending message:', error)
+      toast.error('Failed to send message')
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      sendMessage()
+    }
+  }
+
+  return (
+    <div className="flex items-end space-x-3">
+      <div className="flex-1 relative">
+        <Input
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyPress={handleKeyPress}
+          placeholder="Message..."
+          className="w-full rounded-full border-0 focus:border-blue-500 focus:ring-blue-500 py-3 px-4 pr-12 text-sm bg-gray-50 focus:bg-white transition-colors"
+          disabled={isSending}
+          style={{ fontSize: '16px' }}
+        />
+        <Button
+          variant="ghost"
+          size="sm"
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-gray-100 rounded-full"
+        >
+          <Smile className="h-4 w-4 text-gray-500" />
+        </Button>
+      </div>
+      <Button
+        onClick={sendMessage}
+        disabled={!message.trim() || isSending}
+        className="rounded-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 min-h-[44px] min-w-[44px] shadow-none"
+        size="sm"
+      >
+        {isSending ? (
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+        ) : (
+          <Send className="h-4 w-4" />
+        )}
+      </Button>
+    </div>
+  )
+}
+
+// Quick Message Button Component
+function QuickMessageButton({ message, conversationId, participantId, currentUserId, onMessageSent }: {
+  message: string
+  conversationId: string
+  participantId: string
+  currentUserId: string
+  onMessageSent?: () => void
+}) {
+  const [isSending, setIsSending] = useState(false)
+
+  const sendQuickMessage = async () => {
+    if (isSending) return
+
+    setIsSending(true)
+    try {
+      const response = await fetch('/api/family-messaging', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          participantId,
+          messageText: message
+        })
+      })
+
+      if (response.ok) {
+        // Trigger refresh of messages without page reload
+        if (onMessageSent) {
+          onMessageSent()
+        }
+      } else {
+        console.error('Failed to send quick message:', response.status)
+      }
+    } catch (error: any) {
+      console.error('Error sending quick message:', error)
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  return (
+    <Button
+      onClick={sendQuickMessage}
+      disabled={isSending}
+      variant="outline"
+      size="sm"
+      className="text-xs px-3 py-2 rounded-full bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-700 disabled:opacity-50 min-h-[32px] whitespace-nowrap"
+    >
+      {isSending ? (
+        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-500 mr-1"></div>
+      ) : null}
+      <span className="truncate">{message}</span>
+    </Button>
+  )
+}
+
+
+function StudentMessagingContent() {
+  const { profile, user } = useAppSelector((state) => state.auth)
+  const [selectedTab, setSelectedTab] = useState<'teachers' | 'parents' | 'community'>('teachers')
+  const [selectedTeacher, setSelectedTeacher] = useState<string | null>(null)
+  const [selectedParent, setSelectedParent] = useState<string | null>(null)
+  const [selectedTool, setSelectedTool] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showEmergencyModal, setShowEmergencyModal] = useState(false)
+  const [emergencyMessage, setEmergencyMessage] = useState('')
+  const [parents, setParents] = useState<any[]>([])
+  const [messageRefreshTrigger, setMessageRefreshTrigger] = useState(0)
+  const [isLoadingParents, setIsLoadingParents] = useState(false)
+  const [familyConversations, setFamilyConversations] = useState<any[]>([])
+  const [teachers, setTeachers] = useState<Teacher[]>([])
+  const [isLoadingTeachers, setIsLoadingTeachers] = useState(false)
+  const [optimisticMessageHandler, setOptimisticMessageHandler] = useState<((message: any) => void) | undefined>(undefined)
+
+  // Function to refresh messages without page reload
+  const refreshMessages = () => {
+    console.log('refreshMessages called, updating trigger')
+    setMessageRefreshTrigger(prev => {
+      console.log('messageRefreshTrigger updated from', prev, 'to', prev + 1)
+      return prev + 1
+    })
+  }
+
+  // Function to start a family conversation with a parent
+  const startFamilyConversation = async (parentId: string) => {
+    try {
+      // Create or get existing conversation
+      const response = await fetch('/api/family-messaging', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          participantId: parentId,
+          participantRole: 'parent'
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const parentName = parents.find(parent => parent.id === parentId)?.name || 'Parent'
+        
+        // Update familyConversations to include this conversation with participant info
+        const conversationData = {
+          id: data.conversationId,
+          participantId: parentId,
+          participantName: parentName,
+          participantRole: 'parent'
+        }
+        
+        setFamilyConversations(prev => {
+          const existing = prev.find(c => c.id === data.conversationId)
+          if (existing) {
+            return prev
+          }
+          return [...prev, conversationData]
+        })
+        
+        setSelectedParent(parentId)
+        setSelectedTeacher(null) // Clear other selections
+      }
+    } catch (error: any) {
+      console.error('Error starting family conversation:', error)
+    }
+  }
+
+  // Optimized fetch assigned teachers with caching
+  const fetchAssignedTeachers = useCallback(async () => {
+    if (!user?.id) return
+    
+    // Check cache first
+    const cacheKey = `teachers_${user.id}`
+    const cachedData = getCachedData(cacheKey)
+    if (cachedData) {
+      setTeachers(cachedData)
+      setIsLoadingTeachers(false)
+      return
+    }
+    
+    setIsLoadingTeachers(true)
+    try {
+      const response = await fetch(`/api/student/assigned-teachers?student_id=${user.id}`, {
+        headers: {
+          'Cache-Control': 'max-age=300', // Cache for 5 minutes
+        }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        const teachersData = data.teachers || []
+        setTeachers(teachersData)
+        // Cache the data for 5 minutes
+        setCachedData(cacheKey, teachersData, 300000)
+      } else {
+        console.error('Failed to fetch assigned teachers:', response.status)
+        setTeachers([])
+      }
+    } catch (error: any) {
+      console.error('Error fetching assigned teachers:', error)
+      setTeachers([])
+    } finally {
+      setIsLoadingTeachers(false)
+    }
+  }, [user?.id])
+
+  useEffect(() => {
+    if (selectedTab === 'teachers' && user?.id) {
+      fetchAssignedTeachers()
+    }
+  }, [selectedTab, user?.id, fetchAssignedTeachers])
+
+  // Fetch family data (parents and conversations)
+  useEffect(() => {
+    const fetchFamilyData = async () => {
+      if (selectedTab !== 'parents') return
+      
+      setIsLoadingParents(true)
+      try {
+        const response = await fetch('/api/family-messaging', {
+          credentials: 'include'
+        })
+        if (response.ok) {
+          const data = await response.json()
+          console.log('Student family data response:', data)
+          console.log('Parents found:', data.parents)
+          setFamilyConversations(data.conversations || [])
+          setParents(data.parents || [])
+        } else {
+          const errorData = await response.text()
+          console.error('API Error Response:', errorData)
+          console.error('Failed to fetch family data:', response.status, response.statusText)
+        }
+      } catch (error: any) {
+        console.error('Error fetching family data:', error)
+        setFamilyConversations([])
+        setParents([])
+      } finally {
+        setIsLoadingParents(false)
+      }
+    }
+
+    fetchFamilyData()
+  }, [selectedTab])
+
+  const conversationStarters = [
+    { id: '1', text: 'I need help with today\'s homework', icon: BookOpen },
+    { id: '2', text: 'Can you explain this topic again?', icon: HelpCircle },
+    { id: '3', text: 'I\'m feeling stressed about the test', icon: Heart },
+    { id: '4', text: 'I have an idea for our project', icon: Lightbulb }
+  ]
+
+  return (
+    <div className="messaging-container">
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+          {/* Premium Background Pattern */}
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 via-purple-500/10 to-fuchsia-500/10" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_2px_2px,rgba(147,51,234,0.15)_1px,transparent_0)] bg-[length:32px_32px]" />
+          <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-white/5" />
+          
+          <div className="relative z-10 p-4 sm:p-6 lg:p-8">
+            <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
+              
+              {/* Premium Modern Header */}
+              <motion.div 
+                className="relative"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+              >
+                {/* Premium Glass Card Header */}
+                <div className="bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl p-6 sm:p-8">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-6 sm:space-y-0">
+                    <div className="flex items-center space-x-4 sm:space-x-6">
+                      <motion.div 
+                        className="relative p-4 sm:p-5 bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 rounded-2xl shadow-2xl"
+                        whileHover={{ scale: 1.05, rotate: 5 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <MessageCircle className="h-8 w-8 sm:h-10 sm:w-10 text-white" />
+                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full animate-pulse"></div>
+                      </motion.div>
+                      <div>
+                        <motion.h1 
+                          className="text-2xl sm:text-3xl lg:text-5xl font-black bg-gradient-to-r from-white via-purple-200 to-white bg-clip-text text-transparent"
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.2 }}
+                        >
+                          Connect Hub
+                        </motion.h1>
+                        <motion.p 
+                          className="text-sm sm:text-base lg:text-xl text-white/80 font-medium mt-1"
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.3 }}
+                        >
+                          Premium messaging experience
+                        </motion.p>
+                        {profile && (
+                          <motion.p 
+                            className="text-xs sm:text-sm text-white/60 mt-2 flex items-center space-x-2"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.4 }}
+                          >
+                            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                            <span>Welcome back, {profile.first_name} {profile.last_name}</span>
+                          </motion.p>
+                        )}
+                      </div>
+                    </div>
+                  
+                    {/* Premium Status Indicators */}
+                    <motion.div 
+                      className="flex items-center space-x-4"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.5 }}
+                    >
+                      <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 border border-white/20">
+                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        <span className="text-white/80 text-sm font-medium">Online</span>
+                      </div>
+                      <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 border border-white/20">
+                        <Shield className="w-4 h-4 text-blue-400" />
+                        <span className="text-white/80 text-sm font-medium">Secure</span>
+                      </div>
+                    </motion.div>
+                  </div>
+                </div>
+              </motion.div>
+
+
+              {/* Premium Navigation Tabs */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.6 }}
+                className="flex space-x-2 sm:space-x-3 bg-white/10 backdrop-blur-xl p-3 rounded-3xl shadow-2xl border border-white/20"
+              >
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex-1"
+                >
+                  <Button
+                    variant={selectedTab === 'teachers' ? 'default' : 'ghost'}
+                    onClick={() => setSelectedTab('teachers')}
+                    className={`w-full py-3 sm:py-4 px-2 sm:px-4 rounded-2xl font-bold transition-all text-xs sm:text-base ${
+                      selectedTab === 'teachers' 
+                        ? 'bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 text-white shadow-2xl border-0' 
+                        : 'text-white/70 hover:text-white hover:bg-white/10 border border-white/20'
+                    }`}
+                  >
+                    <Users className="h-3 w-3 sm:h-5 sm:w-5 mr-1 sm:mr-3" />
+                    <span className="hidden sm:inline">Teachers</span>
+                    <span className="sm:hidden">Teachers</span>
+                  </Button>
+                </motion.div>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex-1"
+                >
+                  <Button
+                    variant={selectedTab === 'parents' ? 'default' : 'ghost'}
+                    onClick={() => setSelectedTab('parents')}
+                    className={`w-full py-3 sm:py-4 px-2 sm:px-4 rounded-2xl font-bold transition-all text-xs sm:text-base ${
+                      selectedTab === 'parents' 
+                        ? 'bg-gradient-to-r from-pink-500 via-rose-500 to-red-500 text-white shadow-2xl border-0' 
+                        : 'text-white/70 hover:text-white hover:bg-white/10 border border-white/20'
+                    }`}
+                  >
+                    <Heart className="h-3 w-3 sm:h-5 sm:w-5 mr-1 sm:mr-3" />
+                    <span className="hidden sm:inline">Family</span>
+                    <span className="sm:hidden">Family</span>
+                  </Button>
+                </motion.div>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex-1"
+                >
+                  <Button
+                    variant={selectedTab === 'community' ? 'default' : 'ghost'}
+                    onClick={() => setSelectedTab('community')}
+                    className={`w-full py-3 sm:py-4 px-2 sm:px-4 rounded-2xl font-bold transition-all text-xs sm:text-base ${
+                      selectedTab === 'community' 
+                        ? 'bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white shadow-2xl border-0' 
+                        : 'text-white/70 hover:text-white hover:bg-white/10 border border-white/20'
+                    }`}
+                  >
+                    <School className="h-3 w-3 sm:h-5 sm:w-5 mr-1 sm:mr-3" />
+                    <span className="hidden sm:inline">School Community</span>
+                    <span className="sm:hidden">Community</span>
+                  </Button>
+                </motion.div>
+              </motion.div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
+              {/* Enhanced Contact List - Mobile: Hide sidebar when chat is open */}
+              <motion.div 
+                className={`lg:col-span-1 space-y-4 sm:space-y-6 ${selectedTeacher || selectedParent || selectedTool ? 'hidden lg:block' : 'block'}`}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.6 }}
+              >
+                <Card className="bg-white/10 backdrop-blur-xl shadow-2xl border border-white/20 rounded-3xl">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center space-x-4 text-xl sm:text-2xl">
+                      {selectedTab === 'teachers' ? (
+                        <>
+                          <motion.div 
+                            className="p-3 bg-gradient-to-br from-violet-500/20 to-purple-500/20 rounded-2xl backdrop-blur-sm border border-white/20"
+                            whileHover={{ scale: 1.1, rotate: 5 }}
+                          >
+                            <Users className="h-6 w-6 text-violet-300" />
+                          </motion.div>
+                          <span className="bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent font-black">Your Teachers</span>
+                        </>
+                      ) : selectedTab === 'parents' ? (
+                        <>
+                          <motion.div 
+                            className="p-3 bg-gradient-to-br from-pink-500/20 to-rose-500/20 rounded-2xl backdrop-blur-sm border border-white/20"
+                            whileHover={{ scale: 1.1, rotate: 5 }}
+                          >
+                            <Heart className="h-6 w-6 text-pink-300" />
+                          </motion.div>
+                          <span className="bg-gradient-to-r from-white to-pink-200 bg-clip-text text-transparent font-black">Your Family</span>
+                        </>
+                      ) : (
+                        <>
+                          <motion.div 
+                            className="p-3 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-2xl backdrop-blur-sm border border-white/20"
+                            whileHover={{ scale: 1.1, rotate: 5 }}
+                          >
+                            <School className="h-6 w-6 text-emerald-300" />
+                          </motion.div>
+                          <span className="bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent font-black">School Community</span>
+                        </>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 sm:space-y-4">
+                    <div className="relative">
+                      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-white/40" />
+                      <Input
+                        placeholder={
+                          selectedTab === 'teachers' ? "Search teachers..." : 
+                          selectedTab === 'parents' ? "Search family..." : 
+                          "Search community..."
+                        }
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-12 pr-4 py-4 text-sm sm:text-base rounded-2xl bg-white/10 border border-white/20 text-white placeholder:text-white/50 focus:border-violet-400 focus:ring-2 focus:ring-violet-400/20 backdrop-blur-sm transition-all"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {selectedTab === 'teachers' ? (
+                        isLoadingTeachers ? (
+                          <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                            <div className="relative">
+                              <div className="animate-spin rounded-full h-10 w-10 border-2 border-white/20 border-t-violet-400"></div>
+                              <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-purple-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-white/80 text-sm font-medium">Loading your teachers...</p>
+                              <p className="text-white/60 text-xs mt-1">Getting everything ready</p>
+                            </div>
+                          </div>
+                        ) : teachers.length > 0 ? (
+                          teachers
+                            .filter(teacher => 
+                              searchQuery === '' || 
+                              teacher.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              teacher.subject.toLowerCase().includes(searchQuery.toLowerCase())
+                            )
+                            .map((teacher) => (
+                            <motion.div
+                              key={teacher.id}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.3 }}
+                              onClick={() => {
+                                setSelectedTeacher(teacher.id)
+                                setSelectedParent(null)
+                              }}
+                              className={`p-4 sm:p-5 rounded-2xl border cursor-pointer transition-all hover:shadow-2xl group ${
+                                selectedTeacher === teacher.id 
+                                  ? 'bg-gradient-to-r from-violet-500/20 to-purple-500/20 border-violet-400/50 shadow-xl backdrop-blur-sm' 
+                                  : 'bg-white/10 border-white/20 hover:bg-white/20 backdrop-blur-sm'
+                              }`}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3 min-w-0 flex-1">
+                                  <div className="relative flex-shrink-0">
+                                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 rounded-2xl flex items-center justify-center text-white font-bold text-sm sm:text-base shadow-2xl border-2 border-white/20">
+                                      {teacher.name.split(' ').map(n => n[0]).join('')}
+                                    </div>
+                                    {teacher.isOnline && (
+                                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-green-400 to-emerald-400 border-2 border-white rounded-full animate-pulse shadow-lg"></div>
+                                    )}
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="font-bold text-white text-sm sm:text-base truncate group-hover:text-white/90">{teacher.name}</p>
+                                    <p className="text-xs sm:text-sm text-white/70 truncate group-hover:text-white/80">{teacher.subject}</p>
+                                    {(teacher as any).classes && (teacher as any).classes.length > 1 && (
+                                      <p className="text-xs text-violet-300 font-medium mt-1 group-hover:text-violet-200">
+                                        {(teacher as any).classes.length} classes
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-right flex-shrink-0 ml-2">
+                                  {teacher.isOnline ? (
+                                    <div className="flex items-center space-x-1 bg-green-500/20 backdrop-blur-sm rounded-full px-3 py-1 border border-green-400/30">
+                                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                                      <span className="text-green-300 text-xs font-medium hidden sm:inline">Online</span>
+                                      <span className="text-green-300 text-xs font-medium sm:hidden">●</span>
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs text-white/50 hidden sm:block">{teacher.lastSeen}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </motion.div>
+                          ))
+                        ) : (
+                          <div className="text-center py-12">
+                            <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm border border-white/20">
+                              <Users className="h-8 w-8 text-white/40" />
+                            </div>
+                            <p className="text-white/80 text-sm font-medium">No teachers assigned</p>
+                            <p className="text-white/60 text-xs mt-2 px-4">
+                              Your teachers will appear here once you're enrolled in classes
+                            </p>
+                          </div>
+                        )
+                      ) : selectedTab === 'parents' ? (
+                        isLoadingParents ? (
+                          <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                            <div className="relative">
+                              <div className="animate-spin rounded-full h-10 w-10 border-2 border-white/20 border-t-pink-400"></div>
+                              <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-rose-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-white/80 text-sm font-medium">Loading your family...</p>
+                              <p className="text-white/60 text-xs mt-1">Connecting with loved ones</p>
+                            </div>
+                          </div>
+                        ) : parents.length > 0 ? (
+                          parents.map((parent) => (
+                            <motion.div
+                              key={parent.id}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.3 }}
+                              className="p-4 sm:p-5 rounded-2xl border bg-white/10 border-white/20 hover:bg-white/20 backdrop-blur-sm transition-all hover:shadow-2xl group cursor-pointer"
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-pink-500 via-rose-500 to-red-500 rounded-2xl flex items-center justify-center text-white font-bold text-sm sm:text-base shadow-2xl border-2 border-white/20">
+                                    {parent.name.split(' ').map((n: string) => n[0]).join('')}
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="font-bold text-white text-sm sm:text-base truncate group-hover:text-white/90">{parent.name}</p>
+                                    <p className="text-xs sm:text-sm text-white/70 group-hover:text-white/80">Family Member</p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <Button
+                                    onClick={() => startFamilyConversation(parent.id)}
+                                    variant="outline"
+                                    size="sm"
+                                    className="bg-pink-500/20 hover:bg-pink-500/30 border-pink-400/30 text-pink-300 hover:text-pink-200 text-xs sm:text-sm px-3 sm:px-4 py-2 rounded-xl backdrop-blur-sm transition-all"
+                                  >
+                                    <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                                    <span className="hidden sm:inline">Message</span>
+                                    <span className="sm:hidden">Chat</span>
+                                  </Button>
+                                </div>
+                              </div>
+                            </motion.div>
+                          ))
+                        ) : (
+                          <div className="text-center py-12">
+                            <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm border border-white/20">
+                              <Heart className="h-8 w-8 text-white/40" />
+                            </div>
+                            <p className="text-white/80 text-sm font-medium">No family linked yet</p>
+                            <p className="text-white/60 text-xs mt-2 px-4">Your family will appear here once they register and verify your account</p>
+                          </div>
+                        )
+                      ) : (
+                        <div className="space-y-4">
+                          {/* Premium Header */}
+                          <div className="text-center py-6">
+                            <div className="flex items-center justify-center space-x-3 mb-4">
+                              <div className="w-12 h-12 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-2xl flex items-center justify-center backdrop-blur-sm border border-yellow-400/30">
+                                <Crown className="h-6 w-6 text-yellow-300" />
+                              </div>
+                              <div>
+                                <p className="text-white/90 text-lg font-bold">Advanced Tools</p>
+                                <p className="text-yellow-300/80 text-xs font-medium">Premium Features</p>
+                              </div>
+                            </div>
+                            <p className="text-white/60 text-sm px-4">
+                              Unlock powerful tools to enhance your learning experience
+                            </p>
+                          </div>
+
+                          {/* Advanced Tools Grid */}
+                          <div className="space-y-2 max-h-96 overflow-y-auto">
+                            {/* Academic Tools */}
+                            <div className="space-y-2">
+                              <p className="text-white/70 text-xs font-semibold uppercase tracking-wider px-2">Academic Excellence</p>
+                              
+                              <motion.div
+                                className="p-3 rounded-xl bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-400/20 backdrop-blur-sm cursor-pointer hover:bg-blue-500/20 transition-all"
+                                whileHover={{ scale: 1.02, x: 4 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => setSelectedTool('study-planner')}
+                              >
+                                <div className="flex items-center space-x-3">
+                                  <div className="p-2 bg-blue-500/20 rounded-lg">
+                                    <Calendar className="h-4 w-4 text-blue-300" />
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="text-white/90 font-medium text-sm">AI Study Planner</p>
+                                    <p className="text-white/60 text-xs">Personalized study schedules</p>
+                                  </div>
+                                  <Crown className="h-3 w-3 text-yellow-400" />
+                                </div>
+                              </motion.div>
+
+                              <motion.div
+                                className="p-3 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-400/20 backdrop-blur-sm cursor-pointer hover:bg-purple-500/20 transition-all"
+                                whileHover={{ scale: 1.02, x: 4 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => setSelectedTool('grade-tracker')}
+                              >
+                                <div className="flex items-center space-x-3">
+                                  <div className="p-2 bg-purple-500/20 rounded-lg">
+                                    <TrendingUp className="h-4 w-4 text-purple-300" />
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="text-white/90 font-medium text-sm">Grade Analytics</p>
+                                    <p className="text-white/60 text-xs">Track academic progress</p>
+                                  </div>
+                                  <Crown className="h-3 w-3 text-yellow-400" />
+                                </div>
+                              </motion.div>
+
+                              <motion.div
+                                className="p-3 rounded-xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-400/20 backdrop-blur-sm cursor-pointer hover:bg-green-500/20 transition-all"
+                                whileHover={{ scale: 1.02, x: 4 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => setSelectedTool('homework-assistant')}
+                              >
+                                <div className="flex items-center space-x-3">
+                                  <div className="p-2 bg-green-500/20 rounded-lg">
+                                    <Brain className="h-4 w-4 text-green-300" />
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="text-white/90 font-medium text-sm">AI Homework Helper</p>
+                                    <p className="text-white/60 text-xs">Smart assignment assistance</p>
+                                  </div>
+                                  <Crown className="h-3 w-3 text-yellow-400" />
+                                </div>
+                              </motion.div>
+                            </div>
+
+                            {/* Social & Community */}
+                            <div className="space-y-3 sm:space-y-4 pt-4 sm:pt-6">
+                              <div className="flex items-center justify-between px-2 sm:px-3">
+                                <p className="text-white/70 text-xs sm:text-sm font-semibold uppercase tracking-wider">Social & Community</p>
+                                <Badge variant="secondary" className="bg-rose-500/20 text-rose-300 text-xs px-2 py-1 rounded-full border-rose-400/30">
+                                  3 Features
+                                </Badge>
+                              </div>
+                              
+                              {/* Study Groups */}
+                              <motion.div
+                                className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-rose-500/10 to-pink-500/10 border border-rose-400/20 backdrop-blur-sm cursor-pointer hover:bg-rose-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-rose-500/10"
+                                whileHover={{ scale: 1.02, x: 4 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => setSelectedTool('study-groups')}
+                              >
+                                <div className="flex items-center space-x-3 sm:space-x-4">
+                                  <div className="relative p-2 sm:p-3 bg-rose-500/20 rounded-lg sm:rounded-xl group-hover:bg-rose-500/30 transition-colors">
+                                    <Users2 className="h-4 w-4 sm:h-5 sm:w-5 text-rose-300 group-hover:text-rose-200 transition-colors" />
+                                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-rose-400 rounded-full animate-pulse"></div>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center space-x-2 mb-1">
+                                      <p className="text-white/90 font-semibold text-sm sm:text-base truncate">Study Groups</p>
+                                      <Crown className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400 flex-shrink-0" />
+                                    </div>
+                                    <p className="text-white/60 text-xs sm:text-sm line-clamp-1">Collaborative learning spaces with peers</p>
+                                    <div className="flex items-center space-x-2 mt-2">
+                                      <div className="flex -space-x-1">
+                                        <div className="w-4 h-4 sm:w-5 sm:h-5 bg-rose-400 rounded-full border border-white/20"></div>
+                                        <div className="w-4 h-4 sm:w-5 sm:h-5 bg-pink-400 rounded-full border border-white/20"></div>
+                                        <div className="w-4 h-4 sm:w-5 sm:h-5 bg-purple-400 rounded-full border border-white/20"></div>
+                                      </div>
+                                      <span className="text-white/50 text-xs">12+ active groups</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col items-end space-y-1">
+                                    <Badge variant="outline" className="bg-rose-500/10 text-rose-300 border-rose-400/30 text-xs px-2 py-0.5">
+                                      Hot
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </motion.div>
+
+                              {/* Peer Tutoring */}
+                              <motion.div
+                                className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-400/20 backdrop-blur-sm cursor-pointer hover:bg-cyan-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/10"
+                                whileHover={{ scale: 1.02, x: 4 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => setSelectedTool('peer-tutoring')}
+                              >
+                                <div className="flex items-center space-x-3 sm:space-x-4">
+                                  <div className="relative p-2 sm:p-3 bg-cyan-500/20 rounded-lg sm:rounded-xl group-hover:bg-cyan-500/30 transition-colors">
+                                    <GraduationCap className="h-4 w-4 sm:h-5 sm:w-5 text-cyan-300 group-hover:text-cyan-200 transition-colors" />
+                                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center space-x-2 mb-1">
+                                      <p className="text-white/90 font-semibold text-sm sm:text-base truncate">Peer Tutoring</p>
+                                      <Crown className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400 flex-shrink-0" />
+                                    </div>
+                                    <p className="text-white/60 text-xs sm:text-sm line-clamp-1">Connect with experienced student tutors</p>
+                                    <div className="flex items-center space-x-2 mt-2">
+                                      <div className="flex items-center space-x-1">
+                                        <Star className="h-3 w-3 text-yellow-400 fill-current" />
+                                        <span className="text-white/70 text-xs">4.8 rating</span>
+                                      </div>
+                                      <span className="text-white/50 text-xs">•</span>
+                                      <span className="text-white/50 text-xs">8 tutors online</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col items-end space-y-1">
+                                    <Badge variant="outline" className="bg-cyan-500/10 text-cyan-300 border-cyan-400/30 text-xs px-2 py-0.5">
+                                      New
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </motion.div>
+
+                              {/* School Events Hub */}
+                              <motion.div
+                                className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-400/20 backdrop-blur-sm cursor-pointer hover:bg-orange-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/10"
+                                whileHover={{ scale: 1.02, x: 4 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => setSelectedTool('school-events')}
+                              >
+                                <div className="flex items-center space-x-3 sm:space-x-4">
+                                  <div className="relative p-2 sm:p-3 bg-orange-500/20 rounded-lg sm:rounded-xl group-hover:bg-orange-500/30 transition-colors">
+                                    <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-orange-300 group-hover:text-orange-200 transition-colors" />
+                                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center space-x-2 mb-1">
+                                      <p className="text-white/90 font-semibold text-sm sm:text-base truncate">School Events Hub</p>
+                                      <Crown className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400 flex-shrink-0" />
+                                    </div>
+                                    <p className="text-white/60 text-xs sm:text-sm line-clamp-1">Discover & join exciting school activities</p>
+                                    <div className="flex items-center space-x-2 mt-2">
+                                      <div className="flex items-center space-x-1">
+                                        <Clock className="h-3 w-3 text-orange-400" />
+                                        <span className="text-white/70 text-xs">3 events today</span>
+                                      </div>
+                                      <span className="text-white/50 text-xs">•</span>
+                                      <span className="text-white/50 text-xs">15 upcoming</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col items-end space-y-1">
+                                    <Badge variant="outline" className="bg-orange-500/10 text-orange-300 border-orange-400/30 text-xs px-2 py-0.5">
+                                      Live
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            </div>
+
+                            {/* Gamification & Rewards */}
+                            <div className="space-y-3 sm:space-y-4 pt-4 sm:pt-6">
+                              <div className="flex items-center justify-between px-2 sm:px-3">
+                                <p className="text-white/70 text-xs sm:text-sm font-semibold uppercase tracking-wider">Gamification & Rewards</p>
+                                <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-300 text-xs px-2 py-1 rounded-full border-yellow-400/30">
+                                  2 Features
+                                </Badge>
+                              </div>
+                              
+                              {/* Achievement Center */}
+                              <motion.div
+                                className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-400/20 backdrop-blur-sm cursor-pointer hover:bg-yellow-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/10"
+                                whileHover={{ scale: 1.02, x: 4 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => setSelectedTool('achievement-center')}
+                              >
+                                <div className="flex items-center space-x-3 sm:space-x-4">
+                                  <div className="relative p-2 sm:p-3 bg-yellow-500/20 rounded-lg sm:rounded-xl group-hover:bg-yellow-500/30 transition-colors">
+                                    <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-300 group-hover:text-yellow-200 transition-colors" />
+                                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center space-x-2 mb-1">
+                                      <p className="text-white/90 font-semibold text-sm sm:text-base truncate">Achievement Center</p>
+                                      <Crown className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400 flex-shrink-0" />
+                                    </div>
+                                    <p className="text-white/60 text-xs sm:text-sm line-clamp-1">Unlock badges, trophies & exclusive rewards</p>
+                                    <div className="flex items-center space-x-2 mt-2">
+                                      <div className="flex items-center space-x-1">
+                                        <div className="flex -space-x-0.5">
+                                          <div className="w-3 h-3 bg-yellow-400 rounded-sm rotate-45"></div>
+                                          <div className="w-3 h-3 bg-orange-400 rounded-sm rotate-45"></div>
+                                          <div className="w-3 h-3 bg-red-400 rounded-sm rotate-45"></div>
+                                        </div>
+                                        <span className="text-white/70 text-xs">7 badges earned</span>
+                                      </div>
+                                      <span className="text-white/50 text-xs">•</span>
+                                      <span className="text-white/50 text-xs">3 new available</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col items-end space-y-1">
+                                    <Badge variant="outline" className="bg-yellow-500/10 text-yellow-300 border-yellow-400/30 text-xs px-2 py-0.5">
+                                      Trending
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </motion.div>
+
+                              {/* Learning Games */}
+                              <motion.div
+                                className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-400/20 backdrop-blur-sm cursor-pointer hover:bg-indigo-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/10"
+                                whileHover={{ scale: 1.02, x: 4 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => setSelectedTool('learning-games')}
+                              >
+                                <div className="flex items-center space-x-3 sm:space-x-4">
+                                  <div className="relative p-2 sm:p-3 bg-indigo-500/20 rounded-lg sm:rounded-xl group-hover:bg-indigo-500/30 transition-colors">
+                                    <Gamepad2 className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-300 group-hover:text-indigo-200 transition-colors" />
+                                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></div>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center space-x-2 mb-1">
+                                      <p className="text-white/90 font-semibold text-sm sm:text-base truncate">Learning Games</p>
+                                      <Crown className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400 flex-shrink-0" />
+                                    </div>
+                                    <p className="text-white/60 text-xs sm:text-sm line-clamp-1">Interactive educational mini-games & challenges</p>
+                                    <div className="flex items-center space-x-2 mt-2">
+                                      <div className="flex items-center space-x-1">
+                                        <Zap className="h-3 w-3 text-indigo-400" />
+                                        <span className="text-white/70 text-xs">5 games unlocked</span>
+                                      </div>
+                                      <span className="text-white/50 text-xs">•</span>
+                                      <span className="text-white/50 text-xs">Level 12</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col items-end space-y-1">
+                                    <Badge variant="outline" className="bg-indigo-500/10 text-indigo-300 border-indigo-400/30 text-xs px-2 py-0.5">
+                                      Fun
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            </div>
+
+                            {/* Creative & Expression */}
+                            <div className="space-y-3 sm:space-y-4 pt-4 sm:pt-6">
+                              <div className="flex items-center justify-between px-2 sm:px-3">
+                                <p className="text-white/70 text-xs sm:text-sm font-semibold uppercase tracking-wider">Creative & Expression</p>
+                                <Badge variant="secondary" className="bg-pink-500/20 text-pink-300 text-xs px-2 py-1 rounded-full border-pink-400/30">
+                                  2 Features
+                                </Badge>
+                              </div>
+                              
+                              {/* Digital Portfolio */}
+                              <motion.div
+                                className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-pink-500/10 to-rose-500/10 border border-pink-400/20 backdrop-blur-sm cursor-pointer hover:bg-pink-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-pink-500/10"
+                                whileHover={{ scale: 1.02, x: 4 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => setSelectedTool('digital-portfolio')}
+                              >
+                                <div className="flex items-center space-x-3 sm:space-x-4">
+                                  <div className="relative p-2 sm:p-3 bg-pink-500/20 rounded-lg sm:rounded-xl group-hover:bg-pink-500/30 transition-colors">
+                                    <Palette className="h-4 w-4 sm:h-5 sm:w-5 text-pink-300 group-hover:text-pink-200 transition-colors" />
+                                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-400 rounded-full animate-pulse"></div>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center space-x-2 mb-1">
+                                      <p className="text-white/90 font-semibold text-sm sm:text-base truncate">Digital Portfolio</p>
+                                      <Crown className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400 flex-shrink-0" />
+                                    </div>
+                                    <p className="text-white/60 text-xs sm:text-sm line-clamp-1">Showcase your best work & achievements</p>
+                                    <div className="flex items-center space-x-2 mt-2">
+                                      <div className="flex items-center space-x-1">
+                                        <div className="flex -space-x-1">
+                                          <div className="w-4 h-4 sm:w-5 sm:h-5 bg-gradient-to-br from-pink-400 to-rose-400 rounded border border-white/20 flex items-center justify-center">
+                                            <ImageIcon className="h-2 w-2 text-white" />
+                                          </div>
+                                          <div className="w-4 h-4 sm:w-5 sm:h-5 bg-gradient-to-br from-purple-400 to-pink-400 rounded border border-white/20 flex items-center justify-center">
+                                            <BookOpen className="h-2 w-2 text-white" />
+                                          </div>
+                                        </div>
+                                        <span className="text-white/70 text-xs">12 projects</span>
+                                      </div>
+                                      <span className="text-white/50 text-xs">•</span>
+                                      <span className="text-white/50 text-xs">85% complete</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col items-end space-y-1">
+                                    <Badge variant="outline" className="bg-pink-500/10 text-pink-300 border-pink-400/30 text-xs px-2 py-0.5">
+                                      Popular
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </motion.div>
+
+                              {/* Project Showcase */}
+                              <motion.div
+                                className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-teal-500/10 to-green-500/10 border border-teal-400/20 backdrop-blur-sm cursor-pointer hover:bg-teal-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-teal-500/10"
+                                whileHover={{ scale: 1.02, x: 4 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => setSelectedTool('project-showcase')}
+                              >
+                                <div className="flex items-center space-x-3 sm:space-x-4">
+                                  <div className="relative p-2 sm:p-3 bg-teal-500/20 rounded-lg sm:rounded-xl group-hover:bg-teal-500/30 transition-colors">
+                                    <Rocket className="h-4 w-4 sm:h-5 sm:w-5 text-teal-300 group-hover:text-teal-200 transition-colors" />
+                                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-teal-400 rounded-full animate-pulse"></div>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center space-x-2 mb-1">
+                                      <p className="text-white/90 font-semibold text-sm sm:text-base truncate">Project Showcase</p>
+                                      <Crown className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400 flex-shrink-0" />
+                                    </div>
+                                    <p className="text-white/60 text-xs sm:text-sm line-clamp-1">Share creative projects with the community</p>
+                                    <div className="flex items-center space-x-2 mt-2">
+                                      <div className="flex items-center space-x-1">
+                                        <Heart className="h-3 w-3 text-teal-400 fill-current" />
+                                        <span className="text-white/70 text-xs">24 likes</span>
+                                      </div>
+                                      <span className="text-white/50 text-xs">•</span>
+                                      <span className="text-white/50 text-xs">5 comments</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col items-end space-y-1">
+                                    <Badge variant="outline" className="bg-teal-500/10 text-teal-300 border-teal-400/30 text-xs px-2 py-0.5">
+                                      Creative
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            </div>
+                          </div>
+
+                          {/* Premium CTA */}
+                          <div className="mt-6 sm:mt-8 px-2 sm:px-4">
+                            <motion.div
+                              className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-yellow-500/10 via-orange-500/10 to-red-500/10 border border-yellow-400/20 backdrop-blur-sm p-4 sm:p-6"
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/5 via-orange-500/5 to-red-500/5 animate-pulse"></div>
+                              <div className="relative text-center space-y-3 sm:space-y-4">
+                                <div className="flex items-center justify-center space-x-2">
+                                  <Crown className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-400 animate-bounce" />
+                                  <h3 className="text-white font-bold text-base sm:text-lg">Unlock All Features</h3>
+                                  <Crown className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-400 animate-bounce" style={{ animationDelay: '0.2s' }} />
+                                </div>
+                                <p className="text-white/70 text-xs sm:text-sm max-w-xs mx-auto leading-relaxed">
+                                  Get access to all premium tools, unlimited features, and exclusive content
+                                </p>
+                                <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
+                                  <Button
+                                    className="w-full sm:w-auto bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold text-sm sm:text-base px-6 sm:px-8 py-2 sm:py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                                  >
+                                    <Crown className="h-4 w-4 mr-2" />
+                                    Upgrade Now
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    className="w-full sm:w-auto text-yellow-300 hover:text-yellow-200 hover:bg-yellow-500/10 text-xs sm:text-sm px-4 py-2 rounded-lg transition-all"
+                                  >
+                                    Learn More
+                                  </Button>
+                                </div>
+                                <div className="flex items-center justify-center space-x-4 text-xs text-white/50">
+                                  <span className="flex items-center space-x-1">
+                                    <Check className="h-3 w-3 text-green-400" />
+                                    <span>7-day free trial</span>
+                                  </span>
+                                  <span className="flex items-center space-x-1">
+                                    <Check className="h-3 w-3 text-green-400" />
+                                    <span>Cancel anytime</span>
+                                  </span>
+                                </div>
+                              </div>
+                            </motion.div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Premium Conversation Starters */}
+                <Card className="bg-white/10 backdrop-blur-xl shadow-2xl border border-white/20 rounded-2xl sm:rounded-3xl">
+                  <CardHeader className="pb-3 sm:pb-4 px-4 sm:px-6 pt-4 sm:pt-6">
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3 sm:space-x-4">
+                        <motion.div 
+                          className="p-2 sm:p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl sm:rounded-2xl backdrop-blur-sm border border-white/20"
+                          whileHover={{ scale: 1.1, rotate: 5 }}
+                        >
+                          <Star className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-300" />
+                        </motion.div>
+                        <div>
+                          <span className="bg-gradient-to-r from-white to-yellow-200 bg-clip-text text-transparent font-black text-lg sm:text-2xl">Quick Starters</span>
+                          <p className="text-white/60 text-xs sm:text-sm mt-1">Start conversations easily</p>
+                        </div>
+                      </div>
+                      <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-300 text-xs px-2 py-1 rounded-full border-yellow-400/30 hidden sm:block">
+                        {conversationStarters.length} Options
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 sm:space-y-3 px-4 sm:px-6 pb-4 sm:pb-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                      {conversationStarters.map((starter, index) => {
+                        const Icon = starter.icon
+                        return (
+                          <motion.div
+                            key={starter.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3, delay: index * 0.1 }}
+                            className="group"
+                          >
+                            <Button
+                              variant="outline"
+                              className="w-full justify-start text-left h-auto p-3 sm:p-4 rounded-xl sm:rounded-2xl border-white/20 bg-white/5 hover:bg-white/15 hover:border-white/30 backdrop-blur-sm transition-all duration-300 hover:shadow-lg hover:shadow-white/5"
+                            >
+                              <div className="flex items-start space-x-3 sm:space-x-4 w-full">
+                                <div className="p-2 sm:p-2.5 bg-white/10 group-hover:bg-white/20 rounded-lg sm:rounded-xl transition-all border border-white/20 flex-shrink-0">
+                                  <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-white/70 group-hover:text-white transition-colors" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-xs sm:text-sm text-white/80 group-hover:text-white font-medium leading-relaxed line-clamp-2">
+                                    {starter.text}
+                                  </span>
+                                  <div className="flex items-center space-x-2 mt-2">
+                                    <div className="flex items-center space-x-1">
+                                      <ThumbsUp className="h-3 w-3 text-white/40" />
+                                      <span className="text-white/40 text-xs">Quick</span>
+                                    </div>
+                                    <span className="text-white/30 text-xs">•</span>
+                                    <span className="text-white/40 text-xs">Popular</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </Button>
+                          </motion.div>
+                        )
+                      })}
+                    </div>
+                    
+                    {/* Add Custom Starter */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: conversationStarters.length * 0.1 }}
+                      className="pt-2 sm:pt-3"
+                    >
+                      <Button
+                        variant="outline"
+                        className="w-full justify-center h-auto p-3 sm:p-4 rounded-xl sm:rounded-2xl border-dashed border-white/30 bg-white/5 hover:bg-white/10 hover:border-white/40 backdrop-blur-sm transition-all duration-300 group"
+                      >
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-white/60 group-hover:text-white/80 transition-colors" />
+                          <span className="text-sm sm:text-base text-white/60 group-hover:text-white/80 font-medium">Create Custom Starter</span>
+                        </div>
+                      </Button>
+                    </motion.div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Chat Area - Mobile Optimized */}
+              <div className={`lg:col-span-2 ${selectedTeacher || selectedParent || selectedTool ? 'block' : 'hidden lg:block'}`}>
+                {selectedTool === 'study-planner' ? (
+                  <AIStudyPlanner onBack={() => setSelectedTool(null)} />
+                ) : selectedTool === 'grade-tracker' ? (
+                  <GradeAnalytics onBack={() => setSelectedTool(null)} />
+                ) : selectedTool === 'homework-assistant' ? (
+                  <AIHomeworkHelper onBack={() => setSelectedTool(null)} />
+                ) : selectedTool === 'study-groups' ? (
+                  <StudyGroups onBack={() => setSelectedTool(null)} />
+                ) : selectedTool === 'peer-tutoring' ? (
+                  <PeerTutoring onBack={() => setSelectedTool(null)} />
+                ) : selectedTool === 'school-events' ? (
+                  <SchoolEventsHub onBack={() => setSelectedTool(null)} />
+                ) : selectedTool === 'achievement-center' ? (
+                  <AchievementCenter onBack={() => setSelectedTool(null)} />
+                ) : selectedTool === 'learning-games' ? (
+                  <LearningGames onBack={() => setSelectedTool(null)} />
+                ) : selectedTool === 'digital-portfolio' ? (
+                  <DigitalPortfolio onBack={() => setSelectedTool(null)} />
+                ) : selectedTool === 'project-showcase' ? (
+                  <ProjectShowcase onBack={() => setSelectedTool(null)} />
+                ) : selectedTool ? (
+                  <div className="min-h-[600px] bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="w-16 h-16 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <Settings className="h-8 w-8 text-blue-300" />
+                      </div>
+                      <p className="text-white/80 text-lg font-bold mb-2">Tool Coming Soon</p>
+                      <p className="text-white/60 text-sm mb-4">This advanced tool is under development</p>
+                      <Button
+                        onClick={() => setSelectedTool(null)}
+                        className="bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/30 text-blue-300"
+                      >
+                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        Back to Tools
+                      </Button>
+                    </div>
+                  </div>
+                ) : selectedTeacher ? (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Card className="h-[70vh] sm:h-[600px] flex flex-col shadow-xl border-0 bg-white/90 backdrop-blur-sm">
+                      <CardHeader className="border-b border-gray-100 p-3 sm:p-4 bg-gradient-to-r from-purple-50 to-indigo-50">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3 min-w-0 flex-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSelectedTeacher(null)}
+                              className="lg:hidden p-2 hover:bg-white/50 rounded-full"
+                            >
+                              <ArrowLeft className="h-4 w-4" />
+                            </Button>
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-purple-400 to-indigo-400 rounded-full flex items-center justify-center text-white font-semibold text-sm sm:text-base flex-shrink-0 shadow-lg">
+                              {teachers.find(t => t.id === selectedTeacher)?.name.split(' ').map(n => n[0]).join('')}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h3 className="font-bold text-sm sm:text-base text-gray-900 truncate">
+                                {teachers.find(t => t.id === selectedTeacher)?.name}
+                              </h3>
+                              <p className="text-xs sm:text-sm text-gray-600 truncate">
+                                {teachers.find(t => t.id === selectedTeacher)?.subject}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge className="bg-green-100 text-green-800 text-xs px-2 py-1 flex-shrink-0 font-medium">
+                            <Clock className="h-3 w-3 mr-1" />
+                            <span className="hidden sm:inline">Available</span>
+                            <span className="sm:hidden">●</span>
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      
+                      <CardContent className="flex-1 p-0 flex flex-col min-h-0">
+                        {/* Messages Area */}
+                        <div className="flex-1 overflow-y-auto p-3 sm:p-4 bg-gradient-to-b from-gray-50/50 to-white">
+                          <div className="space-y-4">
+                            {/* Welcome Message */}
+                            <div className="flex justify-center">
+                              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 max-w-xs text-center">
+                                <p className="text-xs text-blue-700 font-medium">
+                                  Start a conversation with your teacher! 
+                                  Remember to be respectful and ask clear questions. 📚
+                                </p>
+                              </div>
+                            </div>
+                            
+                            {/* Instagram-style Messages Display */}
+                            <div className="flex-1 flex items-center justify-center">
+                              <div className="text-center space-y-4">
+                                <div className="w-16 h-16 bg-gradient-to-r from-purple-100 to-indigo-100 rounded-full flex items-center justify-center mx-auto">
+                                  <MessageCircle className="h-8 w-8 text-purple-500" />
+                                </div>
+                                <div>
+                                  <h3 className="text-lg font-semibold text-gray-900">Start a conversation</h3>
+                                  <p className="text-gray-500 text-sm">Send a message to your teacher</p>
+                                  <p className="text-gray-400 text-xs mt-1">Your messages are safe and monitored</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Message Input - Student Friendly */}
+                        <div className="border-t border-gray-100 p-3 sm:p-4 bg-white">
+                          <div className="space-y-3">
+                            {/* Quick Message Buttons */}
+                            <div className="flex flex-wrap gap-2">
+                              {[
+                                "I need help with homework",
+                                "Can you explain this?",
+                                "I'm confused about...",
+                                "Thank you!"
+                              ].map((quickMsg, index) => (
+                                <Button
+                                  key={index}
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-xs px-3 py-1 rounded-full bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-700"
+                                >
+                                  {quickMsg}
+                                </Button>
+                              ))}
+                            </div>
+                            
+                            {/* Instagram-style Message Input */}
+                            <InstagramMessageInput 
+                              teacherId={selectedTeacher}
+                              placeholder="Type your message to your teacher..."
+                            />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ) : selectedParent ? (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                    className="fixed inset-0 z-50 lg:relative lg:inset-auto lg:z-auto"
+                  >
+                    {/* Instagram-like Chat Interface */}
+                    <div className="h-full lg:h-[calc(100vh-12rem)] xl:h-[600px] flex flex-col bg-white lg:rounded-2xl lg:shadow-xl lg:border lg:border-gray-200">
+                      {/* Instagram-style Header */}
+                      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white lg:rounded-t-2xl">
+                        <div className="flex items-center space-x-3 min-w-0 flex-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedParent(null)}
+                            className="p-2 hover:bg-gray-100 rounded-full min-w-[40px] min-h-[40px]"
+                          >
+                            <ArrowLeft className="h-5 w-5 text-gray-700" />
+                          </Button>
+                          
+                          {/* Instagram-style Profile Picture */}
+                          <div className="relative">
+                            <div className="w-10 h-10 bg-gradient-to-br from-pink-400 via-red-400 to-yellow-400 rounded-full p-0.5">
+                              <div className="w-full h-full bg-gradient-to-r from-pink-500 to-rose-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                                {parents.find(p => p.id === selectedParent)?.name.split(' ').map((n: string) => n[0]).join('')}
+                              </div>
+                            </div>
+                            <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
+                          </div>
+                          
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-semibold text-gray-900 truncate text-base">
+                              {parents.find(p => p.id === selectedParent)?.name}
+                            </h3>
+                            <p className="text-xs text-green-600 font-medium">Active now</p>
+                          </div>
+                        </div>
+                        
+                        {/* Instagram-style Action Buttons */}
+                        <div className="flex items-center space-x-2">
+                          <Button variant="ghost" size="sm" className="p-2 hover:bg-gray-100 rounded-full">
+                            <Heart className="h-5 w-5 text-gray-600" />
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      {/* Instagram-style Messages Area */}
+                      <div className="flex-1 overflow-hidden bg-white">
+                        <div className="h-full flex flex-col">
+                          {/* Messages Container */}
+                          <div className="flex-1 overflow-y-auto">
+                            <InstagramMessagesContainer 
+                              conversationId={familyConversations.find((c: any) => c.participantId === selectedParent)?.id || ''}
+                              currentUserId={profile?.id || ''}
+                              participantName={parents.find(p => p.id === selectedParent)?.name || 'Parent'}
+                              refreshTrigger={messageRefreshTrigger}
+                              onOptimisticMessage={setOptimisticMessageHandler}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Instagram-style Message Input */}
+                      <div className="border-t border-gray-200 bg-white p-4 lg:rounded-b-2xl">
+                        <div className="space-y-3">
+                          {/* Quick Reactions - Instagram Style */}
+                          <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                            {[
+                              { emoji: "👋", text: "Hi Mom/Dad!" },
+                              { emoji: "😊", text: "I had a great day!" },
+                              { emoji: "🤔", text: "Can you help me?" },
+                              { emoji: "❤️", text: "I love you!" }
+                            ].map((quickMsg, index) => (
+                              <div key={index} className="flex-shrink-0">
+                                <QuickMessageButton
+                                  message={`${quickMsg.emoji} ${quickMsg.text}`}
+                                  conversationId={familyConversations.find(c => c.participantId === selectedParent)?.id || ''}
+                                  participantId={selectedParent}
+                                  currentUserId={profile?.id || ''}
+                                  onMessageSent={refreshMessages}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                          {/* Optimistic Message Input */}
+                          <OptimisticMessageInput 
+                            participantId={selectedParent}
+                            conversationId={familyConversations.find((c: any) => c.participantId === selectedParent)?.id || ''}
+                            currentUserId={profile?.id || ''}
+                            onMessageSent={refreshMessages}
+                            onOptimisticMessage={optimisticMessageHandler}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <Card className="h-full flex flex-col">
+                    <div className="text-center space-y-3 sm:space-y-4 px-4">
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full flex items-center justify-center mx-auto">
+                        <MessageCircle className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500" />
+                      </div>
+                      <div>
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900">
+                          {selectedTab === 'teachers' ? 'Select a Teacher' : 'Select a Parent'}
+                        </h3>
+                        <p className="text-sm sm:text-base text-gray-500">
+                          {selectedTab === 'teachers' 
+                            ? 'Choose a teacher from the list to start a conversation'
+                            : 'Choose a parent from the list to start a family conversation'
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                )}
+              </div>
+            </div>
+            </div>
+          </div>
+        </div>
+      </div>
+  )
+}
+
+// Optimistic Message Input Component - Instant message display
+function OptimisticMessageInput({ participantId, conversationId, currentUserId, onMessageSent, onOptimisticMessage }: {
+  participantId: string | null
+  conversationId: string
+  currentUserId: string
+  onMessageSent?: () => void
+  onOptimisticMessage?: (message: any) => void
+}) {
+  const [message, setMessage] = useState('')
+
+  const handleSend = () => {
+    if (!message || !message.trim() || !participantId) return
+    
+    const messageText = message.trim()
+    if (!messageText) return
+    
+    const tempId = `temp_${Date.now()}_${Math.random()}`
+    
+    // Create optimistic message - appears INSTANTLY
+    const optimisticMessage = {
+      id: tempId,
+      message_text: messageText,
+      sender_id: currentUserId,
+      receiver_id: participantId,
+      created_at: new Date().toISOString(),
+      is_read: false,
+      isOptimistic: true // Flag to identify optimistic messages
+    }
+    
+    // INSTANT: Clear input and show message with zero delay
+    setMessage('') // Clear input FIRST for instant feel
+    
+    // Show message instantly in UI (no async, no delays)
+    if (onOptimisticMessage && optimisticMessage) {
+      onOptimisticMessage(optimisticMessage)
+    }
+    
+    // Fire-and-forget API call (non-blocking)
+    fetch('/api/family-messaging', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        participantId,
+        messageText,
+        conversationId
+      }),
+    })
+    .then(async response => {
+      if (response.ok) {
+        const data = await response.json()
+        
+        // Replace optimistic message with real message
+        if (onOptimisticMessage && data.message) {
+          onOptimisticMessage({ ...data.message, replaceId: tempId })
+        }
+      } else {
+        const errorData = await response.json()
+        console.error('Message send failed:', errorData)
+        
+        // Remove optimistic message and restore input
+        if (onOptimisticMessage) {
+          onOptimisticMessage({ removeId: tempId })
+        }
+        setMessage(messageText)
+        toast.error(errorData.error || 'Failed to send message')
+      }
+    })
+    .catch(error => {
+      console.error('Error sending message:', error)
+      
+      // Remove optimistic message and restore input
+      if (onOptimisticMessage) {
+        onOptimisticMessage({ removeId: tempId })
+      }
+      setMessage(messageText)
+      toast.error('Failed to send message')
+    })
+    
+    // Function returns immediately - no waiting!
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
+    }
+  }
+
+  return (
+    <div className="flex items-end space-x-3">
+      <div className="flex-1 relative">
+        <Input
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyPress={handleKeyPress}
+          placeholder="Type a message..."
+          className="w-full rounded-full border-0 focus:border-pink-500 focus:ring-pink-500 py-3 px-4 pr-12 text-sm bg-gray-50 focus:bg-white transition-colors"
+          style={{ fontSize: '16px' }}
+        />
+      </div>
+      <Button
+        onClick={handleSend}
+        disabled={!message.trim() || !participantId}
+        className="rounded-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white px-4 py-3 min-h-[44px] min-w-[44px] shadow-lg transition-all duration-150"
+        size="sm"
+      >
+        <Send className="h-4 w-4" />
+      </Button>
+    </div>
+  )
+}
+
+export default function StudentMessagingPage() {
+  return (
+    <AuthGuard requiredRole="student">
+      <StudentMessagingContent />
+    </AuthGuard>
+  )
+}
