@@ -507,8 +507,12 @@ const StudentDashboardContent = () => {
           streakData: data.quests.streakData || { current: 0, best: 0, lastCompleted: "" }
         })
         setMood(data.mood)
-        if (data.mood?.current) {
+        // Only set locked date if there's actually a mood logged for today
+        if (data.mood?.current && data.mood.current !== '') {
           setMoodLockedDate(getTodayDate())
+        } else {
+          // Clear locked date if no mood is set
+          setMoodLockedDate('')
         }
         setAcademicData({
           recentTests: data.academic?.recentTests || [],
@@ -723,7 +727,14 @@ const StudentDashboardContent = () => {
 
   // Check if mood should be unlocked for new day
   useEffect(() => {
-    if (mood.current && isNewDay()) {
+    console.log('🔍 Mood state check:', { 
+      current: mood.current, 
+      moodLockedDate, 
+      todayDate: getTodayDate(),
+      isNewDay: isNewDay()
+    })
+    
+    if (mood.current && mood.current !== '' && isNewDay()) {
       console.log('🌅 New day detected! Unlocking mood selection')
       setMood(prev => ({
         ...prev,
@@ -1524,51 +1535,57 @@ const StudentDashboardContent = () => {
           </motion.div>
         </div>
 
-        {/* Performance Analytics & Insights */}
+        {/* Performance Analytics & Insights - Mobile Optimized */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
-          className="mb-6"
+          className="mb-4 sm:mb-6"
         >
           <FloatingCard className="bg-gradient-to-r from-purple-50 via-pink-50 to-rose-50 border-purple-200">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg">
-                  <BarChart3 className="h-6 w-6 text-white" />
+            {/* Mobile-First Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
+              <div className="flex items-center space-x-3 mb-3 sm:mb-0">
+                <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex-shrink-0">
+                  <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-800">Performance Analytics</h3>
-                  <p className="text-sm text-gray-600">Track your academic progress</p>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-base sm:text-lg font-bold text-gray-800 truncate">Performance Analytics</h3>
+                  <p className="text-xs sm:text-sm text-gray-600">Track your academic progress</p>
                 </div>
               </div>
-              <div className="flex gap-2">
+              
+              {/* Mobile-Optimized Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <Button
-                  onClick={() => router.push('/student/study-plan/dashboard')}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                  onClick={() => router.push('/student/study-plan')}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white w-full sm:w-auto"
                   size="sm"
                 >
-                  <Brain className="w-4 h-4 mr-1" />
-                  Study Plans
+                  <Brain className="w-4 h-4 mr-2" />
+                  <span className="sm:hidden">Study Plans</span>
+                  <span className="hidden sm:inline">Study Plans</span>
                 </Button>
                 <Button
                   onClick={() => router.push('/student/analytics')}
                   variant="outline"
                   size="sm"
-                  className="bg-purple-100 hover:bg-purple-200 border-purple-300 text-purple-700"
+                  className="bg-purple-100 hover:bg-purple-200 border-purple-300 text-purple-700 w-full sm:w-auto"
                 >
-                  <TrendingUp className="w-4 h-4 mr-1" />
-                  Analytics
+                  <TrendingUp className="w-4 h-4 mr-2" />
+                  <span className="sm:hidden">Analytics</span>
+                  <span className="hidden sm:inline">Analytics</span>
                 </Button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Grade Distribution */}
-              <div className="bg-white/80 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-                  <Award className="w-4 h-4 mr-2 text-purple-600" />
-                  Grade Distribution
+            {/* Mobile-Optimized Analytics Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+              {/* Grade Distribution - Mobile Enhanced */}
+              <div className="bg-white/80 rounded-lg p-3 sm:p-4">
+                <h4 className="font-semibold text-gray-800 mb-3 flex items-center text-sm sm:text-base">
+                  <Award className="w-4 h-4 mr-2 text-purple-600 flex-shrink-0" />
+                  <span className="truncate">Grade Distribution</span>
                 </h4>
                 <div className="space-y-2">
                   {[
@@ -1578,38 +1595,38 @@ const StudentDashboardContent = () => {
                     { grade: 'B', count: 1, color: 'bg-orange-500' }
                   ].map((item) => (
                     <div key={item.grade} className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <div className={`w-3 h-3 rounded-full ${item.color}`}></div>
-                        <span className="text-sm font-medium text-gray-700">{item.grade}</span>
+                      <div className="flex items-center space-x-2 min-w-0 flex-1">
+                        <div className={`w-3 h-3 rounded-full ${item.color} flex-shrink-0`}></div>
+                        <span className="text-xs sm:text-sm font-medium text-gray-700">{item.grade}</span>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-16 bg-gray-200 rounded-full h-2">
+                      <div className="flex items-center space-x-2 flex-shrink-0">
+                        <div className="w-12 sm:w-16 bg-gray-200 rounded-full h-2">
                           <div 
                             className={`h-2 rounded-full ${item.color}`}
                             style={{ width: `${(item.count / 11) * 100}%` }}
                           ></div>
                         </div>
-                        <span className="text-xs text-gray-500 w-6">{item.count}</span>
+                        <span className="text-xs text-gray-500 w-4 sm:w-6 text-right">{item.count}</span>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Study Streak */}
-              <div className="bg-white/80 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-                  <Target className="w-4 h-4 mr-2 text-purple-600" />
-                  Study Consistency
+              {/* Study Streak - Mobile Enhanced */}
+              <div className="bg-white/80 rounded-lg p-3 sm:p-4">
+                <h4 className="font-semibold text-gray-800 mb-3 flex items-center text-sm sm:text-base">
+                  <Target className="w-4 h-4 mr-2 text-purple-600 flex-shrink-0" />
+                  <span className="truncate">Study Consistency</span>
                 </h4>
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-purple-600 mb-2">12</div>
-                  <div className="text-sm text-gray-600 mb-3">Days Study Streak</div>
-                  <div className="grid grid-cols-7 gap-1">
+                  <div className="text-2xl sm:text-3xl font-bold text-purple-600 mb-1 sm:mb-2">12</div>
+                  <div className="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3">Days Study Streak</div>
+                  <div className="grid grid-cols-7 gap-1 max-w-[140px] mx-auto">
                     {Array.from({ length: 14 }, (_, i) => (
                       <div
                         key={i}
-                        className={`w-4 h-4 rounded-sm ${
+                        className={`w-3 h-3 sm:w-4 sm:h-4 rounded-sm ${
                           i < 12 ? 'bg-purple-400' : 'bg-gray-200'
                         }`}
                         title={`Day ${i + 1}`}
@@ -1620,54 +1637,55 @@ const StudentDashboardContent = () => {
                 </div>
               </div>
 
-              {/* Improvement Areas */}
-              <div className="bg-white/80 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-                  <TrendingUp className="w-4 h-4 mr-2 text-purple-600" />
-                  Focus Areas
+              {/* Focus Areas - Mobile Enhanced */}
+              <div className="bg-white/80 rounded-lg p-3 sm:p-4">
+                <h4 className="font-semibold text-gray-800 mb-3 flex items-center text-sm sm:text-base">
+                  <TrendingUp className="w-4 h-4 mr-2 text-purple-600 flex-shrink-0" />
+                  <span className="truncate">Focus Areas</span>
                 </h4>
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {[
                     { subject: 'History', improvement: '+5%', color: 'text-green-600' },
                     { subject: 'Geography', improvement: '+3%', color: 'text-green-600' },
                     { subject: 'Physics', improvement: '-2%', color: 'text-red-600' }
                   ].map((item) => (
                     <div key={item.subject} className="flex items-center justify-between">
-                      <span className="text-sm text-gray-700">{item.subject}</span>
-                      <span className={`text-sm font-medium ${item.color}`}>
+                      <span className="text-xs sm:text-sm text-gray-700 truncate flex-1 mr-2">{item.subject}</span>
+                      <span className={`text-xs sm:text-sm font-medium ${item.color} flex-shrink-0`}>
                         {item.improvement}
                       </span>
                     </div>
                   ))}
                 </div>
                 <Button
-                  onClick={() => router.push('/student/study-plan')}
-                  className="w-full mt-3 bg-purple-100 hover:bg-purple-200 text-purple-700 border-purple-300"
+                  onClick={() => router.push('/student/analytics')}
+                  className="w-full mt-3 bg-purple-100 hover:bg-purple-200 text-purple-700 border-purple-300 text-xs sm:text-sm"
                   variant="outline"
                   size="sm"
                 >
-                  Create Study Plan
+                  <span className="sm:hidden">View Details</span>
+                  <span className="hidden sm:inline">View Detailed Analytics</span>
                 </Button>
               </div>
             </div>
 
-            {/* Quick Stats Row */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-purple-200">
-              <div className="text-center">
-                <div className="text-xl font-bold text-purple-600">89%</div>
-                <div className="text-xs text-gray-500">Avg Score</div>
+            {/* Quick Stats Row - Mobile Optimized */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-purple-200">
+              <div className="text-center bg-white/60 rounded-lg p-2 sm:p-3">
+                <div className="text-lg sm:text-xl font-bold text-purple-600">89%</div>
+                <div className="text-xs text-gray-500 truncate">Avg Score</div>
               </div>
-              <div className="text-center">
-                <div className="text-xl font-bold text-purple-600">15</div>
-                <div className="text-xs text-gray-500">Tests Taken</div>
+              <div className="text-center bg-white/60 rounded-lg p-2 sm:p-3">
+                <div className="text-lg sm:text-xl font-bold text-purple-600">15</div>
+                <div className="text-xs text-gray-500 truncate">Tests Taken</div>
               </div>
-              <div className="text-center">
-                <div className="text-xl font-bold text-purple-600">8</div>
-                <div className="text-xs text-gray-500">Subjects</div>
+              <div className="text-center bg-white/60 rounded-lg p-2 sm:p-3">
+                <div className="text-lg sm:text-xl font-bold text-purple-600">8</div>
+                <div className="text-xs text-gray-500 truncate">Subjects</div>
               </div>
-              <div className="text-center">
-                <div className="text-xl font-bold text-purple-600">92%</div>
-                <div className="text-xs text-gray-500">Attendance</div>
+              <div className="text-center bg-white/60 rounded-lg p-2 sm:p-3">
+                <div className="text-lg sm:text-xl font-bold text-purple-600">92%</div>
+                <div className="text-xs text-gray-500 truncate">Attendance</div>
               </div>
             </div>
           </FloatingCard>
@@ -1888,7 +1906,7 @@ const StudentDashboardContent = () => {
                   <div className="text-2xl">😊</div>
                   <h3 className="text-lg sm:text-xl font-bold text-gray-800">How are you feeling?</h3>
                 </div>
-                {mood.current && moodLockedDate === getTodayDate() && (
+                {mood.current && mood.current !== '' && moodLockedDate === getTodayDate() && (
                   <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                     Resets tomorrow
                   </div>
@@ -1897,7 +1915,8 @@ const StudentDashboardContent = () => {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-2 sm:gap-3">
                 {Object.entries(moodEmojis).map(([moodType, emoji]: [string, any]) => {
                   const isSelected = mood.current === moodType
-                  const isLockedForToday = mood.current && mood.current !== '' && moodLockedDate === getTodayDate()
+                  const hasMoodToday = mood.current && mood.current !== ''
+                  const isLockedForToday = hasMoodToday && moodLockedDate === getTodayDate()
                   const isLocked = isLockedForToday
                   
                   return (

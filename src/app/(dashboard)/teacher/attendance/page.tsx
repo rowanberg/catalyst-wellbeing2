@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 // Note: Checkbox component may not exist, using a simple checkbox implementation
 // import { Checkbox } from '@/components/ui/checkbox'
 import { ProfessionalLoader } from '@/components/ui/professional-loader'
+import { AttendanceLoader, AttendancePageLoader } from '@/components/ui/attendance-loader'
 import { 
   ArrowLeft,
   Users, 
@@ -551,11 +552,7 @@ export default function TeacherAttendancePage() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <ProfessionalLoader size="md" text="Loading attendance..." variant="default" />
-      </div>
-    )
+    return <AttendancePageLoader />
   }
 
   return (
@@ -645,7 +642,7 @@ export default function TeacherAttendancePage() {
                 <CardContent>
                   {loadingAssignedClasses ? (
                     <div className="flex items-center justify-center py-12">
-                      <ProfessionalLoader size="md" text="Loading your assigned classes..." variant="default" />
+                      <AttendanceLoader size="md" text="Loading your assigned classes..." variant="default" />
                     </div>
                   ) : error ? (
                     <div className="text-center py-12">
@@ -1208,7 +1205,7 @@ export default function TeacherAttendancePage() {
                   <CardContent>
                     {loadingHistory ? (
                       <div className="flex items-center justify-center py-12">
-                        <ProfessionalLoader size="md" text="Loading history..." variant="default" />
+                        <AttendanceLoader size="md" text="Loading attendance history..." variant="default" />
                       </div>
                     ) : attendanceHistory.length > 0 ? (
                       <div className="space-y-3">
@@ -1338,7 +1335,7 @@ export default function TeacherAttendancePage() {
                   <CardContent>
                     {loadingHistory ? (
                       <div className="flex items-center justify-center py-12">
-                        <ProfessionalLoader size="md" text="Loading details..." variant="default" />
+                        <AttendanceLoader size="md" text="Loading attendance details..." variant="default" />
                       </div>
                     ) : attendanceDetails.length > 0 ? (
                       <div className="space-y-3">

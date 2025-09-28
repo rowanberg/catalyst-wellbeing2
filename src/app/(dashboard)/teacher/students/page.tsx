@@ -11,6 +11,7 @@ import { ProfessionalLoader } from '@/components/ui/professional-loader'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { ClientOnly } from '@/components/ui/ClientOnly'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -432,6 +433,8 @@ function StudentSetupComponent() {
 type ViewType = 'assigned-classes' | 'grades' | 'classes' | 'students'
 
 export default function TeacherStudentsPage() {
+  const router = useRouter()
+  
   // Local state for UI interactions
   const [selectedGrade, setSelectedGrade] = useState<string>('')
   const [selectedClass, setSelectedClass] = useState<string>('')
@@ -652,9 +655,35 @@ export default function TeacherStudentsPage() {
   if (loading) {
     return (
       <ClientOnly fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
-        <div className="flex items-center justify-center min-h-screen">
-          <ProfessionalLoader size="md" />
-          <span className="ml-2">Loading your classes...</span>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+          <motion.div 
+            className="text-center"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+            >
+              <ProfessionalLoader size="md" />
+            </motion.div>
+            <motion.div 
+              className="mt-4 space-y-2"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+            >
+              <h3 className="text-lg font-semibold text-gray-800">Loading Your Classes</h3>
+              <p className="text-sm text-gray-600">Fetching your assigned classes and student data...</p>
+              <div className="flex items-center justify-center space-x-1 mt-3">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              </div>
+            </motion.div>
+          </motion.div>
         </div>
       </ClientOnly>
     )
@@ -1267,6 +1296,34 @@ export default function TeacherStudentsPage() {
                                         <div className="text-xs text-gray-500">Room</div>
                                       </div>
 
+                                      {/* Desktop Action Buttons */}
+                                      <div className="flex items-center gap-2">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 px-3 text-xs bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded-lg"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            // Handle quick message
+                                          }}
+                                        >
+                                          <MessageSquare className="h-3 w-3 mr-1" />
+                                          Message
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 px-3 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            window.location.href = '/teacher/attendance'
+                                          }}
+                                        >
+                                          <UserCheck className="h-3 w-3 mr-1" />
+                                          Attendance
+                                        </Button>
+                                      </div>
+
                                       <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
                                     </>
                                   ) : (
@@ -1459,7 +1516,7 @@ export default function TeacherStudentsPage() {
                                   className="flex-1 h-9 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg"
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    // Handle attendance
+                                    window.location.href = '/teacher/attendance'
                                   }}
                                 >
                                   <UserCheck className="h-3 w-3 mr-1" />
@@ -1536,20 +1593,54 @@ export default function TeacherStudentsPage() {
                   </div>
                 </motion.div>
               ) : (
-                <div className="text-center py-12 mt-8">
-                  <UserCheck className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Classes Assigned</h3>
-                  <p className="text-gray-600 mb-4">
-                    You haven't been assigned to any classes yet. Click the button below to browse and assign yourself to classes.
-                  </p>
-                  <Button
-                    onClick={handleAddMoreClasses}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                <motion.div 
+                  className="text-center py-12 mt-8"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
                   >
-                    <Plus className="h-5 w-5 mr-2" />
-                    Browse All Classes
-                  </Button>
-                </div>
+                    <UserCheck className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  </motion.div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Classes Assigned Yet</h3>
+                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                    You haven't been assigned to any classes yet. Contact your administrator or browse available classes to get started.
+                  </p>
+                  
+                  {/* Loading indicator for initial data fetch */}
+                  {loading && (
+                    <motion.div 
+                      className="flex items-center justify-center space-x-2 mb-4"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                    >
+                      <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />
+                      <span className="text-sm text-gray-500">Checking for class assignments...</span>
+                    </motion.div>
+                  )}
+                  
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+                    <Button
+                      onClick={handleAddMoreClasses}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                    >
+                      <Plus className="h-5 w-5 mr-2" />
+                      Browse All Classes
+                    </Button>
+                    <Button
+                      onClick={refreshData}
+                      variant="outline"
+                      className="px-6 py-3 rounded-xl border-gray-300 hover:border-gray-400 transition-all duration-300"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Refresh
+                    </Button>
+                  </div>
+                </motion.div>
               )}
               </div>
             </motion.div>

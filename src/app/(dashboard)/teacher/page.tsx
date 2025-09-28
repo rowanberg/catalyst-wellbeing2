@@ -603,8 +603,8 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                 exit={{ opacity: 0, y: -20 }}
                 className="space-y-4 sm:space-y-8"
               >
-                {/* Enhanced Analytics Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+                {/* Enhanced Analytics Cards - Mobile 2x2 Layout */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
                 {[
                   { 
                     icon: Users, 
@@ -612,7 +612,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                     value: analytics.totalStudents, 
                     color: 'from-blue-600 to-indigo-600', 
                     bgColor: 'from-blue-50 to-indigo-50',
-                    trend: '+5%',
+                    trend: '+12%',
                     description: 'Assigned to my classes',
                     iconBg: 'from-blue-500 to-indigo-500'
                   },
@@ -661,35 +661,38 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                         <div className={`absolute inset-0 bg-gradient-to-br ${stat.bgColor} opacity-50 group-hover:opacity-70 transition-opacity duration-500`} />
                         <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
                         <CardContent className="p-3 sm:p-4 lg:p-6 relative z-10">
-                          {/* Mobile Compact Layout */}
-                          <div className="sm:hidden">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-3">
-                                <motion.div 
-                                  className={`p-1.5 rounded-lg bg-gradient-to-r ${stat.iconBg} text-white shadow-md`}
-                                  whileHover={{ scale: 1.05 }}
-                                  transition={{ duration: 0.3 }}
-                                >
-                                  <Icon className="h-4 w-4" />
-                                </motion.div>
-                                <div>
-                                  <p className="text-xs font-medium text-gray-600 truncate">{stat.label}</p>
-                                  <motion.p 
-                                    className="text-lg font-bold text-gray-900"
-                                    key={stat.value}
-                                    initial={{ scale: 1.1, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    transition={{ type: "spring", bounce: 0.3 }}
-                                  >
-                                    {stat.value}
-                                  </motion.p>
-                                </div>
-                              </div>
+                          {/* Mobile 2x2 Optimized Layout */}
+                          <div className="lg:hidden">
+                            <div className="text-center space-y-2">
                               <motion.div 
-                                className={`px-1.5 py-0.5 rounded-md text-xs font-semibold ${
+                                className={`w-10 h-10 mx-auto rounded-xl bg-gradient-to-r ${stat.iconBg} text-white shadow-lg flex items-center justify-center`}
+                                whileHover={{ scale: 1.05, rotate: 5 }}
+                                transition={{ duration: 0.3 }}
+                              >
+                                <Icon className="h-5 w-5" />
+                              </motion.div>
+                              
+                              <div>
+                                <motion.p 
+                                  className="text-xl sm:text-2xl font-bold text-gray-900"
+                                  key={stat.value}
+                                  initial={{ scale: 1.1, opacity: 0 }}
+                                  animate={{ scale: 1, opacity: 1 }}
+                                  transition={{ type: "spring", bounce: 0.3 }}
+                                >
+                                  {stat.value}
+                                </motion.p>
+                                <p className="text-xs font-semibold text-gray-700 truncate">{stat.label}</p>
+                                <p className="text-xs text-gray-500 truncate leading-tight">{stat.description}</p>
+                              </div>
+                              
+                              <motion.div 
+                                className={`inline-flex px-2 py-1 rounded-full text-xs font-bold ${
                                   stat.trend.startsWith('+') 
                                     ? 'bg-emerald-100 text-emerald-700' 
-                                    : 'bg-rose-100 text-rose-700'
+                                    : stat.trend.startsWith('-')
+                                    ? 'bg-rose-100 text-rose-700'
+                                    : 'bg-gray-100 text-gray-700'
                                 }`}
                                 initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}
@@ -698,18 +701,10 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                                 {stat.trend}
                               </motion.div>
                             </div>
-                            <div className="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                              <motion.div 
-                                className={`h-full bg-gradient-to-r ${stat.iconBg} rounded-full`}
-                                initial={{ width: 0 }}
-                                animate={{ width: `${Math.min(stat.value * 2, 100)}%` }}
-                                transition={{ delay: index * 0.15, duration: 1, ease: "easeOut" }}
-                              />
-                            </div>
                           </div>
                           
                           {/* Desktop Layout */}
-                          <div className="hidden sm:block">
+                          <div className="hidden lg:block">
                             <div className="flex items-start justify-between mb-3 sm:mb-4">
                               <motion.div 
                                 className={`p-2 sm:p-3 rounded-2xl bg-gradient-to-r ${stat.iconBg} text-white shadow-lg group-hover:shadow-2xl transition-all duration-300`}
@@ -762,8 +757,8 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                 })}
               </div>
 
-              {/* Enhanced Quick Actions */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+              {/* Enhanced Quick Actions - Mobile 2x2 Layout */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
                 {[
                   { 
                     icon: Star, 

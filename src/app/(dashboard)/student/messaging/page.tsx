@@ -1096,8 +1096,8 @@ function StudentMessagingContent() {
                     }`}
                   >
                     <School className="h-3 w-3 sm:h-5 sm:w-5 mr-1 sm:mr-3" />
-                    <span className="hidden sm:inline">School Community</span>
-                    <span className="sm:hidden">Community</span>
+                    <span className="hidden sm:inline">Advanced Tools</span>
+                    <span className="sm:hidden">Tools</span>
                   </Button>
                 </motion.div>
               </motion.div>
@@ -1141,7 +1141,7 @@ function StudentMessagingContent() {
                           >
                             <School className="h-6 w-6 text-emerald-300" />
                           </motion.div>
-                          <span className="bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent font-black">School Community</span>
+                          <span className="bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent font-black">Advanced Tools</span>
                         </>
                       )}
                     </CardTitle>
@@ -1303,79 +1303,117 @@ function StudentMessagingContent() {
                         )
                       ) : (
                         <div className="space-y-4">
-                          {/* Premium Header */}
-                          <div className="text-center py-6">
-                            <div className="flex items-center justify-center space-x-3 mb-4">
-                              <div className="w-12 h-12 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-2xl flex items-center justify-center backdrop-blur-sm border border-yellow-400/30">
-                                <Crown className="h-6 w-6 text-yellow-300" />
-                              </div>
-                              <div>
-                                <p className="text-white/90 text-lg font-bold">Advanced Tools</p>
-                                <p className="text-yellow-300/80 text-xs font-medium">Premium Features</p>
-                              </div>
-                            </div>
-                            <p className="text-white/60 text-sm px-4">
-                              Unlock powerful tools to enhance your learning experience
-                            </p>
-                          </div>
 
-                          {/* Advanced Tools Grid */}
-                          <div className="space-y-2 max-h-96 overflow-y-auto">
+                          {/* Advanced Tools Grid - Mobile Optimized */}
+                          <div className="space-y-3 sm:space-y-4 max-h-96 overflow-y-auto px-1 sm:px-0">
                             {/* Academic Tools */}
-                            <div className="space-y-2">
-                              <p className="text-white/70 text-xs font-semibold uppercase tracking-wider px-2">Academic Excellence</p>
+                            <div className="space-y-2 sm:space-y-3">
+                              <div className="flex items-center justify-between px-2 sm:px-3">
+                                <p className="text-white/70 text-xs sm:text-sm font-semibold uppercase tracking-wider">Academic Excellence</p>
+                                <Badge variant="secondary" className="bg-blue-500/20 text-blue-300 text-xs px-2 py-1 rounded-full border-blue-400/30">
+                                  3 Tools
+                                </Badge>
+                              </div>
                               
                               <motion.div
-                                className="p-3 rounded-xl bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-400/20 backdrop-blur-sm cursor-pointer hover:bg-blue-500/20 transition-all"
+                                className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-400/20 backdrop-blur-sm cursor-pointer hover:bg-blue-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10"
                                 whileHover={{ scale: 1.02, x: 4 }}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => setSelectedTool('study-planner')}
                               >
-                                <div className="flex items-center space-x-3">
-                                  <div className="p-2 bg-blue-500/20 rounded-lg">
-                                    <Calendar className="h-4 w-4 text-blue-300" />
+                                <div className="flex items-center space-x-3 sm:space-x-4">
+                                  <div className="relative p-2 sm:p-3 bg-blue-500/20 rounded-lg sm:rounded-xl group-hover:bg-blue-500/30 transition-colors">
+                                    <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-300 group-hover:text-blue-200 transition-colors" />
+                                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
                                   </div>
-                                  <div className="flex-1">
-                                    <p className="text-white/90 font-medium text-sm">AI Study Planner</p>
-                                    <p className="text-white/60 text-xs">Personalized study schedules</p>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center space-x-2 mb-1">
+                                      <p className="text-white/90 font-semibold text-sm sm:text-base truncate">AI Study Planner</p>
+                                      <Crown className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400 flex-shrink-0" />
+                                    </div>
+                                    <p className="text-white/60 text-xs sm:text-sm line-clamp-1">Personalized study schedules & reminders</p>
+                                    <div className="flex items-center space-x-2 mt-2">
+                                      <div className="flex items-center space-x-1">
+                                        <Zap className="h-3 w-3 text-blue-400" />
+                                        <span className="text-white/70 text-xs">AI-powered</span>
+                                      </div>
+                                      <span className="text-white/50 text-xs">•</span>
+                                      <span className="text-white/50 text-xs">Smart scheduling</span>
+                                    </div>
                                   </div>
-                                  <Crown className="h-3 w-3 text-yellow-400" />
+                                  <div className="flex flex-col items-end space-y-1">
+                                    <Badge variant="outline" className="bg-blue-500/10 text-blue-300 border-blue-400/30 text-xs px-2 py-0.5">
+                                      Popular
+                                    </Badge>
+                                  </div>
                                 </div>
                               </motion.div>
 
                               <motion.div
-                                className="p-3 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-400/20 backdrop-blur-sm cursor-pointer hover:bg-purple-500/20 transition-all"
+                                className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-400/20 backdrop-blur-sm cursor-pointer hover:bg-purple-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10"
                                 whileHover={{ scale: 1.02, x: 4 }}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => setSelectedTool('grade-tracker')}
                               >
-                                <div className="flex items-center space-x-3">
-                                  <div className="p-2 bg-purple-500/20 rounded-lg">
-                                    <TrendingUp className="h-4 w-4 text-purple-300" />
+                                <div className="flex items-center space-x-3 sm:space-x-4">
+                                  <div className="relative p-2 sm:p-3 bg-purple-500/20 rounded-lg sm:rounded-xl group-hover:bg-purple-500/30 transition-colors">
+                                    <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-purple-300 group-hover:text-purple-200 transition-colors" />
+                                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
                                   </div>
-                                  <div className="flex-1">
-                                    <p className="text-white/90 font-medium text-sm">Grade Analytics</p>
-                                    <p className="text-white/60 text-xs">Track academic progress</p>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center space-x-2 mb-1">
+                                      <p className="text-white/90 font-semibold text-sm sm:text-base truncate">Grade Analytics</p>
+                                      <Crown className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400 flex-shrink-0" />
+                                    </div>
+                                    <p className="text-white/60 text-xs sm:text-sm line-clamp-1">Track academic progress & insights</p>
+                                    <div className="flex items-center space-x-2 mt-2">
+                                      <div className="flex items-center space-x-1">
+                                        <TrendingUp className="h-3 w-3 text-purple-400" />
+                                        <span className="text-white/70 text-xs">Progress tracking</span>
+                                      </div>
+                                      <span className="text-white/50 text-xs">•</span>
+                                      <span className="text-white/50 text-xs">Analytics</span>
+                                    </div>
                                   </div>
-                                  <Crown className="h-3 w-3 text-yellow-400" />
+                                  <div className="flex flex-col items-end space-y-1">
+                                    <Badge variant="outline" className="bg-purple-500/10 text-purple-300 border-purple-400/30 text-xs px-2 py-0.5">
+                                      Insights
+                                    </Badge>
+                                  </div>
                                 </div>
                               </motion.div>
 
                               <motion.div
-                                className="p-3 rounded-xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-400/20 backdrop-blur-sm cursor-pointer hover:bg-green-500/20 transition-all"
+                                className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-400/20 backdrop-blur-sm cursor-pointer hover:bg-green-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/10"
                                 whileHover={{ scale: 1.02, x: 4 }}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => setSelectedTool('homework-assistant')}
                               >
-                                <div className="flex items-center space-x-3">
-                                  <div className="p-2 bg-green-500/20 rounded-lg">
-                                    <Brain className="h-4 w-4 text-green-300" />
+                                <div className="flex items-center space-x-3 sm:space-x-4">
+                                  <div className="relative p-2 sm:p-3 bg-green-500/20 rounded-lg sm:rounded-xl group-hover:bg-green-500/30 transition-colors">
+                                    <Brain className="h-4 w-4 sm:h-5 sm:w-5 text-green-300 group-hover:text-green-200 transition-colors" />
+                                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                                   </div>
-                                  <div className="flex-1">
-                                    <p className="text-white/90 font-medium text-sm">AI Homework Helper</p>
-                                    <p className="text-white/60 text-xs">Smart assignment assistance</p>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center space-x-2 mb-1">
+                                      <p className="text-white/90 font-semibold text-sm sm:text-base truncate">AI Homework Helper</p>
+                                      <Crown className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400 flex-shrink-0" />
+                                    </div>
+                                    <p className="text-white/60 text-xs sm:text-sm line-clamp-1">Smart assignment assistance & tutoring</p>
+                                    <div className="flex items-center space-x-2 mt-2">
+                                      <div className="flex items-center space-x-1">
+                                        <Brain className="h-3 w-3 text-green-400" />
+                                        <span className="text-white/70 text-xs">AI tutor</span>
+                                      </div>
+                                      <span className="text-white/50 text-xs">•</span>
+                                      <span className="text-white/50 text-xs">24/7 help</span>
+                                    </div>
                                   </div>
-                                  <Crown className="h-3 w-3 text-yellow-400" />
+                                  <div className="flex flex-col items-end space-y-1">
+                                    <Badge variant="outline" className="bg-green-500/10 text-green-300 border-green-400/30 text-xs px-2 py-0.5">
+                                      Smart
+                                    </Badge>
+                                  </div>
                                 </div>
                               </motion.div>
                             </div>
@@ -1667,46 +1705,40 @@ function StudentMessagingContent() {
                             </div>
                           </div>
 
-                          {/* Premium CTA */}
+                          {/* School Premium Features */}
                           <div className="mt-6 sm:mt-8 px-2 sm:px-4">
                             <motion.div
-                              className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-yellow-500/10 via-orange-500/10 to-red-500/10 border border-yellow-400/20 backdrop-blur-sm p-4 sm:p-6"
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
+                              className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-green-500/10 via-emerald-500/10 to-teal-500/10 border border-green-400/20 backdrop-blur-sm p-4 sm:p-6"
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.5 }}
                             >
-                              <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/5 via-orange-500/5 to-red-500/5 animate-pulse"></div>
+                              <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 via-emerald-500/5 to-teal-500/5"></div>
                               <div className="relative text-center space-y-3 sm:space-y-4">
                                 <div className="flex items-center justify-center space-x-2">
-                                  <Crown className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-400 animate-bounce" />
-                                  <h3 className="text-white font-bold text-base sm:text-lg">Unlock All Features</h3>
-                                  <Crown className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-400 animate-bounce" style={{ animationDelay: '0.2s' }} />
+                                  <School className="h-5 w-5 sm:h-6 sm:w-6 text-green-400" />
+                                  <h3 className="text-white font-bold text-base sm:text-lg">Premium Features Unlocked</h3>
+                                  <School className="h-5 w-5 sm:h-6 sm:w-6 text-green-400" />
                                 </div>
-                                <p className="text-white/70 text-xs sm:text-sm max-w-xs mx-auto leading-relaxed">
-                                  Get access to all premium tools, unlimited features, and exclusive content
+                                <p className="text-white/80 text-xs sm:text-sm max-w-sm mx-auto leading-relaxed">
+                                  Your school has unlocked all premium features for you! Enjoy unlimited access to advanced tools and exclusive content.
                                 </p>
-                                <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
-                                  <Button
-                                    className="w-full sm:w-auto bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold text-sm sm:text-base px-6 sm:px-8 py-2 sm:py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
-                                  >
-                                    <Crown className="h-4 w-4 mr-2" />
-                                    Upgrade Now
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    className="w-full sm:w-auto text-yellow-300 hover:text-yellow-200 hover:bg-yellow-500/10 text-xs sm:text-sm px-4 py-2 rounded-lg transition-all"
-                                  >
-                                    Learn More
-                                  </Button>
+                                <div className="flex flex-col space-y-2 text-xs sm:text-sm">
+                                  <div className="flex items-center justify-center space-x-2 text-green-300">
+                                    <Check className="h-4 w-4 text-green-400" />
+                                    <span>All premium tools available</span>
+                                  </div>
+                                  <div className="flex items-center justify-center space-x-2 text-green-300">
+                                    <Check className="h-4 w-4 text-green-400" />
+                                    <span>Unlimited feature access</span>
+                                  </div>
+                                  <div className="flex items-center justify-center space-x-2 text-green-300">
+                                    <Check className="h-4 w-4 text-green-400" />
+                                    <span>Exclusive educational content</span>
+                                  </div>
                                 </div>
-                                <div className="flex items-center justify-center space-x-4 text-xs text-white/50">
-                                  <span className="flex items-center space-x-1">
-                                    <Check className="h-3 w-3 text-green-400" />
-                                    <span>7-day free trial</span>
-                                  </span>
-                                  <span className="flex items-center space-x-1">
-                                    <Check className="h-3 w-3 text-green-400" />
-                                    <span>Cancel anytime</span>
-                                  </span>
+                                <div className="text-xs text-white/60 mt-3">
+                                  Provided by your school administration
                                 </div>
                               </div>
                             </motion.div>

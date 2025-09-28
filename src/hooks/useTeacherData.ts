@@ -53,6 +53,7 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
   const [studentsLoading, setStudentsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [currentClassId, setCurrentClassId] = useState<string | undefined>(classId)
+  const [retryCount, setRetryCount] = useState(0)
   
   const refreshIntervalRef = useRef<NodeJS.Timeout>()
   const abortControllerRef = useRef<AbortController>()
@@ -84,8 +85,14 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
 
   // Fetch data function
   const fetchData = useCallback(async (forceRefresh = false) => {
-    if (!user?.id || !user?.school_id) {
-      setError('Authentication required')
+    // Wait for user data to be available instead of immediately erroring
+    if (!user) {
+      // Keep loading state true while waiting for auth
+      return
+    }
+    
+    if (!user.id || !user.school_id) {
+      setError('Authentication required - missing user data')
       setLoading(false)
       return
     }
@@ -146,6 +153,7 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
       if (result.success) {
         setData(result.data)
         setCachedData(cacheKey, result.data)
+        setRetryCount(0) // Reset retry count on success
         console.log('✅ Teacher data fetched successfully')
       } else {
         throw new Error(result.message || 'Failed to fetch data')
@@ -154,12 +162,22 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
     } catch (error: any) {
       if (error.name !== 'AbortError') {
         console.error('❌ Error fetching teacher data:', error)
+        
+        // Retry logic for network errors
+        if (retryCount < 2 && (error.message.includes('fetch') || error.message.includes('network'))) {
+          console.log(`🔄 Retrying fetch (attempt ${retryCount + 1}/2)...`)
+          setRetryCount(prev => prev + 1)
+          setTimeout(() => fetchData(forceRefresh), 1000 * (retryCount + 1)) // Exponential backoff
+          return
+        }
+        
         setError(error.message || 'Failed to fetch data')
+        setRetryCount(0) // Reset retry count on final failure
       }
     } finally {
       setLoading(false)
     }
-  }, [user?.id, user?.school_id, currentClassId, includeStudents, getCacheKey, getCachedData, setCachedData])
+  }, [user?.id, user?.school_id, currentClassId, includeStudents, getCacheKey, getCachedData, setCachedData, retryCount])
 
   // Refresh data function
   const refreshData = useCallback(async () => {

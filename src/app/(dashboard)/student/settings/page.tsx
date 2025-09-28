@@ -8,6 +8,7 @@ import { AuthGuard } from '@/components/auth/auth-guard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Switch } from '@/components/ui/switch'
 import { 
   Settings, 
   ArrowLeft,
@@ -764,16 +765,11 @@ const StudentSettingsPage = () => {
                                 <p className="text-white/60 text-[10px] mt-0.5 leading-relaxed">{description}</p>
                               </div>
                             </div>
-                            <Button
-                              onClick={() => handleSettingChange(key as keyof SettingsState, !settings[key as keyof SettingsState])}
-                              className={`relative w-9 h-5 rounded-full transition-all flex-shrink-0 ml-2 ${
-                                settings[key as keyof SettingsState] ? 'bg-violet-500' : 'bg-white/20'
-                              }`}
-                            >
-                              <div className={`absolute w-3 h-3 bg-white rounded-full transition-all ${
-                                settings[key as keyof SettingsState] ? 'translate-x-4' : 'translate-x-1'
-                              }`} />
-                            </Button>
+                            <Switch
+                              checked={settings[key as keyof SettingsState] as boolean}
+                              onCheckedChange={(checked) => handleSettingChange(key as keyof SettingsState, checked)}
+                              className="flex-shrink-0 ml-2 data-[state=checked]:bg-violet-500 data-[state=unchecked]:bg-white/20"
+                            />
                           </div>
                         </div>
 
@@ -788,16 +784,11 @@ const StudentSettingsPage = () => {
                               <p className="text-white/60 text-sm">{description}</p>
                             </div>
                           </div>
-                          <Button
-                            onClick={() => handleSettingChange(key as keyof SettingsState, !settings[key as keyof SettingsState])}
-                            className={`relative w-12 h-6 rounded-full transition-all ${
-                              settings[key as keyof SettingsState] ? 'bg-violet-500' : 'bg-white/20'
-                            }`}
-                          >
-                            <div className={`absolute w-5 h-5 bg-white rounded-full transition-all ${
-                              settings[key as keyof SettingsState] ? 'translate-x-6' : 'translate-x-0.5'
-                            }`} />
-                          </Button>
+                          <Switch
+                            checked={settings[key as keyof SettingsState] as boolean}
+                            onCheckedChange={(checked) => handleSettingChange(key as keyof SettingsState, checked)}
+                            className="data-[state=checked]:bg-violet-500 data-[state=unchecked]:bg-white/20"
+                          />
                         </div>
                       </div>
                     ))}
@@ -838,16 +829,11 @@ const StudentSettingsPage = () => {
                                 <p className="text-white/60 text-[10px] mt-0.5 leading-relaxed">{description}</p>
                               </div>
                             </div>
-                            <Button
-                              onClick={() => handleSettingChange(key as keyof SettingsState, !settings[key as keyof SettingsState])}
-                              className={`relative w-9 h-5 rounded-full transition-all flex-shrink-0 ml-2 ${
-                                settings[key as keyof SettingsState] ? 'bg-green-500' : 'bg-white/20'
-                              }`}
-                            >
-                              <div className={`absolute w-3 h-3 bg-white rounded-full transition-all ${
-                                settings[key as keyof SettingsState] ? 'translate-x-4' : 'translate-x-1'
-                              }`} />
-                            </Button>
+                            <Switch
+                              checked={settings[key as keyof SettingsState] as boolean}
+                              onCheckedChange={(checked) => handleSettingChange(key as keyof SettingsState, checked)}
+                              className="flex-shrink-0 ml-2 data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-white/20"
+                            />
                           </div>
                         </div>
 
@@ -862,16 +848,11 @@ const StudentSettingsPage = () => {
                               <p className="text-white/60 text-sm">{description}</p>
                             </div>
                           </div>
-                          <Button
-                            onClick={() => handleSettingChange(key as keyof SettingsState, !settings[key as keyof SettingsState])}
-                            className={`relative w-12 h-6 rounded-full transition-all ${
-                              settings[key as keyof SettingsState] ? 'bg-green-500' : 'bg-white/20'
-                            }`}
-                          >
-                            <div className={`absolute w-5 h-5 bg-white rounded-full transition-all ${
-                              settings[key as keyof SettingsState] ? 'translate-x-6' : 'translate-x-0.5'
-                            }`} />
-                          </Button>
+                          <Switch
+                            checked={settings[key as keyof SettingsState] as boolean}
+                            onCheckedChange={(checked) => handleSettingChange(key as keyof SettingsState, checked)}
+                            className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-white/20"
+                          />
                         </div>
                       </div>
                     ))}

@@ -66,7 +66,38 @@ interface GradeLevelManagerProps {
 }
 
 const GRADE_TEMPLATES = [
-  { name: 'US Elementary (K-5)', grades: [
+  // Tamil Nadu, India
+  { name: '🇮🇳 Tamil Nadu (1-12)', country: 'India', grades: [
+    { level: '1', name: 'Class 1' },
+    { level: '2', name: 'Class 2' },
+    { level: '3', name: 'Class 3' },
+    { level: '4', name: 'Class 4' },
+    { level: '5', name: 'Class 5' },
+    { level: '6', name: 'Class 6' },
+    { level: '7', name: 'Class 7' },
+    { level: '8', name: 'Class 8' },
+    { level: '9', name: 'Class 9' },
+    { level: '10', name: 'Class 10 (SSLC)' },
+    { level: '11', name: 'Class 11 (HSC)' },
+    { level: '12', name: 'Class 12 (HSC)' }
+  ]},
+  { name: '🇮🇳 Tamil Nadu Primary (1-5)', country: 'India', grades: [
+    { level: '1', name: 'Class 1' },
+    { level: '2', name: 'Class 2' },
+    { level: '3', name: 'Class 3' },
+    { level: '4', name: 'Class 4' },
+    { level: '5', name: 'Class 5' }
+  ]},
+  { name: '🇮🇳 Tamil Nadu Secondary (6-10)', country: 'India', grades: [
+    { level: '6', name: 'Class 6' },
+    { level: '7', name: 'Class 7' },
+    { level: '8', name: 'Class 8' },
+    { level: '9', name: 'Class 9' },
+    { level: '10', name: 'Class 10 (SSLC)' }
+  ]},
+  
+  // United States
+  { name: '🇺🇸 US Elementary (K-5)', country: 'United States', grades: [
     { level: 'K', name: 'Kindergarten' },
     { level: '1', name: 'First Grade' },
     { level: '2', name: 'Second Grade' },
@@ -74,24 +105,354 @@ const GRADE_TEMPLATES = [
     { level: '4', name: 'Fourth Grade' },
     { level: '5', name: 'Fifth Grade' }
   ]},
-  { name: 'US Middle School (6-8)', grades: [
+  { name: '🇺🇸 US Middle School (6-8)', country: 'United States', grades: [
     { level: '6', name: 'Sixth Grade' },
     { level: '7', name: 'Seventh Grade' },
     { level: '8', name: 'Eighth Grade' }
   ]},
-  { name: 'US High School (9-12)', grades: [
+  { name: '🇺🇸 US High School (9-12)', country: 'United States', grades: [
     { level: '9', name: 'Freshman' },
     { level: '10', name: 'Sophomore' },
     { level: '11', name: 'Junior' },
     { level: '12', name: 'Senior' }
   ]},
-  { name: 'UK Primary (1-6)', grades: [
+  
+  // United Kingdom
+  { name: '🇬🇧 UK Primary (1-6)', country: 'United Kingdom', grades: [
     { level: '1', name: 'Year 1' },
     { level: '2', name: 'Year 2' },
     { level: '3', name: 'Year 3' },
     { level: '4', name: 'Year 4' },
     { level: '5', name: 'Year 5' },
     { level: '6', name: 'Year 6' }
+  ]},
+  { name: '🇬🇧 UK Secondary (7-11)', country: 'United Kingdom', grades: [
+    { level: '7', name: 'Year 7' },
+    { level: '8', name: 'Year 8' },
+    { level: '9', name: 'Year 9' },
+    { level: '10', name: 'Year 10 (GCSE)' },
+    { level: '11', name: 'Year 11 (GCSE)' }
+  ]},
+  
+  // Canada
+  { name: '🇨🇦 Canada Elementary (K-6)', country: 'Canada', grades: [
+    { level: 'K', name: 'Kindergarten' },
+    { level: '1', name: 'Grade 1' },
+    { level: '2', name: 'Grade 2' },
+    { level: '3', name: 'Grade 3' },
+    { level: '4', name: 'Grade 4' },
+    { level: '5', name: 'Grade 5' },
+    { level: '6', name: 'Grade 6' }
+  ]},
+  { name: '🇨🇦 Canada Secondary (7-12)', country: 'Canada', grades: [
+    { level: '7', name: 'Grade 7' },
+    { level: '8', name: 'Grade 8' },
+    { level: '9', name: 'Grade 9' },
+    { level: '10', name: 'Grade 10' },
+    { level: '11', name: 'Grade 11' },
+    { level: '12', name: 'Grade 12' }
+  ]},
+  
+  // Australia
+  { name: '🇦🇺 Australia Primary (K-6)', country: 'Australia', grades: [
+    { level: 'K', name: 'Kindergarten' },
+    { level: '1', name: 'Year 1' },
+    { level: '2', name: 'Year 2' },
+    { level: '3', name: 'Year 3' },
+    { level: '4', name: 'Year 4' },
+    { level: '5', name: 'Year 5' },
+    { level: '6', name: 'Year 6' }
+  ]},
+  { name: '🇦🇺 Australia Secondary (7-12)', country: 'Australia', grades: [
+    { level: '7', name: 'Year 7' },
+    { level: '8', name: 'Year 8' },
+    { level: '9', name: 'Year 9' },
+    { level: '10', name: 'Year 10' },
+    { level: '11', name: 'Year 11' },
+    { level: '12', name: 'Year 12' }
+  ]},
+  
+  // Germany
+  { name: '🇩🇪 Germany Primary (1-4)', country: 'Germany', grades: [
+    { level: '1', name: 'Klasse 1' },
+    { level: '2', name: 'Klasse 2' },
+    { level: '3', name: 'Klasse 3' },
+    { level: '4', name: 'Klasse 4' }
+  ]},
+  { name: '🇩🇪 Germany Gymnasium (5-12)', country: 'Germany', grades: [
+    { level: '5', name: 'Klasse 5' },
+    { level: '6', name: 'Klasse 6' },
+    { level: '7', name: 'Klasse 7' },
+    { level: '8', name: 'Klasse 8' },
+    { level: '9', name: 'Klasse 9' },
+    { level: '10', name: 'Klasse 10' },
+    { level: '11', name: 'Klasse 11' },
+    { level: '12', name: 'Klasse 12 (Abitur)' }
+  ]},
+  
+  // France
+  { name: '🇫🇷 France Elementary (CP-CM2)', country: 'France', grades: [
+    { level: 'CP', name: 'Cours Préparatoire' },
+    { level: 'CE1', name: 'Cours Élémentaire 1' },
+    { level: 'CE2', name: 'Cours Élémentaire 2' },
+    { level: 'CM1', name: 'Cours Moyen 1' },
+    { level: 'CM2', name: 'Cours Moyen 2' }
+  ]},
+  { name: '🇫🇷 France Secondary (6-3)', country: 'France', grades: [
+    { level: '6', name: 'Sixième' },
+    { level: '5', name: 'Cinquième' },
+    { level: '4', name: 'Quatrième' },
+    { level: '3', name: 'Troisième' }
+  ]},
+  
+  // Japan
+  { name: '🇯🇵 Japan Elementary (1-6)', country: 'Japan', grades: [
+    { level: '1', name: '小学1年 (Shōgaku 1-nen)' },
+    { level: '2', name: '小学2年 (Shōgaku 2-nen)' },
+    { level: '3', name: '小学3年 (Shōgaku 3-nen)' },
+    { level: '4', name: '小学4年 (Shōgaku 4-nen)' },
+    { level: '5', name: '小学5年 (Shōgaku 5-nen)' },
+    { level: '6', name: '小学6年 (Shōgaku 6-nen)' }
+  ]},
+  { name: '🇯🇵 Japan Junior High (1-3)', country: 'Japan', grades: [
+    { level: '7', name: '中学1年 (Chūgaku 1-nen)' },
+    { level: '8', name: '中学2年 (Chūgaku 2-nen)' },
+    { level: '9', name: '中学3年 (Chūgaku 3-nen)' }
+  ]},
+  
+  // Singapore
+  { name: '🇸🇬 Singapore Primary (1-6)', country: 'Singapore', grades: [
+    { level: '1', name: 'Primary 1' },
+    { level: '2', name: 'Primary 2' },
+    { level: '3', name: 'Primary 3' },
+    { level: '4', name: 'Primary 4' },
+    { level: '5', name: 'Primary 5' },
+    { level: '6', name: 'Primary 6 (PSLE)' }
+  ]},
+  { name: '🇸🇬 Singapore Secondary (1-4)', country: 'Singapore', grades: [
+    { level: '7', name: 'Secondary 1' },
+    { level: '8', name: 'Secondary 2' },
+    { level: '9', name: 'Secondary 3' },
+    { level: '10', name: 'Secondary 4 (O-Level)' }
+  ]},
+  
+  // South Africa
+  { name: '🇿🇦 South Africa Foundation (R-3)', country: 'South Africa', grades: [
+    { level: 'R', name: 'Grade R' },
+    { level: '1', name: 'Grade 1' },
+    { level: '2', name: 'Grade 2' },
+    { level: '3', name: 'Grade 3' }
+  ]},
+  { name: '🇿🇦 South Africa Senior (10-12)', country: 'South Africa', grades: [
+    { level: '10', name: 'Grade 10' },
+    { level: '11', name: 'Grade 11' },
+    { level: '12', name: 'Grade 12 (Matric)' }
+  ]},
+  
+  // China
+  { name: '🇨🇳 China Primary (1-6)', country: 'China', grades: [
+    { level: '1', name: '小学一年级 (Primary 1)' },
+    { level: '2', name: '小学二年级 (Primary 2)' },
+    { level: '3', name: '小学三年级 (Primary 3)' },
+    { level: '4', name: '小学四年级 (Primary 4)' },
+    { level: '5', name: '小学五年级 (Primary 5)' },
+    { level: '6', name: '小学六年级 (Primary 6)' }
+  ]},
+  { name: '🇨🇳 China Junior High (7-9)', country: 'China', grades: [
+    { level: '7', name: '初中一年级 (Junior 1)' },
+    { level: '8', name: '初中二年级 (Junior 2)' },
+    { level: '9', name: '初中三年级 (Junior 3)' }
+  ]},
+  
+  // South Korea
+  { name: '🇰🇷 South Korea Elementary (1-6)', country: 'South Korea', grades: [
+    { level: '1', name: '초등학교 1학년 (Elementary 1)' },
+    { level: '2', name: '초등학교 2학년 (Elementary 2)' },
+    { level: '3', name: '초등학교 3학년 (Elementary 3)' },
+    { level: '4', name: '초등학교 4학년 (Elementary 4)' },
+    { level: '5', name: '초등학교 5학년 (Elementary 5)' },
+    { level: '6', name: '초등학교 6학년 (Elementary 6)' }
+  ]},
+  { name: '🇰🇷 South Korea Middle School (1-3)', country: 'South Korea', grades: [
+    { level: '7', name: '중학교 1학년 (Middle 1)' },
+    { level: '8', name: '중학교 2학년 (Middle 2)' },
+    { level: '9', name: '중학교 3학년 (Middle 3)' }
+  ]},
+  
+  // Brazil
+  { name: '🇧🇷 Brazil Elementary I (1-5)', country: 'Brazil', grades: [
+    { level: '1', name: '1º Ano Fundamental' },
+    { level: '2', name: '2º Ano Fundamental' },
+    { level: '3', name: '3º Ano Fundamental' },
+    { level: '4', name: '4º Ano Fundamental' },
+    { level: '5', name: '5º Ano Fundamental' }
+  ]},
+  { name: '🇧🇷 Brazil Elementary II (6-9)', country: 'Brazil', grades: [
+    { level: '6', name: '6º Ano Fundamental' },
+    { level: '7', name: '7º Ano Fundamental' },
+    { level: '8', name: '8º Ano Fundamental' },
+    { level: '9', name: '9º Ano Fundamental' }
+  ]},
+  
+  // Russia
+  { name: '🇷🇺 Russia Primary (1-4)', country: 'Russia', grades: [
+    { level: '1', name: '1 класс (1st Class)' },
+    { level: '2', name: '2 класс (2nd Class)' },
+    { level: '3', name: '3 класс (3rd Class)' },
+    { level: '4', name: '4 класс (4th Class)' }
+  ]},
+  { name: '🇷🇺 Russia Secondary (5-11)', country: 'Russia', grades: [
+    { level: '5', name: '5 класс (5th Class)' },
+    { level: '6', name: '6 класс (6th Class)' },
+    { level: '7', name: '7 класс (7th Class)' },
+    { level: '8', name: '8 класс (8th Class)' },
+    { level: '9', name: '9 класс (9th Class)' },
+    { level: '10', name: '10 класс (10th Class)' },
+    { level: '11', name: '11 класс (11th Class)' }
+  ]},
+  
+  // Italy
+  { name: '🇮🇹 Italy Primary (1-5)', country: 'Italy', grades: [
+    { level: '1', name: 'Prima Elementare' },
+    { level: '2', name: 'Seconda Elementare' },
+    { level: '3', name: 'Terza Elementare' },
+    { level: '4', name: 'Quarta Elementare' },
+    { level: '5', name: 'Quinta Elementare' }
+  ]},
+  { name: '🇮🇹 Italy Middle School (1-3)', country: 'Italy', grades: [
+    { level: '6', name: 'Prima Media' },
+    { level: '7', name: 'Seconda Media' },
+    { level: '8', name: 'Terza Media' }
+  ]},
+  
+  // Spain
+  { name: '🇪🇸 Spain Primary (1-6)', country: 'Spain', grades: [
+    { level: '1', name: '1º Primaria' },
+    { level: '2', name: '2º Primaria' },
+    { level: '3', name: '3º Primaria' },
+    { level: '4', name: '4º Primaria' },
+    { level: '5', name: '5º Primaria' },
+    { level: '6', name: '6º Primaria' }
+  ]},
+  { name: '🇪🇸 Spain ESO (1-4)', country: 'Spain', grades: [
+    { level: '7', name: '1º ESO' },
+    { level: '8', name: '2º ESO' },
+    { level: '9', name: '3º ESO' },
+    { level: '10', name: '4º ESO' }
+  ]},
+  
+  // Netherlands
+  { name: '🇳🇱 Netherlands Primary (1-8)', country: 'Netherlands', grades: [
+    { level: '1', name: 'Groep 1' },
+    { level: '2', name: 'Groep 2' },
+    { level: '3', name: 'Groep 3' },
+    { level: '4', name: 'Groep 4' },
+    { level: '5', name: 'Groep 5' },
+    { level: '6', name: 'Groep 6' },
+    { level: '7', name: 'Groep 7' },
+    { level: '8', name: 'Groep 8' }
+  ]},
+  
+  // Sweden
+  { name: '🇸🇪 Sweden Grundskola (1-9)', country: 'Sweden', grades: [
+    { level: '1', name: 'Årskurs 1' },
+    { level: '2', name: 'Årskurs 2' },
+    { level: '3', name: 'Årskurs 3' },
+    { level: '4', name: 'Årskurs 4' },
+    { level: '5', name: 'Årskurs 5' },
+    { level: '6', name: 'Årskurs 6' },
+    { level: '7', name: 'Årskurs 7' },
+    { level: '8', name: 'Årskurs 8' },
+    { level: '9', name: 'Årskurs 9' }
+  ]},
+  
+  // Norway
+  { name: '🇳🇴 Norway Primary (1-7)', country: 'Norway', grades: [
+    { level: '1', name: '1. trinn' },
+    { level: '2', name: '2. trinn' },
+    { level: '3', name: '3. trinn' },
+    { level: '4', name: '4. trinn' },
+    { level: '5', name: '5. trinn' },
+    { level: '6', name: '6. trinn' },
+    { level: '7', name: '7. trinn' }
+  ]},
+  
+  // Finland
+  { name: '🇫🇮 Finland Basic Education (1-9)', country: 'Finland', grades: [
+    { level: '1', name: '1. luokka' },
+    { level: '2', name: '2. luokka' },
+    { level: '3', name: '3. luokka' },
+    { level: '4', name: '4. luokka' },
+    { level: '5', name: '5. luokka' },
+    { level: '6', name: '6. luokka' },
+    { level: '7', name: '7. luokka' },
+    { level: '8', name: '8. luokka' },
+    { level: '9', name: '9. luokka' }
+  ]},
+  
+  // Mexico
+  { name: '🇲🇽 Mexico Primary (1-6)', country: 'Mexico', grades: [
+    { level: '1', name: '1° Primaria' },
+    { level: '2', name: '2° Primaria' },
+    { level: '3', name: '3° Primaria' },
+    { level: '4', name: '4° Primaria' },
+    { level: '5', name: '5° Primaria' },
+    { level: '6', name: '6° Primaria' }
+  ]},
+  { name: '🇲🇽 Mexico Secondary (1-3)', country: 'Mexico', grades: [
+    { level: '7', name: '1° Secundaria' },
+    { level: '8', name: '2° Secundaria' },
+    { level: '9', name: '3° Secundaria' }
+  ]},
+  
+  // Argentina
+  { name: '🇦🇷 Argentina Primary (1-6)', country: 'Argentina', grades: [
+    { level: '1', name: '1° Grado' },
+    { level: '2', name: '2° Grado' },
+    { level: '3', name: '3° Grado' },
+    { level: '4', name: '4° Grado' },
+    { level: '5', name: '5° Grado' },
+    { level: '6', name: '6° Grado' }
+  ]},
+  { name: '🇦🇷 Argentina Secondary (1-6)', country: 'Argentina', grades: [
+    { level: '7', name: '1° Año Secundario' },
+    { level: '8', name: '2° Año Secundario' },
+    { level: '9', name: '3° Año Secundario' },
+    { level: '10', name: '4° Año Secundario' },
+    { level: '11', name: '5° Año Secundario' },
+    { level: '12', name: '6° Año Secundario' }
+  ]},
+  
+  // New Zealand
+  { name: '🇳🇿 New Zealand Primary (1-6)', country: 'New Zealand', grades: [
+    { level: '1', name: 'Year 1' },
+    { level: '2', name: 'Year 2' },
+    { level: '3', name: 'Year 3' },
+    { level: '4', name: 'Year 4' },
+    { level: '5', name: 'Year 5' },
+    { level: '6', name: 'Year 6' }
+  ]},
+  { name: '🇳🇿 New Zealand Intermediate (7-8)', country: 'New Zealand', grades: [
+    { level: '7', name: 'Year 7' },
+    { level: '8', name: 'Year 8' }
+  ]},
+  
+  // Switzerland
+  { name: '🇨🇭 Switzerland Primary (1-6)', country: 'Switzerland', grades: [
+    { level: '1', name: '1. Klasse' },
+    { level: '2', name: '2. Klasse' },
+    { level: '3', name: '3. Klasse' },
+    { level: '4', name: '4. Klasse' },
+    { level: '5', name: '5. Klasse' },
+    { level: '6', name: '6. Klasse' }
+  ]},
+  
+  // Austria
+  { name: '🇦🇹 Austria Primary (1-4)', country: 'Austria', grades: [
+    { level: '1', name: '1. Klasse Volksschule' },
+    { level: '2', name: '2. Klasse Volksschule' },
+    { level: '3', name: '3. Klasse Volksschule' },
+    { level: '4', name: '4. Klasse Volksschule' }
   ]}
 ]
 
@@ -852,59 +1213,110 @@ export function AdvancedGradeLevelManager({ schoolId }: GradeLevelManagerProps) 
         )}
       </div>
 
-      {/* Quick Setup Templates Dialog */}
+      {/* Enhanced Mobile-Optimized Quick Setup Templates Dialog */}
       <Dialog.Root open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-          <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto z-50">
-            <Dialog.Title className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Zap className="h-5 w-5 text-blue-600" />
-              Quick Setup Templates
-            </Dialog.Title>
-            
-            <p className="text-gray-600 mb-6">
-              Choose a template to quickly set up grade levels for your school system.
-            </p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {GRADE_TEMPLATES.map((template) => (
-                <Card key={template.name} className="hover:shadow-md transition-shadow cursor-pointer">
-                  <CardHeader>
-                    <CardTitle className="text-base">{template.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 mb-4">
-                      {template.grades.slice(0, 3).map((grade) => (
-                        <div key={grade.level} className="flex items-center gap-2 text-sm text-gray-600">
-                          <div className="w-6 h-6 bg-blue-100 rounded text-xs flex items-center justify-center font-medium">
-                            {grade.level}
-                          </div>
-                          {grade.name}
-                        </div>
-                      ))}
-                      {template.grades.length > 3 && (
-                        <div className="text-xs text-gray-500">
-                          +{template.grades.length - 3} more grades
-                        </div>
-                      )}
-                    </div>
-                    <Button
-                      onClick={() => applyTemplate(template)}
-                      disabled={saving}
-                      className="w-full"
-                      size="sm"
-                    >
-                      {saving ? 'Applying...' : `Apply Template (${template.grades.length} grades)`}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
+          <Dialog.Content className="fixed top-0 left-0 right-0 bottom-0 sm:top-1/2 sm:left-1/2 sm:transform sm:-translate-x-1/2 sm:-translate-y-1/2 bg-white sm:rounded-xl shadow-xl w-full sm:w-[95vw] sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto z-50">
+            {/* Mobile Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 sm:p-6 z-10">
+              <div className="flex items-center justify-between">
+                <Dialog.Title className="text-lg sm:text-xl font-semibold flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-blue-600" />
+                  Quick Setup Templates
+                </Dialog.Title>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setShowTemplateDialog(false)}
+                  className="sm:hidden"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              
+              <p className="text-gray-600 mt-2 text-sm sm:text-base">
+                Choose a template to quickly set up grade levels for your school system.
+              </p>
             </div>
             
-            <div className="flex justify-end gap-2 mt-6">
-              <Dialog.Close asChild>
-                <Button variant="outline">Cancel</Button>
-              </Dialog.Close>
+            {/* Templates Grid */}
+            <div className="p-4 sm:p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {GRADE_TEMPLATES.map((template) => (
+                  <Card key={template.name} className="hover:shadow-lg transition-all duration-200 border-2 hover:border-blue-200">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm sm:text-base font-medium leading-tight">
+                        {template.name}
+                      </CardTitle>
+                      {template.country && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          {template.country}
+                        </div>
+                      )}
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="space-y-2 mb-4">
+                        {template.grades.slice(0, 4).map((grade) => (
+                          <div key={grade.level} className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
+                            <div className="w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-r from-blue-100 to-indigo-100 rounded text-xs flex items-center justify-center font-medium text-blue-700 flex-shrink-0">
+                              {grade.level}
+                            </div>
+                            <span className="truncate">{grade.name}</span>
+                          </div>
+                        ))}
+                        {template.grades.length > 4 && (
+                          <div className="text-xs text-gray-500 pl-7 sm:pl-8">
+                            +{template.grades.length - 4} more grades
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="text-xs text-gray-500">
+                          {template.grades.length} grade{template.grades.length !== 1 ? 's' : ''}
+                        </div>
+                        <div className="text-xs font-medium text-blue-600">
+                          {template.country}
+                        </div>
+                      </div>
+                      
+                      <Button
+                        onClick={() => applyTemplate(template)}
+                        disabled={saving}
+                        className="w-full h-9 text-xs sm:text-sm"
+                        size="sm"
+                      >
+                        {saving ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                            Applying...
+                          </div>
+                        ) : (
+                          `Apply Template`
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 sm:p-6">
+              <div className="flex flex-col-reverse sm:flex-row justify-between items-center gap-3">
+                <div className="text-xs sm:text-sm text-gray-500 text-center sm:text-left">
+                  {GRADE_TEMPLATES.length} templates available from {new Set(GRADE_TEMPLATES.map(t => t.country)).size} countries
+                </div>
+                <Dialog.Close asChild>
+                  <Button 
+                    variant="outline" 
+                    className="w-full sm:w-auto"
+                  >
+                    Close
+                  </Button>
+                </Dialog.Close>
+              </div>
             </div>
           </Dialog.Content>
         </Dialog.Portal>

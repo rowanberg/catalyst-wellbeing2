@@ -24,10 +24,17 @@ import {
   HelpCircle,
   Activity,
   Bot,
-  Clock
+  Clock,
+  LogOut,
+  User,
+  ChevronDown
 } from 'lucide-react'
 import { PageLoader } from '@/components/ui/loading-spinner'
 import { AuthGuard } from '@/components/auth/auth-guard'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
+import { useAppSelector, useAppDispatch } from '@/lib/redux/hooks'
+import { signOut } from '@/lib/redux/slices/authSlice'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 interface SchoolInfo {
@@ -61,6 +68,10 @@ interface SchoolStats {
 }
 
 function AdminDashboardContent() {
+  const router = useRouter()
+  const dispatch = useAppDispatch()
+  const { profile } = useAppSelector((state) => state.auth)
+  
   const [schoolInfo, setSchoolInfo] = useState<SchoolInfo | null>(null)
   const [schoolDetails, setSchoolDetails] = useState<SchoolDetails | null>(null)
   const [schoolStats, setSchoolStats] = useState<SchoolStats>({
@@ -77,6 +88,16 @@ function AdminDashboardContent() {
   const [error, setError] = useState<string | null>(null)
   const [featureLoading, setFeatureLoading] = useState<string | null>(null)
   const [showSetupBanner, setShowSetupBanner] = useState(false)
+
+  // Logout handler
+  const handleLogout = async () => {
+    try {
+      await dispatch(signOut()).unwrap()
+      router.push('/login')
+    } catch (error) {
+      console.error('Logout failed:', error)
+    }
+  }
 
   useEffect(() => {
     const fetchSchoolData = async () => {
@@ -314,9 +335,42 @@ function AdminDashboardContent() {
                     <span className="sm:inline">Messages</span>
                   </Button>
                 </Link>
-                <Button variant="outline" size="sm" className="sm:hidden bg-white/70 hover:bg-white/90 border-blue-200/50 shadow-sm">
-                  <Settings className="h-4 w-4" />
-                </Button>
+                
+                {/* Settings Dropdown Menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="bg-white/70 hover:bg-white/90 border-blue-200/50 shadow-sm flex items-center gap-1">
+                      <Settings className="h-4 w-4" />
+                      <ChevronDown className="h-3 w-3 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem asChild>
+                      <div className="flex items-center px-2 py-1.5">
+                        <User className="h-4 w-4 mr-2" />
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">{profile?.first_name} {profile?.last_name}</span>
+                          <span className="text-xs text-gray-500">{profile?.email}</span>
+                        </div>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin/settings" className="flex items-center w-full">
+                        <Settings className="h-4 w-4 mr-2" />
+                        Settings
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={handleLogout}
+                      className="flex items-center text-red-600 focus:text-red-600 focus:bg-red-50"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Log Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 

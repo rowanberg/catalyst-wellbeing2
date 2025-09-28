@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Progress } from '@/components/ui/progress'
-import { ClientWrapper } from '@/components/providers/ClientWrapper'
 import { 
   ArrowLeft, 
   Brain, 
@@ -30,7 +29,18 @@ import {
   Award,
   Timer,
   Users,
-  Lightbulb
+  Lightbulb,
+  ChevronRight,
+  ChevronLeft,
+  Trash2,
+  Edit3,
+  PlayCircle,
+  PauseCircle,
+  RotateCcw,
+  Flame,
+  Trophy,
+  Rocket,
+  GraduationCap
 } from 'lucide-react'
 
 interface Subject {
@@ -64,21 +74,106 @@ interface StudyPlan {
   targetDate: string
 }
 
-const FloatingCard = ({ children, className = "", delay = 0 }: { 
+// Enhanced Mobile-First Card Component
+const MobileCard = ({ children, className = "", delay = 0, gradient = false }: { 
   children: React.ReactNode
   className?: string
   delay?: number 
+  gradient?: boolean
 }) => (
   <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.6, delay }}
-    className={className}
+    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+    animate={{ opacity: 1, y: 0, scale: 1 }}
+    transition={{ 
+      duration: 0.5, 
+      delay,
+      type: "spring",
+      stiffness: 100,
+      damping: 15
+    }}
+    whileHover={{ 
+      y: -2,
+      transition: { duration: 0.2 }
+    }}
+    className={`${className} ${gradient ? 'bg-gradient-to-br from-white via-purple-50/30 to-pink-50/30' : 'bg-white/95'} backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-300`}
   >
-    <Card className="shadow-lg hover:shadow-xl transition-all duration-300 border-0 bg-white/95 backdrop-blur-sm">
-      {children}
-    </Card>
+    {children}
   </motion.div>
+)
+
+// Mobile Step Indicator Component
+const MobileStepIndicator = ({ currentStep, totalSteps }: { currentStep: number, totalSteps: number }) => (
+  <div className="flex items-center justify-center space-x-2 mb-6">
+    {Array.from({ length: totalSteps }, (_, i) => (
+      <motion.div
+        key={i}
+        className={`h-2 rounded-full transition-all duration-300 ${
+          i + 1 <= currentStep 
+            ? 'bg-gradient-to-r from-purple-500 to-pink-500 w-8' 
+            : 'bg-gray-200 w-2'
+        }`}
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ delay: i * 0.1 }}
+      />
+    ))}
+  </div>
+)
+
+// Mobile Navigation Component
+const MobileNavigation = ({ 
+  currentStep, 
+  onBack, 
+  onNext, 
+  canProceed = true, 
+  nextLabel = "Continue",
+  isLoading = false 
+}: {
+  currentStep: number
+  onBack?: () => void
+  onNext?: () => void
+  canProceed?: boolean
+  nextLabel?: string
+  isLoading?: boolean
+}) => (
+  <div className="flex gap-3 mt-6">
+    {onBack && (
+      <Button 
+        onClick={onBack}
+        variant="outline" 
+        className="flex-1 h-12 text-base font-semibold border-2 border-gray-200 hover:border-gray-300 rounded-xl"
+      >
+        <ChevronLeft className="w-4 h-4 mr-2" />
+        Back
+      </Button>
+    )}
+    {onNext && (
+      <Button 
+        onClick={onNext}
+        disabled={!canProceed || isLoading}
+        className={`flex-1 h-12 text-base font-semibold rounded-xl transition-all duration-300 ${
+          canProceed 
+            ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl' 
+            : 'bg-gray-300 cursor-not-allowed'
+        }`}
+      >
+        {isLoading ? (
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className="w-4 h-4 mr-2"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </motion.div>
+        ) : (
+          <>
+            {nextLabel}
+            <ChevronRight className="w-4 h-4 ml-2" />
+          </>
+        )}
+      </Button>
+    )}
+  </div>
 )
 
 export default function StudyPlanPage() {
@@ -200,117 +295,152 @@ export default function StudyPlanPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
-      {/* Header */}
-      <div className="bg-white/95 backdrop-blur-xl shadow-lg border-b border-white/20 sticky top-0 z-10">
-        <div className="px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <ClientWrapper>
-                <Button
-                  onClick={() => router.back()}
-                  variant="ghost"
-                  size="sm"
-                  className="p-2"
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-              </ClientWrapper>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Create Study Plan</h1>
-                <p className="text-sm text-gray-600">Build your personalized learning journey</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Brain className="h-6 w-6 text-purple-600" />
-              <Sparkles className="h-5 w-5 text-pink-500" />
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <motion.div 
+          className="absolute top-20 left-10 w-32 h-32 bg-purple-300/20 rounded-full blur-xl"
+          animate={{ 
+            x: [0, 100, 0],
+            y: [0, -50, 0],
+            scale: [1, 1.2, 1]
+          }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div 
+          className="absolute bottom-20 right-10 w-24 h-24 bg-pink-300/20 rounded-full blur-xl"
+          animate={{ 
+            x: [0, -80, 0],
+            y: [0, 60, 0],
+            scale: [1, 0.8, 1]
+          }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        />
       </div>
 
-      {/* Progress Steps */}
-      <div className="px-4 py-6">
-        <div className="flex justify-center mb-8">
-          <div className="flex items-center space-x-4 overflow-x-auto">
-            {steps.map((step, index) => (
-              <div key={step.id} className="flex items-center">
-                <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all ${
-                  currentStep >= step.id 
-                    ? 'bg-purple-600 border-purple-600 text-white' 
-                    : 'bg-white border-gray-300 text-gray-400'
-                }`}>
-                  {currentStep > step.id ? (
-                    <CheckCircle className="h-5 w-5" />
-                  ) : (
-                    <step.icon className="h-5 w-5" />
-                  )}
-                </div>
-                <span className={`ml-2 text-sm font-medium ${
-                  currentStep >= step.id ? 'text-purple-600' : 'text-gray-400'
-                }`}>
-                  {step.title}
-                </span>
-                {index < steps.length - 1 && (
-                  <div className={`w-8 h-0.5 mx-4 ${
-                    currentStep > step.id ? 'bg-purple-600' : 'bg-gray-300'
-                  }`} />
-                )}
+      {/* Modern Mobile Header */}
+      <motion.div 
+        className="bg-white/95 backdrop-blur-xl shadow-lg border-b border-white/20 sticky top-0 z-50"
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.5, type: "spring", stiffness: 100 }}
+      >
+        <div className="px-4 sm:px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <Button
+                onClick={() => router.back()}
+                variant="ghost"
+                size="sm"
+                className="p-2 hover:bg-purple-100 rounded-xl transition-colors"
+              >
+                <ArrowLeft className="h-5 w-5 text-gray-700" />
+              </Button>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">Create Study Plan</h1>
+                <p className="text-xs sm:text-sm text-gray-600 truncate">Build your personalized learning journey</p>
               </div>
-            ))}
+            </div>
+            <div className="flex items-center space-x-2 flex-shrink-0">
+              <motion.div
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+              >
+                <Brain className="h-6 w-6 text-purple-600" />
+              </motion.div>
+              <motion.div
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
+              >
+                <Sparkles className="h-5 w-5 text-pink-500" />
+              </motion.div>
+            </div>
           </div>
         </div>
+      </motion.div>
+
+      {/* Mobile-Optimized Content */}
+      <div className="px-3 sm:px-4 py-4 sm:py-6 relative z-10">
+        {/* Mobile Step Indicator */}
+        <MobileStepIndicator currentStep={currentStep} totalSteps={5} />
 
         {/* Step Content */}
         <div className="max-w-4xl mx-auto">
-          {/* Step 1: Plan Details */}
+          {/* Step 1: Plan Details - Mobile Enhanced */}
           {currentStep === 1 && (
-            <FloatingCard className="mb-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5 text-purple-600" />
-                  Plan Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
+            <MobileCard className="p-6 sm:p-8" gradient>
+              <div className="text-center mb-6">
+                <motion.div
+                  className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg"
+                  whileHover={{ scale: 1.05, rotate: 5 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                >
+                  <Target className="h-8 w-8 text-white" />
+                </motion.div>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">Let's Start Planning!</h2>
+                <p className="text-sm sm:text-base text-gray-600">Tell us about your study goals</p>
+              </div>
+
+              <div className="space-y-6">
                 <div>
-                  <Label htmlFor="planName">Study Plan Name</Label>
+                  <Label htmlFor="planName" className="text-base font-semibold text-gray-700 mb-2 block">
+                    📚 Study Plan Name
+                  </Label>
                   <Input
                     id="planName"
-                    placeholder="e.g., Final Exam Preparation"
+                    placeholder="e.g., Final Exam Preparation, Math Mastery"
                     value={studyPlan.name}
                     onChange={(e) => setStudyPlan(prev => ({ ...prev, name: e.target.value }))}
-                    className="mt-2"
+                    className="h-12 text-base border-2 border-gray-200 focus:border-purple-400 rounded-xl transition-colors"
                   />
                 </div>
+                
                 <div>
-                  <Label htmlFor="goal">Learning Goal</Label>
+                  <Label htmlFor="goal" className="text-base font-semibold text-gray-700 mb-2 block">
+                    🎯 Learning Goal
+                  </Label>
                   <Textarea
                     id="goal"
-                    placeholder="What do you want to achieve with this study plan?"
+                    placeholder="What do you want to achieve? Be specific about your goals..."
                     value={studyPlan.goal}
                     onChange={(e) => setStudyPlan(prev => ({ ...prev, goal: e.target.value }))}
-                    className="mt-2"
-                    rows={3}
+                    className="min-h-[100px] text-base border-2 border-gray-200 focus:border-purple-400 rounded-xl transition-colors resize-none"
+                    rows={4}
                   />
                 </div>
-                <ClientWrapper>
-                  <Button 
-                    onClick={() => setCurrentStep(2)}
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                    disabled={!studyPlan.name}
-                  >
-                    Continue to Subjects
-                  </Button>
-                </ClientWrapper>
-              </CardContent>
-            </FloatingCard>
+
+                {/* Motivational Tips */}
+                <motion.div 
+                  className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-xl border border-blue-200"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <div className="flex items-start gap-3">
+                    <Lightbulb className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-semibold text-blue-800 text-sm">💡 Pro Tip</h4>
+                      <p className="text-blue-700 text-xs sm:text-sm mt-1">
+                        Make your goals specific and measurable. Instead of "improve math", try "increase algebra test scores from 75% to 90%"
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+
+                <MobileNavigation
+                  currentStep={currentStep}
+                  onNext={() => setCurrentStep(2)}
+                  canProceed={!!studyPlan.name?.trim()}
+                  nextLabel="Start Adding Subjects"
+                />
+              </div>
+            </MobileCard>
           )}
 
           {/* Step 2: Add Subjects */}
           {currentStep === 2 && (
             <div className="space-y-6">
-              <FloatingCard>
+              <MobileCard>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <BookOpen className="h-5 w-5 text-blue-600" />
@@ -383,18 +513,16 @@ export default function StudyPlanPage() {
                     </div>
                   </div>
                   
-                  <ClientWrapper>
-                    <Button onClick={addSubject} className="w-full" variant="outline">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Subject
-                    </Button>
-                  </ClientWrapper>
+                  <Button onClick={addSubject} className="w-full" variant="outline">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Subject
+                  </Button>
                 </CardContent>
-              </FloatingCard>
+              </MobileCard>
 
               {/* Added Subjects */}
               {studyPlan.subjects && studyPlan.subjects.length > 0 && (
-                <FloatingCard>
+                <MobileCard>
                   <CardHeader>
                     <CardTitle>Added Subjects ({studyPlan.subjects.length})</CardTitle>
                   </CardHeader>
@@ -438,14 +566,14 @@ export default function StudyPlanPage() {
                       </Button>
                     </div>
                   </CardContent>
-                </FloatingCard>
+                </MobileCard>
               )}
             </div>
           )}
 
           {/* Step 3: Schedule */}
           {currentStep === 3 && (
-            <FloatingCard>
+            <MobileCard>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Calendar className="h-5 w-5 text-green-600" />
@@ -523,12 +651,12 @@ export default function StudyPlanPage() {
                   </Button>
                 </div>
               </CardContent>
-            </FloatingCard>
+            </MobileCard>
           )}
 
           {/* Step 4: AI Generation */}
           {currentStep === 4 && (
-            <FloatingCard>
+            <MobileCard>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Brain className="h-5 w-5 text-purple-600" />
@@ -607,13 +735,13 @@ export default function StudyPlanPage() {
                   </div>
                 )}
               </CardContent>
-            </FloatingCard>
+            </MobileCard>
           )}
 
           {/* Step 5: Review & Save */}
           {currentStep === 5 && (
             <div className="space-y-6">
-              <FloatingCard>
+              <MobileCard>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Save className="h-5 w-5 text-green-600" />
@@ -685,7 +813,7 @@ export default function StudyPlanPage() {
                     </Button>
                   </div>
                 </CardContent>
-              </FloatingCard>
+              </MobileCard>
             </div>
           )}
         </div>

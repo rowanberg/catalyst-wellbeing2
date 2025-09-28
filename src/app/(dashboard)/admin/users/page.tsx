@@ -118,6 +118,11 @@ function UserManagementContent() {
   const [showAddUser, setShowAddUser] = useState(false)
   const [showBulkActions, setShowBulkActions] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
+  
+  // Debug logging for tab state
+  useEffect(() => {
+    console.log('🔍 Admin Users - Current active tab:', activeTab)
+  }, [activeTab])
   const [editFormData, setEditFormData] = useState<any>({})
   const [bulkAction, setBulkAction] = useState('')
   const [isSaving, setIsSaving] = useState(false)
@@ -760,13 +765,36 @@ function UserManagementContent() {
           </motion.div>
         </div>
 
-        {/* Main Content Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 bg-white/50 backdrop-blur-sm shadow-lg rounded-xl p-1">
-            <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
-            <TabsTrigger value="users" className="text-xs sm:text-sm">Users</TabsTrigger>
-            <TabsTrigger value="analytics" className="text-xs sm:text-sm">Analytics</TabsTrigger>
-            <TabsTrigger value="settings" className="text-xs sm:text-sm">Settings</TabsTrigger>
+        {/* Main Content Tabs - Enhanced Visibility */}
+        <Tabs value={activeTab} onValueChange={(value) => {
+          console.log('🔄 Tab changing to:', value)
+          setActiveTab(value)
+        }} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 bg-white border border-gray-200 shadow-lg rounded-xl p-2 mb-6 h-auto min-h-[48px] sm:min-h-[56px]">
+            <TabsTrigger 
+              value="overview" 
+              className="text-xs sm:text-sm font-medium px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-all duration-200 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-blue-600 flex items-center justify-center whitespace-nowrap"
+            >
+              Overview
+            </TabsTrigger>
+            <TabsTrigger 
+              value="users" 
+              className="text-xs sm:text-sm font-medium px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-all duration-200 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-blue-600 flex items-center justify-center whitespace-nowrap"
+            >
+              Users
+            </TabsTrigger>
+            <TabsTrigger 
+              value="analytics" 
+              className="text-xs sm:text-sm font-medium px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-all duration-200 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-blue-600 flex items-center justify-center whitespace-nowrap"
+            >
+              Analytics
+            </TabsTrigger>
+            <TabsTrigger 
+              value="settings" 
+              className="text-xs sm:text-sm font-medium px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-all duration-200 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-blue-600 flex items-center justify-center whitespace-nowrap"
+            >
+              Settings
+            </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -821,34 +849,35 @@ function UserManagementContent() {
 
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-6">
-            {/* Advanced Search and Filters */}
+            {/* Advanced Search and Filters - Mobile Optimized */}
             <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">Search & Filter</h3>
+              <CardContent className="p-3 sm:p-4 lg:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-4 gap-2">
+                  <h3 className="text-base sm:text-lg font-semibold">Search & Filter</h3>
                   <Button 
                     variant="ghost" 
                     size="sm"
                     onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                    className="self-start sm:self-auto text-xs sm:text-sm"
                   >
-                    <Filter className="w-4 h-4 mr-2" />
-                    Advanced Filters
-                    {showAdvancedFilters ? <ChevronDown className="w-4 h-4 ml-2" /> : <ChevronRight className="w-4 h-4 ml-2" />}
+                    <Filter className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                    <span className="hidden xs:inline">Advanced </span>Filters
+                    {showAdvancedFilters ? <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4 ml-1 sm:ml-2" /> : <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1 sm:ml-2" />}
                   </Button>
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 mb-3 sm:mb-4">
+                  <div className="relative sm:col-span-2 lg:col-span-1">
+                    <Search className="absolute left-3 top-2.5 sm:top-3 h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
                     <Input
                       placeholder="Search users..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 bg-white/50 border-2 focus:border-blue-400"
+                      className="pl-8 sm:pl-10 bg-white/50 border-2 focus:border-blue-400 text-sm h-9 sm:h-10"
                     />
                   </div>
                   <Select value={roleFilter} onValueChange={setRoleFilter}>
-                    <SelectTrigger className="bg-white/50 border-2 focus:border-blue-400">
+                    <SelectTrigger className="bg-white/50 border-2 focus:border-blue-400 h-9 sm:h-10 text-sm">
                       <SelectValue placeholder="All Roles" />
                     </SelectTrigger>
                     <SelectContent>
@@ -860,7 +889,7 @@ function UserManagementContent() {
                     </SelectContent>
                   </Select>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="bg-white/50 border-2 focus:border-blue-400">
+                    <SelectTrigger className="bg-white/50 border-2 focus:border-blue-400 h-9 sm:h-10 text-sm">
                       <SelectValue placeholder="All Status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -869,24 +898,24 @@ function UserManagementContent() {
                       <SelectItem value="inactive">Inactive</SelectItem>
                     </SelectContent>
                   </Select>
-                  <div className="flex space-x-2">
+                  <div className="flex space-x-1 sm:space-x-2 sm:col-span-2 lg:col-span-1">
                     <Button
                       variant={viewMode === 'grid' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setViewMode('grid')}
-                      className="flex-1 px-2 sm:px-3"
+                      className="flex-1 px-2 sm:px-3 h-9 sm:h-10 text-xs sm:text-sm"
                     >
                       <Grid3X3 className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span className="hidden sm:inline ml-1">Grid</span>
+                      <span className="hidden xs:inline ml-1">Grid</span>
                     </Button>
                     <Button
                       variant={viewMode === 'table' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setViewMode('table')}
-                      className="flex-1 px-2 sm:px-3"
+                      className="flex-1 px-2 sm:px-3 h-9 sm:h-10 text-xs sm:text-sm"
                     >
                       <List className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span className="hidden sm:inline ml-1">Table</span>
+                      <span className="hidden xs:inline ml-1">Table</span>
                     </Button>
                   </div>
                 </div>
@@ -895,10 +924,10 @@ function UserManagementContent() {
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
-                    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 pt-4 border-t border-gray-200"
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 lg:gap-4 pt-3 sm:pt-4 border-t border-gray-200"
                   >
                     <Select value={gradeFilter} onValueChange={setGradeFilter}>
-                      <SelectTrigger className="bg-white/50">
+                      <SelectTrigger className="bg-white/50 h-9 sm:h-10 text-sm">
                         <SelectValue placeholder="All Grades" />
                       </SelectTrigger>
                       <SelectContent>
@@ -909,7 +938,7 @@ function UserManagementContent() {
                       </SelectContent>
                     </Select>
                     <Select value={classFilter} onValueChange={setClassFilter}>
-                      <SelectTrigger className="bg-white/50">
+                      <SelectTrigger className="bg-white/50 h-9 sm:h-10 text-sm">
                         <SelectValue placeholder="All Classes" />
                       </SelectTrigger>
                       <SelectContent>
@@ -918,9 +947,9 @@ function UserManagementContent() {
                         <SelectItem value="B">Class B</SelectItem>
                       </SelectContent>
                     </Select>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 sm:col-span-2 lg:col-span-1">
                       <Switch id="active-only" />
-                      <Label htmlFor="active-only">Active users only</Label>
+                      <Label htmlFor="active-only" className="text-sm">Active users only</Label>
                     </div>
                   </motion.div>
                 )}
@@ -941,15 +970,144 @@ function UserManagementContent() {
                 </CardContent>
               </Card>
             ) : viewMode === 'table' ? (
-              /* Table View */
+              /* Table View - Mobile Optimized */
               <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
                 <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
+                  {/* Mobile: Card-based layout, Desktop: Table layout */}
+                  <div className="block sm:hidden">
+                    {/* Mobile Card Layout */}
+                    <div className="divide-y divide-gray-200">
+                      {filteredUsers.map((user, index) => (
+                        <motion.div
+                          key={user.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          className="p-4 hover:bg-gray-50/50 transition-colors"
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center space-x-3 flex-1 min-w-0">
+                              <input
+                                type="checkbox"
+                                className="rounded border-gray-300 mt-1"
+                                checked={selectedUsers.includes(user.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedUsers([...selectedUsers, user.id])
+                                  } else {
+                                    setSelectedUsers(selectedUsers.filter(id => id !== user.id))
+                                  }
+                                }}
+                              />
+                              <div className="relative">
+                                <Avatar className="w-10 h-10 ring-2 ring-white shadow-sm">
+                                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-sm font-semibold">
+                                    {user.first_name?.[0]}{user.last_name?.[0]}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="text-sm font-medium text-gray-900 truncate">
+                                  {user.first_name} {user.last_name}
+                                </div>
+                                <div className="text-xs text-gray-500 truncate">{user.email}</div>
+                              </div>
+                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <MoreVertical className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuItem onClick={() => handleViewUser(user)}>
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit User
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleMessageUser(user)}>
+                                  <MessageCircle className="w-4 h-4 mr-2" />
+                                  Send Message
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => handleToggleUserStatus(user)}>
+                                  {user.status === 'active' ? (
+                                    <>
+                                      <Ban className="w-4 h-4 mr-2" />
+                                      Deactivate
+                                    </>
+                                  ) : (
+                                    <>
+                                      <UserCheck className="w-4 h-4 mr-2" />
+                                      Activate
+                                    </>
+                                  )}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => handleDeleteUser(user)}
+                                  className="text-red-600 focus:text-red-600"
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <span className="text-gray-500 text-xs">Role:</span>
+                              <div className="mt-1">
+                                <Badge 
+                                  variant="outline" 
+                                  className={`text-xs ${getRoleBadgeColor(user.role)}`}
+                                >
+                                  {user.role}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-gray-500 text-xs">Status:</span>
+                              <div className="mt-1">
+                                {renderStatusBadge(user.status || 'active')}
+                              </div>
+                            </div>
+                            {(user.grade_level || user.class_name) && (
+                              <div>
+                                <span className="text-gray-500 text-xs">Grade/Class:</span>
+                                <div className="mt-1 text-sm font-medium text-gray-900">
+                                  {user.grade_level || user.class_name || '-'}
+                                </div>
+                              </div>
+                            )}
+                            {user.role === 'student' && (
+                              <div>
+                                <span className="text-gray-500 text-xs">XP:</span>
+                                <div className="mt-1 text-sm font-medium text-gray-900">
+                                  {user.xp || 0} XP
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Desktop Table Layout */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="w-full min-w-[700px]">
                       <thead className="bg-gray-50/80 border-b border-gray-200">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            <div className="flex items-center space-x-2">
+                          <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                            <div className="flex items-center">
                               <input
                                 type="checkbox"
                                 className="rounded border-gray-300"
@@ -964,22 +1122,22 @@ function UserManagementContent() {
                               />
                             </div>
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">
                             User
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Role
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Status
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Grade/Class
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             XP
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                             Actions
                           </th>
                         </tr>
@@ -993,7 +1151,7 @@ function UserManagementContent() {
                             transition={{ delay: index * 0.05 }}
                             className="hover:bg-gray-50/50 transition-colors"
                           >
-                            <td className="px-4 py-4 whitespace-nowrap">
+                            <td className="px-3 lg:px-4 py-3 lg:py-4 whitespace-nowrap">
                               <input
                                 type="checkbox"
                                 className="rounded border-gray-300"
@@ -1007,25 +1165,25 @@ function UserManagementContent() {
                                 }}
                               />
                             </td>
-                            <td className="px-4 py-4 whitespace-nowrap">
-                              <div className="flex items-center space-x-3">
+                            <td className="px-3 lg:px-4 py-3 lg:py-4 whitespace-nowrap">
+                              <div className="flex items-center space-x-2 lg:space-x-3">
                                 <div className="relative">
-                                  <Avatar className="w-8 h-8 ring-2 ring-white shadow-sm">
+                                  <Avatar className="w-7 h-7 lg:w-8 lg:h-8 ring-2 ring-white shadow-sm">
                                     <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs font-semibold">
                                       {user.first_name?.[0]}{user.last_name?.[0]}
                                     </AvatarFallback>
                                   </Avatar>
-                                  <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border border-white"></div>
+                                  <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 lg:w-2.5 lg:h-2.5 bg-green-500 rounded-full border border-white"></div>
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                  <div className="text-sm font-medium text-gray-900 truncate">
+                                  <div className="text-xs lg:text-sm font-medium text-gray-900 truncate">
                                     {user.first_name} {user.last_name}
                                   </div>
                                   <div className="text-xs text-gray-500 truncate">{user.email}</div>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-4 py-4 whitespace-nowrap">
+                            <td className="px-3 lg:px-4 py-3 lg:py-4 whitespace-nowrap">
                               <Badge 
                                 variant="outline" 
                                 className={`text-xs ${getRoleBadgeColor(user.role)}`}
@@ -1033,21 +1191,21 @@ function UserManagementContent() {
                                 {user.role}
                               </Badge>
                             </td>
-                            <td className="px-4 py-4 whitespace-nowrap">
+                            <td className="px-3 lg:px-4 py-3 lg:py-4 whitespace-nowrap">
                               {renderStatusBadge(user.status || 'active')}
                             </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <td className="px-3 lg:px-4 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-gray-900">
                               {user.grade_level || user.class_name || '-'}
                             </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <td className="px-3 lg:px-4 py-3 lg:py-4 whitespace-nowrap text-xs lg:text-sm text-gray-900">
                               {user.role === 'student' ? (user.xp || 0) : '-'}
                             </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                            <td className="px-3 lg:px-4 py-3 lg:py-4 whitespace-nowrap text-sm font-medium">
                               <div className="flex items-center space-x-1">
                                 <Button 
                                   variant="ghost" 
                                   size="sm" 
-                                  className="h-8 w-8 p-0"
+                                  className="h-7 w-7 lg:h-8 lg:w-8 p-0"
                                   onClick={() => handleViewUser(user)}
                                   title="View Details"
                                 >
@@ -1056,7 +1214,7 @@ function UserManagementContent() {
                                 <Button 
                                   variant="ghost" 
                                   size="sm" 
-                                  className="h-8 w-8 p-0"
+                                  className="h-7 w-7 lg:h-8 lg:w-8 p-0 hidden md:flex"
                                   onClick={() => handleMessageUser(user)}
                                   title="Send Message"
                                 >
@@ -1065,7 +1223,7 @@ function UserManagementContent() {
                                 <Button 
                                   variant="ghost" 
                                   size="sm" 
-                                  className="h-8 w-8 p-0"
+                                  className="h-7 w-7 lg:h-8 lg:w-8 p-0"
                                   onClick={() => handleEditUser(user)}
                                   title="Edit User"
                                 >
@@ -1076,13 +1234,17 @@ function UserManagementContent() {
                                     <Button 
                                       variant="ghost" 
                                       size="sm" 
-                                      className="h-8 w-8 p-0"
+                                      className="h-7 w-7 lg:h-8 lg:w-8 p-0"
                                       title="More Actions"
                                     >
                                       <MoreVertical className="w-3 h-3" />
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end" className="w-48">
+                                    <DropdownMenuItem onClick={() => handleMessageUser(user)} className="md:hidden">
+                                      <MessageCircle className="w-4 h-4 mr-2" />
+                                      Send Message
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleToggleUserStatus(user)}>
                                       {user.status === 'active' ? (
                                         <>
@@ -1115,8 +1277,8 @@ function UserManagementContent() {
                 </CardContent>
               </Card>
             ) : (
-              /* Grid View */
-              <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              /* Grid View - Mobile Optimized */
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
                 {filteredUsers.map((user, index) => (
                   <motion.div
                     key={user.id}
@@ -1125,23 +1287,23 @@ function UserManagementContent() {
                     transition={{ delay: index * 0.1 }}
                   >
                     <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 group">
-                      <CardContent className="p-4 sm:p-6">
+                      <CardContent className="p-3 sm:p-4 lg:p-6">
                         <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
-                            <div className="relative">
-                              <Avatar className="w-10 h-10 sm:w-12 sm:h-12 ring-2 ring-white shadow-lg">
-                                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
+                          <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+                            <div className="relative flex-shrink-0">
+                              <Avatar className="w-9 h-9 sm:w-10 sm:h-10 lg:w-12 lg:h-12 ring-2 ring-white shadow-lg">
+                                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold text-xs sm:text-sm">
                                   {user.first_name?.[0]}{user.last_name?.[0]}
                                 </AvatarFallback>
                               </Avatar>
-                              <div className="absolute -bottom-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 bg-green-500 rounded-full border-2 border-white"></div>
+                              <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4 bg-green-500 rounded-full border-2 border-white"></div>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-gray-900 truncate text-sm sm:text-base">
+                              <h3 className="font-semibold text-gray-900 truncate text-xs sm:text-sm lg:text-base">
                                 {user.first_name} {user.last_name}
                               </h3>
-                              <p className="text-xs sm:text-sm text-gray-600 truncate">{user.email}</p>
-                              <div className="flex items-center space-x-1 sm:space-x-2 mt-1 sm:mt-2">
+                              <p className="text-xs text-gray-600 truncate">{user.email}</p>
+                              <div className="flex flex-wrap items-center gap-1 mt-1 sm:mt-2">
                                 <Badge 
                                   variant="outline" 
                                   className={`text-xs ${getRoleBadgeColor(user.role)}`}
@@ -1152,32 +1314,23 @@ function UserManagementContent() {
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-1 sm:space-x-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                          <div className="flex items-center space-x-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              className="h-8 w-8 p-0 sm:h-9 sm:w-9"
-                              onClick={() => handleMessageUser(user)}
-                              title="Send Message"
-                            >
-                              <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-8 w-8 p-0 sm:h-9 sm:w-9"
+                              className="h-7 w-7 sm:h-8 sm:w-8 p-0 sm:hidden"
                               onClick={() => handleEditUser(user)}
                               title="Edit User"
                             >
-                              <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
+                              <Edit className="w-3 h-3" />
                             </Button>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button 
                                   variant="ghost" 
                                   size="sm" 
-                                  className="h-8 w-8 p-0 sm:h-9 sm:w-9"
-                                  title="More Actions"
+                                  className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                                  title="Actions"
                                 >
                                   <MoreVertical className="w-3 h-3 sm:w-4 sm:h-4" />
                                 </Button>
@@ -1217,14 +1370,22 @@ function UserManagementContent() {
                           </div>
                         </div>
                         
-                        {/* User Stats */}
+                        {/* User Stats - Mobile Optimized */}
                         {user.role === 'student' && (
-                          <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200">
-                            <div className="flex items-center justify-between text-xs sm:text-sm">
+                          <div className="mt-2 sm:mt-3 lg:mt-4 pt-2 sm:pt-3 lg:pt-4 border-t border-gray-200">
+                            <div className="flex items-center justify-between text-xs">
                               <span className="text-gray-600">XP Progress</span>
                               <span className="font-medium">{user.xp || 0} XP</span>
                             </div>
-                            <Progress value={((user.xp || 0) % 100)} className="mt-1 sm:mt-2" />
+                            <Progress value={((user.xp || 0) % 100)} className="mt-1 h-1.5 sm:h-2" />
+                          </div>
+                        )}
+                        
+                        {/* Additional Info for Mobile */}
+                        {(user.grade_level || user.class_name) && (
+                          <div className="mt-2 sm:hidden">
+                            <span className="text-xs text-gray-500">Grade/Class: </span>
+                            <span className="text-xs font-medium text-gray-900">{user.grade_level || user.class_name}</span>
                           </div>
                         )}
                       </CardContent>
@@ -1235,61 +1396,74 @@ function UserManagementContent() {
             )}
           </TabsContent>
 
-          {/* Analytics Tab */}
-          <TabsContent value="analytics" className="space-y-6">
+          {/* Analytics Tab - Mobile Optimized */}
+          <TabsContent value="analytics" className="space-y-4 sm:space-y-6">
             <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
-              <CardHeader>
-                <CardTitle>User Analytics</CardTitle>
-                <CardDescription>Detailed insights into user behavior and engagement</CardDescription>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-lg sm:text-xl">User Analytics</CardTitle>
+                <CardDescription className="text-sm sm:text-base">Detailed insights into user behavior and engagement</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+              <CardContent className="p-4 sm:p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                   <div>
-                    <h4 className="font-semibold mb-4">Role Distribution</h4>
-                    <div className="space-y-3">
+                    <h4 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">Role Distribution</h4>
+                    <div className="space-y-2 sm:space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm">Students</span>
+                        <span className="text-xs sm:text-sm">Students</span>
                         <div className="flex items-center space-x-2">
-                          <div className="w-24 h-2 bg-gray-200 rounded-full">
-                            <div className="h-2 bg-blue-500 rounded-full" style={{ width: `${(stats.students / stats.total) * 100}%` }}></div>
+                          <div className="w-16 sm:w-24 h-1.5 sm:h-2 bg-gray-200 rounded-full">
+                            <div className="h-1.5 sm:h-2 bg-blue-500 rounded-full" style={{ width: `${stats.total > 0 ? (stats.students / stats.total) * 100 : 0}%` }}></div>
                           </div>
-                          <span className="text-sm font-medium">{stats.students}</span>
+                          <span className="text-xs sm:text-sm font-medium w-8 text-right">{stats.students}</span>
                         </div>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm">Teachers</span>
+                        <span className="text-xs sm:text-sm">Teachers</span>
                         <div className="flex items-center space-x-2">
-                          <div className="w-24 h-2 bg-gray-200 rounded-full">
-                            <div className="h-2 bg-green-500 rounded-full" style={{ width: `${(stats.teachers / stats.total) * 100}%` }}></div>
+                          <div className="w-16 sm:w-24 h-1.5 sm:h-2 bg-gray-200 rounded-full">
+                            <div className="h-1.5 sm:h-2 bg-green-500 rounded-full" style={{ width: `${stats.total > 0 ? (stats.teachers / stats.total) * 100 : 0}%` }}></div>
                           </div>
-                          <span className="text-sm font-medium">{stats.teachers}</span>
+                          <span className="text-xs sm:text-sm font-medium w-8 text-right">{stats.teachers}</span>
                         </div>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm">Parents</span>
+                        <span className="text-xs sm:text-sm">Parents</span>
                         <div className="flex items-center space-x-2">
-                          <div className="w-24 h-2 bg-gray-200 rounded-full">
-                            <div className="h-2 bg-purple-500 rounded-full" style={{ width: `${(stats.parents / stats.total) * 100}%` }}></div>
+                          <div className="w-16 sm:w-24 h-1.5 sm:h-2 bg-gray-200 rounded-full">
+                            <div className="h-1.5 sm:h-2 bg-purple-500 rounded-full" style={{ width: `${stats.total > 0 ? (stats.parents / stats.total) * 100 : 0}%` }}></div>
                           </div>
-                          <span className="text-sm font-medium">{stats.parents}</span>
+                          <span className="text-xs sm:text-sm font-medium w-8 text-right">{stats.parents}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs sm:text-sm">Admins</span>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-16 sm:w-24 h-1.5 sm:h-2 bg-gray-200 rounded-full">
+                            <div className="h-1.5 sm:h-2 bg-orange-500 rounded-full" style={{ width: `${stats.total > 0 ? (stats.admins / stats.total) * 100 : 0}%` }}></div>
+                          </div>
+                          <span className="text-xs sm:text-sm font-medium w-8 text-right">{stats.admins}</span>
                         </div>
                       </div>
                     </div>
                   </div>
                   <div>
-                    <h4 className="font-semibold mb-4">Activity Metrics</h4>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Engagement Rate</span>
-                        <span className="font-medium">{stats.engagementRate}%</span>
+                    <h4 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base mt-6 lg:mt-0">Activity Metrics</h4>
+                    <div className="space-y-2 sm:space-y-3">
+                      <div className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 rounded-lg">
+                        <span className="text-xs sm:text-sm text-gray-600">Engagement Rate</span>
+                        <span className="font-medium text-sm sm:text-base">{stats.engagementRate}%</span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Average XP</span>
-                        <span className="font-medium">{stats.averageXP}</span>
+                      <div className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 rounded-lg">
+                        <span className="text-xs sm:text-sm text-gray-600">Average XP</span>
+                        <span className="font-medium text-sm sm:text-base">{stats.averageXP}</span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">New This Month</span>
-                        <span className="font-medium">{stats.newThisMonth}</span>
+                      <div className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 rounded-lg">
+                        <span className="text-xs sm:text-sm text-gray-600">New This Month</span>
+                        <span className="font-medium text-sm sm:text-base">{stats.newThisMonth}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 rounded-lg">
+                        <span className="text-xs sm:text-sm text-gray-600">Active Users</span>
+                        <span className="font-medium text-sm sm:text-base">{stats.active}</span>
                       </div>
                     </div>
                   </div>
@@ -1298,35 +1472,42 @@ function UserManagementContent() {
             </Card>
           </TabsContent>
 
-          {/* Settings Tab */}
-          <TabsContent value="settings" className="space-y-6">
+          {/* Settings Tab - Mobile Optimized */}
+          <TabsContent value="settings" className="space-y-4 sm:space-y-6">
             <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
-              <CardHeader>
-                <CardTitle>User Management Settings</CardTitle>
-                <CardDescription>Configure user management preferences and permissions</CardDescription>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-lg sm:text-xl">User Management Settings</CardTitle>
+                <CardDescription className="text-sm sm:text-base">Configure user management preferences and permissions</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">Auto-approve new users</h4>
-                      <p className="text-sm text-gray-600">Automatically approve new user registrations</p>
+              <CardContent className="p-4 sm:p-6">
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-sm sm:text-base">Auto-approve new users</h4>
+                      <p className="text-xs sm:text-sm text-gray-600 mt-1">Automatically approve new user registrations</p>
                     </div>
-                    <Switch />
+                    <Switch className="self-start sm:self-center" />
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">Email notifications</h4>
-                      <p className="text-sm text-gray-600">Send email notifications for user activities</p>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-sm sm:text-base">Email notifications</h4>
+                      <p className="text-xs sm:text-sm text-gray-600 mt-1">Send email notifications for user activities</p>
                     </div>
-                    <Switch />
+                    <Switch className="self-start sm:self-center" />
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">Bulk operations</h4>
-                      <p className="text-sm text-gray-600">Enable bulk user management operations</p>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-sm sm:text-base">Bulk operations</h4>
+                      <p className="text-xs sm:text-sm text-gray-600 mt-1">Enable bulk user management operations</p>
                     </div>
-                    <Switch />
+                    <Switch className="self-start sm:self-center" />
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-3 sm:p-4 bg-gray-50 rounded-lg">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-sm sm:text-base">Data export permissions</h4>
+                      <p className="text-xs sm:text-sm text-gray-600 mt-1">Allow authorized users to export user data</p>
+                    </div>
+                    <Switch className="self-start sm:self-center" />
                   </div>
                 </div>
               </CardContent>
@@ -1334,40 +1515,42 @@ function UserManagementContent() {
           </TabsContent>
         </Tabs>
 
-        {/* Message Modal */}
+        {/* Message Modal - Mobile Optimized */}
         <Dialog open={showMessageModal} onOpenChange={setShowMessageModal}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="w-[95vw] max-w-md mx-auto">
             <DialogHeader>
-              <DialogTitle>Send Message</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-lg">Send Message</DialogTitle>
+              <DialogDescription className="text-sm">
                 Send a message to {messageRecipient?.first_name} {messageRecipient?.last_name}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div>
-                <Label htmlFor="subject">Subject</Label>
+                <Label htmlFor="subject" className="text-sm">Subject</Label>
                 <Input
                   id="subject"
                   value={messageSubject}
                   onChange={(e) => setMessageSubject(e.target.value)}
                   placeholder="Enter message subject"
+                  className="mt-1 text-sm"
                 />
               </div>
               <div>
-                <Label htmlFor="message">Message</Label>
+                <Label htmlFor="message" className="text-sm">Message</Label>
                 <Textarea
                   id="message"
                   value={messageContent}
                   onChange={(e) => setMessageContent(e.target.value)}
                   placeholder="Type your message here..."
                   rows={4}
+                  className="mt-1 text-sm resize-none"
                 />
               </div>
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setShowMessageModal(false)}>
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-2">
+                <Button variant="outline" onClick={() => setShowMessageModal(false)} className="text-sm">
                   Cancel
                 </Button>
-                <Button onClick={handleSendMessage}>
+                <Button onClick={handleSendMessage} className="text-sm">
                   <Send className="w-4 h-4 mr-2" />
                   Send Message
                 </Button>
@@ -1376,51 +1559,54 @@ function UserManagementContent() {
           </DialogContent>
         </Dialog>
 
-        {/* Edit User Modal */}
+        {/* Edit User Modal - Mobile Optimized */}
         <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-          <DialogContent className="sm:max-w-2xl">
+          <DialogContent className="w-[95vw] max-w-2xl mx-auto max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Edit User</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-lg">Edit User</DialogTitle>
+              <DialogDescription className="text-sm">
                 Update information for {selectedUser?.first_name} {selectedUser?.last_name}
               </DialogDescription>
             </DialogHeader>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <Label htmlFor="edit-first-name">First Name</Label>
+                <Label htmlFor="edit-first-name" className="text-sm">First Name</Label>
                 <Input
                   id="edit-first-name"
                   value={editFormData.first_name || ''}
                   onChange={(e) => setEditFormData({...editFormData, first_name: e.target.value})}
                   placeholder="First name"
+                  className="mt-1 text-sm"
                 />
               </div>
               <div>
-                <Label htmlFor="edit-last-name">Last Name</Label>
+                <Label htmlFor="edit-last-name" className="text-sm">Last Name</Label>
                 <Input
                   id="edit-last-name"
                   value={editFormData.last_name || ''}
                   onChange={(e) => setEditFormData({...editFormData, last_name: e.target.value})}
                   placeholder="Last name"
+                  className="mt-1 text-sm"
                 />
               </div>
-              <div>
-                <Label htmlFor="edit-email">Email</Label>
+              <div className="sm:col-span-2">
+                <Label htmlFor="edit-email" className="text-sm">Email</Label>
                 <Input
                   id="edit-email"
                   type="email"
                   value={editFormData.email || ''}
                   onChange={(e) => setEditFormData({...editFormData, email: e.target.value})}
                   placeholder="Email address"
+                  className="mt-1 text-sm"
                 />
               </div>
               <div>
-                <Label htmlFor="edit-role">Role</Label>
+                <Label htmlFor="edit-role" className="text-sm">Role</Label>
                 <Select 
                   value={editFormData.role || ''} 
                   onValueChange={(value) => setEditFormData({...editFormData, role: value})}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="mt-1 text-sm">
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1432,47 +1618,51 @@ function UserManagementContent() {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="edit-phone">Phone</Label>
+                <Label htmlFor="edit-phone" className="text-sm">Phone</Label>
                 <Input
                   id="edit-phone"
                   value={editFormData.phone || ''}
                   onChange={(e) => setEditFormData({...editFormData, phone: e.target.value})}
                   placeholder="Phone number"
+                  className="mt-1 text-sm"
                 />
               </div>
-              <div>
-                <Label htmlFor="edit-grade">Grade Level</Label>
+              <div className="sm:col-span-2">
+                <Label htmlFor="edit-grade" className="text-sm">Grade Level</Label>
                 <Input
                   id="edit-grade"
                   value={editFormData.grade_level || ''}
                   onChange={(e) => setEditFormData({...editFormData, grade_level: e.target.value})}
                   placeholder="Grade level"
+                  className="mt-1 text-sm"
                 />
               </div>
-              <div className="md:col-span-2">
-                <Label htmlFor="edit-address">Address</Label>
+              <div className="sm:col-span-2">
+                <Label htmlFor="edit-address" className="text-sm">Address</Label>
                 <Input
                   id="edit-address"
                   value={editFormData.address || ''}
                   onChange={(e) => setEditFormData({...editFormData, address: e.target.value})}
                   placeholder="Address"
+                  className="mt-1 text-sm"
                 />
               </div>
-              <div className="md:col-span-2">
-                <Label htmlFor="edit-emergency">Emergency Contact</Label>
+              <div className="sm:col-span-2">
+                <Label htmlFor="edit-emergency" className="text-sm">Emergency Contact</Label>
                 <Input
                   id="edit-emergency"
                   value={editFormData.emergency_contact || ''}
                   onChange={(e) => setEditFormData({...editFormData, emergency_contact: e.target.value})}
                   placeholder="Emergency contact"
+                  className="mt-1 text-sm"
                 />
               </div>
             </div>
-            <div className="flex justify-end space-x-2 mt-6">
-              <Button variant="outline" onClick={() => setShowEditModal(false)}>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 mt-4 sm:mt-6 pt-4 border-t">
+              <Button variant="outline" onClick={() => setShowEditModal(false)} className="text-sm">
                 Cancel
               </Button>
-              <Button onClick={handleSaveUser} disabled={isSaving}>
+              <Button onClick={handleSaveUser} disabled={isSaving} className="text-sm">
                 {isSaving ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
@@ -1489,33 +1679,34 @@ function UserManagementContent() {
           </DialogContent>
         </Dialog>
 
-        {/* Toast Notifications */}
-        <div className="fixed top-4 right-4 z-50 space-y-2">
+        {/* Toast Notifications - Mobile Optimized */}
+        <div className="fixed top-4 left-4 right-4 sm:top-4 sm:right-4 sm:left-auto z-50 space-y-2">
           {toasts.map((toast) => (
             <motion.div
               key={toast.id}
-              initial={{ opacity: 0, x: 300 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 300 }}
-              className={`px-4 py-3 rounded-lg shadow-lg flex items-center justify-between min-w-[300px] ${
+              initial={{ opacity: 0, y: -50, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -50, scale: 0.95 }}
+              className={`px-3 sm:px-4 py-2 sm:py-3 rounded-lg shadow-lg flex items-center justify-between w-full sm:min-w-[300px] sm:max-w-md ${
                 toast.type === 'success' 
                   ? 'bg-green-500 text-white' 
                   : 'bg-red-500 text-white'
               }`}
             >
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 flex-1 min-w-0">
                 {toast.type === 'success' ? (
-                  <Check className="w-5 h-5" />
+                  <Check className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
                 ) : (
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
                 )}
-                <span className="text-sm font-medium">{toast.message}</span>
+                <span className="text-xs sm:text-sm font-medium truncate">{toast.message}</span>
               </div>
               <button
                 onClick={() => removeToast(toast.id)}
-                className="ml-4 text-white hover:text-gray-200"
+                className="ml-2 sm:ml-4 text-white hover:text-gray-200 flex-shrink-0 p-1"
+                aria-label="Close notification"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3 h-3 sm:w-4 sm:h-4" />
               </button>
             </motion.div>
           ))}

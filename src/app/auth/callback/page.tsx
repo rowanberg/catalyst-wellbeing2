@@ -12,9 +12,13 @@ import { GraduationCap } from 'lucide-react'
 export default function AuthCallback() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [hasProcessed, setHasProcessed] = useState(false)
   const router = useRouter()
   const dispatch = useAppDispatch()
   const { addToast } = useToast()
+
+  // Check if welcome message was already shown in this session
+  const welcomeShownKey = 'catalyst_welcome_shown'
 
   // Initialize Supabase client
   const supabase = createClient(
@@ -23,7 +27,36 @@ export default function AuthCallback() {
   )
 
   useEffect(() => {
+    // Clear welcome flag when component mounts (new session)
+    return () => {
+      // Cleanup on unmount
+      sessionStorage.removeItem('catalyst_auth_processing')
+    }
+  }, [])
+
+  useEffect(() => {
     const handleAuthCallback = async () => {
+      // Prevent multiple executions with multiple checks
+      if (hasProcessed) {
+        console.log('⏭️ Auth callback already processed, skipping...')
+        return
+      }
+
+      // Check if we've already shown welcome message in this session
+      const welcomeAlreadyShown = sessionStorage.getItem(welcomeShownKey)
+      if (welcomeAlreadyShown) {
+        console.log('⏭️ Welcome message already shown in this session, redirecting directly...')
+        // Just redirect without showing message again
+        const savedDashboardPath = sessionStorage.getItem('catalyst_dashboard_path') || '/student'
+        router.push(savedDashboardPath)
+        return
+      }
+      
+      setHasProcessed(true)
+      
+      // Mark that we're processing to prevent any other instances
+      sessionStorage.setItem('catalyst_auth_processing', 'true')
+      
       try {
         console.log('🔄 Processing auth callback...')
         
@@ -111,16 +144,26 @@ export default function AuthCallback() {
 
           console.log('🚀 Redirecting to:', dashboardPath)
 
+          // Save dashboard path for potential future redirects
+          sessionStorage.setItem('catalyst_dashboard_path', dashboardPath)
+
+          // Show enhanced welcome message only once
           addToast({
             type: 'success',
-            title: 'Welcome to Catalyst!',
-            description: `Successfully signed in with Google. Redirecting to your ${userRole} dashboard...`
+            title: '🎉 Welcome to Catalyst!',
+            description: `Welcome ${userProfile?.first_name || 'back'}! You're now signed in as ${userRole}. Taking you to your dashboard...`
           })
+
+          // Mark that welcome message has been shown
+          sessionStorage.setItem(welcomeShownKey, 'true')
+          
+          // Clear the processing flag
+          sessionStorage.removeItem('catalyst_auth_processing')
 
           // Redirect to appropriate dashboard
           setTimeout(() => {
             router.push(dashboardPath)
-          }, 1000)
+          }, 1500)
 
         } else {
           throw new Error('No session found after authentication')
@@ -132,9 +175,13 @@ export default function AuthCallback() {
         
         addToast({
           type: 'error',
-          title: 'Authentication Failed',
+          title: '❌ Authentication Failed',
           description: error.message || 'Failed to complete sign-in. Please try again.'
         })
+
+        // Clear any processing flags on error
+        sessionStorage.removeItem('catalyst_auth_processing')
+        sessionStorage.removeItem(welcomeShownKey)
 
         // Redirect back to login after error
         setTimeout(() => {
@@ -146,7 +193,7 @@ export default function AuthCallback() {
     }
 
     handleAuthCallback()
-  }, [router, dispatch, addToast, supabase])
+  }, []) // Empty dependency array to run only once
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-slate-50">
@@ -173,11 +220,16 @@ export default function AuthCallback() {
           </div>
 
           {isLoading ? (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <LoadingSpinner size="lg" text="Completing sign-in..." />
-              <p className="text-white/80 text-sm">
-                Please wait while we set up your account...
-              </p>
+              <div className="space-y-2">
+                <p className="text-white/90 text-base font-medium">
+                  🎉 Welcome to Catalyst!
+                </p>
+                <p className="text-white/70 text-sm">
+                  Setting up your personalized dashboard...
+                </p>
+              </div>
             </div>
           ) : error ? (
             <div className="space-y-4">
@@ -193,12 +245,15 @@ export default function AuthCallback() {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="text-green-400 text-lg font-medium">
-                Success!
+              <div className="text-green-400 text-xl font-bold">
+                ✅ Welcome Aboard!
               </div>
-              <p className="text-white/80 text-sm">
-                Redirecting to your dashboard...
+              <p className="text-white/90 text-base">
+                Taking you to your dashboard...
               </p>
+              <div className="flex justify-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-400"></div>
+              </div>
             </div>
           )}
         </div>
