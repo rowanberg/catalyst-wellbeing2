@@ -1,6 +1,6 @@
 [build]
   command = "npm run build:netlify"
-  publish = "out"
+  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "20"
@@ -19,10 +19,7 @@
   bundle = true
   minify = true
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+# Redirects handled by Next.js
 
 [functions]
   node_bundler = "esbuild"
