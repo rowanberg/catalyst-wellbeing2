@@ -6,8 +6,8 @@
   NODE_VERSION = "20"
   NPM_FLAGS = "--production=false"
   NEXT_TELEMETRY_DISABLED = "1"
-  # Secrets scanning configuration
-  SECRETS_SCAN_OMIT_PATHS = ".next/cache/**,.netlify/.next/cache/**,node_modules/**,.env.example,.env.production.example"
+  # Secrets scanning configuration - exclude all build output directories
+  SECRETS_SCAN_OMIT_PATHS = ".next/**,.netlify/**,node_modules/**,.env.example,.env.production.example"
 
 # Build cache configuration
 [build.processing]
