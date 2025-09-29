@@ -7,13 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 // Note: Using local Badge and Progress components defined below
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useAuth } from '@/lib/hooks/useAuth'
 import { useAppDispatch, useAppSelector } from '@/lib/redux/hooks'
 import { updateXP, updateGems } from '@/lib/redux/slices/authSlice'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { AuthGuard } from '@/components/auth/auth-guard'
 import { useToast } from '@/components/ui/toast'
 import { 
   Heart, Star, Zap, Target, Brain, HelpCircle, X, AlertTriangle, MessageCircle, Trophy, Crown,
@@ -197,11 +195,12 @@ interface Poll {
 
 const StudentDashboardContent = () => {
   const router = useRouter()
-  const { profile: reduxProfile } = useAppSelector((state) => state.auth)
+  const { profile: reduxProfile, user: reduxUser, isLoading: authLoading } = useAppSelector((state) => state.auth)
   const { addToast } = useToast()
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<any>(null)
   const [schoolInfo, setSchoolInfo] = useState<any>(null)
+  const [authChecked, setAuthChecked] = useState(false)
   
   // State for dashboard components
   const [stats, setStats] = useState<DashboardStats>({
@@ -583,23 +582,62 @@ const StudentDashboardContent = () => {
   }, [reduxProfile])
 
   useEffect(() => {
-    // Prevent duplicate calls by checking if already loading
-    if (!loading) return
-    
-    console.log('🎯 [DASHBOARD] Initial load started')
-    
-    // Start all data fetching in parallel for maximum speed
-    Promise.all([
-      fetchDashboardData(),
-      fetchSchoolInfo().catch(error => {
-        console.error('❌ [DASHBOARD] School info error:', error)
-      })
-    ]).then(() => {
-      console.log('🏁 [DASHBOARD] All initial data loaded')
-    }).catch(error => {
-      console.error('❌ [DASHBOARD] Initial load error:', error)
-    })
-  }, []) // Empty dependency array to run only once
+    const initializeDashboard = async () => {
+      try {
+        console.log('🎯 [DASHBOARD] Starting initialization...')
+        
+        // Check authentication first
+        if (!authChecked) {
+          console.log('🔐 [AUTH] Checking authentication...')
+          
+          // Check if user is authenticated
+          if (!reduxUser && !authLoading) {
+            console.log('❌ [AUTH] No user found, redirecting to login')
+            router.push('/login')
+            return
+          }
+          
+          // Check if user has student role
+          if (reduxProfile && reduxProfile.role !== 'student') {
+            console.log('❌ [AUTH] Wrong role, redirecting to correct dashboard')
+            router.push(`/${reduxProfile.role}`)
+            return
+          }
+          
+          // If still loading auth, wait
+          if (authLoading) {
+            console.log('⏳ [AUTH] Still loading authentication...')
+            return
+          }
+          
+          setAuthChecked(true)
+          console.log('✅ [AUTH] Authentication verified')
+        }
+        
+        // Prevent duplicate calls by checking if already loading
+        if (!loading || !authChecked) return
+        
+        console.log('🎯 [DASHBOARD] Starting data fetch...')
+        
+        // Start all data fetching in parallel for maximum speed
+        await Promise.all([
+          fetchDashboardData(),
+          fetchSchoolInfo().catch(error => {
+            console.error('❌ [DASHBOARD] School info error:', error)
+          })
+        ])
+        
+        console.log('🏁 [DASHBOARD] All data loaded successfully')
+        
+      } catch (error) {
+        console.error('❌ [DASHBOARD] Initialization error:', error)
+        // On error, redirect to login
+        router.push('/login')
+      }
+    }
+
+    initializeDashboard()
+  }, [authChecked, authLoading, reduxUser, reduxProfile, loading, router]) // Dependencies for auth checking
 
   // Quest toggle handler
   const handleQuestToggle = async (questType: keyof QuestStatus) => {
@@ -854,41 +892,93 @@ const StudentDashboardContent = () => {
     setHelpRequest({ urgency: 'low', message: '' })
   }
 
-  if (loading) {
+  if (loading || !authChecked) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center relative overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-40">
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-pink-500/5"></div>
-          <div className="absolute inset-0" style={{
-            backgroundImage: `radial-gradient(circle at 2px 2px, rgba(99, 102, 241, 0.15) 1px, transparent 0)`,
-            backgroundSize: '32px 32px'
-          }}></div>
-        </div>
-        
-        {/* Optimized Single Loading Component */}
-        <div className="relative z-10 text-center">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
-            className="bg-white/90 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/30"
-          >
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          {/* Modern Spinning Wheel */}
+          <div className="relative w-20 h-20 mx-auto mb-8">
+            {/* Outer Ring */}
             <motion.div
+              className="absolute inset-0 border-4 border-gray-200 rounded-full"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
+            />
+            
+            {/* Spinning Arc */}
+            <motion.div
+              className="absolute inset-0 border-4 border-transparent border-t-blue-500 rounded-full"
               animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-              className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-indigo-500 flex items-center justify-center"
+              transition={{ 
+                duration: 1, 
+                repeat: Infinity, 
+                ease: "linear" 
+              }}
+            />
+            
+            {/* Inner Spinning Arc */}
+            <motion.div
+              className="absolute inset-2 border-3 border-transparent border-t-purple-500 rounded-full"
+              animate={{ rotate: -360 }}
+              transition={{ 
+                duration: 1.5, 
+                repeat: Infinity, 
+                ease: "linear" 
+              }}
+            />
+            
+            {/* Center Dot */}
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center"
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ 
+                duration: 2, 
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
             >
-              <motion.div
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 1, repeat: Infinity }}
-                className="text-white text-2xl"
-              >
-                🎓
-              </motion.div>
+              <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full" />
             </motion.div>
-            <h2 className="text-xl font-bold text-gray-800 mb-2">Loading Your Dashboard</h2>
-            <p className="text-gray-600 text-sm">Preparing your personalized learning experience...</p>
+          </div>
+          
+          {/* Loading Text */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+          >
+            <h2 className="text-2xl font-semibold text-gray-800 mb-2">
+              Loading
+            </h2>
+            <p className="text-gray-500 text-sm">
+              {!authChecked ? 'Verifying account...' : 'Preparing dashboard...'}
+            </p>
+          </motion.div>
+          
+          {/* Progress Dots */}
+          <motion.div
+            className="flex justify-center space-x-2 mt-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+          >
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                className="w-2 h-2 bg-gray-300 rounded-full"
+                animate={{ 
+                  backgroundColor: ["#d1d5db", "#3b82f6", "#d1d5db"],
+                  scale: [1, 1.2, 1]
+                }}
+                transition={{ 
+                  duration: 1.5, 
+                  repeat: Infinity, 
+                  delay: i * 0.2,
+                  ease: "easeInOut"
+                }}
+              />
+            ))}
           </motion.div>
         </div>
       </div>
@@ -934,93 +1024,92 @@ const StudentDashboardContent = () => {
           className="mb-6 sm:mb-8"
         >
           <FloatingCard className="bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white shadow-2xl border-0">
-            {/* Mobile Layout */}
+            {/* Mobile Layout - Optimized */}
             <div className="block sm:hidden">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-start justify-between mb-3">
                 {/* Avatar and Basic Info */}
-                <div className="flex items-center space-x-3">
-                  <div className="relative">
-                    <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center text-2xl backdrop-blur-sm border-2 border-white/40 shadow-lg overflow-hidden">
+                <div className="flex items-center space-x-3 flex-1 min-w-0">
+                  <div className="relative flex-shrink-0">
+                    <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center text-xl backdrop-blur-sm border-2 border-white/40 shadow-lg overflow-hidden">
                       {profile?.profile_picture_url ? (
                         <Image
                           src={profile.profile_picture_url}
                           alt={`${profile?.first_name || 'Student'}'s profile`}
-                          width={64}
-                          height={64}
+                          width={56}
+                          height={56}
                           className="w-full h-full object-cover"
                         />
                       ) : (
                         <span>{profile?.first_name ? profile.first_name.charAt(0).toUpperCase() : '👤'}</span>
                       )}
                     </div>
-                    <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs">
+                    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center text-xs">
                       👑
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h1 className="text-lg font-bold truncate">
+                    <h1 className="text-base font-bold truncate leading-tight">
                       {profile?.first_name && profile?.last_name 
                         ? `${profile.first_name} ${profile.last_name}` 
                         : 'Welcome, Student!'}
                     </h1>
                     {profile?.school?.name && (
-                      <p className="text-sm text-white/80 font-medium truncate">
+                      <p className="text-xs text-white/80 font-medium truncate mt-0.5">
                         🏫 {profile.school.name}
                       </p>
                     )}
+                    {/* Grade and Class Info - Moved under name for better space usage */}
+                    <div className="flex items-center space-x-3 mt-1">
+                      {profile?.grade_level && (
+                        <div className="flex items-center space-x-1">
+                          <span className="text-sm">📚</span>
+                          <span className="font-medium text-xs">Grade {profile.grade_level}</span>
+                        </div>
+                      )}
+                      {profile?.class_name && (
+                        <div className="flex items-center space-x-1">
+                          <span className="text-sm">🚪</span>
+                          <span className="font-medium text-xs truncate max-w-20">{profile.class_name}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
                 
-                {/* Chat and Settings Icons */}
-                <div className="flex items-center space-x-2">
+                {/* Chat and Settings Icons - Vertical Stack for Mobile */}
+                <div className="flex flex-col space-y-1 flex-shrink-0 ml-2">
                   <Button
                     onClick={() => router.push('/student/messaging')}
                     variant="ghost"
                     size="sm"
-                    className="text-white hover:bg-white/20 p-2 h-10 w-10"
+                    className="text-white hover:bg-white/20 p-1.5 h-8 w-8 rounded-lg"
                   >
-                    <MessageCircle className="h-5 w-5" />
+                    <MessageCircle className="h-4 w-4" />
                   </Button>
                   <Button
                     onClick={() => router.push('/student/settings')}
                     variant="ghost"
                     size="sm"
-                    className="text-white hover:bg-white/20 p-2 h-10 w-10"
+                    className="text-white hover:bg-white/20 p-1.5 h-8 w-8 rounded-lg"
                   >
-                    <Settings className="h-5 w-5" />
+                    <Settings className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
               
-              {/* Grade and Class Info */}
-              <div className="flex items-center justify-center space-x-6 mb-4">
-                {profile?.grade_level && (
-                  <div className="flex items-center space-x-1">
-                    <span className="text-lg">📚</span>
-                    <span className="font-medium text-sm">Grade {profile.grade_level}</span>
-                  </div>
-                )}
-                {profile?.class_name && (
-                  <div className="flex items-center space-x-1">
-                    <span className="text-lg">🚪</span>
-                    <span className="font-medium text-sm">{profile.class_name}</span>
-                  </div>
-                )}
-              </div>
-              
-              {/* Quick Stats Grid */}
-              <div className="grid grid-cols-3 gap-4 mb-4">
-                <div className="text-center bg-white/10 rounded-lg p-3">
-                  <div className="text-xl font-bold">{stats.level}</div>
-                  <div className="text-xs text-white/80">Level</div>
+              {/* Quick Stats Grid - Improved Mobile Layout */}
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <div className="text-center bg-white/15 rounded-lg p-2.5 backdrop-blur-sm border border-white/20">
+                  <div className="text-lg font-bold leading-none">{stats.level}</div>
+                  <div className="text-xs text-white/90 mt-0.5">Level</div>
                 </div>
-                <div className="text-center bg-white/10 rounded-lg p-3">
-                  <div className="text-xl font-bold">{stats.streakDays}</div>
-                  <div className="text-xs text-white/80">Streak</div>
+                <div className="text-center bg-white/15 rounded-lg p-2.5 backdrop-blur-sm border border-white/20">
+                  <div className="text-lg font-bold leading-none">{stats.streakDays}</div>
+                  <div className="text-xs text-white/90 mt-0.5">Streak</div>
                 </div>
-                <div className="text-center bg-white/10 rounded-lg p-3">
-                  <div className="text-xl font-bold">{stats.totalQuestsCompleted}</div>
-                  <div className="text-xs text-white/80">Quests</div>
+                <div className="text-center bg-white/15 rounded-lg p-2.5 backdrop-blur-sm border border-white/20">
+                  <div className="text-lg font-bold leading-none">{stats.totalQuestsCompleted}</div>
+                  <div className="text-xs text-white/90 mt-0.5">Quests</div>
                 </div>
               </div>
             </div>
@@ -1100,17 +1189,29 @@ const StudentDashboardContent = () => {
               </div>
             </div>
             
-            {/* Progress Bar */}
-            <div className="mt-4 sm:mt-6">
-              <div className="flex justify-between text-xs sm:text-sm text-white/90 mb-2">
-                <span>Progress to Level {stats.level + 1}</span>
-                <span>{stats.xp} / {stats.nextLevelXP} XP</span>
+            {/* Progress Bar - Mobile Optimized */}
+            <div className="mt-3 sm:mt-6">
+              <div className="flex justify-between items-center text-xs sm:text-sm text-white/90 mb-2">
+                <span className="font-medium">Level {stats.level + 1}</span>
+                <div className="flex items-center space-x-1">
+                  <span className="text-yellow-300">⚡</span>
+                  <span className="font-bold">{stats.xp}</span>
+                  <span className="text-white/70">/</span>
+                  <span>{stats.nextLevelXP}</span>
+                  <span className="hidden xs:inline">XP</span>
+                </div>
               </div>
-              <div className="w-full bg-white/20 rounded-full h-2 sm:h-3">
+              <div className="w-full bg-white/20 rounded-full h-2.5 sm:h-3 backdrop-blur-sm border border-white/30">
                 <div 
-                  className="bg-gradient-to-r from-yellow-400 to-orange-400 h-2 sm:h-3 rounded-full transition-all duration-1000"
+                  className="bg-gradient-to-r from-yellow-400 via-orange-400 to-yellow-500 h-2.5 sm:h-3 rounded-full transition-all duration-1000 shadow-sm"
                   style={{ width: `${Math.min((stats.xp / stats.nextLevelXP) * 100, 100)}%` }}
                 />
+              </div>
+              {/* Progress percentage for mobile */}
+              <div className="flex justify-center mt-1 sm:hidden">
+                <span className="text-xs text-white/80 font-medium">
+                  {Math.round((stats.xp / stats.nextLevelXP) * 100)}% to next level
+                </span>
               </div>
             </div>
           </FloatingCard>
@@ -1970,28 +2071,50 @@ const StudentDashboardContent = () => {
               </div>
               <div className="text-center">
                 <motion.div 
-                  className="text-5xl sm:text-8xl mb-2 sm:mb-4 inline-block cursor-pointer"
+                  className="text-5xl sm:text-8xl mb-2 sm:mb-4 inline-block cursor-pointer select-none"
                   animate={{ 
                     scale: stats.petHappiness > 80 ? [1, 1.1, 1] : 1,
                     rotate: stats.petHappiness > 90 ? [0, 5, -5, 0] : 0
                   }}
                   transition={{ duration: 2, repeat: Infinity }}
                   whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
+                  whileTap={{ 
+                    scale: 0.8,
+                    rotate: [0, -10, 10, -5, 5, 0],
+                    transition: { duration: 0.6, ease: "easeInOut" }
+                  }}
                   onClick={() => {
-                    // Pet interaction - small happiness boost
+                    // Pet interaction - small happiness boost with visual feedback
                     setStats(prev => ({
                       ...prev,
                       petHappiness: Math.min(prev.petHappiness + 1, 100)
                     }))
-                    addToast({
-                      title: "Pet Interaction",
-                      description: `${stats.petName} loves your attention! +1 happiness`,
-                      type: "success"
-                    })
+                    
+                    // Create floating heart effect
+                    const petElement = document.querySelector('.pet-container')
+                    if (petElement) {
+                      const heart = document.createElement('div')
+                      heart.innerHTML = '💖'
+                      heart.className = 'absolute text-2xl pointer-events-none animate-bounce'
+                      heart.style.left = '50%'
+                      heart.style.top = '20%'
+                      heart.style.transform = 'translateX(-50%)'
+                      heart.style.zIndex = '50'
+                      
+                      petElement.appendChild(heart)
+                      
+                      // Remove heart after animation
+                      setTimeout(() => {
+                        if (heart.parentNode) {
+                          heart.parentNode.removeChild(heart)
+                        }
+                      }, 1500)
+                    }
                   }}
                 >
-                  🐱
+                  <div className="relative pet-container">
+                    🐱
+                  </div>
                 </motion.div>
                 <div className="mb-4">
                   <div className="flex justify-between text-sm text-gray-700 mb-2">
@@ -2508,9 +2631,5 @@ const StudentDashboardContent = () => {
 }
 
 export default function StudentDashboard() {
-  return (
-    <AuthGuard requiredRole="student">
-      <StudentDashboardContent />
-    </AuthGuard>
-  )
+  return <StudentDashboardContent />
 }

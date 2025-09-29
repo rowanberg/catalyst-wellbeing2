@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { apiCache, createCacheKey } from '@/lib/utils/apiCache'
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,61 +23,37 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get user profile
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, school_id, role, grade_level')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
-    }
-
     const { searchParams } = new URL(request.url)
     const category = searchParams.get('category')
 
-    // Check cache first
-    const cacheKey = createCacheKey('achievements', { 
-      schoolId: profile.school_id, 
-      category,
-      userId: profile.id 
-    })
-    const cachedData = apiCache.get(cacheKey)
-    if (cachedData) {
-      console.log('✅ [ACHIEVEMENTS-API] Returning cached data')
-      return NextResponse.json(cachedData)
+    // Initialize achievements for user if not exists (with error handling)
+    try {
+      await supabase.rpc('initialize_student_achievements', { p_student_id: user.id })
+    } catch (initError) {
+      console.log('Achievement initialization skipped (tables may not exist yet):', initError)
     }
 
-    // Get achievements for the school with student progress
+    // Get achievement templates with student progress
     let query = supabase
-      .from('achievements')
+      .from('achievement_templates')
       .select(`
         *,
-        student_achievements(
-          current_progress,
-          target_progress,
-          progress_percentage,
-          is_completed,
-          completed_at,
-          xp_earned,
-          gems_earned
+        student_achievements!left(
+          progress,
+          is_unlocked,
+          unlocked_at,
+          is_new
         )
       `)
-      .eq('school_id', profile.school_id)
+      .eq('student_achievements.student_id', user.id)
       .eq('is_active', true)
-
-    // Filter by grade level if student
-    if (profile.role === 'student' && profile.grade_level) {
-      query = query.or(`required_grade_levels.is.null,required_grade_levels.cs.{${profile.grade_level}}`)
-    }
 
     // Add category filter
     if (category && category !== 'All') {
       query = query.eq('category', category)
     }
 
-    const { data: achievements, error } = await query.order('difficulty_level', { ascending: true })
+    const { data: achievements, error } = await query.order('rarity', { ascending: false })
 
     if (error) {
       console.error('Error fetching achievements:', error)
@@ -87,59 +62,67 @@ export async function GET(request: NextRequest) {
 
     // Process achievements to match frontend interface
     const processedAchievements = achievements?.map((achievement: any) => {
-      const studentProgress = achievement.student_achievements?.[0]
+      const studentProgress = achievement.student_achievements?.[0] || null
       
       return {
         id: achievement.id,
-        title: achievement.name,
+        title: achievement.title,
         description: achievement.description,
         category: achievement.category,
-        type: achievement.rarity === 'legendary' ? 'certificate' : 
-              achievement.rarity === 'epic' ? 'trophy' :
-              achievement.rarity === 'rare' ? 'medal' : 'badge',
+        type: achievement.type,
         rarity: achievement.rarity,
-        icon: achievement.icon_name, // Will need to map to emoji or icon
-        color: achievement.icon_color,
-        isUnlocked: studentProgress?.is_completed || false,
-        unlockedDate: studentProgress?.completed_at,
-        progress: studentProgress?.current_progress || 0,
-        maxProgress: studentProgress?.target_progress || 1,
-        requirements: [], // Will be derived from criteria_config
-        rewards: {
-          xp: achievement.xp_reward || 0,
-          gems: achievement.gem_reward || 0,
-          title: achievement.special_rewards?.find((r: any) => r.type === 'title')?.name
-        },
-        isNew: studentProgress?.completed_at && 
-               new Date(studentProgress.completed_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+        icon: achievement.icon,
+        color: achievement.color,
+        isUnlocked: studentProgress?.is_unlocked || false,
+        unlockedDate: studentProgress?.unlocked_at || null,
+        progress: studentProgress?.progress || 0,
+        maxProgress: achievement.max_progress || 1,
+        requirements: achievement.requirements || [],
+        rewards: achievement.rewards || { xp: 0, gems: 0 },
+        isNew: studentProgress?.is_new || false
       }
     }) || []
 
-    // Get user stats
-    const { data: userStats } = await supabase
-      .from('student_achievements')
-      .select('xp_earned, gems_earned, is_completed')
-      .eq('student_id', profile.id)
+    // Get achievement stats (with error handling)
+    let stats = null
+    try {
+      const { data: statsData } = await supabase
+        .from('student_achievement_stats')
+        .select('*')
+        .eq('student_id', user.id)
+        .single()
+      stats = statsData
+    } catch (statsError) {
+      console.log('Achievement stats not available yet:', statsError)
+    }
 
-    const totalXP = userStats?.reduce((sum, stat) => sum + (stat.xp_earned || 0), 0) || 0
-    const totalGems = userStats?.reduce((sum, stat) => sum + (stat.gems_earned || 0), 0) || 0
-    const unlockedCount = userStats?.filter(stat => stat.is_completed).length || 0
+    // Get current student data for additional stats (with error handling)
+    let profile = null
+    try {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('xp, gems, level, streak_days')
+        .eq('user_id', user.id)
+        .single()
+      profile = profileData
+    } catch (profileError) {
+      console.log('Profile data not available:', profileError)
+    }
 
     const responseData = { 
       achievements: processedAchievements,
       stats: {
-        totalAchievements: achievements?.length || 0,
-        unlockedAchievements: unlockedCount,
-        totalXP,
-        totalGems,
-        rank: 0, // Will be calculated from leaderboard
-        streak: 0 // Will be calculated from daily activity
+        totalAchievements: stats?.total_achievements || 0,
+        unlockedAchievements: stats?.unlocked_achievements || 0,
+        totalXP: stats?.total_xp_from_achievements || 0,
+        totalGems: stats?.total_gems_from_achievements || 0,
+        rank: stats?.school_rank || 0,
+        streak: profile?.streak_days || 0,
+        currentXP: profile?.xp || 0,
+        currentGems: profile?.gems || 0,
+        currentLevel: profile?.level || 1
       }
     }
-
-    // Cache the response for 5 minutes
-    apiCache.set(cacheKey, responseData, 5)
-    console.log('✅ [ACHIEVEMENTS-API] Data cached')
 
     return NextResponse.json(responseData)
   } catch (error) {

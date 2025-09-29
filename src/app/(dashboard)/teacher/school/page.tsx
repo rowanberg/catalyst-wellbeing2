@@ -157,68 +157,69 @@ const TeacherSchoolPage = () => {
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-indigo-500/10 to-purple-500/10" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_2px_2px,rgba(59,130,246,0.15)_1px,transparent_0)] bg-[length:32px_32px]" />
         
-        <div className="relative z-10 p-4 sm:p-6 lg:p-8">
+        <div className="relative z-10 p-3 sm:p-6 lg:p-8">
           <div className="max-w-6xl mx-auto">
             
             {/* Header */}
             <motion.div 
-              className="mb-6"
+              className="mb-4 sm:mb-6"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-2xl p-4 sm:p-6">
-                <div className="flex items-center space-x-4">
+              <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-2xl p-3 sm:p-6">
+                <div className="flex items-center space-x-3 sm:space-x-4">
                   <Button
                     onClick={() => router.back()}
                     variant="ghost"
                     size="sm"
-                    className="text-white/80 hover:text-white hover:bg-white/10 rounded-xl p-2"
+                    className="text-white/80 hover:text-white hover:bg-white/10 rounded-xl p-2 flex-shrink-0"
                   >
-                    <ArrowLeft className="h-5 w-5" />
+                    <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
                   </Button>
-                  <div className="flex items-center space-x-3">
-                    <div className="p-3 bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600 rounded-xl shadow-lg">
-                      <School className="h-6 w-6 text-white" />
+                  <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+                    <div className="p-2 sm:p-3 bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600 rounded-xl shadow-lg flex-shrink-0">
+                      <School className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                     </div>
-                    <div>
-                      <h1 className="text-xl sm:text-2xl font-bold text-white">{schoolInfo?.name}</h1>
-                      <p className="text-white/80 text-sm">School Information & Details</p>
+                    <div className="min-w-0 flex-1">
+                      <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-white truncate">{schoolInfo?.name}</h1>
+                      <p className="text-white/80 text-xs sm:text-sm hidden sm:block">School Information & Details</p>
+                      <p className="text-white/80 text-xs sm:hidden">School Info</p>
                     </div>
                   </div>
                 </div>
               </div>
             </motion.div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
               
               {/* School Overview */}
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.6, delay: 0.1 }}
-                className="lg:col-span-1 space-y-6"
+                className="lg:col-span-1 space-y-4 sm:space-y-6"
               >
                 {/* Basic Info */}
                 <Card className="bg-white/10 backdrop-blur-xl shadow-2xl border border-white/20 rounded-2xl">
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2 text-white">
-                      <Building className="h-5 w-5 text-emerald-400" />
+                  <CardHeader className="pb-3 sm:pb-6">
+                    <CardTitle className="flex items-center space-x-2 text-white text-base sm:text-lg">
+                      <Building className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-400" />
                       School Overview
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-3 sm:space-y-4 pt-0">
                     <div>
-                      <p className="text-white/60 text-sm">Principal</p>
-                      <p className="text-white font-medium">{schoolInfo?.principal_name}</p>
+                      <p className="text-white/60 text-xs sm:text-sm">Principal</p>
+                      <p className="text-white font-medium text-sm sm:text-base truncate">{schoolInfo?.principal_name}</p>
                     </div>
                     <div>
-                      <p className="text-white/60 text-sm">School Type</p>
-                      <p className="text-white font-medium">{schoolInfo?.school_type}</p>
+                      <p className="text-white/60 text-xs sm:text-sm">School Type</p>
+                      <p className="text-white font-medium text-sm sm:text-base">{schoolInfo?.school_type}</p>
                     </div>
                     <div>
-                      <p className="text-white/60 text-sm">Established</p>
-                      <p className="text-white font-medium">{schoolInfo?.established_year}</p>
+                      <p className="text-white/60 text-xs sm:text-sm">Established</p>
+                      <p className="text-white font-medium text-sm sm:text-base">{schoolInfo?.established_year}</p>
                     </div>
                     <div>
                       <p className="text-white/60 text-sm">Grade Levels</p>
@@ -235,33 +236,33 @@ const TeacherSchoolPage = () => {
 
                 {/* Quick Stats */}
                 <Card className="bg-white/10 backdrop-blur-xl shadow-2xl border border-white/20 rounded-2xl">
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2 text-white">
-                      <TrendingUp className="h-5 w-5 text-blue-400" />
+                  <CardHeader className="pb-3 sm:pb-6">
+                    <CardTitle className="flex items-center space-x-2 text-white text-base sm:text-lg">
+                      <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400" />
                       Statistics
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-3 sm:space-y-4 pt-0">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <Users className="h-4 w-4 text-blue-400" />
-                        <span className="text-white/80 text-sm">Students</span>
+                        <Users className="h-3 w-3 sm:h-4 sm:w-4 text-blue-400" />
+                        <span className="text-white/80 text-xs sm:text-sm">Students</span>
                       </div>
-                      <span className="text-white font-bold text-lg">{schoolInfo?.total_students}</span>
+                      <span className="text-white font-bold text-base sm:text-lg">{schoolInfo?.total_students}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <GraduationCap className="h-4 w-4 text-green-400" />
-                        <span className="text-white/80 text-sm">Teachers</span>
+                        <GraduationCap className="h-3 w-3 sm:h-4 sm:w-4 text-green-400" />
+                        <span className="text-white/80 text-xs sm:text-sm">Teachers</span>
                       </div>
-                      <span className="text-white font-bold text-lg">{schoolInfo?.total_teachers}</span>
+                      <span className="text-white font-bold text-base sm:text-lg">{schoolInfo?.total_teachers}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <Target className="h-4 w-4 text-purple-400" />
-                        <span className="text-white/80 text-sm">Student-Teacher Ratio</span>
+                        <Target className="h-3 w-3 sm:h-4 sm:w-4 text-purple-400" />
+                        <span className="text-white/80 text-xs sm:text-sm">Ratio</span>
                       </div>
-                      <span className="text-white font-bold text-lg">
+                      <span className="text-white font-bold text-base sm:text-lg">
                         {schoolInfo?.student_teacher_ratio || Math.round((schoolInfo?.total_students || 0) / (schoolInfo?.total_teachers || 1))}:1
                       </span>
                     </div>
@@ -274,53 +275,53 @@ const TeacherSchoolPage = () => {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
-                className="lg:col-span-2 space-y-6"
+                className="lg:col-span-2 space-y-4 sm:space-y-6"
               >
                 
                 {/* Contact Information */}
                 <Card className="bg-white/10 backdrop-blur-xl shadow-2xl border border-white/20 rounded-2xl">
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2 text-white">
-                      <Phone className="h-5 w-5 text-blue-400" />
+                  <CardHeader className="pb-3 sm:pb-6">
+                    <CardTitle className="flex items-center space-x-2 text-white text-base sm:text-lg">
+                      <Phone className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400" />
                       Contact Information
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-4">
-                      <div className="flex items-start space-x-3">
-                        <MapPin className="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-white/60 text-sm">Address</p>
-                          <p className="text-white">
+                  <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-0">
+                    <div className="space-y-3 sm:space-y-4">
+                      <div className="flex items-start space-x-2 sm:space-x-3">
+                        <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-red-400 mt-0.5 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-white/60 text-xs sm:text-sm">Address</p>
+                          <p className="text-white text-sm sm:text-base">
                             {schoolInfo?.address}<br />
                             {schoolInfo?.city}, {schoolInfo?.state} {schoolInfo?.postal_code}
                           </p>
                         </div>
                       </div>
                       
-                      <div className="flex items-center space-x-3">
-                        <Phone className="h-5 w-5 text-green-400 flex-shrink-0" />
-                        <div>
-                          <p className="text-white/60 text-sm">Phone</p>
-                          <p className="text-white">{schoolInfo?.phone}</p>
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <Phone className="h-4 w-4 sm:h-5 sm:w-5 text-green-400 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-white/60 text-xs sm:text-sm">Phone</p>
+                          <p className="text-white text-sm sm:text-base">{schoolInfo?.phone}</p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="space-y-4">
-                      <div className="flex items-center space-x-3">
-                        <Mail className="h-5 w-5 text-blue-400 flex-shrink-0" />
-                        <div>
-                          <p className="text-white/60 text-sm">Email</p>
-                          <p className="text-white">{schoolInfo?.email}</p>
+                    <div className="space-y-3 sm:space-y-4">
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-white/60 text-xs sm:text-sm">Email</p>
+                          <p className="text-white text-sm sm:text-base truncate">{schoolInfo?.email}</p>
                         </div>
                       </div>
                       
-                      <div className="flex items-center space-x-3">
-                        <Globe className="h-5 w-5 text-purple-400 flex-shrink-0" />
-                        <div>
-                          <p className="text-white/60 text-sm">Website</p>
-                          <p className="text-blue-300">{schoolInfo?.website}</p>
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <Globe className="h-4 w-4 sm:h-5 sm:w-5 text-purple-400 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-white/60 text-xs sm:text-sm">Website</p>
+                          <p className="text-blue-300 text-sm sm:text-base truncate">{schoolInfo?.website}</p>
                         </div>
                       </div>
                     </div>

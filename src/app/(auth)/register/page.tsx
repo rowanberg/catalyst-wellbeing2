@@ -24,7 +24,7 @@ const registerSchema = z.object({
   lastName: z.string().min(2, 'Last name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  role: z.enum(['student', 'parent', 'teacher']),
+  role: z.enum(['student', 'parent', 'teacher', 'admin']),
   gradeLevel: z.string().optional(),
   className: z.string().optional(),
   classIds: z.array(z.string()).optional(),
@@ -42,6 +42,8 @@ export default function RegisterPage() {
   const [schoolVerified, setSchoolVerified] = useState(false)
   const [schoolError, setSchoolError] = useState('')
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [googleData, setGoogleData] = useState<any>(null)
+  const [isGoogleRegistration, setIsGoogleRegistration] = useState(false)
   
   // Parent-specific state
   const [children, setChildren] = useState<Array<{
@@ -85,6 +87,34 @@ export default function RegisterPage() {
 
   const schoolId = watch('schoolId')
   const selectedRole = watch('role')
+
+  // Check for Google OAuth data on component mount
+  useEffect(() => {
+    const storedGoogleData = sessionStorage.getItem('google_oauth_data')
+    if (storedGoogleData) {
+      try {
+        const googleUserData = JSON.parse(storedGoogleData)
+        setGoogleData(googleUserData)
+        setIsGoogleRegistration(true)
+        
+        // Pre-fill form with Google data
+        setValue('firstName', googleUserData.firstName || '')
+        setValue('lastName', googleUserData.lastName || '')
+        setValue('email', googleUserData.email || '')
+        
+        console.log('📝 Pre-filled form with Google OAuth data:', googleUserData)
+        
+        addToast({
+          type: 'success',
+          title: '✨ Information Pre-filled',
+          description: 'We\'ve filled in your name and email from Google. Please complete the remaining fields.'
+        })
+      } catch (error) {
+        console.error('Error parsing Google OAuth data:', error)
+        sessionStorage.removeItem('google_oauth_data')
+      }
+    }
+  }, [setValue, addToast])
 
   // Fetch available grade levels when school is verified
   useEffect(() => {
@@ -418,16 +448,52 @@ export default function RegisterPage() {
     setSubmitError(null)
     
     try {
-      const result = await dispatch(signUp({
-        schoolId: data.schoolId,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        password: data.password,
-        role: data.role,
-        gradeLevel: data.gradeLevel,
-        className: data.className,
-      })).unwrap()
+      let result
+      
+      if (isGoogleRegistration && googleData) {
+        // For Google OAuth users, create profile with additional password for security
+        console.log('🔄 Creating profile for Google OAuth user with additional password...')
+        
+        const response = await fetch('/api/auth/google-register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: googleData.userId,
+            schoolId: data.schoolId,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+            password: data.password, // Include password for additional security
+            role: data.role,
+            gradeLevel: data.gradeLevel,
+            className: data.className,
+            avatarUrl: googleData.avatarUrl,
+            selectedGrades: data.role === 'teacher' ? selectedGrades : undefined,
+            children: data.role === 'parent' ? children : undefined
+          })
+        })
+        
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to complete Google registration')
+        }
+        
+        result = await response.json()
+      } else {
+        // Regular email/password registration
+        result = await dispatch(signUp({
+          schoolId: data.schoolId,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          password: data.password,
+          role: data.role,
+          gradeLevel: data.gradeLevel,
+          className: data.className,
+        })).unwrap()
+      }
 
       if (result.user) {
         // If teacher, assign grade levels
@@ -538,7 +604,39 @@ export default function RegisterPage() {
           }
         }
 
-        router.push('/login?message=Registration successful! Please check your email to verify your account.')
+        // Clear Google OAuth data if it was a Google registration
+        if (isGoogleRegistration) {
+          sessionStorage.removeItem('google_oauth_data')
+          
+          addToast({
+            type: 'success',
+            title: '🎉 Registration Complete!',
+            description: 'Your Google account has been successfully registered. Redirecting to your dashboard...'
+          })
+          
+          // Redirect to appropriate dashboard based on role
+          let dashboardPath = '/student'
+          switch (data.role) {
+            case 'admin':
+              dashboardPath = '/admin'
+              break
+            case 'teacher':
+              dashboardPath = '/teacher'
+              break
+            case 'parent':
+              dashboardPath = '/parent'
+              break
+            case 'student':
+              dashboardPath = '/student'
+              break
+          }
+          
+          setTimeout(() => {
+            router.push(dashboardPath)
+          }, 1500)
+        } else {
+          router.push('/login?message=Registration successful! Please check your email to verify your account.')
+        }
       }
     } catch (error) {
       const handledError = handleError(error)
@@ -680,24 +778,66 @@ export default function RegisterPage() {
                 <p className="text-red-300 text-sm">{schoolError}</p>
               )}
 
+              {/* Google OAuth Info Banner */}
+              {isGoogleRegistration && (
+                <div className="bg-gradient-to-r from-blue-500/20 to-indigo-500/20 border border-blue-400/30 rounded-xl p-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <svg className="w-6 h-6 text-blue-400" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-white font-medium text-sm">Connected with Google</p>
+                      <p className="text-white/70 text-xs">Your name and email have been pre-filled. Please create a password to secure your account.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Name Fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>First Name</Label>
+                  <div className="flex items-center gap-2">
+                    <Label>First Name</Label>
+                    {isGoogleRegistration && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        ✓ Google
+                      </span>
+                    )}
+                  </div>
                   <Input
                     {...register('firstName')}
                     type="text"
-                    className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent backdrop-blur-sm transition-all duration-200"
+                    className={`w-full pl-10 pr-4 py-3 bg-white/10 border rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:border-transparent backdrop-blur-sm transition-all duration-200 ${
+                      isGoogleRegistration 
+                        ? 'border-blue-400/50 focus:ring-blue-400' 
+                        : 'border-white/20 focus:ring-emerald-400'
+                    }`}
                     placeholder="First name"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Last Name</Label>
+                  <div className="flex items-center gap-2">
+                    <Label>Last Name</Label>
+                    {isGoogleRegistration && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        ✓ Google
+                      </span>
+                    )}
+                  </div>
                   <Input
                     {...register('lastName')}
                     type="text"
-                    className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent backdrop-blur-sm transition-all duration-200"
+                    className={`w-full pl-10 pr-4 py-3 bg-white/10 border rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:border-transparent backdrop-blur-sm transition-all duration-200 ${
+                      isGoogleRegistration 
+                        ? 'border-blue-400/50 focus:ring-blue-400' 
+                        : 'border-white/20 focus:ring-emerald-400'
+                    }`}
                     placeholder="Last name"
                   />
                 </div>
@@ -711,12 +851,24 @@ export default function RegisterPage() {
 
               {/* Email Field */}
               <div className="space-y-2">
-                <Label>Email Address</Label>
+                <div className="flex items-center gap-2">
+                  <Label>Email Address</Label>
+                  {isGoogleRegistration && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      ✓ Google
+                    </span>
+                  )}
+                </div>
                 <Input
                   {...register('email')}
                   type="email"
-                  className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent backdrop-blur-sm transition-all duration-200"
+                  className={`w-full pl-10 pr-4 py-3 bg-white/10 border rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:border-transparent backdrop-blur-sm transition-all duration-200 ${
+                    isGoogleRegistration 
+                      ? 'border-blue-400/50 focus:ring-blue-400' 
+                      : 'border-white/20 focus:ring-emerald-400'
+                  }`}
                   placeholder="Enter your email"
+                  readOnly={isGoogleRegistration}
                 />
               </div>
               {errors.email && (
@@ -725,20 +877,38 @@ export default function RegisterPage() {
 
               {/* Password Field */}
               <div className="space-y-2">
-                <Label>Password</Label>
-                <Input
-                  {...register('password')}
-                  type={showPassword ? 'text' : 'password'}
-                  className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent backdrop-blur-sm transition-all duration-200"
-                  placeholder="Create a password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-white/60 hover:text-white/80 transition-colors"
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
+                <div className="flex items-center gap-2">
+                  <Label>Password</Label>
+                  {isGoogleRegistration && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                      Required
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <Input
+                    {...register('password')}
+                    type={showPassword ? 'text' : 'password'}
+                    className={`w-full pl-10 pr-12 py-3 bg-white/10 border rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:border-transparent backdrop-blur-sm transition-all duration-200 ${
+                      isGoogleRegistration 
+                        ? 'border-orange-400/50 focus:ring-orange-400' 
+                        : 'border-white/20 focus:ring-emerald-400'
+                    }`}
+                    placeholder={isGoogleRegistration ? "Create a secure password for your account" : "Create a password"}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-white/60 hover:text-white/80 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+                {isGoogleRegistration && (
+                  <p className="text-orange-200 text-xs">
+                    💡 This password will be used for account security and alternative login methods.
+                  </p>
+                )}
               </div>
               {errors.password && (
                 <p className="text-red-300 text-sm">{errors.password?.message}</p>

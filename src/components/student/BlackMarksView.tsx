@@ -8,7 +8,6 @@ import {
   Clock, 
   CheckCircle, 
   FileText, 
-  Upload, 
   MessageSquare, 
   User, 
   Target, 
@@ -17,10 +16,14 @@ import {
   Shield,
   AlertCircle,
   Send,
-  Eye,
-  Download
+  TrendingUp,
+  Award,
+  Sparkles,
+  Filter,
+  Search,
+  ChevronDown
 } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
@@ -28,6 +31,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
+import { Input } from '@/components/ui/input'
 
 interface BlackMark {
   id: string
@@ -57,31 +61,34 @@ interface BlackMarkSubmission {
 }
 
 const CATEGORIES = [
-  { value: 'behavioral', label: 'Behavioral', icon: Users, color: 'bg-red-100 text-red-800', description: 'Issues related to classroom behavior and interactions' },
-  { value: 'academic', label: 'Academic', icon: BookOpen, color: 'bg-blue-100 text-blue-800', description: 'Academic performance and assignment issues' },
-  { value: 'attendance', label: 'Attendance', icon: Clock, color: 'bg-yellow-100 text-yellow-800', description: 'Attendance and punctuality concerns' },
-  { value: 'conduct', label: 'Conduct', icon: Shield, color: 'bg-purple-100 text-purple-800', description: 'General conduct and school policy violations' },
-  { value: 'safety', label: 'Safety', icon: AlertTriangle, color: 'bg-orange-100 text-orange-800', description: 'Safety violations and dangerous behavior' }
+  { value: 'behavioral', label: 'Behavioral', icon: Users, color: 'bg-red-100 text-red-800' },
+  { value: 'academic', label: 'Academic', icon: BookOpen, color: 'bg-blue-100 text-blue-800' },
+  { value: 'attendance', label: 'Attendance', icon: Clock, color: 'bg-yellow-100 text-yellow-800' },
+  { value: 'conduct', label: 'Conduct', icon: Shield, color: 'bg-purple-100 text-purple-800' },
+  { value: 'safety', label: 'Safety', icon: AlertTriangle, color: 'bg-orange-100 text-orange-800' }
 ]
 
 const REMEDY_TYPES = [
-  { value: 'assignment', label: 'Written Assignment', icon: FileText, description: 'Complete a specific written assignment' },
-  { value: 'community_service', label: 'Community Service', icon: Users, description: 'Perform community service hours' },
-  { value: 'reflection', label: 'Reflection Essay', icon: MessageSquare, description: 'Write a reflective essay about the incident' },
-  { value: 'apology', label: 'Formal Apology', icon: MessageSquare, description: 'Write and deliver a formal apology' },
-  { value: 'behavior_plan', label: 'Behavior Plan', icon: Target, description: 'Create and follow a behavior improvement plan' },
-  { value: 'parent_meeting', label: 'Parent Meeting', icon: Users, description: 'Attend a meeting with parents and teacher' },
-  { value: 'detention', label: 'Detention', icon: Clock, description: 'Serve detention time' },
-  { value: 'counseling', label: 'Counseling Session', icon: MessageSquare, description: 'Attend counseling sessions' }
+  { value: 'assignment', label: 'Written Assignment', icon: FileText },
+  { value: 'community_service', label: 'Community Service', icon: Users },
+  { value: 'reflection', label: 'Reflection Essay', icon: MessageSquare },
+  { value: 'apology', label: 'Formal Apology', icon: MessageSquare },
+  { value: 'behavior_plan', label: 'Behavior Plan', icon: Target },
+  { value: 'parent_meeting', label: 'Parent Meeting', icon: Users },
+  { value: 'detention', label: 'Detention', icon: Clock },
+  { value: 'counseling', label: 'Counseling Session', icon: MessageSquare }
 ]
 
 export default function BlackMarksView() {
   const [blackMarks, setBlackMarks] = useState<BlackMark[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('all')
-  const [selectedBlackMark, setSelectedBlackMark] = useState<BlackMark | null>(null)
   const [submissionText, setSubmissionText] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState('all')
+  const [showFilters, setShowFilters] = useState(false)
+  const [selectedBlackMark, setSelectedBlackMark] = useState<BlackMark | null>(null)
 
   useEffect(() => {
     fetchBlackMarks()
@@ -178,107 +185,278 @@ export default function BlackMarksView() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center"
+        >
+          <div className="relative w-16 h-16 mx-auto mb-4">
+            <motion.div
+              className="absolute inset-0 border-4 border-blue-200 rounded-full"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            />
+            <motion.div
+              className="absolute inset-2 border-4 border-transparent border-t-blue-500 rounded-full"
+              animate={{ rotate: -360 }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+            />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">Loading Records</h3>
+          <p className="text-gray-600 text-sm">Fetching your disciplinary records...</p>
+        </motion.div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">My Black Marks</h2>
-        <p className="text-gray-600">
-          Track your disciplinary records and complete remedial actions to resolve them
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-3 sm:p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Modern Header with Glass Effect */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center bg-white/80 backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-xl border border-white/20"
+        >
+          <div className="flex items-center justify-center mb-4">
+            <motion.div
+              animate={{ rotate: [0, 5, -5, 0] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="w-16 h-16 bg-gradient-to-r from-red-500 to-orange-500 rounded-2xl flex items-center justify-center mr-4"
+            >
+              <Shield className="w-8 h-8 text-white" />
+            </motion.div>
+            <div className="text-left">
+              <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                Disciplinary Records
+              </h1>
+              <p className="text-gray-600 text-sm sm:text-base">
+                Track and resolve your academic conduct records
+              </p>
+            </div>
+          </div>
+        </motion.div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-gradient-to-r from-red-50 to-red-100 border-red-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-red-700">Active Black Marks</p>
-                <p className="text-2xl font-bold text-red-800">{activeCount}</p>
-                <p className="text-xs text-red-600">Need immediate attention</p>
-              </div>
-              <AlertTriangle className="h-8 w-8 text-red-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-700">Resolved</p>
-                <p className="text-2xl font-bold text-green-800">{resolvedCount}</p>
-                <p className="text-xs text-green-600">Successfully completed</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-700">Resolution Rate</p>
-                <p className="text-2xl font-bold text-blue-800">
-                  {totalCount > 0 ? Math.round((resolvedCount / totalCount) * 100) : 0}%
-                </p>
-                <Progress 
-                  value={totalCount > 0 ? (resolvedCount / totalCount) * 100 : 0} 
-                  className="mt-1 h-2"
+        {/* Enhanced Stats Overview with Modern Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="group"
+          >
+            <Card className="bg-gradient-to-br from-red-500 to-red-600 text-white border-0 shadow-xl hover:shadow-2xl transition-all duration-300 group-hover:scale-105">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <AlertTriangle className="h-5 w-5" />
+                      <p className="text-sm font-medium text-red-100">Active Issues</p>
+                    </div>
+                    <p className="text-3xl sm:text-4xl font-bold mb-1">{activeCount}</p>
+                    <p className="text-xs text-red-100">Require attention</p>
+                  </div>
+                  <motion.div
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center"
+                  >
+                    <AlertTriangle className="h-6 w-6" />
+                  </motion.div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+          
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="group"
+          >
+            <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white border-0 shadow-xl hover:shadow-2xl transition-all duration-300 group-hover:scale-105">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <CheckCircle className="h-5 w-5" />
+                      <p className="text-sm font-medium text-green-100">Resolved</p>
+                    </div>
+                    <p className="text-3xl sm:text-4xl font-bold mb-1">{resolvedCount}</p>
+                    <p className="text-xs text-green-100">Successfully completed</p>
+                  </div>
+                  <motion.div
+                    animate={{ rotate: [0, 360] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                    className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center"
+                  >
+                    <Award className="h-6 w-6" />
+                  </motion.div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+          
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+            className="group sm:col-span-2 lg:col-span-1"
+          >
+            <Card className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-0 shadow-xl hover:shadow-2xl transition-all duration-300 group-hover:scale-105">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <TrendingUp className="h-5 w-5" />
+                      <p className="text-sm font-medium text-blue-100">Success Rate</p>
+                    </div>
+                    <p className="text-3xl sm:text-4xl font-bold mb-2">
+                      {totalCount > 0 ? Math.round((resolvedCount / totalCount) * 100) : 0}%
+                    </p>
+                    <div className="w-full bg-white/20 rounded-full h-2 mb-1">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${totalCount > 0 ? (resolvedCount / totalCount) * 100 : 0}%` }}
+                        transition={{ duration: 1.5, ease: "easeOut" }}
+                        className="bg-white h-2 rounded-full"
+                      />
+                    </div>
+                    <p className="text-xs text-blue-100">Resolution progress</p>
+                  </div>
+                  <motion.div
+                    animate={{ y: [0, -5, 0] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center"
+                  >
+                    <Sparkles className="h-6 w-6" />
+                  </motion.div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+
+        {/* Modern Search and Filter Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="bg-white/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 shadow-lg border border-white/20"
+        >
+          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between mb-4">
+            <div className="flex-1 w-full sm:max-w-md">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search records..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-white/50 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-              <Target className="h-8 w-8 text-blue-500" />
             </div>
-          </CardContent>
-        </Card>
-      </div>
+            
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              className="bg-white/50 border-gray-200 hover:bg-white/80 rounded-xl"
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filters
+              <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+            </Button>
+          </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="all">All ({totalCount})</TabsTrigger>
-          <TabsTrigger value="active">Active ({activeCount})</TabsTrigger>
-          <TabsTrigger value="in_progress">In Progress ({blackMarks.filter(bm => bm.status === 'in_progress').length})</TabsTrigger>
-          <TabsTrigger value="resolved">Resolved ({resolvedCount})</TabsTrigger>
-        </TabsList>
+          <AnimatePresence>
+            {showFilters && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="border-t border-gray-200 pt-4"
+              >
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {CATEGORIES.map((category) => (
+                    <Button
+                      key={category.value}
+                      variant={selectedCategory === category.value ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedCategory(selectedCategory === category.value ? 'all' : category.value)}
+                      className="justify-start text-xs"
+                    >
+                      <category.icon className="h-3 w-3 mr-2" />
+                      {category.label}
+                    </Button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
 
-        <TabsContent value={activeTab} className="space-y-4">
-          {filteredBlackMarks.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {activeTab === 'all' ? 'No Black Marks' : `No ${activeTab.replace('_', ' ')} Black Marks`}
+        {/* Modern Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 bg-white/80 backdrop-blur-xl rounded-2xl p-1 shadow-lg border border-white/20">
+              <TabsTrigger value="all" className="rounded-xl text-xs sm:text-sm">
+                All <span className="ml-1 px-1.5 py-0.5 bg-gray-100 rounded-full text-xs">{totalCount}</span>
+              </TabsTrigger>
+              <TabsTrigger value="active" className="rounded-xl text-xs sm:text-sm">
+                Active <span className="ml-1 px-1.5 py-0.5 bg-red-100 text-red-800 rounded-full text-xs">{activeCount}</span>
+              </TabsTrigger>
+              <TabsTrigger value="in_progress" className="rounded-xl text-xs sm:text-sm">
+                Progress <span className="ml-1 px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded-full text-xs">{blackMarks.filter(bm => bm.status === 'in_progress').length}</span>
+              </TabsTrigger>
+              <TabsTrigger value="resolved" className="rounded-xl text-xs sm:text-sm">
+                Resolved <span className="ml-1 px-1.5 py-0.5 bg-green-100 text-green-800 rounded-full text-xs">{resolvedCount}</span>
+              </TabsTrigger>
+            </TabsList>
+          </motion.div>
+
+          <TabsContent value={activeTab} className="space-y-4 mt-6">
+            {filteredBlackMarks.length === 0 ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 sm:p-12 text-center shadow-xl border border-white/20"
+              >
+                <motion.div
+                  animate={{ rotate: [0, 10, -10, 0] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="w-20 h-20 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-6"
+                >
+                  <CheckCircle className="h-10 w-10 text-white" />
+                </motion.div>
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">
+                  {activeTab === 'all' ? 'No Records Found' : `No ${activeTab.replace('_', ' ')} Records`}
                 </h3>
-                <p className="text-gray-600">
+                <p className="text-gray-600 text-sm sm:text-base max-w-md mx-auto">
                   {activeTab === 'all' 
                     ? "Great job! You don't have any black marks."
                     : `You don't have any ${activeTab.replace('_', ' ')} black marks.`
                   }
                 </p>
-              </CardContent>
-            </Card>
-          ) : (
-            filteredBlackMarks.map((blackMark) => {
-              const StatusIcon = getStatusIcon(blackMark.status)
-              const category = CATEGORIES.find(cat => cat.value === blackMark.category)
-              const remedyType = REMEDY_TYPES.find(rt => rt.value === blackMark.remedy_type)
-              const isOverdue = blackMark.remedy_due_date && new Date(blackMark.remedy_due_date) < new Date() && blackMark.status !== 'resolved'
-              
-              return (
-                <motion.div
-                  key={blackMark.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`bg-white rounded-lg border-2 p-6 hover:shadow-lg transition-all ${
+              </motion.div>
+            ) : (
+              filteredBlackMarks.map((blackMark, index) => {
+                const StatusIcon = getStatusIcon(blackMark.status)
+                const category = CATEGORIES.find(cat => cat.value === blackMark.category)
+                const remedyType = REMEDY_TYPES.find(rt => rt.value === blackMark.remedy_type)
+                const isOverdue = blackMark.remedy_due_date && new Date(blackMark.remedy_due_date) < new Date() && blackMark.status !== 'resolved'
+                
+                return (
+                  <motion.div
+                    key={blackMark.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className={`group bg-white/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 shadow-lg border border-white/20 hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] ${
                     isOverdue ? 'border-red-300 bg-red-50' : 'border-gray-200'
                   }`}
                 >
@@ -455,6 +633,7 @@ export default function BlackMarksView() {
           )}
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   )
 }

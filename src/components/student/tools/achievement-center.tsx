@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -30,8 +30,16 @@ import {
   Clock,
   Settings,
   Share2,
-  Download
+  Download,
+  Filter,
+  Search,
+  ChevronDown,
+  Flame,
+  Gem,
+  Shield,
+  Palette
 } from 'lucide-react'
+import { Input } from '@/components/ui/input'
 
 interface Achievement {
   id: string
@@ -79,13 +87,18 @@ export function AchievementCenter({ onBack }: { onBack: () => void }) {
   const [milestones, setMilestones] = useState<Milestone[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>('All')
   const [loading, setLoading] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
   const [stats, setStats] = useState({
     totalAchievements: 0,
     unlockedAchievements: 0,
     totalXP: 0,
     totalGems: 0,
     rank: 0,
-    streak: 0
+    streak: 0,
+    currentXP: 0,
+    currentGems: 0,
+    currentLevel: 1
   })
 
   const categories = [
@@ -147,24 +160,24 @@ export function AchievementCenter({ onBack }: { onBack: () => void }) {
 
   const getRarityColor = (rarity: string) => {
     switch (rarity) {
-      case 'common': return 'bg-gray-500/20 text-gray-300 border-gray-400/30'
-      case 'rare': return 'bg-blue-500/20 text-blue-300 border-blue-400/30'
-      case 'epic': return 'bg-purple-500/20 text-purple-300 border-purple-400/30'
-      case 'legendary': return 'bg-yellow-500/20 text-yellow-300 border-yellow-400/30'
-      default: return 'bg-gray-500/20 text-gray-300 border-gray-400/30'
+      case 'common': return 'bg-gray-100 text-gray-700 border-gray-300'
+      case 'rare': return 'bg-blue-100 text-blue-700 border-blue-300'
+      case 'epic': return 'bg-purple-100 text-purple-700 border-purple-300'
+      case 'legendary': return 'bg-yellow-100 text-yellow-800 border-yellow-300'
+      default: return 'bg-gray-100 text-gray-700 border-gray-300'
     }
   }
 
   const getCategoryColor = (category: string) => {
     const cat = categories.find(c => c.id === category)
     switch (cat?.color) {
-      case 'blue': return 'bg-blue-500/20 text-blue-300 border-blue-400/30'
-      case 'green': return 'bg-green-500/20 text-green-300 border-green-400/30'
-      case 'pink': return 'bg-pink-500/20 text-pink-300 border-pink-400/30'
-      case 'purple': return 'bg-purple-500/20 text-purple-300 border-purple-400/30'
-      case 'yellow': return 'bg-yellow-500/20 text-yellow-300 border-yellow-400/30'
-      case 'red': return 'bg-red-500/20 text-red-300 border-red-400/30'
-      default: return 'bg-gray-500/20 text-gray-300 border-gray-400/30'
+      case 'blue': return 'bg-blue-100 text-blue-700 border-blue-300'
+      case 'green': return 'bg-green-100 text-green-700 border-green-300'
+      case 'pink': return 'bg-pink-100 text-pink-700 border-pink-300'
+      case 'purple': return 'bg-purple-100 text-purple-700 border-purple-300'
+      case 'yellow': return 'bg-yellow-100 text-yellow-800 border-yellow-300'
+      case 'red': return 'bg-red-100 text-red-700 border-red-300'
+      default: return 'bg-gray-100 text-gray-700 border-gray-300'
     }
   }
 
@@ -178,152 +191,197 @@ export function AchievementCenter({ onBack }: { onBack: () => void }) {
     }
   }
 
-  const filteredAchievements = achievements.filter(achievement => 
-    selectedCategory === 'All' || achievement.category === selectedCategory
-  )
+  const filteredAchievements = achievements.filter(achievement => {
+    const matchesCategory = selectedCategory === 'All' || achievement.category === selectedCategory
+    const matchesSearch = searchQuery === '' || 
+      achievement.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      achievement.description.toLowerCase().includes(searchQuery.toLowerCase())
+    return matchesCategory && matchesSearch
+  })
 
   const renderAchievements = () => (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Stats Overview */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <motion.div
-          className="p-4 rounded-2xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-400/20 backdrop-blur-sm"
+          className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white/90 backdrop-blur-xl border border-amber-200 shadow-lg"
           whileHover={{ scale: 1.02 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
         >
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-yellow-500/20 rounded-lg">
-              <Trophy className="h-5 w-5 text-yellow-300" />
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="p-2 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg shadow-sm">
+              <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
             </div>
-            <div>
-              <p className="text-white/90 font-bold text-lg">{stats.unlockedAchievements}/{stats.totalAchievements}</p>
-              <p className="text-white/60 text-xs">Achievements</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-gray-900 font-bold text-sm sm:text-lg truncate">{stats.unlockedAchievements}/{stats.totalAchievements}</p>
+              <p className="text-gray-600 text-xs">Achievements</p>
             </div>
           </div>
         </motion.div>
 
         <motion.div
-          className="p-4 rounded-2xl bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-400/20 backdrop-blur-sm"
+          className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white/90 backdrop-blur-xl border border-blue-200 shadow-lg"
           whileHover={{ scale: 1.02 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
         >
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-500/20 rounded-lg">
-              <Zap className="h-5 w-5 text-blue-300" />
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shadow-sm">
+              <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
             </div>
-            <div>
-              <p className="text-white/90 font-bold text-lg">{stats.totalXP.toLocaleString()}</p>
-              <p className="text-white/60 text-xs">Total XP</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-gray-900 font-bold text-sm sm:text-lg truncate">{stats.totalXP.toLocaleString()}</p>
+              <p className="text-gray-600 text-xs">Total XP</p>
             </div>
           </div>
         </motion.div>
 
         <motion.div
-          className="p-4 rounded-2xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-400/20 backdrop-blur-sm"
+          className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white/90 backdrop-blur-xl border border-emerald-200 shadow-lg"
           whileHover={{ scale: 1.02 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
         >
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-green-500/20 rounded-lg">
-              <Gift className="h-5 w-5 text-green-300" />
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="p-2 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg shadow-sm">
+              <Gem className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
             </div>
-            <div>
-              <p className="text-white/90 font-bold text-lg">{stats.totalGems}</p>
-              <p className="text-white/60 text-xs">Gems</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-gray-900 font-bold text-sm sm:text-lg truncate">{stats.totalGems}</p>
+              <p className="text-gray-600 text-xs">Gems</p>
             </div>
           </div>
         </motion.div>
 
         <motion.div
-          className="p-4 rounded-2xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-400/20 backdrop-blur-sm"
+          className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white/90 backdrop-blur-xl border border-purple-200 shadow-lg lg:col-span-1 col-span-2"
           whileHover={{ scale: 1.02 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
         >
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-purple-500/20 rounded-lg">
-              <TrendingUp className="h-5 w-5 text-purple-300" />
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg shadow-sm">
+              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
             </div>
-            <div>
-              <p className="text-white/90 font-bold text-lg">#{stats.rank}</p>
-              <p className="text-white/60 text-xs">School Rank</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-gray-900 font-bold text-sm sm:text-lg truncate">#{stats.rank || 'N/A'}</p>
+              <p className="text-gray-600 text-xs">School Rank</p>
             </div>
           </div>
         </motion.div>
       </div>
 
-      {/* Category Filter */}
-      <div className="flex space-x-3 overflow-x-auto pb-2">
-        {categories.map((category) => {
-          const Icon = category.icon
-          return (
-            <Button
-              key={category.id}
-              onClick={() => setSelectedCategory(category.id)}
-              className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm transition-all flex items-center space-x-2 ${
-                selectedCategory === category.id
-                  ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white'
-                  : 'bg-white/10 text-white/70 hover:text-white hover:bg-white/20'
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-              <span>{category.label}</span>
-            </Button>
-          )
-        })}
+      {/* Search and Filter Section */}
+      <div className="bg-white/90 backdrop-blur-xl rounded-2xl p-4 shadow-lg border border-gray-200/50 space-y-4">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search achievements..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 pr-4 py-2 bg-gray-50 border-gray-200 rounded-xl text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+
+        {/* Category Filter */}
+        <div className="flex flex-wrap gap-2 sm:gap-3">
+          {categories.map((category) => {
+            const Icon = category.icon
+            return (
+              <Button
+                key={category.id}
+                onClick={() => setSelectedCategory(category.id)}
+                size="sm"
+                className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center space-x-1.5 ${
+                  selectedCategory === category.id
+                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900'
+                }`}
+              >
+                <Icon className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">{category.label}</span>
+                <span className="sm:hidden">{category.label.slice(0, 4)}</span>
+              </Button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Achievements Grid */}
       {loading ? (
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Trophy className="h-8 w-8 text-white/40 animate-pulse" />
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="bg-white/90 backdrop-blur-xl rounded-2xl p-8 sm:p-12 text-center shadow-lg border border-gray-200/50"
+        >
+          <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <Trophy className="h-8 w-8 text-white animate-pulse" />
           </div>
-          <p className="text-white/60">Loading achievements...</p>
-        </div>
+          <p className="text-gray-700 font-medium">Loading achievements...</p>
+          <p className="text-gray-500 text-sm mt-1">Getting your progress ready</p>
+        </motion.div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredAchievements.map((achievement) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {filteredAchievements.map((achievement, index) => (
           <motion.div
             key={achievement.id}
-            className={`p-6 rounded-2xl border backdrop-blur-sm transition-all ${
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+            className={`group p-4 sm:p-6 rounded-2xl border shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.02] ${
               achievement.isUnlocked 
-                ? 'bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-yellow-400/20' 
-                : 'bg-white/10 border-white/20 hover:bg-white/15'
+                ? 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200' 
+                : 'bg-white/90 backdrop-blur-xl border-gray-200'
             }`}
-            whileHover={{ scale: 1.02, y: -2 }}
           >
             <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className={`p-3 rounded-xl text-2xl ${
-                  achievement.isUnlocked ? 'bg-yellow-500/20' : 'bg-white/10'
+              <div className="flex items-center space-x-3 flex-1 min-w-0">
+                <div className={`p-2.5 sm:p-3 rounded-xl text-xl sm:text-2xl shadow-sm ${
+                  achievement.isUnlocked 
+                    ? 'bg-gradient-to-br from-amber-400 to-orange-500' 
+                    : 'bg-gray-200'
                 }`}>
-                  {achievement.isUnlocked ? achievement.icon : '🔒'}
+                  <span className="block">
+                    {achievement.isUnlocked ? achievement.icon : '🔒'}
+                  </span>
                 </div>
-                <div className="flex-1">
-                  <h3 className={`font-bold text-sm ${
-                    achievement.isUnlocked ? 'text-white/90' : 'text-white/60'
+                <div className="flex-1 min-w-0">
+                  <h3 className={`font-bold text-sm sm:text-base truncate ${
+                    achievement.isUnlocked ? 'text-gray-900' : 'text-gray-600'
                   }`}>
                     {achievement.title}
                   </h3>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <Badge className={`text-xs px-2 py-1 ${getRarityColor(achievement.rarity)}`}>
+                  <div className="flex items-center space-x-1.5 mt-1 flex-wrap gap-1">
+                    <Badge className={`text-xs px-2 py-0.5 font-medium ${getRarityColor(achievement.rarity)}`}>
                       {achievement.rarity}
                     </Badge>
-                    <Badge className={`text-xs px-2 py-1 ${getCategoryColor(achievement.category)}`}>
+                    <Badge className={`text-xs px-2 py-0.5 font-medium ${getCategoryColor(achievement.category)}`}>
                       {achievement.category}
                     </Badge>
                   </div>
                 </div>
               </div>
               
-              <div className="flex flex-col items-end space-y-1">
-                {getTypeIcon(achievement.type)}
+              <div className="flex flex-col items-end space-y-1 flex-shrink-0">
+                <div className="text-gray-600">
+                  {getTypeIcon(achievement.type)}
+                </div>
                 {achievement.isNew && (
-                  <Badge className="bg-red-500/20 text-red-300 border-red-400/30 text-xs">
+                  <Badge className="bg-red-100 text-red-700 border-red-200 text-xs font-medium">
                     New!
                   </Badge>
                 )}
               </div>
             </div>
 
-            <p className={`text-sm mb-4 ${
-              achievement.isUnlocked ? 'text-white/70' : 'text-white/50'
+            <p className={`text-sm mb-4 leading-relaxed ${
+              achievement.isUnlocked ? 'text-gray-700' : 'text-gray-500'
             }`}>
               {achievement.description}
             </p>
@@ -331,43 +389,56 @@ export function AchievementCenter({ onBack }: { onBack: () => void }) {
             {!achievement.isUnlocked && (
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-white/60 text-xs">Progress</span>
-                  <span className="text-white/60 text-xs">
+                  <span className="text-gray-600 text-xs font-medium">Progress</span>
+                  <span className="text-gray-700 text-xs font-bold">
                     {achievement.progress}/{achievement.maxProgress}
                   </span>
                 </div>
-                <Progress 
-                  value={(achievement.progress / achievement.maxProgress) * 100} 
-                  className="h-2"
-                />
+                <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min((achievement.progress / achievement.maxProgress) * 100, 100)}%` }}
+                    transition={{ duration: 1.5, ease: "easeOut" }}
+                    className="h-2.5 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full"
+                  />
+                </div>
+                <div className="flex justify-center mt-1">
+                  <span className="text-xs text-gray-500 font-medium">
+                    {Math.round((achievement.progress / achievement.maxProgress) * 100)}% complete
+                  </span>
+                </div>
               </div>
             )}
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-white/60">Rewards:</span>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 text-sm font-medium">Rewards:</span>
                 <div className="flex items-center space-x-2">
-                  <div className="flex items-center space-x-1">
-                    <Zap className="h-3 w-3 text-blue-400" />
-                    <span className="text-white/70">{achievement.rewards.xp}</span>
+                  <div className="flex items-center space-x-1 bg-blue-100 px-2 py-1 rounded-lg">
+                    <Zap className="h-3 w-3 text-blue-600" />
+                    <span className="text-blue-700 font-medium text-xs">{achievement.rewards.xp}</span>
                   </div>
-                  <div className="flex items-center space-x-1">
-                    <Gift className="h-3 w-3 text-green-400" />
-                    <span className="text-white/70">{achievement.rewards.gems}</span>
+                  <div className="flex items-center space-x-1 bg-green-100 px-2 py-1 rounded-lg">
+                    <Gem className="h-3 w-3 text-green-600" />
+                    <span className="text-green-700 font-medium text-xs">{achievement.rewards.gems}</span>
                   </div>
                 </div>
               </div>
               
               {achievement.rewards.title && (
-                <div className="text-xs text-white/60">
-                  Title: <span className="text-yellow-300">{achievement.rewards.title}</span>
+                <div className="bg-yellow-100 px-3 py-2 rounded-lg">
+                  <span className="text-yellow-800 text-xs font-medium">
+                    🏆 Title: <span className="font-bold">{achievement.rewards.title}</span>
+                  </span>
                 </div>
               )}
 
               {achievement.isUnlocked && achievement.unlockedDate && (
-                <div className="flex items-center space-x-1 text-xs text-white/60">
-                  <CheckCircle2 className="h-3 w-3 text-green-400" />
-                  <span>Unlocked {new Date(achievement.unlockedDate).toLocaleDateString()}</span>
+                <div className="flex items-center space-x-2 bg-green-100 px-3 py-2 rounded-lg">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <span className="text-green-700 text-xs font-medium">
+                    Unlocked {new Date(achievement.unlockedDate).toLocaleDateString()}
+                  </span>
                 </div>
               )}
             </div>
@@ -377,78 +448,111 @@ export function AchievementCenter({ onBack }: { onBack: () => void }) {
       )}
 
       {!loading && filteredAchievements.length === 0 && (
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Trophy className="h-8 w-8 text-white/40" />
-          </div>
-          <p className="text-white/80 text-lg font-medium mb-2">No achievements found</p>
-          <p className="text-white/60 text-sm">Try selecting a different category</p>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white/90 backdrop-blur-xl rounded-3xl p-8 sm:p-12 text-center shadow-xl border border-gray-200/50"
+        >
+          <motion.div
+            animate={{ rotate: [0, 10, -10, 0] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="w-20 h-20 bg-gradient-to-r from-gray-400 to-gray-500 rounded-full flex items-center justify-center mx-auto mb-6"
+          >
+            <Trophy className="h-10 w-10 text-white" />
+          </motion.div>
+          <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">
+            No Achievements Found
+          </h3>
+          <p className="text-gray-600 text-sm sm:text-base max-w-md mx-auto">
+            {searchQuery ? 'Try adjusting your search terms' : 'Try selecting a different category or complete more activities'}
+          </p>
+        </motion.div>
       )}
     </div>
   )
 
   const renderMilestones = () => (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {milestones.map((milestone) => (
+    <div className="space-y-4 sm:space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        {milestones.map((milestone, index) => (
           <motion.div
             key={milestone.id}
-            className={`p-6 rounded-2xl border backdrop-blur-sm ${
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+            className={`group bg-white/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 shadow-lg border border-white/20 hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] ${
               milestone.isCompleted 
-                ? 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-400/20' 
-                : 'bg-white/10 border-white/20'
+                ? 'border-green-300 bg-green-50/50' 
+                : ''
             }`}
-            whileHover={{ scale: 1.01 }}
           >
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center space-x-3">
-                <div className={`p-3 rounded-xl text-2xl ${
-                  milestone.isCompleted ? 'bg-green-500/20' : 'bg-white/10'
+                <div className={`p-3 rounded-xl text-2xl backdrop-blur-sm ${
+                  milestone.isCompleted ? 'bg-green-500/20 border border-green-400/30' : 'bg-gray-100/80'
                 }`}>
                   {milestone.icon}
                 </div>
-                <div>
-                  <h3 className="text-white/90 font-bold text-lg">{milestone.title}</h3>
-                  <p className="text-white/60 text-sm">{milestone.description}</p>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-gray-900 font-bold text-base sm:text-lg truncate">{milestone.title}</h3>
+                  <p className="text-gray-600 text-sm">{milestone.description}</p>
                 </div>
               </div>
               
               {milestone.isCompleted && (
-                <CheckCircle2 className="h-6 w-6 text-green-400" />
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="flex-shrink-0"
+                >
+                  <CheckCircle2 className="h-6 w-6 text-green-500" />
+                </motion.div>
               )}
             </div>
 
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-white/60 text-sm">Progress</span>
-                <span className="text-white/80 font-medium">
+                <span className="text-gray-600 text-sm font-medium">Progress</span>
+                <span className="text-gray-900 font-bold text-sm">
                   {milestone.currentValue.toLocaleString()}/{milestone.targetValue.toLocaleString()}
                 </span>
               </div>
-              <Progress 
-                value={(milestone.currentValue / milestone.targetValue) * 100} 
-                className="h-3"
-              />
+              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min((milestone.currentValue / milestone.targetValue) * 100, 100)}%` }}
+                  transition={{ duration: 1.5, ease: "easeOut" }}
+                  className={`h-3 rounded-full ${
+                    milestone.isCompleted 
+                      ? 'bg-gradient-to-r from-green-400 to-green-500'
+                      : 'bg-gradient-to-r from-blue-400 to-blue-500'
+                  }`}
+                />
+              </div>
+              <div className="flex justify-center mt-1">
+                <span className="text-xs text-gray-500 font-medium">
+                  {Math.round((milestone.currentValue / milestone.targetValue) * 100)}% complete
+                </span>
+              </div>
             </div>
 
             <div className="flex items-center justify-between text-sm">
-              <span className="text-white/60">Rewards:</span>
+              <span className="text-gray-600 font-medium">Rewards:</span>
               <div className="flex items-center space-x-3">
                 {milestone.rewards.xp > 0 && (
-                  <div className="flex items-center space-x-1">
-                    <Zap className="h-4 w-4 text-blue-400" />
-                    <span className="text-white/70">{milestone.rewards.xp}</span>
+                  <div className="flex items-center space-x-1 bg-blue-100 px-2 py-1 rounded-lg">
+                    <Zap className="h-3 w-3 text-blue-600" />
+                    <span className="text-blue-700 font-medium text-xs">{milestone.rewards.xp}</span>
                   </div>
                 )}
-                <div className="flex items-center space-x-1">
-                  <Gift className="h-4 w-4 text-green-400" />
-                  <span className="text-white/70">{milestone.rewards.gems}</span>
+                <div className="flex items-center space-x-1 bg-green-100 px-2 py-1 rounded-lg">
+                  <Gem className="h-3 w-3 text-green-600" />
+                  <span className="text-green-700 font-medium text-xs">{milestone.rewards.gems}</span>
                 </div>
                 {milestone.rewards.achievement && (
-                  <div className="flex items-center space-x-1">
-                    <Award className="h-4 w-4 text-yellow-400" />
-                    <span className="text-white/70 text-xs">{milestone.rewards.achievement}</span>
+                  <div className="flex items-center space-x-1 bg-yellow-100 px-2 py-1 rounded-lg">
+                    <Award className="h-3 w-3 text-yellow-600" />
+                    <span className="text-yellow-700 font-medium text-xs truncate max-w-20">{milestone.rewards.achievement}</span>
                   </div>
                 )}
               </div>
@@ -456,87 +560,120 @@ export function AchievementCenter({ onBack }: { onBack: () => void }) {
           </motion.div>
         ))}
       </div>
+      
+      {milestones.length === 0 && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 sm:p-12 text-center shadow-xl border border-white/20"
+        >
+          <motion.div
+            animate={{ rotate: [0, 10, -10, 0] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="w-20 h-20 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-6"
+          >
+            <Target className="h-10 w-10 text-white" />
+          </motion.div>
+          <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">
+            No Milestones Yet
+          </h3>
+          <p className="text-gray-600 text-sm sm:text-base max-w-md mx-auto">
+            Complete more activities to unlock milestone challenges!
+          </p>
+        </motion.div>
+      )}
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 relative overflow-hidden">
       {/* Background Pattern */}
-      <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 via-purple-500/10 to-fuchsia-500/10" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_2px_2px,rgba(147,51,234,0.15)_1px,transparent_0)] bg-[length:32px_32px]" />
+      <div className="absolute inset-0 opacity-20">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/3 via-indigo-500/3 to-purple-500/3"></div>
+        <div className="absolute inset-0" style={{
+          backgroundImage: `radial-gradient(circle at 2px 2px, rgba(59, 130, 246, 0.08) 1px, transparent 0)`,
+          backgroundSize: '24px 24px'
+        }}></div>
+      </div>
       
-      <div className="relative z-10 p-4 sm:p-6 lg:p-8">
-        <div className="max-w-6xl mx-auto space-y-6">
+      <div className="relative z-10 p-3 sm:p-4 lg:p-6">
+        <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6">
           
           {/* Header */}
           <motion.div 
-            className="flex items-center justify-between"
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/90 backdrop-blur-xl rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-200/50"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3 sm:space-x-4">
               <Button
                 onClick={onBack}
                 variant="ghost"
-                className="p-2 hover:bg-white/10 rounded-full text-white/70 hover:text-white"
+                size="sm"
+                className="p-2 hover:bg-gray-100 rounded-xl text-gray-600 hover:text-gray-900 transition-colors"
               >
-                <ArrowLeft className="h-5 w-5" />
+                <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
               <div className="flex items-center space-x-3">
-                <div className="p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-2xl border border-yellow-400/30">
-                  <Trophy className="h-6 w-6 text-yellow-300" />
+                <div className="p-2.5 sm:p-3 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl shadow-md">
+                  <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-black text-white">Achievement Center</h1>
-                  <p className="text-white/60 text-sm">Unlock badges & rewards</p>
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 truncate">Achievement Center</h1>
+                  <p className="text-gray-600 text-sm hidden sm:block">Unlock badges & earn rewards</p>
                 </div>
               </div>
             </div>
             
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 self-end sm:self-auto">
               <Button
                 variant="ghost"
-                className="p-2 hover:bg-white/10 rounded-full text-white/70 hover:text-white"
+                size="sm"
+                className="p-2 hover:bg-gray-100 rounded-xl text-gray-600 hover:text-gray-900 transition-colors"
               >
-                <Share2 className="h-5 w-5" />
+                <Share2 className="h-4 w-4" />
               </Button>
               <Button
                 variant="ghost"
-                className="p-2 hover:bg-white/10 rounded-full text-white/70 hover:text-white"
+                size="sm"
+                className="p-2 hover:bg-gray-100 rounded-xl text-gray-600 hover:text-gray-900 transition-colors"
               >
-                <Settings className="h-5 w-5" />
+                <Settings className="h-4 w-4" />
               </Button>
             </div>
           </motion.div>
 
           {/* Navigation Tabs */}
           <motion.div
-            className="flex space-x-2 bg-white/10 backdrop-blur-xl p-2 rounded-2xl border border-white/20"
+            className="bg-white/90 backdrop-blur-xl rounded-2xl p-2 shadow-lg border border-gray-200/50"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            {[
-              { id: 'achievements', label: 'Achievements', icon: Trophy },
-              { id: 'milestones', label: 'Milestones', icon: Target },
-              { id: 'leaderboard', label: 'Leaderboard', icon: Crown }
-            ].map((tab) => {
-              const Icon = tab.icon
-              return (
-                <Button
-                  key={tab.id}
-                  onClick={() => setCurrentView(tab.id as any)}
-                  className={`flex-1 py-2 px-4 rounded-xl font-medium text-sm transition-all ${
-                    currentView === tab.id
-                      ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-lg'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  <Icon className="h-4 w-4 mr-2" />
-                  {tab.label}
-                </Button>
-              )
-            })}
+            <div className="flex space-x-1 sm:space-x-2">
+              {[
+                { id: 'achievements', label: 'Achievements', shortLabel: 'Badges', icon: Trophy },
+                { id: 'milestones', label: 'Milestones', shortLabel: 'Goals', icon: Target },
+                { id: 'leaderboard', label: 'Leaderboard', shortLabel: 'Ranks', icon: Crown }
+              ].map((tab) => {
+                const Icon = tab.icon
+                return (
+                  <Button
+                    key={tab.id}
+                    onClick={() => setCurrentView(tab.id as any)}
+                    className={`flex-1 py-2.5 px-2 sm:px-4 rounded-xl font-semibold text-xs sm:text-sm transition-all duration-200 ${
+                      currentView === tab.id
+                        ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 mx-auto sm:mr-2 sm:mx-0" />
+                    <span className="hidden sm:inline">{tab.label}</span>
+                    <span className="sm:hidden">{tab.shortLabel}</span>
+                  </Button>
+                )
+              })}
+            </div>
           </motion.div>
 
           {/* Content */}
@@ -549,13 +686,30 @@ export function AchievementCenter({ onBack }: { onBack: () => void }) {
             {currentView === 'achievements' && renderAchievements()}
             {currentView === 'milestones' && renderMilestones()}
             {currentView === 'leaderboard' && (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Crown className="h-8 w-8 text-yellow-300" />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white/90 backdrop-blur-xl rounded-3xl p-8 sm:p-12 text-center shadow-xl border border-gray-200/50"
+              >
+                <motion.div
+                  animate={{ rotate: [0, 5, -5, 0] }}
+                  transition={{ duration: 3, repeat: Infinity }}
+                  className="w-20 h-20 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg"
+                >
+                  <Crown className="h-10 w-10 text-white" />
+                </motion.div>
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">
+                  School Leaderboard
+                </h3>
+                <p className="text-gray-600 text-sm sm:text-base max-w-md mx-auto mb-6">
+                  Compare your achievements with classmates and see who's leading the way!
+                </p>
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <p className="text-blue-700 text-sm font-medium">
+                    🚀 Coming Soon: Compete with friends and climb the rankings!
+                  </p>
                 </div>
-                <p className="text-white/80 text-lg font-bold mb-2">School Leaderboard</p>
-                <p className="text-white/60 text-sm">Compare your achievements with classmates</p>
-              </div>
+              </motion.div>
             )}
           </motion.div>
 

@@ -88,32 +88,35 @@ export default function AuthCallback() {
 
           let userProfile = profile
           
-          // If no profile exists, create one for Google OAuth users
+          // If no profile exists, redirect to registration with Google data
           if (!profile) {
-            console.log('📝 Creating new profile for Google user...')
+            console.log('👤 No profile found for Google user, redirecting to registration...')
             
-            const { data: newProfile, error: createError } = await supabase
-              .from('profiles')
-              .insert({
-                user_id: data.session.user.id,
-                email: data.session.user.email,
-                first_name: data.session.user.user_metadata?.full_name?.split(' ')[0] || '',
-                last_name: data.session.user.user_metadata?.full_name?.split(' ').slice(1).join(' ') || '',
-                role: 'student', // Default role, can be changed later
-                avatar_url: data.session.user.user_metadata?.avatar_url || null,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              })
-              .select()
-              .single()
-
-            if (createError) {
-              console.error('❌ Profile creation error:', createError)
-              throw createError
+            // Store Google OAuth data in sessionStorage for registration page
+            const googleUserData = {
+              email: data.session.user.email,
+              firstName: data.session.user.user_metadata?.full_name?.split(' ')[0] || '',
+              lastName: data.session.user.user_metadata?.full_name?.split(' ').slice(1).join(' ') || '',
+              avatarUrl: data.session.user.user_metadata?.avatar_url || null,
+              userId: data.session.user.id,
+              provider: 'google'
             }
-
-            userProfile = newProfile
-            console.log('✅ Profile created successfully')
+            
+            sessionStorage.setItem('google_oauth_data', JSON.stringify(googleUserData))
+            
+            // Clear processing flags
+            sessionStorage.removeItem('catalyst_auth_processing')
+            
+            // Show informative message
+            addToast({
+              type: 'info',
+              title: '👋 Welcome to Catalyst!',
+              description: 'Please complete your registration to continue. We\'ve pre-filled some information from Google.'
+            })
+            
+            // Redirect to registration page
+            router.push('/register')
+            return
           }
 
           // Set profile in Redux store

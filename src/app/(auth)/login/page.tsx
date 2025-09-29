@@ -91,16 +91,8 @@ export default function LoginPage() {
         
         console.log('Redirecting to:', dashboardPath)
         
-        addToast({
-          type: 'success',
-          title: 'Welcome back!',
-          description: `Redirecting to your ${userRole} dashboard...`
-        })
-        
-        // Use Next.js router with a small delay to ensure state is updated
-        setTimeout(() => {
-          router.push(dashboardPath)
-        }, 500)
+        // Use Next.js router to redirect immediately
+        router.push(dashboardPath)
       } else if (signIn.rejected.match(result)) {
         // Handle login error
         const errorMessage = result.payload as string || 'Login failed'

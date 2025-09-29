@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { apiCache, createCacheKey } from '@/lib/utils/apiCache'
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,73 +23,80 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get user profile
+    // Initialize milestones for user if not exists (with error handling)
+    try {
+      await supabase.rpc('initialize_student_achievements', { p_student_id: user.id })
+    } catch (initError) {
+      console.log('Milestone initialization skipped (tables may not exist yet):', initError)
+    }
+
+    // Get milestone templates with student progress
+    const { data: milestones, error } = await supabase
+      .from('milestone_templates')
+      .select(`
+        *,
+        student_milestones!left(
+          current_value,
+          is_completed,
+          completed_at
+        )
+      `)
+      .eq('student_milestones.student_id', user.id)
+      .eq('is_active', true)
+      .order('target_value', { ascending: true })
+
+    if (error) {
+      console.error('Error fetching milestones:', error)
+      return NextResponse.json({ error: 'Failed to fetch milestones' }, { status: 500 })
+    }
+
+    // Get current student data for milestone updates
     const { data: profile } = await supabase
       .from('profiles')
-      .select('id, school_id, role')
+      .select('xp, gems, level, streak_days, quests_completed, pet_happiness')
       .eq('user_id', user.id)
       .single()
 
-    if (!profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
-    }
+    if (profile) {
+      // Update milestone progress for various data sources
+      const updates = [
+        { data_source: 'total_xp', value: profile.xp || 0 },
+        { data_source: 'total_gems', value: profile.gems || 0 },
+        { data_source: 'current_level', value: profile.level || 1 },
+        { data_source: 'streak_days', value: profile.streak_days || 0 },
+        { data_source: 'quests_completed', value: profile.quests_completed || 0 },
+        { data_source: 'pet_happiness', value: profile.pet_happiness || 0 }
+      ]
 
-    // Check cache first
-    const cacheKey = createCacheKey('achievement-milestones', { userId: profile.id })
-    const cachedData = apiCache.get(cacheKey)
-    if (cachedData) {
-      console.log('✅ [MILESTONES-API] Returning cached data')
-      return NextResponse.json(cachedData)
-    }
-
-    // For now, return mock milestones since the database schema focuses on achievements
-    // In a real implementation, milestones would be derived from achievement progress
-    const mockMilestones = [
-      {
-        id: '1',
-        title: 'Quest Completion',
-        description: 'Complete daily quests',
-        targetValue: 50,
-        currentValue: 23, // Would be calculated from user's quest completion data
-        category: 'academic',
-        icon: '✅',
-        color: 'blue',
-        rewards: { xp: 500, gems: 100, achievement: 'Quest Master' },
-        isCompleted: false
-      },
-      {
-        id: '2',
-        title: 'XP Milestone',
-        description: 'Earn total XP points',
-        targetValue: 5000,
-        currentValue: 3250, // Would come from user's total XP
-        category: 'general',
-        icon: '⚡',
-        color: 'yellow',
-        rewards: { xp: 0, gems: 200 },
-        isCompleted: false
-      },
-      {
-        id: '3',
-        title: 'Social Butterfly',
-        description: 'Interact with classmates',
-        targetValue: 25,
-        currentValue: 25, // Would be calculated from social interactions
-        category: 'social',
-        icon: '🦋',
-        color: 'green',
-        rewards: { xp: 300, gems: 75, achievement: 'Social Star' },
-        isCompleted: true
+      for (const update of updates) {
+        await supabase.rpc('update_milestone_progress', {
+          p_student_id: user.id,
+          p_data_source: update.data_source,
+          p_new_value: update.value
+        })
       }
-    ]
+    }
 
-    const responseData = { milestones: mockMilestones }
+    // Process milestones to match frontend interface
+    const processedMilestones = milestones?.map((milestone: any) => {
+      const studentProgress = milestone.student_milestones?.[0] || null
+      
+      return {
+        id: milestone.id,
+        title: milestone.title,
+        description: milestone.description,
+        targetValue: milestone.target_value,
+        currentValue: studentProgress?.current_value || 0,
+        category: milestone.category,
+        icon: milestone.icon,
+        color: milestone.color,
+        rewards: milestone.rewards || { xp: 0, gems: 0 },
+        isCompleted: studentProgress?.is_completed || false,
+        completedAt: studentProgress?.completed_at || null
+      }
+    }) || []
 
-    // Cache the response for 3 minutes
-    apiCache.set(cacheKey, responseData, 3)
-    console.log('✅ [MILESTONES-API] Data cached')
-
-    return NextResponse.json(responseData)
+    return NextResponse.json({ milestones: processedMilestones })
   } catch (error) {
     console.error('Milestones API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

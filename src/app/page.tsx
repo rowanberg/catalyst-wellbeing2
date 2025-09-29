@@ -32,6 +32,33 @@ export default function HomePage() {
               const profile = await response.json()
               router.push(`/${profile.role}`)
             } else {
+              // Check if this is a Google OAuth user without a profile
+              const errorData = await response.json().catch(() => ({}))
+              
+              if (response.status === 404 && errorData.code === 'PROFILE_NOT_FOUND') {
+                // Check if user has Google provider
+                const { data: { user } } = await supabase.auth.getUser()
+                
+                if (user && user.app_metadata?.provider === 'google') {
+                  console.log('🔄 Google OAuth user without profile, redirecting to registration...')
+                  
+                  // Store Google OAuth data for registration
+                  const googleUserData = {
+                    email: user.email,
+                    firstName: user.user_metadata?.full_name?.split(' ')[0] || '',
+                    lastName: user.user_metadata?.full_name?.split(' ').slice(1).join(' ') || '',
+                    avatarUrl: user.user_metadata?.avatar_url || null,
+                    userId: user.id,
+                    provider: 'google'
+                  }
+                  
+                  sessionStorage.setItem('google_oauth_data', JSON.stringify(googleUserData))
+                  router.push('/register')
+                  return
+                }
+              }
+              
+              // For all other cases, redirect to login
               router.push('/login')
             }
           } catch (error) {

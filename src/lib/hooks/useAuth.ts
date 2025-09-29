@@ -109,37 +109,66 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
               
               setInitializing(false)
             } else {
-              // If profile fetch fails, create a mock profile for development
-              console.warn('Profile fetch failed, using mock profile for development')
-              const mockRole = requiredRole || 'admin'
-              const mockProfileData = {
-                id: user.id,
-                user_id: user.id,
-                first_name: mockRole === 'teacher' ? 'Teacher' : mockRole === 'student' ? 'Student' : 'Admin',
-                last_name: 'User',
-                role: mockRole,
-                school_id: '6123d635-43a0-4c21-8c0e-66b9f231ee5e', // Use real school ID from logs
-                grade_level: null,
-                class_name: null,
-                xp: 0,
-                gems: 0,
-                level: 1,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
+              // Check if this is a Google OAuth user without a profile
+              const errorData = await response.json().catch(() => ({}))
+              
+              if (response.status === 404 && errorData.code === 'PROFILE_NOT_FOUND') {
+                // Check if user has Google provider
+                if (user.app_metadata?.provider === 'google') {
+                  console.log('🔄 Google OAuth user without profile detected in useAuth, redirecting to registration...')
+                  
+                  // Store Google OAuth data for registration
+                  const googleUserData = {
+                    email: user.email,
+                    firstName: user.user_metadata?.full_name?.split(' ')[0] || '',
+                    lastName: user.user_metadata?.full_name?.split(' ').slice(1).join(' ') || '',
+                    avatarUrl: user.user_metadata?.avatar_url || null,
+                    userId: user.id,
+                    provider: 'google'
+                  }
+                  
+                  sessionStorage.setItem('google_oauth_data', JSON.stringify(googleUserData))
+                  router.push('/register')
+                  return
+                }
               }
               
-              const userData: User = {
-                id: user.id,
-                email: user.email || '',
-                role: mockRole,
-                school_id: '6123d635-43a0-4c21-8c0e-66b9f231ee5e',
-                created_at: user.created_at || '',
-                updated_at: user.updated_at || ''
-              }
+              // For development/testing only - create mock profile
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('Profile fetch failed, using mock profile for development')
+                const mockRole = requiredRole || 'admin'
+                const mockProfileData = {
+                  id: user.id,
+                  user_id: user.id,
+                  first_name: mockRole === 'teacher' ? 'Teacher' : mockRole === 'student' ? 'Student' : 'Admin',
+                  last_name: 'User',
+                  role: mockRole,
+                  school_id: '6123d635-43a0-4c21-8c0e-66b9f231ee5e', // Use real school ID from logs
+                  grade_level: null,
+                  class_name: null,
+                  xp: 0,
+                  gems: 0,
+                  level: 1,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                }
+                
+                const userData: User = {
+                  id: user.id,
+                  email: user.email || '',
+                  role: mockRole,
+                  school_id: '6123d635-43a0-4c21-8c0e-66b9f231ee5e',
+                  created_at: user.created_at || '',
+                  updated_at: user.updated_at || ''
+                }
 
-              dispatch(setUser(userData))
-              dispatch(setProfile(mockProfileData))
-              setInitializing(false)
+                dispatch(setUser(userData))
+                dispatch(setProfile(mockProfileData))
+                setInitializing(false)
+              } else {
+                // In production, redirect to login for profile errors
+                router.push('/login')
+              }
             }
           } catch (error) {
             console.error('Profile fetch error:', error)
