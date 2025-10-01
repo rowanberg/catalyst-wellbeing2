@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
     // Get user profile
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('id, first_name, last_name, role, school_id')
+      .select('id, first_name, last_name, role, school_id, user_id')
       .eq('user_id', user.id)
       .single()
 
@@ -122,20 +122,11 @@ export async function GET(request: NextRequest) {
     if (profile.role === 'parent') {
       console.log('Fetching children for parent profile ID:', profile.id)
       
-      // Get all children linked to this parent
+      // Get all children linked to this parent (using user_id, not profile id)
       const { data: childRelationships, error: childrenError } = await supabaseAdmin
         .from('parent_child_relationships')
-        .select(`
-          id,
-          child_id,
-          profiles:child_id (
-            id,
-            first_name,
-            last_name,
-            grade_level
-          )
-        `)
-        .eq('parent_id', profile.id)
+        .select('id, child_id')
+        .eq('parent_id', profile.user_id)
 
       console.log('Children query result:', { childRelationships, childrenError })
 
@@ -144,12 +135,26 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to fetch children' }, { status: 500 })
       }
 
-      children = childRelationships?.map((rel: any) => ({
-        id: rel.profiles?.id,
-        name: `${rel.profiles?.first_name || ''} ${rel.profiles?.last_name || ''}`.trim(),
-        grade: rel.profiles?.grade_level || 'N/A',
-        relationshipId: rel.id
-      })) || []
+      // Get children profiles separately to avoid join issues
+      if (childRelationships && childRelationships.length > 0) {
+        const childUserIds = childRelationships.map((rel: any) => rel.child_id)
+        const { data: childProfiles, error: childProfilesError } = await supabaseAdmin
+          .from('profiles')
+          .select('id, user_id, first_name, last_name, grade_level')
+          .in('user_id', childUserIds)
+
+        if (!childProfilesError && childProfiles) {
+          children = childRelationships.map((rel: any) => {
+            const childProfile = childProfiles.find((p: any) => p.user_id === rel.child_id)
+            return {
+              id: childProfile?.id || rel.child_id,
+              name: childProfile ? `${childProfile.first_name || ''} ${childProfile.last_name || ''}`.trim() : 'Unknown',
+              grade: childProfile?.grade_level || 'N/A',
+              relationshipId: rel.id
+            }
+          })
+        }
+      }
 
       console.log('Transformed children array:', children)
 
@@ -194,16 +199,8 @@ export async function GET(request: NextRequest) {
       
       const { data: parentRelationships, error: parentsError } = await supabaseAdmin
         .from('parent_child_relationships')
-        .select(`
-          id,
-          parent_id,
-          profiles:parent_id (
-            id,
-            first_name,
-            last_name
-          )
-        `)
-        .eq('child_id', profile.id)
+        .select('id, parent_id')
+        .eq('child_id', profile.user_id)
 
       console.log('Parent relationships query result:', { parentRelationships, parentsError })
 
@@ -212,14 +209,25 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to fetch parents' }, { status: 500 })
       }
 
-      parents = parentRelationships?.map((rel: any) => ({
-        id: rel.profiles?.id,
-        name: `${rel.profiles?.first_name || ''} ${rel.profiles?.last_name || ''}`.trim(),
-        email: 'N/A', // Email field doesn't exist in profiles table
-        relationshipId: rel.id
-      })) || []
+      // Get parent profiles separately to avoid join issues
+      if (parentRelationships && parentRelationships.length > 0) {
+        const parentUserIds = parentRelationships.map((rel: any) => rel.parent_id)
+        const { data: parentProfiles, error: parentProfilesError } = await supabaseAdmin
+          .from('profiles')
+          .select('id, user_id, first_name, last_name')
+          .in('user_id', parentUserIds)
 
-      console.log('Transformed parents array:', parents)
+        if (!parentProfilesError && parentProfiles) {
+          parents = parentRelationships.map((rel: any) => {
+            const parentProfile = parentProfiles.find((p: any) => p.user_id === rel.parent_id)
+            return {
+              id: parentProfile?.id || rel.parent_id,
+              name: parentProfile ? `${parentProfile.first_name || ''} ${parentProfile.last_name || ''}`.trim() : 'Unknown',
+              relationshipId: rel.id
+            }
+          })
+        }
+      }
 
       // Get existing conversations with parents
       const { data: studentConversations, error: conversationsError } = await supabaseAdmin

@@ -14,6 +14,7 @@ import QuestBadgeCreator from '@/components/teacher/quest-badge-creator'
 import BlackMarkSystem from '@/components/teacher/BlackMarkSystem'
 import ParentCommunicationSystem from '@/components/teacher/parent-communication-system'
 import InteractiveActivitiesSystem from '@/components/teacher/interactive-activities-system'
+import UpdateResultsSystem from '@/components/teacher/UpdateResultsSystem'
 import { 
   Users, 
   TrendingUp, 
@@ -140,7 +141,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
     averageStreak: 0
   })
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'analytics' | 'overview' | 'roster' | 'incidents' | 'shoutouts' | 'interventions' | 'quests' | 'messaging' | 'blackmarks' | 'activities' | 'communication' | 'settings'>('overview')
+  const [activeTab, setActiveTab] = useState<'analytics' | 'overview' | 'roster' | 'incidents' | 'shoutouts' | 'interventions' | 'quests' | 'messaging' | 'blackmarks' | 'activities' | 'communication' | 'settings' | 'results'>('overview')
   const [notifications, setNotifications] = useState<Array<{id: string, message: string, type: 'success' | 'error' | 'warning' | 'info'}>>([])
   const [realTimeData, setRealTimeData] = useState({
     newHelpRequests: 0,
@@ -225,30 +226,28 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
       setLoading(true)
       console.log('Fetching teacher analytics for user:', user.id)
       
-      // Fetch teacher-specific analytics
-      console.log('Fetching analytics for user ID:', user.id)
-      const response = await fetch(`/api/teacher/dashboard-analytics?teacher_id=${user.id}`)
+      // Use combined API for better performance (single request instead of two)
+      console.log('Fetching combined dashboard data for user ID:', user.id)
+      const response = await fetch(`/api/teacher/dashboard-combined?teacher_id=${user.id}`)
       
-      console.log('Analytics API response status:', response.status)
+      console.log('Combined API response status:', response.status)
       
       if (response.ok) {
-        const analyticsData = await response.json()
-        console.log('Teacher analytics data received:', analyticsData)
+        const combinedData = await response.json()
+        console.log('Combined dashboard data received:', combinedData)
         
-        setAnalytics(analyticsData)
+        // Set analytics data
+        setAnalytics(combinedData.analytics || {
+          totalStudents: 0,
+          averageXP: 0,
+          activeToday: 0,
+          helpRequests: 0,
+          moodDistribution: { happy: 0, excited: 0, calm: 0, sad: 0, angry: 0, anxious: 0 },
+          averageStreak: 0
+        })
         
-        // Also fetch detailed student data for the roster
-        try {
-          const studentsResponse = await fetch(`/api/teacher/students-overview?teacher_id=${user.id}`)
-          if (studentsResponse.ok) {
-            const studentsData = await studentsResponse.json()
-            setStudents(studentsData.students || [])
-          }
-        } catch (studentsError: any) {
-          console.log('Could not fetch detailed student data:', studentsError)
-          // Set empty students array if detailed data fails
-          setStudents([])
-        }
+        // Set students data
+        setStudents(combinedData.students || [])
       } else {
         console.error('Failed to fetch teacher analytics:', response.status)
         const errorText = await response.text()
@@ -411,13 +410,13 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
         {/* Navigation Menu */}
         <nav className="flex-1 p-3 sm:p-4 space-y-1.5 sm:space-y-2 overflow-y-auto">
           {[
-            { id: 'overview', label: 'Overview', icon: BarChart3, color: 'text-blue-600', bgColor: 'bg-blue-50' },
+            { id: 'overview', label: 'Overview', icon: School, color: 'text-blue-600', bgColor: 'bg-blue-50' },
             { id: 'roster', label: 'Students', icon: Users, color: 'text-emerald-600', bgColor: 'bg-emerald-50', isLink: true, href: '/teacher/students' },
             { id: 'analytics', label: 'Analytics', icon: Activity, color: 'text-violet-600', bgColor: 'bg-violet-50' },
             { id: 'shoutouts', label: 'Shout-outs', icon: Star, color: 'text-amber-500', bgColor: 'bg-amber-50' },
             { id: 'activities', label: 'Activities', icon: Play, color: 'text-cyan-600', bgColor: 'bg-cyan-50' },
             { id: 'communication', label: 'Parent Hub', icon: MessageSquare, color: 'text-sky-600', bgColor: 'bg-sky-50' },
-            { id: 'interventions', label: 'Interventions', icon: Lightbulb, color: 'text-orange-600', bgColor: 'bg-orange-50' },
+            { id: 'results', label: 'Update Results', icon: BarChart3, color: 'text-emerald-600', bgColor: 'bg-emerald-50' },
             { id: 'quests', label: 'Quests', icon: Trophy, color: 'text-rose-500', bgColor: 'bg-rose-50' },
             { id: 'blackmarks', label: 'Black Marks', icon: AlertTriangle, color: 'text-red-600', bgColor: 'bg-red-50' },
             { id: 'messaging', label: 'Messages', icon: MessageCircle, color: 'text-indigo-600', bgColor: 'bg-indigo-50' },
@@ -771,14 +770,14 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                     stats: '12 this week'
                   },
                   { 
-                    icon: Lightbulb, 
-                    label: 'View Interventions', 
-                    description: 'AI-powered suggestions', 
-                    color: 'from-orange-600 to-red-500',
-                    bgColor: 'from-orange-50 to-red-50',
-                    iconColor: 'from-orange-500 to-red-400',
-                    action: () => setActiveTab('interventions'),
-                    stats: '3 recommended'
+                    icon: BarChart3, 
+                    label: 'Update Results', 
+                    description: 'Grade entry & analytics hub', 
+                    color: 'from-emerald-600 to-teal-500',
+                    bgColor: 'from-emerald-50 to-teal-50',
+                    iconColor: 'from-emerald-500 to-teal-400',
+                    action: () => window.open('/teacher/update-results', '_blank'),
+                    stats: '5 pending'
                   },
                   { 
                     icon: Trophy, 
@@ -1054,6 +1053,18 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                 exit={{ opacity: 0, y: -20 }}
               >
                 <ShoutOutsSystem />
+              </motion.div>
+            )}
+
+            {activeTab === 'results' && (
+              <motion.div
+                key="results"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-4 sm:space-y-8"
+              >
+                <UpdateResultsSystem />
               </motion.div>
             )}
 

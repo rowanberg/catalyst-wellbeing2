@@ -438,6 +438,8 @@ export default function TeacherStudentsPage() {
   // Local state for UI interactions
   const [selectedGrade, setSelectedGrade] = useState<string>('')
   const [selectedClass, setSelectedClass] = useState<string>('')
+  const [gradeClasses, setGradeClasses] = useState<any[]>([])
+  const [loadingGradeClasses, setLoadingGradeClasses] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [currentView, setCurrentView] = useState<ViewType>('assigned-classes')
@@ -493,15 +495,27 @@ export default function TeacherStudentsPage() {
 
   // Helper functions - memoized for performance
   const handleClassSelect = useCallback(async (classId: string) => {
+    console.log('🎯 Class selected:', classId)
+    console.log('🔍 User data:', { userId: user?.id, hasUser: !!user })
     setSelectedClass(classId)
     setCurrentView('students')
     // Immediately load students for better UX
     await loadStudentsForClass(classId)
-  }, [loadStudentsForClass])
+  }, [loadStudentsForClass, user])
 
   const handleAddMoreClasses = useCallback(() => {
     setCurrentView('grades')
   }, [])
+
+  // Debug students data
+  useEffect(() => {
+    console.log('👥 Students data changed:', {
+      count: students.length,
+      selectedClass,
+      studentsLoading,
+      students: students.slice(0, 2)
+    })
+  }, [students, selectedClass, studentsLoading])
 
   // Filter and sort students
 
@@ -555,11 +569,42 @@ export default function TeacherStudentsPage() {
     return grades.find(grade => grade.id === selectedGrade)
   }
 
+  // Get classes for selected grade (from fetched gradeClasses)
+  const getClassesForSelectedGrade = useCallback(() => {
+    console.log('🔍 Getting classes for selected grade')
+    console.log('📚 Grade classes available:', gradeClasses.length)
+    return gradeClasses
+  }, [gradeClasses])
+
   // Navigation handlers
-  const handleGradeSelect = (gradeId: string) => {
+  const handleGradeSelect = async (gradeId: string) => {
+    console.log('🎓 Grade selected:', gradeId)
     setSelectedGrade(gradeId)
     setSelectedClass('')
     setCurrentView('classes')
+    setLoadingGradeClasses(true)
+    
+    // Fetch classes for this grade
+    if (user?.id) {
+      try {
+        console.log('📚 Fetching classes for grade:', gradeId)
+        const schoolId = user.school_id || (await fetch('/api/profile').then(r => r.json())).school_id
+        const response = await fetch(`/api/teacher/classes?school_id=${schoolId}&grade_level_id=${gradeId}&teacher_id=${user.id}`)
+        if (response.ok) {
+          const data = await response.json()
+          console.log('✅ Classes fetched:', data.classes?.length || 0, 'classes')
+          setGradeClasses(data.classes || [])
+        } else {
+          console.error('❌ Failed to fetch classes:', response.status)
+          setGradeClasses([])
+        }
+      } catch (error) {
+        console.error('❌ Error fetching classes:', error)
+        setGradeClasses([])
+      } finally {
+        setLoadingGradeClasses(false)
+      }
+    }
   }
 
   const handleBackToAssignedClasses = () => {
@@ -1714,13 +1759,13 @@ export default function TeacherStudentsPage() {
                   </p>
                 </div>
 
-                {loading ? (
+                {loadingGradeClasses ? (
                 <div className="flex items-center justify-center py-12">
                   <ProfessionalLoader size="md" text="Loading classes..." />
                 </div>
-              ) : classes.length > 0 ? (
+              ) : getClassesForSelectedGrade().length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {classes.map((cls, index) => (
+                  {getClassesForSelectedGrade().map((cls, index) => (
                     <motion.div
                       key={cls.id}
                       initial={{ opacity: 0, scale: 0.9 }}

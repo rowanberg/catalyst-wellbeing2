@@ -41,7 +41,10 @@ import {
   Cpu,
   AlertTriangle,
   ExternalLink,
-  LogOut
+  LogOut,
+  MessageCircle,
+  Phone,
+  Link
 } from 'lucide-react'
 import { AdvancedProfilePictureUpload } from '@/components/ui/advanced-profile-picture-upload'
 
@@ -66,6 +69,12 @@ interface SettingsState {
   language: string
 }
 
+interface WhatsAppConfig {
+  phoneNumber: string
+  whatsappLink: string
+  isEnabled: boolean
+}
+
 interface GeminiConfig {
   apiKey: string
   selectedModel: string
@@ -86,6 +95,12 @@ const StudentSettingsPage = () => {
     apiKey: '',
     selectedModel: 'gemini-1.5-flash',
     isConfigured: false
+  })
+  
+  const [whatsappConfig, setWhatsappConfig] = useState<WhatsAppConfig>({
+    phoneNumber: '',
+    whatsappLink: '',
+    isEnabled: false
   })
   
   const [settings, setSettings] = useState<SettingsState>({
@@ -244,6 +259,82 @@ const StudentSettingsPage = () => {
     }
   }, [geminiConfig.apiKey, geminiConfig.selectedModel])
 
+  // WhatsApp configuration functions
+  const checkWhatsAppConfig = useCallback(async () => {
+    try {
+      const response = await fetch('/api/student/whatsapp-config', {
+        method: 'GET',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
+      })
+      
+      if (response.ok) {
+        const whatsappData = await response.json()
+        setWhatsappConfig({
+          phoneNumber: whatsappData.phoneNumber || '',
+          whatsappLink: whatsappData.whatsappLink || '',
+          isEnabled: whatsappData.isEnabled || false
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching WhatsApp configuration:', error)
+    }
+  }, [])
+
+  const saveWhatsAppConfig = useCallback(async (config: WhatsAppConfig) => {
+    try {
+      setSaving(true)
+      const response = await fetch('/api/student/whatsapp-config', {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        },
+        body: JSON.stringify({ 
+          phoneNumber: config.phoneNumber,
+          whatsappLink: config.whatsappLink,
+          isEnabled: config.isEnabled
+        })
+      })
+      
+      if (response.ok) {
+        showToast('WhatsApp configuration saved successfully!', 'success')
+        setHasUnsavedChanges(false)
+      } else {
+        showToast('Failed to save WhatsApp configuration', 'error')
+      }
+    } catch (error) {
+      showToast('Failed to save WhatsApp configuration', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }, [])
+
+  const validatePhoneNumber = (phone: string): boolean => {
+    // Remove all non-digit characters
+    const cleanPhone = phone.replace(/\D/g, '')
+    // Check if it's a valid international format (8-15 digits)
+    return cleanPhone.length >= 8 && cleanPhone.length <= 15
+  }
+
+  const formatPhoneNumber = (phone: string): string => {
+    // Remove all non-digit characters except +
+    const cleaned = phone.replace(/[^\d+]/g, '')
+    // Ensure it starts with + if it doesn't already
+    if (cleaned && !cleaned.startsWith('+')) {
+      return '+' + cleaned
+    }
+    return cleaned
+  }
+
+  const generateWhatsAppLink = (phoneNumber: string): string => {
+    if (!phoneNumber) return ''
+    const cleanPhone = phoneNumber.replace(/\D/g, '')
+    return `https://wa.me/${cleanPhone}`
+  }
+
   // Optimized fetch with caching and parallel requests
   const fetchProfileAndSettings = useCallback(async () => {
     try {
@@ -310,6 +401,7 @@ const StudentSettingsPage = () => {
 
   useEffect(() => {
     fetchProfileAndSettings()
+    checkWhatsAppConfig()
   }, []) // Only run once on mount
 
   // Debounced save settings with optimistic updates
@@ -1101,6 +1193,154 @@ const StudentSettingsPage = () => {
                         className={`px-6 py-2 rounded-xl font-medium transition-all ${
                           geminiConfig.apiKey 
                             ? 'bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white' 
+                            : 'bg-gray-500/50 text-gray-300 cursor-not-allowed'
+                        }`}
+                      >
+                        {saving ? (
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Save className="h-4 w-4 mr-2" />
+                        )}
+                        Save Configuration
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* WhatsApp Configuration Section */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.45 }}
+                className="xl:col-span-2 lg:col-span-1"
+              >
+                <Card className="bg-white/10 backdrop-blur-xl shadow-2xl border border-white/20 rounded-2xl sm:rounded-3xl">
+                  <CardHeader className="pb-3 sm:pb-6">
+                    <CardTitle className="flex items-center justify-between text-base sm:text-lg text-white">
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-300" />
+                        <span className="truncate">WhatsApp Configuration</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          checked={whatsappConfig.isEnabled}
+                          onCheckedChange={(checked) => {
+                            setWhatsappConfig(prev => ({ ...prev, isEnabled: checked }))
+                            setHasUnsavedChanges(true)
+                          }}
+                          className="data-[state=checked]:bg-green-500"
+                        />
+                        <span className="text-xs text-white/60">
+                          {whatsappConfig.isEnabled ? 'Enabled' : 'Disabled'}
+                        </span>
+                      </div>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6 pb-6">
+                    
+                    {/* Phone Number Input */}
+                    <div className="space-y-2">
+                      <label className="text-white/80 text-sm font-medium flex items-center space-x-2">
+                        <Phone className="h-4 w-4 text-green-300" />
+                        <span>Phone Number</span>
+                      </label>
+                      <Input
+                        type="tel"
+                        placeholder="+1234567890"
+                        value={whatsappConfig.phoneNumber}
+                        onChange={(e) => {
+                          const formatted = formatPhoneNumber(e.target.value)
+                          setWhatsappConfig(prev => ({ 
+                            ...prev, 
+                            phoneNumber: formatted,
+                            whatsappLink: generateWhatsAppLink(formatted)
+                          }))
+                          setHasUnsavedChanges(true)
+                        }}
+                        className={`bg-white/10 border-white/20 text-white placeholder-white/50 rounded-xl ${
+                          whatsappConfig.phoneNumber && !validatePhoneNumber(whatsappConfig.phoneNumber)
+                            ? 'border-red-400 focus:border-red-400'
+                            : 'focus:border-green-400'
+                        }`}
+                      />
+                      {whatsappConfig.phoneNumber && !validatePhoneNumber(whatsappConfig.phoneNumber) && (
+                        <p className="text-red-300 text-xs flex items-center space-x-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          <span>Please enter a valid phone number with country code</span>
+                        </p>
+                      )}
+                      <p className="text-white/60 text-xs">
+                        Enter your phone number with country code (e.g., +1234567890)
+                      </p>
+                    </div>
+
+                    {/* WhatsApp Link Input */}
+                    <div className="space-y-2">
+                      <label className="text-white/80 text-sm font-medium flex items-center space-x-2">
+                        <Link className="h-4 w-4 text-green-300" />
+                        <span>WhatsApp Link</span>
+                      </label>
+                      <Input
+                        type="url"
+                        placeholder="https://wa.me/1234567890"
+                        value={whatsappConfig.whatsappLink}
+                        onChange={(e) => {
+                          setWhatsappConfig(prev => ({ ...prev, whatsappLink: e.target.value }))
+                          setHasUnsavedChanges(true)
+                        }}
+                        className="bg-white/10 border-white/20 text-white placeholder-white/50 rounded-xl focus:border-green-400"
+                      />
+                      <p className="text-white/60 text-xs">
+                        Custom WhatsApp link (optional - auto-generated from phone number)
+                      </p>
+                    </div>
+
+                    {/* Auto-generated Link Display */}
+                    {whatsappConfig.phoneNumber && validatePhoneNumber(whatsappConfig.phoneNumber) && (
+                      <div className="p-3 bg-green-500/10 border border-green-400/20 rounded-xl">
+                        <div className="flex items-start space-x-2">
+                          <Check className="h-4 w-4 text-green-300 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-green-300 text-sm font-medium">Auto-generated WhatsApp Link:</p>
+                            <p className="text-green-200/80 text-xs mt-1 break-all">
+                              {generateWhatsAppLink(whatsappConfig.phoneNumber)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Test WhatsApp Link */}
+                    {(whatsappConfig.whatsappLink || (whatsappConfig.phoneNumber && validatePhoneNumber(whatsappConfig.phoneNumber))) && (
+                      <div className="flex items-center justify-between pt-4 border-t border-white/20">
+                        <div className="text-xs text-white/60">
+                          <p>Test your WhatsApp configuration</p>
+                        </div>
+                        <Button
+                          onClick={() => {
+                            const linkToTest = whatsappConfig.whatsappLink || generateWhatsAppLink(whatsappConfig.phoneNumber)
+                            window.open(linkToTest, '_blank')
+                          }}
+                          className="bg-green-500 hover:bg-green-600 text-white border-0 rounded-xl px-4 py-2 font-medium transition-all duration-200 flex items-center gap-2"
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                          Test WhatsApp
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Save Configuration */}
+                    <div className="flex items-center justify-between pt-4 border-t border-white/20">
+                      <div className="text-xs text-white/60">
+                        <p>Configure WhatsApp for quick communication</p>
+                      </div>
+                      <Button
+                        onClick={() => saveWhatsAppConfig(whatsappConfig)}
+                        disabled={saving || (!whatsappConfig.phoneNumber && !whatsappConfig.whatsappLink)}
+                        className={`px-6 py-2 rounded-xl font-medium transition-all ${
+                          (whatsappConfig.phoneNumber || whatsappConfig.whatsappLink)
+                            ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white' 
                             : 'bg-gray-500/50 text-gray-300 cursor-not-allowed'
                         }`}
                       >

@@ -17,6 +17,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
+    flowType: 'pkce',
     storage: {
       getItem: (key: string) => {
         if (typeof window !== 'undefined') {
@@ -28,7 +29,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
         if (typeof window !== 'undefined') {
           window.localStorage.setItem(key, value)
           // Also set as cookie for server-side access
-          document.cookie = `${key}=${value}; path=/; max-age=604800; SameSite=Lax`
+          document.cookie = `${key}=${value}; path=/; max-age=604800; SameSite=Lax; Secure`
         }
       },
       removeItem: (key: string) => {
@@ -47,3 +48,18 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     }
   }
 })
+
+// Handle auth state changes and refresh token errors
+if (typeof window !== 'undefined') {
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'TOKEN_REFRESHED') {
+      console.log('✅ Token refreshed successfully')
+    } else if (event === 'SIGNED_OUT') {
+      console.log('🔒 User signed out')
+      // Clear all auth-related data
+      window.localStorage.clear()
+    } else if (event === 'USER_UPDATED') {
+      console.log('👤 User updated')
+    }
+  })
+}

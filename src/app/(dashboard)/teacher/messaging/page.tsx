@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAppSelector } from '@/lib/redux/hooks'
 import { ClientWrapper } from '@/components/providers/ClientWrapper'
 import { AuthGuard } from '@/components/auth/auth-guard'
@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import HapticFeedback from '@/lib/haptic-feedback'
 import { 
   Users, 
   MessageSquare, 
@@ -36,13 +37,15 @@ import {
   BarChart3,
   Lightbulb,
   Shield,
-  ArrowLeft
+  ArrowLeft,
+  RefreshCw
 } from 'lucide-react'
 import { RealtimeProvider } from '@/components/communications/RealtimeProvider'
 import { MessageComposer } from '@/components/communications/MessageComposer'
 import { MessageThread } from '@/components/communications/MessageThread'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { toast } from 'sonner'
 
 interface Student {
   id: string
@@ -103,6 +106,8 @@ function TeacherMessagingContent() {
   const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [wellbeingFilter, setWellbeingFilter] = useState<'all' | 'thriving' | 'needs_support' | 'at_risk'>('all')
+  const [refreshing, setRefreshing] = useState(false)
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
   const [showShoutOutModal, setShowShoutOutModal] = useState(false)
   const [selectedStudentForShoutOut, setSelectedStudentForShoutOut] = useState<string | null>(null)
   const [shoutOutForm, setShoutOutForm] = useState({
@@ -254,44 +259,73 @@ function TeacherMessagingContent() {
   const [moodFilters, setMoodFilters] = useState<any[]>([])
   const [expandedActivity, setExpandedActivity] = useState<string | null>(null)
 
-  // Load real data from API
+  // Optimized data fetching with error handling and caching
+  const fetchTeacherData = useCallback(async (showToast = false) => {
+    try {
+      setRefreshing(true)
+      const response = await fetch('/api/teacher/messaging', {
+        cache: 'no-store', // Ensure fresh data
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+      
+      const data = await response.json()
+      setStudents(data.students || [])
+      setWellbeingAnalytics(data.wellbeingAnalytics || wellbeingAnalytics)
+      setInterventionSuggestions(data.interventionSuggestions || interventionSuggestions)
+      setLastRefresh(new Date())
+      
+      if (showToast) {
+        HapticFeedback.success()
+        toast.success('Data refreshed successfully!')
+      }
+    } catch (error: any) {
+      console.error('Failed to fetch teacher data:', error)
+      HapticFeedback.error()
+      toast.error('Failed to load data. Please try again.')
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }, [])
+
+  const fetchInterventionToolkit = useCallback(async () => {
+    try {
+      setInterventionLoading(true)
+      const response = await fetch(`/api/teacher/intervention-toolkit?category=${selectedCategory}&mood=${selectedMood}`)
+      if (response.ok) {
+        const data = await response.json()
+        setInterventionActivities(data.activities || [])
+        setInterventionCategories(data.categories || [])
+        setMoodFilters(data.moodFilters || [])
+      }
+    } catch (error: any) {
+      console.error('Failed to fetch intervention toolkit:', error)
+      toast.error('Failed to load intervention toolkit')
+    } finally {
+      setInterventionLoading(false)
+    }
+  }, [selectedCategory, selectedMood])
+
+  // Initial data load
   useEffect(() => {
-    const fetchTeacherData = async () => {
-      try {
-        const response = await fetch('/api/teacher/messaging')
-        if (response.ok) {
-          const data = await response.json()
-          setStudents(data.students || [])
-          setWellbeingAnalytics(data.wellbeingAnalytics || wellbeingAnalytics)
-          setInterventionSuggestions(data.interventionSuggestions || interventionSuggestions)
-        }
-      } catch (error: any) {
-        console.error('Failed to fetch teacher data:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    const fetchInterventionToolkit = async () => {
-      try {
-        setInterventionLoading(true)
-        const response = await fetch(`/api/teacher/intervention-toolkit?category=${selectedCategory}&mood=${selectedMood}`)
-        if (response.ok) {
-          const data = await response.json()
-          setInterventionActivities(data.activities || [])
-          setInterventionCategories(data.categories || [])
-          setMoodFilters(data.moodFilters || [])
-        }
-      } catch (error: any) {
-        console.error('Failed to fetch intervention toolkit:', error)
-      } finally {
-        setInterventionLoading(false)
-      }
-    }
-
     fetchTeacherData()
     fetchInterventionToolkit()
-  }, [selectedCategory, selectedMood])
+  }, [fetchTeacherData, fetchInterventionToolkit])
+
+  // Auto-refresh every 2 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchTeacherData()
+    }, 120000) // 2 minutes
+
+    return () => clearInterval(interval)
+  }, [fetchTeacherData])
 
   const getMoodIcon = (mood: string) => {
     switch (mood) {
@@ -314,11 +348,44 @@ function TeacherMessagingContent() {
     }
   }
 
-  const filteredStudents = students.filter(student => {
-    const matchesSearch = student.name.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesFilter = wellbeingFilter === 'all' || student.wellbeingStatus === wellbeingFilter
-    return matchesSearch && matchesFilter
-  })
+  // Memoized filtering and search for better performance
+  const filteredStudents = useMemo(() => {
+    let filtered = students
+
+    // Apply wellbeing filter
+    if (wellbeingFilter !== 'all') {
+      filtered = filtered.filter(student => student.wellbeingStatus === wellbeingFilter)
+    }
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim()
+      filtered = filtered.filter(student => 
+        student.name.toLowerCase().includes(query) ||
+        student.grade.toLowerCase().includes(query) ||
+        student.mood.toLowerCase().includes(query)
+      )
+    }
+
+    return filtered
+  }, [students, wellbeingFilter, searchQuery])
+
+  // Optimized event handlers with haptic feedback
+  const handleTabChange = useCallback((tab: string) => {
+    HapticFeedback.tabSwitch()
+    setActiveTab(tab)
+    setSelectedContact(null) // Reset selection when changing tabs
+  }, [])
+
+  const handleStudentSelect = useCallback((studentId: string) => {
+    HapticFeedback.select()
+    setSelectedContact(studentId)
+  }, [])
+
+  const handleRefresh = useCallback(() => {
+    HapticFeedback.refresh()
+    fetchTeacherData(true)
+  }, [fetchTeacherData])
 
   if (loading) {
     return (
@@ -351,18 +418,65 @@ function TeacherMessagingContent() {
                   </div>
                 </div>
                 
-                {/* Bottom row - Action buttons */}
+                {/* Bottom row - Action buttons with haptic feedback */}
                 <div className="flex items-center space-x-2 sm:space-x-4">
-                  <Button variant="outline" className="flex-1 sm:flex-none text-xs sm:text-sm py-2 sm:py-3">
-                    <Bell className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                    <span className="hidden sm:inline">Notifications</span>
-                    <span className="sm:hidden">Alerts</span>
-                  </Button>
-                  <Button className="flex-1 sm:flex-none text-xs sm:text-sm py-2 sm:py-3">
-                    <Send className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                    <span className="hidden sm:inline">New Message</span>
-                    <span className="sm:hidden">New</span>
-                  </Button>
+                  <motion.div 
+                    className="flex-1 sm:flex-none"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Button 
+                      variant="outline" 
+                      className="w-full text-xs sm:text-sm py-2 sm:py-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
+                      onClick={() => {
+                        HapticFeedback.buttonPress()
+                        toast.info('Notifications feature coming soon!')
+                      }}
+                    >
+                      <Bell className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Notifications</span>
+                      <span className="sm:hidden">Alerts</span>
+                    </Button>
+                  </motion.div>
+                  
+                  <motion.div 
+                    className="flex-1 sm:flex-none"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Button 
+                      className="w-full text-xs sm:text-sm py-2 sm:py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition-all duration-200"
+                      onClick={() => {
+                        HapticFeedback.buttonPress()
+                        toast.info('Compose message feature coming soon!')
+                      }}
+                    >
+                      <Send className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">New Message</span>
+                      <span className="sm:hidden">New</span>
+                    </Button>
+                  </motion.div>
+                  
+                  <motion.div 
+                    className="flex-shrink-0"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRefresh}
+                      disabled={refreshing}
+                      className="p-2 rounded-xl border-gray-300 hover:bg-gray-50 transition-all duration-200"
+                    >
+                      <motion.div
+                        animate={refreshing ? { rotate: 360 } : { rotate: 0 }}
+                        transition={{ duration: 1, repeat: refreshing ? Infinity : 0, ease: "linear" }}
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                      </motion.div>
+                    </Button>
+                  </motion.div>
                 </div>
               </div>
             </div>
@@ -601,29 +715,60 @@ function TeacherMessagingContent() {
               </Card>
             </motion.div>
 
-            {/* Main Content */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-              <TabsList className="grid w-full grid-cols-3 h-auto">
-                <TabsTrigger value="students" className="flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-2 py-2 sm:py-3 text-xs sm:text-sm">
-                  <BookOpen className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline">Students</span>
-                  <span className="sm:hidden">Students</span>
-                  <Badge className="ml-0 sm:ml-1 bg-blue-500 text-xs">24</Badge>
-                </TabsTrigger>
-                <TabsTrigger value="parents" className="flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-2 py-2 sm:py-3 text-xs sm:text-sm">
-                  <Heart className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline">Parents</span>
-                  <span className="sm:hidden">Parents</span>
-                  <Badge className="ml-0 sm:ml-1 bg-green-500 text-xs">18</Badge>
-                </TabsTrigger>
-                <TabsTrigger value="announcements" className="flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-2 py-2 sm:py-3 text-xs sm:text-sm">
-                  <Bell className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline">Announcements</span>
-                  <span className="sm:hidden">News</span>
-                </TabsTrigger>
-              </TabsList>
+            {/* Enhanced Tabs with Haptic Feedback */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+            >
+              <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4 sm:space-y-6">
+                <div className="bg-white/90 backdrop-blur-xl rounded-2xl p-1.5 shadow-lg border border-gray-200/50">
+                  <TabsList className="grid w-full grid-cols-3 h-auto bg-transparent gap-1">
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <TabsTrigger 
+                        value="students" 
+                        className="flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-2 py-3 sm:py-4 text-xs sm:text-sm rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200"
+                      >
+                        <BookOpen className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <span className="hidden sm:inline">Students</span>
+                        <span className="sm:hidden">Students</span>
+                        <Badge className="ml-0 sm:ml-1 bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                          {filteredStudents.length}
+                        </Badge>
+                      </TabsTrigger>
+                    </motion.div>
+                    
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <TabsTrigger 
+                        value="parents" 
+                        className="flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-2 py-3 sm:py-4 text-xs sm:text-sm rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200"
+                      >
+                        <Heart className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <span className="hidden sm:inline">Parents</span>
+                        <span className="sm:hidden">Parents</span>
+                        <Badge className="ml-0 sm:ml-1 bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                          {parents.length}
+                        </Badge>
+                      </TabsTrigger>
+                    </motion.div>
+                    
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <TabsTrigger 
+                        value="announcements" 
+                        className="flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-2 py-3 sm:py-4 text-xs sm:text-sm rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-violet-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200"
+                      >
+                        <Bell className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <span className="hidden sm:inline">Announcements</span>
+                        <span className="sm:hidden">News</span>
+                        <Badge className="ml-0 sm:ml-1 bg-purple-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                          {announcements.length}
+                        </Badge>
+                      </TabsTrigger>
+                    </motion.div>
+                  </TabsList>
+                </div>
 
-              <TabsContent value="students" className="space-y-4 sm:space-y-6">
+                <TabsContent value="students" className="space-y-4 sm:space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
                   
                   {/* Enhanced Students List */}
@@ -656,17 +801,25 @@ function TeacherMessagingContent() {
                             <Filter className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400 flex-shrink-0" />
                             <div className="flex space-x-1 overflow-x-auto pb-1">
                               {(['all', 'thriving', 'needs_support', 'at_risk'] as const).map((filter) => (
-                                <Button
-                                  key={filter}
-                                  size="sm"
-                                  variant={wellbeingFilter === filter ? "default" : "outline"}
-                                  onClick={() => setWellbeingFilter(filter)}
-                                  className="text-xs px-2 py-1 flex-shrink-0 min-w-0"
-                                >
-                                  {filter === 'all' ? 'All' : 
-                                   filter === 'thriving' ? '😊' :
-                                   filter === 'needs_support' ? '😐' : '😰'}
-                                </Button>
+                                <motion.div key={filter} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                  <Button
+                                    size="sm"
+                                    variant={wellbeingFilter === filter ? "default" : "outline"}
+                                    onClick={() => {
+                                      HapticFeedback.select()
+                                      setWellbeingFilter(filter)
+                                    }}
+                                    className={`text-xs px-2 py-1 flex-shrink-0 min-w-0 rounded-xl transition-all duration-200 ${
+                                      wellbeingFilter === filter 
+                                        ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md' 
+                                        : 'hover:bg-gray-100'
+                                    }`}
+                                  >
+                                    {filter === 'all' ? 'All' : 
+                                     filter === 'thriving' ? '😊' :
+                                     filter === 'needs_support' ? '😐' : '😰'}
+                                  </Button>
+                                </motion.div>
                               ))}
                             </div>
                           </div>
@@ -674,14 +827,23 @@ function TeacherMessagingContent() {
                       </CardHeader>
                       <CardContent className="p-0">
                         <div className="max-h-80 sm:max-h-96 overflow-y-auto">
-                          {filteredStudents.map((student) => (
-                            <div
-                              key={student.id}
-                              className={`p-4 border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-all duration-200 ${
-                                selectedContact === student.id ? 'bg-blue-50 border-l-4 border-l-blue-500 shadow-sm' : ''
-                              }`}
-                              onClick={() => setSelectedContact(student.id)}
-                            >
+                          <AnimatePresence>
+                            {filteredStudents.map((student, index) => (
+                              <motion.div
+                                key={student.id}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                transition={{ delay: Math.min(index * 0.05, 0.5) }}
+                                className={`p-4 border-b border-gray-100 last:border-b-0 cursor-pointer transition-all duration-200 ${
+                                  selectedContact === student.id 
+                                    ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-l-blue-500 shadow-md' 
+                                    : 'hover:bg-gray-50 hover:shadow-sm'
+                                }`}
+                                onClick={() => handleStudentSelect(student.id)}
+                                whileHover={{ scale: 1.01 }}
+                                whileTap={{ scale: 0.99 }}
+                              >
                               <div className="flex items-start space-x-4">
                                 <div className="relative flex-shrink-0">
                                   <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
@@ -745,8 +907,9 @@ function TeacherMessagingContent() {
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                              </motion.div>
+                            ))}
+                          </AnimatePresence>
                         </div>
                       </CardContent>
                     </Card>
@@ -1057,7 +1220,8 @@ function TeacherMessagingContent() {
                   </Card>
                 </div>
               </TabsContent>
-            </Tabs>
+              </Tabs>
+            </motion.div>
           </div>
 
           {/* Shout-Out Modal */}

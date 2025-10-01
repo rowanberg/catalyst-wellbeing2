@@ -91,7 +91,7 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
       return
     }
     
-    if (!user.id || !user.school_id) {
+    if (!user.id) {
       setError('Authentication required - missing user data')
       setLoading(false)
       return
@@ -110,7 +110,22 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
         setLoading(true)
       }
 
-      const cacheKey = getCacheKey(user.id, user.school_id, currentClassId, includeStudents)
+      // Get school_id from user or profile
+      let schoolId = user.school_id
+      if (!schoolId) {
+        // Fetch school_id from profile if not available in user object
+        const profileResponse = await fetch('/api/profile')
+        if (profileResponse.ok) {
+          const profile = await profileResponse.json()
+          schoolId = profile.school_id
+        }
+      }
+      
+      if (!schoolId) {
+        throw new Error('School ID not found')
+      }
+
+      const cacheKey = getCacheKey(user.id, schoolId, currentClassId, includeStudents)
       
       // Check cache first (unless force refresh)
       if (!forceRefresh) {
@@ -124,7 +139,7 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
 
       console.log('🔄 Fetching teacher data...', { 
         teacherId: user.id, 
-        schoolId: user.school_id, 
+        schoolId: schoolId, 
         classId: currentClassId, 
         includeStudents 
       })
@@ -132,7 +147,7 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
       // Build query parameters
       const params = new URLSearchParams({
         teacher_id: user.id,
-        school_id: user.school_id,
+        school_id: schoolId,
         include_students: includeStudents.toString()
       })
       
@@ -191,7 +206,17 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
 
   // Load students for a specific class (optimized for immediate loading)
   const loadStudentsForClass = useCallback(async (classId: string) => {
-    if (!user?.id || !user?.school_id) return
+    console.log('🚀 loadStudentsForClass called with:', { classId, userId: user?.id, hasUser: !!user })
+    
+    if (!classId || classId === 'null' || classId === 'undefined') {
+      console.log('❌ Invalid class ID:', classId)
+      return
+    }
+    
+    if (!user?.id) {
+      console.log('❌ No user ID available')
+      return
+    }
 
     setStudentsLoading(true)
     setError(null)
@@ -199,7 +224,30 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
     try {
       console.log('🚀 Fast loading students for class:', classId)
       
-      const response = await fetch(`/api/teacher/students?school_id=${user.school_id}&class_id=${classId}`)
+      // Get school_id from teacher profile first
+      let schoolId = user.school_id
+      console.log('🏫 Initial school_id from user:', schoolId)
+      
+      if (!schoolId) {
+        console.log('🔍 Fetching school_id from profile...')
+        // Fetch school_id from profile if not available in user object
+        const profileResponse = await fetch('/api/profile')
+        if (profileResponse.ok) {
+          const profile = await profileResponse.json()
+          schoolId = profile.school_id
+          console.log('✅ Got school_id from profile:', schoolId)
+        } else {
+          console.log('❌ Failed to fetch profile:', profileResponse.status)
+        }
+      }
+      
+      if (!schoolId) {
+        console.log('❌ No school_id found anywhere')
+        throw new Error('School ID not found')
+      }
+      
+      console.log('📡 Making API call with:', { schoolId, classId })
+      const response = await fetch(`/api/teacher/students?school_id=${schoolId}&class_id=${classId}`)
       
       if (!response.ok) {
         throw new Error(`Failed to fetch students: ${response.status}`)
@@ -215,7 +263,7 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
         }))
         
         // Update cache with new students data
-        const cacheKey = getCacheKey(user.id, user.school_id, classId, true)
+        const cacheKey = getCacheKey(user.id, schoolId, classId, true)
         const cachedData = getCachedData(cacheKey)
         if (cachedData) {
           setCachedData(cacheKey, {

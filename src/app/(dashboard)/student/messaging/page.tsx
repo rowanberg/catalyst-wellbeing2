@@ -125,6 +125,25 @@ interface Conversation {
   avatar?: string
 }
 
+interface ManagementMessage {
+  id: string
+  senderId: string
+  senderName: string
+  senderRole: string
+  subject: string
+  content: string
+  messageType: string
+  isRead: boolean
+  createdAt: string
+  timeAgo: string
+}
+
+interface WhatsAppConfig {
+  phoneNumber?: string
+  whatsappLink?: string
+  isEnabled?: boolean
+}
+
 // Cache for API responses
 const apiCache = new globalThis.Map<string, { data: any; timestamp: number; ttl: number }>()
 
@@ -816,6 +835,13 @@ function StudentMessagingContent() {
   const [teachers, setTeachers] = useState<Teacher[]>([])
   const [isLoadingTeachers, setIsLoadingTeachers] = useState(false)
   const [optimisticMessageHandler, setOptimisticMessageHandler] = useState<((message: any) => void) | undefined>(undefined)
+  
+  // Management messages and WhatsApp state
+  const [managementMessages, setManagementMessages] = useState<ManagementMessage[]>([])
+  const [whatsappConfig, setWhatsappConfig] = useState<WhatsAppConfig | null>(null)
+  const [isLoadingManagementMessages, setIsLoadingManagementMessages] = useState(false)
+  const [selectedManagementMessage, setSelectedManagementMessage] = useState<ManagementMessage | null>(null)
+  const [showManagementMessages, setShowManagementMessages] = useState(true)
 
   // Function to refresh messages without page reload
   const refreshMessages = () => {
@@ -825,6 +851,67 @@ function StudentMessagingContent() {
       return prev + 1
     })
   }
+
+  // Fetch management messages and WhatsApp config
+  const fetchManagementMessages = useCallback(async () => {
+    if (!user?.id) return
+
+    setIsLoadingManagementMessages(true)
+    try {
+      const response = await fetch('/api/student/management-messages', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include'
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setManagementMessages(data.messages || [])
+        setWhatsappConfig(data.whatsappConfig)
+      } else {
+        // Silently handle errors - management messages are optional
+        console.warn('Management messages not available:', response.status)
+        setManagementMessages([])
+        setWhatsappConfig(null)
+      }
+    } catch (error) {
+      // Silently handle network errors - management messages are optional
+      console.warn('Management messages API not available:', error)
+      setManagementMessages([])
+      setWhatsappConfig(null)
+    } finally {
+      setIsLoadingManagementMessages(false)
+    }
+  }, [user?.id])
+
+  // Mark management message as read
+  const markMessageAsRead = useCallback(async (messageId: string) => {
+    try {
+      const response = await fetch('/api/student/management-messages', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          messageId,
+          isRead: true
+        })
+      })
+
+      if (response.ok) {
+        setManagementMessages(prev => 
+          prev.map(msg => 
+            msg.id === messageId ? { ...msg, isRead: true } : msg
+          )
+        )
+      }
+    } catch (error) {
+      console.error('Error marking message as read:', error)
+    }
+  }, [])
 
   // Function to start a family conversation with a parent
   const startFamilyConversation = async (parentId: string) => {
@@ -911,8 +998,9 @@ function StudentMessagingContent() {
   useEffect(() => {
     if (selectedTab === 'teachers' && user?.id) {
       fetchAssignedTeachers()
+      fetchManagementMessages()
     }
-  }, [selectedTab, user?.id, fetchAssignedTeachers])
+  }, [selectedTab, user?.id, fetchAssignedTeachers, fetchManagementMessages])
 
   // Fetch family data (parents and conversations)
   useEffect(() => {
@@ -1162,8 +1250,9 @@ function StudentMessagingContent() {
                     </div>
                     
                     <div className="space-y-2">
-                      {selectedTab === 'teachers' ? (
-                        isLoadingTeachers ? (
+                      {selectedTab === 'teachers' && (
+                        <>
+                        {isLoadingTeachers ? (
                           <div className="flex flex-col items-center justify-center py-12 space-y-4">
                             <div className="relative">
                               <div className="animate-spin rounded-full h-10 w-10 border-2 border-white/20 border-t-violet-400"></div>
@@ -1243,9 +1332,145 @@ function StudentMessagingContent() {
                               Your teachers will appear here once you're enrolled in classes
                             </p>
                           </div>
-                        )
-                      ) : selectedTab === 'parents' ? (
-                        isLoadingParents ? (
+                        )}
+
+                        {/* Management Messages Section */}
+                        {managementMessages.length > 0 && (
+                          <div className="mt-6 pt-6 border-t border-white/20">
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="flex items-center space-x-3">
+                                <div className="p-2 bg-gradient-to-br from-orange-500/20 to-red-500/20 rounded-xl backdrop-blur-sm border border-white/20">
+                                  <Megaphone className="h-5 w-5 text-orange-300" />
+                                </div>
+                                <h3 className="text-white font-semibold text-sm">Management Messages</h3>
+                                {managementMessages.filter(msg => !msg.isRead).length > 0 && (
+                                  <Badge className="bg-red-500/20 text-red-300 text-xs px-2 py-1 rounded-full border-red-400/30">
+                                    {managementMessages.filter(msg => !msg.isRead).length} new
+                                  </Badge>
+                                )}
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowManagementMessages(!showManagementMessages)}
+                                className="text-white/60 hover:text-white/80 p-2"
+                              >
+                                {showManagementMessages ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                              </Button>
+                            </div>
+
+                            <AnimatePresence>
+                              {showManagementMessages && (
+                                <motion.div
+                                  initial={{ opacity: 0, height: 0 }}
+                                  animate={{ opacity: 1, height: 'auto' }}
+                                  exit={{ opacity: 0, height: 0 }}
+                                  className="space-y-2 max-h-64 overflow-y-auto"
+                                >
+                                  {managementMessages.slice(0, 5).map((message) => (
+                                    <motion.div
+                                      key={message.id}
+                                      initial={{ opacity: 0, x: -20 }}
+                                      animate={{ opacity: 1, x: 0 }}
+                                      className={`p-3 rounded-xl border cursor-pointer transition-all hover:shadow-lg ${
+                                        message.isRead 
+                                          ? 'bg-white/5 border-white/10 hover:bg-white/10' 
+                                          : 'bg-orange-500/10 border-orange-400/30 hover:bg-orange-500/20'
+                                      }`}
+                                      onClick={() => {
+                                        setSelectedManagementMessage(message)
+                                        if (!message.isRead) {
+                                          markMessageAsRead(message.id)
+                                        }
+                                      }}
+                                    >
+                                      <div className="flex items-start justify-between">
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center space-x-2 mb-1">
+                                            <p className="text-white text-xs font-medium truncate">{message.subject}</p>
+                                            {!message.isRead && (
+                                              <div className="w-2 h-2 bg-orange-400 rounded-full flex-shrink-0"></div>
+                                            )}
+                                          </div>
+                                          <p className="text-white/60 text-xs truncate mb-1">{message.content}</p>
+                                          <div className="flex items-center justify-between">
+                                            <p className="text-white/40 text-xs">From: {message.senderName}</p>
+                                            <p className="text-white/40 text-xs">{message.timeAgo}</p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </motion.div>
+                                  ))}
+                                  
+                                  {managementMessages.length > 5 && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="w-full text-white/60 hover:text-white/80 text-xs py-2"
+                                      onClick={() => {
+                                        // TODO: Show all messages modal
+                                        toast.info('View all messages feature coming soon!')
+                                      }}
+                                    >
+                                      View all {managementMessages.length} messages
+                                    </Button>
+                                  )}
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        )}
+
+                        {/* WhatsApp Contact Section */}
+                        {whatsappConfig?.isEnabled && (whatsappConfig.phoneNumber || whatsappConfig.whatsappLink) && (
+                          <div className="mt-6 pt-6 border-t border-white/20">
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="flex items-center space-x-3">
+                                <div className="p-2 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl backdrop-blur-sm border border-white/20">
+                                  <MessageCircle className="h-5 w-5 text-green-300" />
+                                </div>
+                                <h3 className="text-white font-semibold text-sm">Quick Contact</h3>
+                              </div>
+                            </div>
+                            
+                            <div className="p-4 bg-green-500/10 border border-green-400/20 rounded-xl">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                  <div className="w-10 h-10 bg-green-500/20 rounded-xl flex items-center justify-center">
+                                    <MessageCircle className="h-5 w-5 text-green-300" />
+                                  </div>
+                                  <div>
+                                    <p className="text-white text-sm font-medium">WhatsApp Contact</p>
+                                    <p className="text-green-300 text-xs">
+                                      {whatsappConfig.phoneNumber || 'Custom Link'}
+                                    </p>
+                                  </div>
+                                </div>
+                                <Button
+                                  onClick={() => {
+                                    const link = whatsappConfig.whatsappLink || 
+                                      (whatsappConfig.phoneNumber ? `https://wa.me/${whatsappConfig.phoneNumber.replace(/\D/g, '')}` : '')
+                                    if (link) {
+                                      window.open(link, '_blank')
+                                      toast.success('Opening WhatsApp...')
+                                    }
+                                  }}
+                                  size="sm"
+                                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl text-xs"
+                                >
+                                  <MessageCircle className="h-3 w-3 mr-1" />
+                                  Chat
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        </>
+                      )}
+                      
+                      {selectedTab === 'parents' && (
+                        <>
+                        {isLoadingParents ? (
                           <div className="flex flex-col items-center justify-center py-12 space-y-4">
                             <div className="relative">
                               <div className="animate-spin rounded-full h-10 w-10 border-2 border-white/20 border-t-pink-400"></div>
@@ -1257,9 +1482,9 @@ function StudentMessagingContent() {
                             </div>
                           </div>
                         ) : parents.length > 0 ? (
-                          parents.map((parent) => (
+                          parents.map((parent: any) => (
                             <motion.div
-                              key={parent.id}
+                              key={parent.id || parent.user_id || `parent-${parent.name}`}
                               initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ duration: 0.3 }}
@@ -1270,7 +1495,7 @@ function StudentMessagingContent() {
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-3">
                                   <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-pink-500 via-rose-500 to-red-500 rounded-2xl flex items-center justify-center text-white font-bold text-sm sm:text-base shadow-2xl border-2 border-white/20">
-                                    {parent.name.split(' ').map((n: string) => n[0]).join('')}
+                                    {parent.name?.split(' ').map((n: string) => n[0]).join('') || 'P'}
                                   </div>
                                   <div className="min-w-0 flex-1">
                                     <p className="font-bold text-white text-sm sm:text-base truncate group-hover:text-white/90">{parent.name}</p>
@@ -1279,7 +1504,7 @@ function StudentMessagingContent() {
                                 </div>
                                 <div className="text-right">
                                   <Button
-                                    onClick={() => startFamilyConversation(parent.id)}
+                                    onClick={() => startFamilyConversation(parent.id || parent.user_id)}
                                     variant="outline"
                                     size="sm"
                                     className="bg-pink-500/20 hover:bg-pink-500/30 border-pink-400/30 text-pink-300 hover:text-pink-200 text-xs sm:text-sm px-3 sm:px-4 py-2 rounded-xl backdrop-blur-sm transition-all"
@@ -1300,8 +1525,12 @@ function StudentMessagingContent() {
                             <p className="text-white/80 text-sm font-medium">No family linked yet</p>
                             <p className="text-white/60 text-xs mt-2 px-4">Your family will appear here once they register and verify your account</p>
                           </div>
-                        )
-                      ) : (
+                        )}
+                        </>
+                      )}
+                      
+                      {selectedTab === 'community' && (
+                        <>
                         <div className="space-y-4">
 
                           {/* Advanced Tools Grid - Mobile Optimized */}
@@ -1744,6 +1973,7 @@ function StudentMessagingContent() {
                             </motion.div>
                           </div>
                         </div>
+                        </>
                       )}
                     </div>
                   </CardContent>

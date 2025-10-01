@@ -416,18 +416,32 @@ function UserManagementContent() {
     }
 
     try {
-      // TODO: Implement actual messaging API
-      console.log('Sending message to:', messageRecipient.email)
-      console.log('Subject:', messageSubject)
-      console.log('Content:', messageContent)
-      
+      const response = await fetch('/api/admin/send-message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          recipientId: messageRecipient.id || messageRecipient.user_id,
+          subject: messageSubject,
+          content: messageContent,
+          messageType: 'management'
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to send message')
+      }
+
       addToast(`Message sent to ${messageRecipient.first_name} ${messageRecipient.last_name}`, 'success')
       setShowMessageModal(false)
       setMessageRecipient(null)
       setMessageSubject('')
       setMessageContent('')
     } catch (error: any) {
-      addToast('Failed to send message', 'error')
+      console.error('Error sending message:', error)
+      addToast(error.message || 'Failed to send message', 'error')
     }
   }
 

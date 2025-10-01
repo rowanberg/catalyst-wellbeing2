@@ -21,9 +21,34 @@ export async function createSupabaseServerClient() {
           } catch (error: any) {
             // In some contexts (like API routes), we can't set cookies
             // This is expected and safe to ignore
+            console.warn('Unable to set cookies:', error.message)
           }
         },
       },
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+        flowType: 'pkce',
+      }
     }
   )
+}
+
+// Helper function to handle auth errors gracefully
+export async function getAuthenticatedUser() {
+  try {
+    const supabase = await createSupabaseServerClient()
+    const { data: { user }, error } = await supabase.auth.getUser()
+    
+    if (error) {
+      console.error('Auth error:', error.message)
+      return { user: null, error }
+    }
+    
+    return { user, error: null }
+  } catch (error: any) {
+    console.error('Failed to get authenticated user:', error)
+    return { user: null, error }
+  }
 }

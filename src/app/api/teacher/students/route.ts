@@ -14,28 +14,25 @@ export async function GET(request: NextRequest) {
     const classId = searchParams.get('class_id')
 
     console.log('🔍 Students API called with:', { schoolId, classId })
+    console.log('📍 Request URL:', request.url)
+    console.log('📍 Caller:', request.headers.get('referer'))
 
     if (!schoolId || !classId) {
+      console.log('❌ Missing required parameters - returning empty result')
       return NextResponse.json(
-        { message: 'School ID and Class ID are required' },
-        { status: 400 }
+        { 
+          students: [],
+          total: 0,
+          message: 'School ID and Class ID are required' 
+        },
+        { status: 200 } // Changed to 200 to prevent error spam
       )
     }
 
-    // Get students through student_class_assignments table with class information
+    // Get student assignments first (avoiding complex joins)
     const { data: classAssignments, error: assignmentError } = await supabaseAdmin
       .from('student_class_assignments')
-      .select(`
-        student_id,
-        class_id,
-        profiles!inner(*),
-        classes!inner(
-          id,
-          class_name,
-          subject,
-          room_number
-        )
-      `)
+      .select('student_id, class_id')
       .eq('class_id', classId)
       .eq('is_active', true)
     
@@ -57,96 +54,67 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('✅ Found', classAssignments.length, 'class assignments')
-    console.log('📋 Raw assignments:', classAssignments)
     
-    // Debug: Check what fields are available in profiles
-    if (classAssignments.length > 0) {
-      const sampleProfile = Array.isArray(classAssignments[0].profiles) ? classAssignments[0].profiles[0] : classAssignments[0].profiles
-      console.log('🔍 Sample profile fields:', Object.keys(sampleProfile || {}))
-      console.log('🔍 Sample profile data:', sampleProfile)
-    }
-
-    // Get student IDs to fetch emails separately
+    // Get student IDs and fetch their profiles separately
     const studentIds = classAssignments.map(assignment => assignment.student_id).filter(Boolean)
     
-    // Fetch emails from users table using student IDs
-    console.log('🔍 Attempting to fetch emails for student IDs:', studentIds)
+    // Fetch student profiles separately to avoid join issues
+    const { data: studentProfiles, error: profilesError } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .in('user_id', studentIds)
     
-    let usersData = null
-    let usersError = null
-    
-    // Try to fetch from custom users table first
-    const customUsersResult = await supabaseAdmin
-      .from('users')
-      .select('id, email')
-      .in('id', studentIds)
-    
-    if (customUsersResult.error) {
-      console.error('⚠️ Failed to fetch from custom users table:', customUsersResult.error.message)
-      
-      // Try to fetch from auth.users table as fallback
-      try {
-        const authUsersResult = await supabaseAdmin.auth.admin.listUsers()
-        if (authUsersResult.data?.users) {
-          // Filter users by student IDs and map to our format
-          usersData = authUsersResult.data.users
-            .filter((user: any) => studentIds.includes(user.id))
-            .map((user: any) => ({ id: user.id, email: user.email }))
-          console.log('📧 Fetched emails from auth.users:', usersData)
-        }
-      } catch (authError) {
-        console.error('⚠️ Failed to fetch from auth.users:', authError)
-        usersError = authError
-      }
-    } else {
-      usersData = customUsersResult.data
-      usersError = customUsersResult.error
-    }
-    
-    console.log('📧 Final user emails fetched:', usersData)
-    console.log('📧 Users query result count:', usersData?.length || 0)
-
-    // Create a map of user ID to email for quick lookup
-    const emailMap = new Map()
-    if (usersData) {
-      usersData.forEach(user => {
-        emailMap.set(user.id, user.email)
+    if (profilesError) {
+      console.error('❌ Failed to fetch student profiles:', profilesError.message)
+      return NextResponse.json({
+        students: [],
+        total: 0,
+        error: 'Failed to fetch student profiles'
       })
     }
-    
-    console.log('🔗 Email mapping:', Array.from(emailMap.entries()))
 
+    // Fetch class information separately
+    const { data: classInfo, error: classError } = await supabaseAdmin
+      .from('classes')
+      .select('id, class_name, subject, room_number')
+      .eq('id', classId)
+      .single()
+    
+    if (classError) {
+      console.error('❌ Failed to fetch class info:', classError.message)
+    }
+
+    console.log('✅ Found', studentProfiles?.length || 0, 'student profiles')
+    console.log('✅ Class info:', classInfo)
+
+    // Map assignments to students using the separate profile data
     const students = classAssignments.map(assignment => {
-      const profile = Array.isArray(assignment.profiles) ? assignment.profiles[0] : assignment.profiles
-      const classInfo = Array.isArray(assignment.classes) ? assignment.classes[0] : assignment.classes
-      const email = emailMap.get(assignment.student_id) || profile?.email
+      const profile = studentProfiles?.find(p => p.user_id === assignment.student_id)
       
       return {
         id: profile?.id || assignment.student_id,
-        first_name: profile?.first_name,
-        last_name: profile?.last_name,
-        email: email || profile?.email || 'No email', // Try multiple sources for email
+        first_name: profile?.first_name || 'Unknown',
+        last_name: profile?.last_name || 'Student',
+        email: profile?.email || 'No email',
         student_number: profile?.student_number,
-        role: profile?.role,
+        role: profile?.role || 'student',
         school_id: profile?.school_id,
-        // Gamification data - try multiple field names
-        xp: profile?.xp || profile?.xp_points || profile?.points || profile?.experience_points || 0,
-        level: profile?.level || profile?.user_level || profile?.current_level || 1,
-        streak_days: profile?.streak_days || profile?.streak || profile?.daily_streak || 0,
+        // Gamification data
+        xp: profile?.xp || 0,
+        level: profile?.level || 1,
+        streak_days: profile?.streak_days || 0,
         // Wellbeing data
-        current_mood: profile?.current_mood || profile?.mood || 'neutral',
-        wellbeing_status: profile?.wellbeing_status || profile?.status || 'managing',
-        // Class information from the join
+        current_mood: profile?.current_mood || 'neutral',
+        wellbeing_status: profile?.wellbeing_status || 'managing',
+        // Class information
         class_id: assignment.class_id,
         class_name: classInfo?.class_name || `Class ${assignment.class_id?.substring(0, 8) || 'Unknown'}`,
-        class_subject: classInfo?.subject,
-        class_room: classInfo?.room_number,
-        // Additional fields that might be useful
+        class_subject: classInfo?.subject || 'General',
+        class_room: classInfo?.room_number || 'TBD',
+        // Additional fields
         grade_level: profile?.grade_level,
         created_at: profile?.created_at,
-        updated_at: profile?.updated_at,
-        // Debug: include raw profile for inspection
-        _debug_profile: profile
+        updated_at: profile?.updated_at
       }
     }).filter(student => student.id) // Only include students with valid IDs
 

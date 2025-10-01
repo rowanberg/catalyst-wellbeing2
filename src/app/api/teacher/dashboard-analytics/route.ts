@@ -180,23 +180,10 @@ export async function GET(request: NextRequest) {
       teacherSchoolId = teacherProfile?.school_id || null
     }
 
-    // Get students from teacher's assigned classes using student_class_assignments
+    // Get students from teacher's assigned classes (avoiding complex joins)
     const { data: studentAssignments, error: studentsError } = await supabaseAdmin
       .from('student_class_assignments')
-      .select(`
-        student_id,
-        profiles:student_id (
-          id,
-          first_name,
-          last_name,
-          xp,
-          level,
-          gems,
-          streak_days,
-          current_mood,
-          updated_at
-        )
-      `)
+      .select('student_id, class_id')
       .in('class_id', classIds)
 
     if (studentsError) {
@@ -212,10 +199,19 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Extract student profiles from assignments
-    const studentProfiles = (studentAssignments || [])
-      .map(assignment => assignment.profiles)
-      .filter(profile => profile !== null)
+    // Fetch student profiles separately to avoid join issues
+    let studentProfiles: any[] = []
+    if (studentAssignments && studentAssignments.length > 0) {
+      const studentIds = studentAssignments.map(assignment => assignment.student_id)
+      const { data: profiles, error: profilesError } = await supabaseAdmin
+        .from('profiles')
+        .select('id, first_name, last_name, xp, level, gems, streak_days, current_mood, updated_at, user_id')
+        .in('user_id', studentIds)
+      
+      if (!profilesError && profiles) {
+        studentProfiles = profiles
+      }
+    }
 
     
     // Calculate analytics
@@ -271,7 +267,7 @@ export async function GET(request: NextRequest) {
       helpRequests = Math.floor(totalStudents * 0.1) // ~10% of students have help requests
     }
 
-    const analytics = {
+    const response = NextResponse.json({
       totalStudents,
       averageXP,
       activeToday,
@@ -279,10 +275,12 @@ export async function GET(request: NextRequest) {
       moodDistribution,
       averageStreak,
       school_id: teacherSchoolId
-    }
+    })
 
-
-    return NextResponse.json(analytics)
+    // Add caching headers for better performance
+    response.headers.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60')
+    
+    return response
 
   } catch (error) {
     console.error('Error fetching teacher analytics:', error)

@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     // Get parent profile using user_id
     const { data: parentProfile, error: parentError } = await supabaseAdmin
       .from('profiles')
-      .select('id, role, user_id')
+      .select('id, role, user_id, school_id')
       .eq('user_id', parentUser.id)
       .eq('role', 'parent')
       .single()
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
     const childrenUserIds = childrenUsers.map(u => u.id)
     const { data: childrenProfiles, error: childrenError } = await supabaseAdmin
       .from('profiles')
-      .select('id, user_id, role, first_name, last_name')
+      .select('id, user_id, role, first_name, last_name, school_id')
       .in('user_id', childrenUserIds)
       .eq('role', 'student')
 
@@ -98,10 +98,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No valid student profiles found' }, { status: 404 })
     }
 
-    // Create parent-child relationships
+    // Create parent-child relationships using user_ids (not profile ids)
     const relationships = childrenProfiles.map(child => ({
-      parent_id: parentProfile.id,
-      child_id: child.id
+      parent_id: parentProfile.user_id,  // Use user_id instead of profile id
+      child_id: child.user_id,           // Use user_id instead of profile id
+      school_id: parentProfile.school_id || null,  // Add school_id if available
+      is_approved: true
     }))
 
     console.log('Creating relationships:', relationships)

@@ -109,21 +109,50 @@ export async function POST(request: NextRequest) {
           console.warn(`Warning: Could not find class with ID "${classId}" for student ${firstName} ${lastName}`)
         } else if (classData) {
           // Create student class assignment
+          console.log(`📝 Creating class assignment for student ${firstName} ${lastName}:`, {
+            student_id: user.id,
+            class_id: classData.id,
+            school_id: school.id,
+            class_name: classData.class_name
+          })
+          
           const { error: assignmentError } = await supabaseAdmin
             .from('student_class_assignments')
             .insert({
               student_id: user.id,
               class_id: classData.id,
               school_id: school.id,
-              is_active: true
+              is_active: true,
+              assigned_at: new Date().toISOString()
             })
 
           if (assignmentError) {
-            console.error('Student class assignment error:', assignmentError)
+            console.error('❌ Student class assignment error:', assignmentError)
+            console.error('Assignment error details:', {
+              code: assignmentError.code,
+              message: assignmentError.message,
+              details: assignmentError.details
+            })
             // Don't fail the entire registration if class assignment fails
-            console.warn(`Warning: Could not assign student ${firstName} ${lastName} to class "${classData.class_name}"`)
+            console.warn(`⚠️ Warning: Could not assign student ${firstName} ${lastName} to class "${classData.class_name}"`)
           } else {
-            console.log(`Successfully assigned student ${firstName} ${lastName} to class "${classData.class_name}"`)
+            console.log(`✅ Successfully assigned student ${firstName} ${lastName} to class "${classData.class_name}"`)
+            
+            // Update the class student count
+            const { data: countData } = await supabaseAdmin
+              .from('student_class_assignments')
+              .select('student_id', { count: 'exact' })
+              .eq('class_id', classData.id)
+              .eq('is_active', true)
+            
+            if (countData) {
+              await supabaseAdmin
+                .from('classes')
+                .update({ current_students: countData.length })
+                .eq('id', classData.id)
+              
+              console.log(`📊 Updated class "${classData.class_name}" student count to ${countData.length}`)
+            }
           }
         }
       } catch (classAssignmentError) {
