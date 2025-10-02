@@ -175,7 +175,7 @@ export default function TeacherAttendancePage() {
         throw new Error(`Failed to fetch assigned classes: ${response.status}`)
       }
     } catch (error: any) {
-      console.error('Error loading assigned classes:', error)
+      // console.error('Error loading assigned classes:', error)
       setError('Failed to load assigned classes. Please try again.')
       setClasses([])
     } finally {
@@ -187,7 +187,7 @@ export default function TeacherAttendancePage() {
 
   const fetchGrades = async (schoolId: string) => {
     if (!schoolId) {
-      console.error('No school ID provided to fetchGrades')
+      // console.error('No school ID provided to fetchGrades')
       setLoading(false)
       return
     }
@@ -198,10 +198,10 @@ export default function TeacherAttendancePage() {
         const data = await response.json()
         setGrades(data.grades || [])
       } else {
-        console.error('Failed to fetch grades:', response.status, response.statusText)
+        // console.error('Failed to fetch grades:', response.status, response.statusText)
       }
     } catch (error: any) {
-      console.error('Error fetching grades:', error)
+      // console.error('Error fetching grades:', error)
     } finally {
       setLoading(false)
     }
@@ -211,7 +211,7 @@ export default function TeacherAttendancePage() {
 
   const fetchStudents = async (classId: string) => {
     if (!user?.school_id) {
-      console.error('No school ID available for fetching students')
+      // console.error('No school ID available for fetching students')
       return
     }
     
@@ -224,9 +224,9 @@ export default function TeacherAttendancePage() {
       console.log('📡 Students API response status:', studentsResponse.status)
       
       if (!studentsResponse.ok) {
-        console.error('❌ Failed to fetch students:', studentsResponse.status, studentsResponse.statusText)
+        // console.error('❌ Failed to fetch students:', studentsResponse.status, studentsResponse.statusText)
         const errorText = await studentsResponse.text()
-        console.error('Error details:', errorText)
+        // console.error('Error details:', errorText)
         setStudents([])
         setCurrentView('students')
         return
@@ -247,7 +247,7 @@ export default function TeacherAttendancePage() {
       console.log('✅ Processed students:', validStudents.length, validStudents)
       
       if (validStudents.length === 0) {
-        console.warn('⚠️ No valid students found in class')
+        // console.warn('⚠️ No valid students found in class')
         setStudents([])
         setCurrentView('students')
         return
@@ -285,7 +285,7 @@ export default function TeacherAttendancePage() {
         setCurrentView('students')
         
       } catch (attendanceError: any) {
-        console.error('Error fetching attendance data:', attendanceError)
+        // console.error('Error fetching attendance data:', attendanceError)
         // Still show students with default attendance status
         const studentsWithDefaultAttendance = validStudents.map((student: any) => ({
           ...student,
@@ -296,7 +296,7 @@ export default function TeacherAttendancePage() {
       }
       
     } catch (error: any) {
-      console.error('Error fetching students:', error)
+      // console.error('Error fetching students:', error)
       setStudents([])
     } finally {
       setLoading(false)
@@ -312,7 +312,7 @@ export default function TeacherAttendancePage() {
 
   const handleStudentAttendanceChange = (studentId: string | undefined, status: 'present' | 'absent' | 'late' | 'excused') => {
     if (!studentId) {
-      console.warn('Cannot change attendance: student ID is undefined')
+      // console.warn('Cannot change attendance: student ID is undefined')
       return
     }
     
@@ -367,7 +367,7 @@ export default function TeacherAttendancePage() {
     }
     
     if (validStudents.length < students.length) {
-      console.warn(`Warning: ${students.length - validStudents.length} students have invalid IDs and will be skipped`)
+      // console.warn(`Warning: ${students.length - validStudents.length} students have invalid IDs and will be skipped`)
     }
     
     setSaving(true)
@@ -406,7 +406,7 @@ export default function TeacherAttendancePage() {
         alert(`✅ Attendance saved successfully for ${attendanceData.length} students!`)
       } else {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-        console.error('Failed to save attendance:', response.status, errorData)
+        // console.error('Failed to save attendance:', response.status, errorData)
         
         if (errorData.error && errorData.error.includes('not created yet')) {
           alert('⚠️ Attendance system not initialized. Please contact your administrator to set up the attendance tables.')
@@ -415,7 +415,7 @@ export default function TeacherAttendancePage() {
         }
       }
     } catch (error) {
-      console.error('Error saving attendance:', error)
+      // console.error('Error saving attendance:', error)
       alert('❌ Error saving attendance. Please check your connection and try again.')
     } finally {
       setSaving(false)
@@ -481,7 +481,7 @@ export default function TeacherAttendancePage() {
       
       setAttendanceHistory(mockHistory)
     } catch (error) {
-      console.error('Error loading attendance history:', error)
+      // console.error('Error loading attendance history:', error)
       setError('Failed to load attendance history')
     } finally {
       setLoadingHistory(false)
@@ -544,7 +544,7 @@ export default function TeacherAttendancePage() {
       setSelectedHistoryDate(date)
       setCurrentView('history-detail')
     } catch (error) {
-      console.error('Error loading attendance details:', error)
+      // console.error('Error loading attendance details:', error)
       setError('Failed to load attendance details')
     } finally {
       setLoadingHistory(false)
@@ -1162,7 +1162,7 @@ export default function TeacherAttendancePage() {
                                 console.log('🔍 Debug API Results:', debugData)
                                 alert('Debug results logged to console. Check browser dev tools.')
                               } catch (error) {
-                                console.error('Debug API failed:', error)
+                                // console.error('Debug API failed:', error)
                                 alert('Debug API failed. Check console for details.')
                               }
                             }}

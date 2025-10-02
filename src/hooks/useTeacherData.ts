@@ -1,7 +1,13 @@
+/**
+ * Teacher Data Hook - OPTIMIZED
+ * React Query-inspired pattern with caching, retries, and performance tracking
+ * Reduced 20 console.log → logger (95% reduction)
+ */
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAppSelector } from '@/lib/redux/hooks'
+import { logger } from '@/lib/logger'
 
 interface TeacherData {
   teacher: any
@@ -67,7 +73,7 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
   const getCachedData = useCallback((cacheKey: string): TeacherData | null => {
     const cached = cache.get(cacheKey)
     if (cached && Date.now() - cached.timestamp < cached.ttl) {
-      console.log('📦 Using cached teacher data')
+      logger.debug('Using cached teacher data')
       return cached.data
     }
     return null
@@ -80,7 +86,7 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
       timestamp: Date.now(),
       ttl: CACHE_TTL
     })
-    console.log('💾 Cached teacher data')
+    logger.debug('Cached teacher data')
   }, [])
 
   // Fetch data function
@@ -137,7 +143,7 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
         }
       }
 
-      console.log('🔄 Fetching teacher data...', { 
+      logger.debug('🔄 Fetching teacher data...', { 
         teacherId: user.id, 
         schoolId: schoolId, 
         classId: currentClassId, 
@@ -169,18 +175,18 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
         setData(result.data)
         setCachedData(cacheKey, result.data)
         setRetryCount(0) // Reset retry count on success
-        console.log('✅ Teacher data fetched successfully')
+        logger.debug('Teacher data fetched successfully')
       } else {
         throw new Error(result.message || 'Failed to fetch data')
       }
 
     } catch (error: any) {
       if (error.name !== 'AbortError') {
-        console.error('❌ Error fetching teacher data:', error)
+        logger.error('❌ Error fetching teacher data:', error)
         
         // Retry logic for network errors
         if (retryCount < 2 && (error.message.includes('fetch') || error.message.includes('network'))) {
-          console.log(`🔄 Retrying fetch (attempt ${retryCount + 1}/2)...`)
+          logger.debug(`🔄 Retrying fetch (attempt ${retryCount + 1}/2)...`)
           setRetryCount(prev => prev + 1)
           setTimeout(() => fetchData(forceRefresh), 1000 * (retryCount + 1)) // Exponential backoff
           return
@@ -206,15 +212,15 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
 
   // Load students for a specific class (optimized for immediate loading)
   const loadStudentsForClass = useCallback(async (classId: string) => {
-    console.log('🚀 loadStudentsForClass called with:', { classId, userId: user?.id, hasUser: !!user })
+    logger.debug('🚀 loadStudentsForClass called with:', { classId, userId: user?.id, hasUser: !!user })
     
     if (!classId || classId === 'null' || classId === 'undefined') {
-      console.log('❌ Invalid class ID:', classId)
+      logger.debug('Invalid class ID', { classId })
       return
     }
     
     if (!user?.id) {
-      console.log('❌ No user ID available')
+      logger.debug('No user ID available')
       return
     }
 
@@ -222,31 +228,31 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
     setError(null)
 
     try {
-      console.log('🚀 Fast loading students for class:', classId)
+      logger.debug('Fast loading students for class', { classId })
       
       // Get school_id from teacher profile first
       let schoolId = user.school_id
-      console.log('🏫 Initial school_id from user:', schoolId)
+      logger.debug('Initial school_id from user', { schoolId })
       
       if (!schoolId) {
-        console.log('🔍 Fetching school_id from profile...')
+        logger.debug('Fetching school_id from profile')
         // Fetch school_id from profile if not available in user object
         const profileResponse = await fetch('/api/profile')
         if (profileResponse.ok) {
           const profile = await profileResponse.json()
           schoolId = profile.school_id
-          console.log('✅ Got school_id from profile:', schoolId)
+          logger.debug('Got school_id from profile', { schoolId })
         } else {
-          console.log('❌ Failed to fetch profile:', profileResponse.status)
+          logger.debug('Failed to fetch profile', { status: profileResponse.status })
         }
       }
       
       if (!schoolId) {
-        console.log('❌ No school_id found anywhere')
+        logger.debug('No school_id found anywhere')
         throw new Error('School ID not found')
       }
       
-      console.log('📡 Making API call with:', { schoolId, classId })
+      logger.debug('📡 Making API call with:', { schoolId, classId })
       const response = await fetch(`/api/teacher/students?school_id=${schoolId}&class_id=${classId}`)
       
       if (!response.ok) {
@@ -272,10 +278,10 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
           })
         }
         
-        console.log('✅ Students loaded successfully:', result.students.length)
+        logger.debug('Students loaded successfully', { count: result.students.length })
       }
     } catch (error: any) {
-      console.error('❌ Error loading students:', error)
+      logger.error('❌ Error loading students:', error)
       setError(error.message || 'Failed to load students')
     } finally {
       setStudentsLoading(false)
@@ -285,7 +291,7 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
   // Clear cache function
   const clearCache = useCallback(() => {
     cache.clear()
-    console.log('🗑️ Teacher data cache cleared')
+    logger.debug('Teacher data cache cleared')
   }, [])
 
   // Initial data fetch
@@ -297,7 +303,7 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
   useEffect(() => {
     if (autoRefresh && !loading) {
       refreshIntervalRef.current = setInterval(() => {
-        console.log('🔄 Auto-refreshing teacher data...')
+        logger.debug('Auto-refreshing teacher data')
         fetchData()
       }, refreshInterval)
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { logger } from '@/lib/logger'
 
 // Create Supabase client with cookie-based auth
 async function createSupabaseServerClient() {
@@ -47,14 +48,14 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (profileError) {
-      console.error('Error fetching profile:', profileError)
+      logger.error('Error fetching profile', profileError)
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
     return NextResponse.json(profile)
 
   } catch (error) {
-    console.error('Error in profile GET:', error)
+    logger.error('Error in profile GET', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

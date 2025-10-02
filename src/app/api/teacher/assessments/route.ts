@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
         max_score,
         created_at,
         class_id,
+        due_date,
         rubric_criteria
       `)
       .eq('teacher_id', user.id)
@@ -79,7 +80,12 @@ export async function POST(request: NextRequest) {
     console.log('✅ POST /assessments - Teacher verified:', { role: profile.role, school_id: profile.school_id })
 
     const body = await request.json()
-    const { title, type, max_score, class_id, rubric_criteria } = body
+    const { title, type, max_score, class_id, due_date, rubric_criteria } = body
+
+    // Validate required fields
+    if (!class_id) {
+      return NextResponse.json({ error: 'Class ID is required' }, { status: 400 })
+    }
 
     // Create new assessment
     const { data: assessment, error: createError } = await supabase
@@ -89,6 +95,7 @@ export async function POST(request: NextRequest) {
         type,
         max_score,
         class_id,
+        due_date: due_date || null,
         teacher_id: user.id,
         school_id: profile.school_id,
         rubric_criteria: rubric_criteria || null

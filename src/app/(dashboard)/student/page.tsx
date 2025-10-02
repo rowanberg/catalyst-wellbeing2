@@ -21,6 +21,12 @@ import {
 import { MessagingNavButton } from '@/components/ui/messaging-nav-button'
 import { ProfessionalLoader } from '@/components/ui/professional-loader'
 
+// Development-only logging helper
+const isDev = process.env.NODE_ENV === 'development'
+const devLog = (...args: any[]): void => {
+  if (isDev) console.log(...args)
+}
+
 // Enhanced Progress Component with animations
 const Progress = ({ value = 0, className = "", animated = true }: { 
   value?: number
@@ -285,10 +291,10 @@ const StudentDashboardContent = () => {
         try {
           const parsedData = JSON.parse(cachedData)
           setPolls(parsedData)
-          console.log('✅ [POLLS] Using cached polls')
+          devLog('✅ [POLLS] Using cached polls')
           return
         } catch (error) {
-          console.log('⚠️ [POLLS] Invalid cached data, fetching fresh')
+          devLog('⚠️ [POLLS] Invalid cached data, fetching fresh')
         }
       }
     }
@@ -299,7 +305,7 @@ const StudentDashboardContent = () => {
       const { data: { session } } = await supabase.auth.getSession()
       
       if (!session?.access_token) {
-        console.log('No active session for polls fetch')
+        devLog('No active session for polls fetch')
         return
       }
 
@@ -313,7 +319,7 @@ const StudentDashboardContent = () => {
 
       if (response.ok) {
         const data = await response.json()
-        console.log('✅ [POLLS] Polls loaded:', data.polls?.length || 0)
+        devLog('✅ [POLLS] Polls loaded:', data.polls?.length || 0)
         const polls = data.polls || []
         setPolls(polls)
         // Cache the results
@@ -388,27 +394,27 @@ const StudentDashboardContent = () => {
         try {
           const parsedData = JSON.parse(cachedData)
           setAnnouncements(parsedData)
-          console.log('✅ [ANNOUNCEMENTS] Using cached announcements')
+          devLog('✅ [ANNOUNCEMENTS] Using cached announcements')
           return
         } catch (error) {
-          console.log('⚠️ [ANNOUNCEMENTS] Invalid cached data, fetching fresh')
+          devLog('⚠️ [ANNOUNCEMENTS] Invalid cached data, fetching fresh')
         }
       }
     }
 
     try {
-      console.log('📢 [ANNOUNCEMENTS] Fetching announcements for school:', schoolId)
+      devLog('📢 [ANNOUNCEMENTS] Fetching announcements for school:', schoolId)
       const response = await fetch(`/api/admin/announcements/?school_id=${schoolId}&audience=students`)
       if (response.ok) {
         const data = await response.json()
-        console.log('✅ [ANNOUNCEMENTS] Announcements loaded:', data.announcements?.length || 0)
+        devLog('✅ [ANNOUNCEMENTS] Announcements loaded:', data.announcements?.length || 0)
         const announcements = data.announcements || []
         setAnnouncements(announcements)
         // Cache the results
         sessionStorage.setItem(cacheKey, JSON.stringify(announcements))
         sessionStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString())
       } else {
-        console.log('⚠️ [ANNOUNCEMENTS] Failed to fetch announcements:', response.status)
+        devLog('⚠️ [ANNOUNCEMENTS] Failed to fetch announcements:', response.status)
         setAnnouncements([])
       }
     } catch (error: any) {
@@ -420,11 +426,11 @@ const StudentDashboardContent = () => {
   // Fetch announcements data using profile state
   const fetchAnnouncements = useCallback(async () => {
     if (!profile?.school_id) {
-      console.log('No school_id available, skipping announcements fetch')
-      console.log('Current profile:', profile)
+      devLog('No school_id available, skipping announcements fetch')
+      devLog('Current profile:', profile)
       return
     }
-    console.log('Fetching announcements with school_id from profile:', profile.school_id)
+    devLog('Fetching announcements with school_id from profile:', profile.school_id)
     await fetchAnnouncementsWithSchoolId(profile.school_id)
   }, [profile?.school_id, fetchAnnouncementsWithSchoolId])
 
@@ -436,24 +442,24 @@ const StudentDashboardContent = () => {
       try {
         const parsedInfo = JSON.parse(cachedSchoolInfo)
         setSchoolInfo(parsedInfo)
-        console.log('✅ [SCHOOL-INFO] Using cached school info')
+        devLog('✅ [SCHOOL-INFO] Using cached school info')
         return
       } catch (error) {
-        console.log('⚠️ [SCHOOL-INFO] Invalid cached data, fetching fresh')
+        devLog('⚠️ [SCHOOL-INFO] Invalid cached data, fetching fresh')
       }
     }
 
     try {
-      console.log('🏫 [SCHOOL-INFO] Fetching school information...')
+      devLog('🏫 [SCHOOL-INFO] Fetching school information...')
       const response = await fetch('/api/student/school-info')
       if (response.ok) {
         const data = await response.json()
-        console.log('✅ [SCHOOL-INFO] School info loaded:', data.schoolInfo?.name)
+        devLog('✅ [SCHOOL-INFO] School info loaded:', data.schoolInfo?.name)
         setSchoolInfo(data.schoolInfo)
         // Cache the school info for future use
         sessionStorage.setItem('schoolInfo', JSON.stringify(data.schoolInfo))
       } else {
-        console.log('⚠️ [SCHOOL-INFO] Failed to fetch school info:', response.status)
+        devLog('⚠️ [SCHOOL-INFO] Failed to fetch school info:', response.status)
         // Set default school info to prevent footer issues
         const defaultInfo = {
           name: 'Your School',
@@ -484,13 +490,13 @@ const StudentDashboardContent = () => {
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true)
-      console.log('🚀 [DASHBOARD] Starting optimized data fetch...')
+      devLog('🚀 [DASHBOARD] Starting optimized data fetch...')
       
       // Fetch dashboard data first
       const dashboardResponse = await fetch('/api/student/dashboard')
       if (dashboardResponse.ok) {
         const data = await dashboardResponse.json()
-        console.log('✅ [DASHBOARD] Dashboard API response received')
+        devLog('✅ [DASHBOARD] Dashboard API response received')
         
         // Set profile and stats from API response immediately
         setProfile(data.profile)
@@ -523,17 +529,17 @@ const StudentDashboardContent = () => {
         
         // Set loading to false immediately after main data is loaded
         setLoading(false)
-        console.log('✅ [DASHBOARD] Main dashboard loaded - UI ready!')
+        devLog('✅ [DASHBOARD] Main dashboard loaded - UI ready!')
         
         // Fetch announcements and polls in parallel (non-blocking)
         if (data.profile?.school_id) {
-          console.log('🔄 [DASHBOARD] Fetching announcements and polls in background...')
+          devLog('🔄 [DASHBOARD] Fetching announcements and polls in background...')
           // Don't await these - let them load in background
           Promise.all([
             fetchAnnouncementsWithSchoolId(data.profile.school_id),
             fetchPolls()
           ]).then(() => {
-            console.log('✅ [DASHBOARD] Background data loaded')
+            devLog('✅ [DASHBOARD] Background data loaded')
           }).catch(error => {
             console.error('❌ [DASHBOARD] Background data error:', error)
           })
@@ -577,47 +583,47 @@ const StudentDashboardContent = () => {
       })
     } finally {
       // Loading is already set to false after main data loads
-      console.log('🏁 [DASHBOARD] Fetch complete')
+      devLog('🏁 [DASHBOARD] Fetch complete')
     }
   }, [reduxProfile])
 
   useEffect(() => {
     const initializeDashboard = async () => {
       try {
-        console.log('🎯 [DASHBOARD] Starting initialization...')
+        devLog('🎯 [DASHBOARD] Starting initialization...')
+        
+        // Wait for auth check to complete
+        if (authLoading) {
+          devLog('⏳ [AUTH] Still checking authentication...')
+          return
+        }
         
         // Check authentication first
         if (!authChecked) {
-          console.log('🔐 [AUTH] Checking authentication...')
+          devLog('🔐 [AUTH] Checking authentication...')
           
           // Check if user is authenticated
-          if (!reduxUser && !authLoading) {
-            console.log('❌ [AUTH] No user found, redirecting to login')
+          if (!reduxUser) {
+            devLog('❌ [AUTH] No user found, redirecting to login')
             router.push('/login')
             return
           }
           
           // Check if user has student role
           if (reduxProfile && reduxProfile.role !== 'student') {
-            console.log('❌ [AUTH] Wrong role, redirecting to correct dashboard')
+            devLog('❌ [AUTH] Wrong role, redirecting to correct dashboard')
             router.push(`/${reduxProfile.role}`)
             return
           }
           
-          // If still loading auth, wait
-          if (authLoading) {
-            console.log('⏳ [AUTH] Still loading authentication...')
-            return
-          }
-          
           setAuthChecked(true)
-          console.log('✅ [AUTH] Authentication verified')
+          devLog('✅ [AUTH] Authentication verified')
         }
         
         // Prevent duplicate calls by checking if already loading
         if (!loading || !authChecked) return
         
-        console.log('🎯 [DASHBOARD] Starting data fetch...')
+        devLog('🎯 [DASHBOARD] Starting data fetch...')
         
         // Start all data fetching in parallel for maximum speed
         await Promise.all([
@@ -627,7 +633,7 @@ const StudentDashboardContent = () => {
           })
         ])
         
-        console.log('🏁 [DASHBOARD] All data loaded successfully')
+        devLog('🏁 [DASHBOARD] All data loaded successfully')
         
       } catch (error) {
         console.error('❌ [DASHBOARD] Initialization error:', error)
@@ -650,7 +656,7 @@ const StudentDashboardContent = () => {
       
       if (response.ok) {
         const data = await response.json()
-        console.log('Quest API response:', data) // Debug log
+        devLog('Quest API response:', data) // Debug log
         const isCompleting = !quests.status[questType]
         
         // Update quest status
@@ -678,7 +684,7 @@ const StudentDashboardContent = () => {
         const reward = questRewards[questType as keyof typeof questRewards] || { xp: 10, gems: 2 }
         
         if (isCompleting) {
-          console.log('Completing quest with rewards:', reward) // Debug log
+          devLog('Completing quest with rewards:', reward) // Debug log
           
           setStats(prev => {
             const newXP = prev.xp + reward.xp
@@ -702,7 +708,7 @@ const StudentDashboardContent = () => {
           })
         } else {
           // Handle uncompleting quest
-          console.log('Uncompleting quest, removing rewards:', reward) // Debug log
+          devLog('Uncompleting quest, removing rewards:', reward) // Debug log
           
           setStats(prev => {
             const newXP = Math.max(0, prev.xp - reward.xp)
@@ -765,7 +771,7 @@ const StudentDashboardContent = () => {
 
   // Check if mood should be unlocked for new day
   useEffect(() => {
-    console.log('🔍 Mood state check:', { 
+    devLog('🔍 Mood state check:', { 
       current: mood.current, 
       moodLockedDate, 
       todayDate: getTodayDate(),
@@ -773,7 +779,7 @@ const StudentDashboardContent = () => {
     })
     
     if (mood.current && mood.current !== '' && isNewDay()) {
-      console.log('🌅 New day detected! Unlocking mood selection')
+      devLog('🌅 New day detected! Unlocking mood selection')
       setMood(prev => ({
         ...prev,
         current: '' // Reset mood for new day
@@ -785,7 +791,7 @@ const StudentDashboardContent = () => {
   // Mood update handler
   const handleMoodUpdate = async (newMood: string) => {
     try {
-      console.log('🎭 Updating mood to:', newMood)
+      devLog('🎭 Updating mood to:', newMood)
       const response = await fetch('/api/student/mood', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -794,7 +800,7 @@ const StudentDashboardContent = () => {
       
       if (response.ok) {
         const data = await response.json()
-        console.log('✅ Mood update response:', data)
+        devLog('✅ Mood update response:', data)
         
         setMood(prev => ({
           ...prev,

@@ -44,6 +44,32 @@ export const signIn = createAsyncThunk(
   }
 )
 
+// Check for existing session on app load
+export const checkAuth = createAsyncThunk(
+  'auth/checkAuth',
+  async () => {
+    const { data: { session }, error } = await supabase.auth.getSession()
+    
+    if (error) throw error
+    if (!session?.user) return null
+    
+    // Fetch user profile
+    const response = await fetch('/api/get-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: session.user.id }),
+    })
+    
+    if (!response.ok) {
+      throw new Error('Profile not found')
+    }
+    
+    const profile = await response.json()
+    console.log('CheckAuth - Session restored:', { user: session.user, profile })
+    return { user: session.user, profile }
+  }
+)
+
 export const signUp = createAsyncThunk(
   'auth/signUp',
   async ({
@@ -166,6 +192,34 @@ const authSlice = createSlice({
       .addCase(signIn.rejected, (state, action) => {
         state.isLoading = false
         state.error = action.error.message || 'Sign in failed'
+      })
+      // Check Auth (session restoration)
+      .addCase(checkAuth.pending, (state) => {
+        state.isLoading = true
+        state.error = null
+      })
+      .addCase(checkAuth.fulfilled, (state, action) => {
+        state.isLoading = false
+        if (action.payload) {
+          if (action.payload.profile) {
+            state.user = {
+              id: action.payload.user.id,
+              email: action.payload.user.email || '',
+              role: action.payload.profile.role,
+              school_id: action.payload.profile.school_id,
+              created_at: action.payload.user.created_at || '',
+              updated_at: action.payload.user.updated_at || ''
+            } as User
+          }
+          state.profile = action.payload.profile
+        }
+        state.error = null
+      })
+      .addCase(checkAuth.rejected, (state, action) => {
+        state.isLoading = false
+        // Don't set error on session check failure (user just isn't logged in)
+        state.user = null
+        state.profile = null
       })
       // Sign Up
       .addCase(signUp.pending, (state) => {

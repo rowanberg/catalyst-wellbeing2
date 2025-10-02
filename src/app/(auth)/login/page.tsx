@@ -16,7 +16,7 @@ import { useToast } from '@/components/ui/toast'
 import { handleError, showErrorToast, AuthError } from '@/lib/utils/errorHandling'
 import Link from 'next/link'
 import { Eye, EyeOff, AlertCircle, GraduationCap, Mail, Lock, Sparkles } from 'lucide-react'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabaseClient'
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -48,12 +48,6 @@ export default function LoginPage() {
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
   })
-
-  // Initialize Supabase client
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
 
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true)
@@ -245,11 +239,10 @@ export default function LoginPage() {
               {/* Email Sign-In Button */}
               <button
                 type="submit"
-                disabled={isLoading || authLoading || isGoogleLoading}
+                disabled={!isClient || isLoading || authLoading || isGoogleLoading}
                 className="py-3 px-4 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold rounded-xl shadow-lg transform transition-all duration-200 hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 focus:ring-offset-transparent flex items-center justify-center space-x-2"
-                suppressHydrationWarning={true}
               >
-                {isLoading || authLoading ? (
+                {isClient && (isLoading || authLoading) ? (
                   <LoadingSpinner size="sm" text="Signing in..." />
                 ) : (
                   <>
@@ -263,11 +256,10 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
-                disabled={isLoading || authLoading || isGoogleLoading}
+                disabled={!isClient || isLoading || authLoading || isGoogleLoading}
                 className="py-3 px-4 bg-white hover:bg-gray-50 disabled:bg-gray-300 text-gray-700 disabled:text-gray-500 font-semibold rounded-xl shadow-lg transform transition-all duration-200 hover:scale-105 disabled:scale-100 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-transparent flex items-center justify-center space-x-2 border border-gray-200"
-                suppressHydrationWarning={true}
               >
-                {isGoogleLoading ? (
+                {isClient && isGoogleLoading ? (
                   <LoadingSpinner size="sm" text="Connecting..." />
                 ) : (
                   <>

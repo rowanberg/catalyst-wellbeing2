@@ -5,6 +5,7 @@ import { Providers } from '@/lib/redux/providers'
 import { ToastProvider } from '@/components/ui/toast'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { HydrationProvider } from '@/components/providers/HydrationProvider'
+import { AuthChecker } from '@/components/providers/AuthChecker'
 import { RealtimeProvider } from '@/components/communications/RealtimeProvider'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -32,11 +33,13 @@ export default function RootLayout({
         <ErrorBoundary>
           <HydrationProvider>
             <Providers>
-              <RealtimeProvider>
-                <ToastProvider>
-                  {children}
-                </ToastProvider>
-              </RealtimeProvider>
+              <AuthChecker>
+                <RealtimeProvider>
+                  <ToastProvider>
+                    {children}
+                  </ToastProvider>
+                </RealtimeProvider>
+              </AuthChecker>
             </Providers>
           </HydrationProvider>
         </ErrorBoundary>

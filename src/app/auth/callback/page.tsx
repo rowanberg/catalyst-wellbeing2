@@ -2,35 +2,25 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabaseClient'
 import { useAppDispatch } from '@/lib/redux/hooks'
 import { setUser, setProfile } from '@/lib/redux/slices/authSlice'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
-import { useToast } from '@/components/ui/toast'
-import { GraduationCap } from 'lucide-react'
 
 export default function AuthCallback() {
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [hasProcessed, setHasProcessed] = useState(false)
   const router = useRouter()
   const dispatch = useAppDispatch()
-  const { addToast } = useToast()
+  const [error, setError] = useState<string | null>(null)
+  const [isProcessing, setIsProcessing] = useState(true)
+  const [hasBeenCalled, setHasBeenCalled] = useState(false)
 
-  // Check if welcome message was already shown in this session
   const welcomeShownKey = 'catalyst_welcome_shown'
-
-  // Initialize Supabase client
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
 
   useEffect(() => {
     // Clear welcome flag when component mounts (new session)
     return () => {
       // Cleanup on unmount
-      sessionStorage.removeItem('catalyst_auth_processing')
+      sessionStorage.removeItem(welcomeShownKey)
     }
   }, [])
 

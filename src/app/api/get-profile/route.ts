@@ -26,8 +26,6 @@ export async function POST(request: NextRequest) {
       .eq('user_id', userId)
       .single()
 
-    console.log('Profile query result:', { profile: profile ? 'found' : 'not found', error: error?.message, userId })
-
     if (error) {
       console.error('Profile fetch error:', error)
       

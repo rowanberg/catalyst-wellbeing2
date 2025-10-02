@@ -1,4 +1,15 @@
 /** @type {import('next').NextConfig} */
+// Optional bundle analyzer - only load if package is installed
+let withBundleAnalyzer
+try {
+  withBundleAnalyzer = require('@next/bundle-analyzer')({
+    enabled: process.env.ANALYZE === 'true',
+  })
+} catch {
+  // @next/bundle-analyzer not installed, use identity function
+  withBundleAnalyzer = (config) => config
+}
+
 const nextConfig = {
   // App Router is now stable in Next.js 13+, no experimental flag needed
   
@@ -101,4 +112,4 @@ const nextConfig = {
   },
 }
 
-module.exports = nextConfig
+module.exports = withBundleAnalyzer(nextConfig)

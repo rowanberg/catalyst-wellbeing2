@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabaseClient'
 import { SchoolContext } from './huggingface-api'
+import { logger } from '@/lib/logger'
 
 export class SchoolContextService {
   private supabaseClient = supabase
@@ -9,7 +10,7 @@ export class SchoolContextService {
    */
   async getSchoolContext(): Promise<SchoolContext> {
     try {
-      console.log('🔍 SchoolContextService: Starting to gather school context...')
+      logger.debug('SchoolContextService: Starting to gather school context')
       
       const [
         schoolInfo,
@@ -35,7 +36,7 @@ export class SchoolContextService {
         this.getTodaysAdventuresData()
       ])
 
-      console.log('📊 SchoolContextService: Data gathered:', {
+      logger.debug('SchoolContextService: Data gathered', {
         schoolInfo,
         students,
         teachers,
@@ -63,11 +64,11 @@ export class SchoolContextService {
         todaysAdventures: adventuresData
       }
 
-      console.log('✅ SchoolContextService: Final context:', context)
+      logger.debug('SchoolContextService: Final context created')
       return context
     } catch (error: any) {
-      console.error('❌ SchoolContextService: Error gathering school context:', error)
-      console.log('🔄 SchoolContextService: Using fallback context')
+      logger.error('SchoolContextService: Error gathering school context', error)
+      logger.warn('SchoolContextService: Using fallback context')
       return this.getFallbackContext()
     }
   }
@@ -77,11 +78,11 @@ export class SchoolContextService {
    */
   private async getSchoolInfo() {
     try {
-      console.log('🏫 Getting school info...')
+      logger.debug('Getting school info')
       
       // Get current user first
       const { data: { user } } = await this.supabaseClient.auth.getUser()
-      console.log('👤 Current user:', user?.id || 'No user')
+      logger.debug('Current user', { userId: user?.id })
       
       if (user) {
         // Try to get school from user's profile first (most reliable)
@@ -99,11 +100,11 @@ export class SchoolContextService {
           .eq('user_id', user.id)
           .single()
 
-        console.log('👤 Profile with school query result:', { profile, profileError })
+        logger.debug('Profile with school query result', { hasProfile: !!profile, hasError: !!profileError })
 
         if (!profileError && profile?.schools) {
           const school = Array.isArray(profile.schools) ? profile.schools[0] : profile.schools
-          console.log('✅ Found school from profile:', school.name)
+          logger.debug('Found school from profile', { schoolName: school.name })
           return {
             name: school.name,
             established: school.established_year?.toString() || '2020',
@@ -112,7 +113,7 @@ export class SchoolContextService {
         }
 
         // If profile doesn't have school, try different approaches
-        console.log('🔍 Profile has no school, trying alternative queries...')
+        logger.debug('Profile has no school, trying alternative queries')
         
         // Try getting profile without school join first
         const { data: profileOnly, error: profileOnlyError } = await this.supabaseClient
@@ -121,7 +122,7 @@ export class SchoolContextService {
           .eq('user_id', user.id)
           .single()
 
-        console.log('👤 Profile only query:', { profileOnly, profileOnlyError })
+        logger.debug('Profile only query', { hasProfile: !!profileOnly, hasError: !!profileOnlyError })
 
         if (!profileOnlyError && profileOnly?.school_id) {
           // Now get the school by ID
@@ -131,10 +132,10 @@ export class SchoolContextService {
             .eq('id', profileOnly.school_id)
             .single()
 
-          console.log('🏫 School by ID query:', { schoolById, schoolByIdError })
+          logger.debug('School by ID query', { hasSchool: !!schoolById, hasError: !!schoolByIdError })
 
           if (!schoolByIdError && schoolById) {
-            console.log('✅ Found school by ID:', schoolById.name)
+            logger.debug('Found school by ID', { schoolName: schoolById.name })
             return {
               name: schoolById.name,
               established: schoolById.established_year?.toString() || '2020',
@@ -149,11 +150,11 @@ export class SchoolContextService {
           .select('name, established_year, school_type')
           .limit(1)
 
-        console.log('🏫 Any schools query result:', { schools, schoolsError })
+        logger.debug('Any schools query result', { count: schools?.length || 0, hasError: !!schoolsError })
 
         if (!schoolsError && schools && schools.length > 0) {
           const school = schools[0]
-          console.log('✅ Found any school in schools table:', school.name)
+          logger.debug('Found any school in schools table', { schoolName: school.name })
           return {
             name: school.name,
             established: school.established_year?.toString() || '2020',
@@ -163,10 +164,10 @@ export class SchoolContextService {
       }
 
       // Final fallback
-      console.log('⚠️ No user or no school data found, using fallback')
+      logger.debug('No user or no school data found, using fallback')
       return { name: 'Your School' }
     } catch (error: any) {
-      console.error('❌ Error getting school info:', error)
+      logger.error('Error getting school info', error)
       return { name: 'Your School' }
     }
   }
@@ -176,7 +177,7 @@ export class SchoolContextService {
    */
   private async getStudentStats() {
     try {
-      console.log('👥 Getting student stats...')
+      logger.debug('Getting student stats')
       
       // Get current user's school_id to filter by school
       const { data: { user } } = await this.supabaseClient.auth.getUser()
@@ -190,7 +191,7 @@ export class SchoolContextService {
           .single()
         
         schoolId = profile?.school_id
-        console.log('👥 User school_id:', schoolId)
+        logger.debug('User school_id', { schoolId })
       }
 
       // Fetch students from profiles table with school filtering
@@ -205,13 +206,13 @@ export class SchoolContextService {
       }
 
       const { data: students, error } = await query
-      console.log('👥 Profiles students query result:', { count: students?.length || 0, error })
+      logger.debug('Profiles students query result', { count: students?.length || 0, hasError: !!error })
 
       if (!error && students && students.length > 0) {
         const gradeSet = new Set(students?.map(s => s.grade_level).filter(g => g) || [])
         const grades = Array.from(gradeSet).sort()
         
-        console.log('✅ Found students in profiles:', students.length, 'grades:', grades)
+        logger.debug('Found students in profiles', { count: students.length, grades })
         return {
           count: students?.length || 0,
           grades: grades.length > 0 ? grades : ['K', '1', '2', '3', '4', '5']
@@ -223,13 +224,13 @@ export class SchoolContextService {
         .from('students')
         .select('id, grade_level')
 
-      console.log('👥 Students table query result:', { count: studentsTable?.length || 0, error: studentsError })
+      logger.debug('Students table query result', { count: studentsTable?.length || 0, hasError: !!studentsError })
 
       if (!studentsError && studentsTable && studentsTable.length > 0) {
         const gradeSet = new Set(studentsTable?.map(s => s.grade_level).filter(g => g) || [])
         const grades = Array.from(gradeSet).sort()
         
-        console.log('✅ Found students in students table:', studentsTable.length, 'grades:', grades)
+        logger.debug('Found students in students table', { count: studentsTable.length, grades })
         return {
           count: studentsTable?.length || 0,
           grades: grades.length > 0 ? grades : ['K', '1', '2', '3', '4', '5']
@@ -237,13 +238,13 @@ export class SchoolContextService {
       }
 
       // If no data found, return default structure instead of throwing error
-      console.log('⚠️ No student data found in database, using defaults')
+      logger.debug('No student data found in database, using defaults')
       return {
         count: 0,
         grades: ['K', '1', '2', '3', '4', '5']
       }
     } catch (error: any) {
-      console.error('❌ Error fetching student stats:', error)
+      logger.error('Error fetching student stats', error)
       return {
         count: 0,
         grades: ['K', '1', '2', '3', '4', '5']
@@ -301,10 +302,10 @@ export class SchoolContextService {
       }
 
       // If no data found, return default structure instead of throwing error
-      console.log('No teacher data found in database, using defaults')
+      logger.debug('No teacher data found in database, using defaults')
       return { count: 0 }
     } catch (error: any) {
-      console.error('Error fetching teacher stats:', error)
+      logger.error('Error fetching teacher stats:', error)
       return { count: 0 }
     }
   }
@@ -379,7 +380,7 @@ export class SchoolContextService {
 
       return activities.slice(0, 15) // Return most recent 15 activities
     } catch (error: any) {
-      console.error('Error fetching recent activities:', error)
+      logger.error('Error fetching recent activities:', error)
       return []
     }
   }
@@ -498,7 +499,7 @@ export class SchoolContextService {
         engagementLevel: Math.round(engagementLevel)
       }
     } catch (error: any) {
-      console.error('Error fetching wellbeing metrics:', error)
+      logger.error('Error fetching wellbeing metrics:', error)
       return {
         averageMoodScore: 7.5,
         helpRequests: 0,
@@ -582,7 +583,7 @@ export class SchoolContextService {
         subjects
       }
     } catch (error: any) {
-      console.error('Error fetching academic metrics:', error)
+      logger.error('Error fetching academic metrics:', error)
       // Return realistic fallback data
       return {
         averageGrades: {
@@ -659,7 +660,7 @@ export class SchoolContextService {
         blackMarks: blackMarksCount
       }
     } catch (error: any) {
-      console.error('Error fetching behavioral metrics:', error)
+      logger.error('Error fetching behavioral metrics:', error)
       return {
         positiveInteractions: 45,
         interventionsNeeded: 3,
@@ -718,10 +719,10 @@ export class SchoolContextService {
       }
 
       // If no data found, return default structure instead of throwing error
-      console.log('No parent data found in database, using defaults')
+      logger.debug('No parent data found in database, using defaults')
       return { count: 0 }
     } catch (error: any) {
-      console.error('Error fetching parent stats:', error)
+      logger.error('Error fetching parent stats:', error)
       return { count: 0 }
     }
   }
@@ -803,7 +804,7 @@ export class SchoolContextService {
         }
       }) || []
     } catch (error: any) {
-      console.error('Error fetching mood logging data:', error)
+      logger.error('Error fetching mood logging data:', error)
       return []
     }
   }
@@ -889,7 +890,7 @@ export class SchoolContextService {
         }
       }) || []
     } catch (error: any) {
-      console.error('Error fetching today\'s adventures data:', error)
+      logger.error('Error fetching today\'s adventures data:', error)
       return []
     }
   }

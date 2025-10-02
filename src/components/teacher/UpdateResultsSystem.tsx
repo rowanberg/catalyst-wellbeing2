@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAppSelector } from '@/lib/redux/hooks'
 import { 
   BarChart3, 
   Plus, 
@@ -41,7 +42,12 @@ import {
   PenTool,
   Scan,
   MessageSquare,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Menu,
+  X,
+  ChevronRight,
+  Settings,
+  Calendar
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -64,11 +70,21 @@ interface Student {
 interface Assessment {
   id: string
   title: string
-  type: 'quiz' | 'test' | 'assignment' | 'project'
+  type: 'quiz' | 'test' | 'assignment' | 'project' | 'exam'
   max_score: number
   created_at: string
   class_id: string
+  due_date?: string
   rubric?: RubricCriteria[]
+}
+
+interface TeacherClass {
+  id: string
+  class_name: string
+  class_code: string
+  subject: string
+  grade_level: string
+  total_students: number
 }
 
 interface RubricCriteria {
@@ -101,9 +117,14 @@ interface GradeAnalytics {
 }
 
 export default function UpdateResultsSystem() {
+  // Get teacher profile from Redux
+  const { user, profile } = useAppSelector((state) => state.auth)
+  
   const [activeMode, setActiveMode] = useState<'grid' | 'omr' | 'rubric' | 'digital' | 'bulk' | 'export'>('grid')
   const [students, setStudents] = useState<Student[]>([])
   const [assessments, setAssessments] = useState<Assessment[]>([])
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null)
   const [grades, setGrades] = useState<{ [studentId: string]: Grade }>({})
   const [analytics, setAnalytics] = useState<GradeAnalytics | null>(null)
@@ -112,10 +133,15 @@ export default function UpdateResultsSystem() {
   const [loading, setLoading] = useState(false)
   const [showAnalytics, setShowAnalytics] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showAssessmentDetails, setShowAssessmentDetails] = useState(false)
+  const [teacherClasses, setTeacherClasses] = useState<TeacherClass[]>([])
+  const [loadingClasses, setLoadingClasses] = useState(false)
   const [newAssessment, setNewAssessment] = useState({
     title: '',
-    type: 'quiz' as 'quiz' | 'test' | 'assignment' | 'project',
-    max_score: 100
+    type: 'quiz' as 'quiz' | 'test' | 'assignment' | 'project' | 'exam',
+    max_score: 100,
+    class_id: '',
+    due_date: ''
   })
 
   // Quick feedback templates
@@ -182,6 +208,74 @@ export default function UpdateResultsSystem() {
       toast.error('Failed to load assessments')
     }
   }
+
+  // Fetch teacher's assigned classes
+  const fetchTeacherClasses = useCallback(async () => {
+    try {
+      setLoadingClasses(true)
+      
+      // Get teacher ID from Redux state - use user.id directly
+      if (!user) {
+        console.error('No user found in Redux state')
+        toast.error('Please log in to view classes')
+        return
+      }
+      
+      const teacherId = user.id
+      
+      console.log('🔄 Fetching teacher classes for:', teacherId)
+      
+      const response = await fetch(`/api/teacher/assigned-classes?teacher_id=${teacherId}`)
+      if (response.ok) {
+        const data = await response.json()
+        console.log('✅ Classes loaded:', data.classes?.length || 0, 'classes')
+        console.log('📋 Class data:', data.classes)
+        setTeacherClasses(data.classes || [])
+        
+        // Cache classes in localStorage for offline access
+        localStorage.setItem('teacher_classes_cache', JSON.stringify(data.classes || []))
+        
+        if (!data.classes || data.classes.length === 0) {
+          toast.error('No classes found. Please ensure you have assigned classes.')
+        } else {
+          console.log('✨ Successfully loaded', data.classes.length, 'classes')
+        }
+      } else {
+        console.error('❌ API Error:', response.status, response.statusText)
+        const errorData = await response.json().catch(() => ({}))
+        console.error('Error details:', errorData)
+        
+        // Try to use cached data
+        const cached = localStorage.getItem('teacher_classes_cache')
+        if (cached) {
+          setTeacherClasses(JSON.parse(cached))
+          toast.info('Using cached class data (API error)')
+        } else {
+          toast.error(`Failed to load classes: ${errorData.message || response.statusText}`)
+        }
+      }
+    } catch (error: any) {
+      console.error('❌ Error fetching teacher classes:', error)
+      
+      // Try to use cached data
+      const cached = localStorage.getItem('teacher_classes_cache')
+      if (cached) {
+        setTeacherClasses(JSON.parse(cached))
+        toast.info('Using cached class data (network error)')
+      } else {
+        toast.error(`Failed to load classes: ${error.message || 'Network error'}`)
+      }
+    } finally {
+      setLoadingClasses(false)
+    }
+  }, [user])
+
+  // Preload teacher classes when user logs in
+  useEffect(() => {
+    if (user) {
+      fetchTeacherClasses()
+    }
+  }, [user, fetchTeacherClasses])
 
   const saveGrade = useCallback(async (studentId: string, score: number, feedback?: string) => {
     if (!selectedAssessment) return
@@ -261,100 +355,44 @@ export default function UpdateResultsSystem() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
-      {/* Header with Status Indicators */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 lg:p-8">
-        <div className="flex items-start sm:items-center gap-2 sm:gap-4 flex-wrap">
-          {/* Back Button - shown when assessment is selected */}
-          {selectedAssessment && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setSelectedAssessment(null)
-                setGrades({})
-                setActiveMode('grid')
-              }}
-              className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2"
-            >
-              <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 rotate-180" />
-              <span className="hidden sm:inline">Back to Assessments</span>
-              <span className="sm:hidden">Back</span>
-            </Button>
-          )}
-          
-          <div className="flex-1 min-w-0">
-            <h1 className="text-lg sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-slate-800 via-blue-800 to-indigo-800 bg-clip-text text-transparent flex items-center gap-2 sm:gap-4">
-              <div className="p-2 sm:p-3 lg:p-4 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 rounded-xl lg:rounded-2xl text-white shadow-lg">
-                <BarChart3 className="h-4 w-4 sm:h-6 sm:w-6 lg:h-8 lg:w-8" />
-              </div>
-              <span className="truncate">{selectedAssessment ? selectedAssessment.title : 'Grade Entry Hub'}</span>
-            </h1>
-            <p className="text-xs sm:text-base lg:text-lg text-slate-600 mt-2 lg:mt-3 truncate font-medium">
-              {selectedAssessment 
-                ? `${selectedAssessment.type.toUpperCase()} • Maximum Score: ${selectedAssessment.max_score} points` 
-                : 'Professional grade management with advanced analytics'}
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2 sm:gap-3 ml-auto">
-          {/* Online Status */}
-          <div className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium ${
-            isOnline 
-              ? 'bg-green-100 text-green-700 border border-green-200' 
-              : 'bg-red-100 text-red-700 border border-red-200'
-          }`}>
-            {isOnline ? <Wifi className="h-3 w-3 sm:h-4 sm:w-4" /> : <WifiOff className="h-3 w-3 sm:h-4 sm:w-4" />}
-            <span className="hidden sm:inline">{isOnline ? 'Online' : 'Offline'}</span>
-          </div>
-          
-          {/* Pending Sync Indicator */}
-          {pendingSync.length > 0 && (
-            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs px-2 py-0.5">
-              <span className="hidden sm:inline">{pendingSync.length} pending sync</span>
-              <span className="sm:hidden">{pendingSync.length}</span>
-            </Badge>
-          )}
-        </div>
-      </div>
+      <div className="w-full mx-auto p-2 sm:p-4 lg:p-3 xl:p-4 space-y-3 sm:space-y-4 lg:space-y-3">
 
       {/* Assessment Selection - only show when no assessment is selected */}
       {!selectedAssessment && (
-      <Card className="bg-white/90 backdrop-blur-sm shadow-2xl border-0 rounded-3xl overflow-hidden">
-        <CardHeader className="p-6 lg:p-8 bg-gradient-to-r from-slate-50 to-blue-50 border-b border-slate-200/50">
-          <CardTitle className="flex items-center gap-3 text-xl lg:text-2xl font-bold text-slate-800">
-            <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl text-white">
-              <BookOpen className="h-5 w-5 lg:h-6 lg:w-6" />
+      <Card className="bg-white/90 backdrop-blur-sm shadow-2xl border-0 rounded-xl sm:rounded-2xl overflow-hidden">
+        <CardHeader className="p-3 sm:p-4 lg:p-6 bg-gradient-to-r from-slate-50 to-blue-50 border-b border-slate-200/50">
+          <CardTitle className="flex items-center gap-2 sm:gap-3 text-lg sm:text-xl lg:text-2xl font-bold text-slate-800">
+            <div className="p-1.5 sm:p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg sm:rounded-xl text-white">
+              <BookOpen className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />
             </div>
             Assessment Portfolio
           </CardTitle>
-          <p className="text-slate-600 mt-2 lg:text-lg">Choose an assessment to begin grading</p>
+          <p className="text-slate-600 mt-1 sm:mt-2 text-sm sm:text-base">Choose an assessment to begin grading</p>
         </CardHeader>
-        <CardContent className="p-6 lg:p-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
+        <CardContent className="p-3 sm:p-4 lg:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-2.5 sm:gap-3 lg:gap-4">
             {assessments.map(assessment => (
               <motion.button
                 key={assessment.id}
                 onClick={() => setSelectedAssessment(assessment)}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="group text-left p-4 lg:p-6 rounded-2xl bg-gradient-to-br from-white to-slate-50 hover:from-emerald-50 hover:to-teal-50 border border-slate-200 hover:border-emerald-300 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+                className="group text-left p-3 sm:p-4 lg:p-5 rounded-xl sm:rounded-2xl bg-gradient-to-br from-white to-slate-50 hover:from-emerald-50 hover:to-teal-50 border border-slate-200 hover:border-emerald-300 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
               >
-                <div className="flex items-start justify-between mb-4 gap-3">
-                  <h3 className="font-bold text-base lg:text-lg text-slate-800 group-hover:text-emerald-700 flex-1 line-clamp-2 transition-colors">{assessment.title}</h3>
-                  <Badge className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0 text-xs font-medium px-2 py-1 rounded-lg">
+                <div className="flex items-start justify-between mb-2 sm:mb-3 gap-2">
+                  <h3 className="font-bold text-sm sm:text-base lg:text-lg text-slate-800 group-hover:text-emerald-700 flex-1 line-clamp-2 transition-colors">{assessment.title}</h3>
+                  <Badge className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0 text-xs font-medium px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md sm:rounded-lg">
                     {assessment.type.toUpperCase()}
                   </Badge>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                    <p className="text-sm lg:text-base text-slate-600 font-medium">Maximum Score: {assessment.max_score} points</p>
+                <div className="space-y-1 sm:space-y-1.5">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-emerald-500 rounded-full"></div>
+                    <p className="text-xs sm:text-sm lg:text-base text-slate-600 font-medium">Max: {assessment.max_score} pts</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <p className="text-sm text-slate-500">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full"></div>
+                    <p className="text-xs sm:text-sm text-slate-500">
                       Created {new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(assessment.created_at))}
                     </p>
                   </div>
@@ -366,14 +404,17 @@ export default function UpdateResultsSystem() {
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => setShowCreateModal(true)}
-              className="group p-4 lg:p-6 rounded-2xl border-2 border-dashed border-slate-300 hover:border-emerald-400 bg-gradient-to-br from-slate-50 to-gray-100 hover:from-emerald-50 hover:to-teal-50 transition-all duration-300 flex flex-col items-center justify-center text-slate-600 hover:text-emerald-600 min-h-[140px] lg:min-h-[160px] transform hover:-translate-y-1 hover:shadow-lg"
+              onClick={() => {
+                setShowCreateModal(true)
+                fetchTeacherClasses() // Load classes when modal opens
+              }}
+              className="group p-3 sm:p-4 lg:p-5 rounded-xl sm:rounded-2xl border-2 border-dashed border-slate-300 hover:border-emerald-400 bg-gradient-to-br from-slate-50 to-gray-100 hover:from-emerald-50 hover:to-teal-50 transition-all duration-300 flex flex-col items-center justify-center text-slate-600 hover:text-emerald-600 min-h-[120px] sm:min-h-[140px] lg:min-h-[160px] transform hover:-translate-y-1 hover:shadow-lg"
             >
-              <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl text-white mb-3 group-hover:scale-110 transition-transform">
-                <Plus className="h-6 w-6 lg:h-8 lg:w-8" />
+              <div className="p-2 sm:p-2.5 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl sm:rounded-2xl text-white mb-2 sm:mb-3 group-hover:scale-110 transition-transform">
+                <Plus className="h-5 w-5 sm:h-6 sm:w-6 lg:h-7 lg:w-7" />
               </div>
-              <span className="font-bold text-base lg:text-lg text-slate-800 group-hover:text-emerald-700 transition-colors">Create New Assessment</span>
-              <span className="text-sm text-slate-500 mt-1">Build your next evaluation</span>
+              <span className="font-bold text-sm sm:text-base lg:text-lg text-slate-800 group-hover:text-emerald-700 transition-colors">Create New Assessment</span>
+              <span className="text-xs sm:text-sm text-slate-500 mt-0.5 sm:mt-1">Build your next evaluation</span>
             </motion.button>
           </div>
         </CardContent>
@@ -382,127 +423,493 @@ export default function UpdateResultsSystem() {
 
       {selectedAssessment && (
         <>
-          {/* Assessment Overview Card */}
-          <Card className="bg-white/95 backdrop-blur-sm shadow-2xl border-0 rounded-3xl overflow-hidden">
-            <CardHeader className="p-4 sm:p-6 lg:p-8 bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50 border-b border-emerald-200/30">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <CardTitle className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-emerald-700 via-teal-700 to-cyan-700 bg-clip-text text-transparent mb-2">
-                    Grading Interface
-                  </CardTitle>
-                  <CardDescription className="text-sm sm:text-base lg:text-lg text-slate-600 font-medium">
-                    Efficient grade entry with real-time analytics and feedback tools
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <Badge className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white border-0 px-3 py-1.5 text-sm font-medium">
-                    {selectedAssessment.type.toUpperCase()}
-                  </Badge>
-                  <div className="text-right">
-                    <p className="text-xs sm:text-sm text-slate-500">Max Score</p>
-                    <p className="text-lg sm:text-xl font-bold text-emerald-600">{selectedAssessment.max_score}</p>
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6 lg:p-8">
-              <Tabs value={activeMode} onValueChange={(value) => setActiveMode(value as any)}>
-                <div className="mb-6">
-                  <h3 className="text-base sm:text-lg font-semibold text-slate-800 mb-3">Choose Input Method</h3>
-                  <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1 sm:gap-2 bg-slate-100/50 p-1 rounded-2xl">
-                    <TabsTrigger value="grid" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg transition-all">
-                      <div className="p-1.5 sm:p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg text-white">
-                        <Grid3X3 className="h-3 w-3 sm:h-4 sm:w-4" />
-                      </div>
-                      <div className="text-center sm:text-left">
-                        <span className="text-xs sm:text-sm font-medium block">Grid</span>
-                        <span className="text-xs text-slate-500 hidden lg:block">Spreadsheet</span>
-                      </div>
-                    </TabsTrigger>
-                    <TabsTrigger value="omr" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg transition-all">
-                      <div className="p-1.5 sm:p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg text-white">
-                        <Scan className="h-3 w-3 sm:h-4 sm:w-4" />
-                      </div>
-                      <div className="text-center sm:text-left">
-                        <span className="text-xs sm:text-sm font-medium block">Scan</span>
-                        <span className="text-xs text-slate-500 hidden lg:block">OMR</span>
-                      </div>
-                    </TabsTrigger>
-                    <TabsTrigger value="rubric" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg transition-all">
-                      <div className="p-1.5 sm:p-2 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg text-white">
-                        <Target className="h-3 w-3 sm:h-4 sm:w-4" />
-                      </div>
-                      <div className="text-center sm:text-left">
-                        <span className="text-xs sm:text-sm font-medium block">Rubric</span>
-                        <span className="text-xs text-slate-500 hidden lg:block">Criteria</span>
-                      </div>
-                    </TabsTrigger>
-                    <TabsTrigger value="digital" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg transition-all">
-                      <div className="p-1.5 sm:p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg text-white">
-                        <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
-                      </div>
-                      <div className="text-center sm:text-left">
-                        <span className="text-xs sm:text-sm font-medium block">Digital</span>
-                        <span className="text-xs text-slate-500 hidden lg:block">Review</span>
-                      </div>
-                    </TabsTrigger>
-                    <TabsTrigger value="bulk" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg transition-all">
-                      <div className="p-1.5 sm:p-2 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-lg text-white">
-                        <Users className="h-3 w-3 sm:h-4 sm:w-4" />
-                      </div>
-                      <div className="text-center sm:text-left">
-                        <span className="text-xs sm:text-sm font-medium block">Bulk</span>
-                        <span className="text-xs text-slate-500 hidden lg:block">Entry</span>
-                      </div>
-                    </TabsTrigger>
-                    <TabsTrigger value="export" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg transition-all">
-                      <div className="p-1.5 sm:p-2 bg-gradient-to-br from-slate-500 to-gray-600 rounded-lg text-white">
-                        <Download className="h-3 w-3 sm:h-4 sm:w-4" />
-                      </div>
-                      <div className="text-center sm:text-left">
-                        <span className="text-xs sm:text-sm font-medium block">Export</span>
-                        <span className="text-xs text-slate-500 hidden lg:block">Data</span>
-                      </div>
-                    </TabsTrigger>
-                  </TabsList>
-                </div>
+          {/* Mobile Navigation Buttons */}
+          <div className="lg:hidden mb-3">
+            <div className="grid grid-cols-2 gap-2">
+              {/* Back Button */}
+              <Button
+                onClick={() => {
+                  setSelectedAssessment(null)
+                  setGrades({})
+                  setActiveMode('grid')
+                }}
+                variant="outline"
+                className="flex items-center justify-center gap-2 p-3 border-2 border-slate-300 hover:border-blue-400 bg-gradient-to-r from-slate-50 to-blue-50 hover:from-blue-50 hover:to-indigo-50"
+              >
+                <ArrowRight className="h-4 w-4 rotate-180" />
+                <span className="font-medium">Back</span>
+              </Button>
+              
+              {/* Grading Method Button */}
+              <Button
+                onClick={() => setMobileMenuOpen(true)}
+                variant="outline"
+                className="flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-300 hover:border-emerald-400 bg-gradient-to-r from-slate-50 to-gray-100 hover:from-emerald-50 hover:to-teal-50"
+              >
+                <Menu className="h-4 w-4" />
+                <span className="font-medium">Method</span>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
 
-                {/* Grading Content Area */}
-                <div className="mt-6 lg:mt-8">
-                  <TabsContent value="grid" className="space-y-4 sm:space-y-6">
-                    <Card className="bg-gradient-to-br from-white to-slate-50 border border-slate-200 rounded-2xl shadow-lg">
-                      <CardHeader className="p-4 sm:p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl border-b border-slate-200/50">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                          <div>
-                            <CardTitle className="text-lg sm:text-xl font-bold text-slate-800 flex items-center gap-2">
-                              <Grid3X3 className="h-5 w-5 text-blue-600" />
-                              Spreadsheet Grid Entry
-                            </CardTitle>
-                            <CardDescription className="text-sm sm:text-base text-slate-600 mt-1">
-                              Fast grade entry with Excel-like interface
-                            </CardDescription>
+          {/* Main Layout with Sidebar */}
+          <div className="flex gap-3 lg:gap-4 xl:gap-5">
+            {/* Desktop Sidebar */}
+            <div className="hidden lg:block w-72 xl:w-80 flex-shrink-0">
+              <Card className="bg-white/95 backdrop-blur-sm shadow-xl border-0 rounded-xl overflow-hidden sticky top-4">
+                <CardHeader className="p-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50 border-b border-emerald-200/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <CardTitle className="text-lg font-bold bg-gradient-to-r from-emerald-700 via-teal-700 to-cyan-700 bg-clip-text text-transparent flex items-center gap-2">
+                      <Settings className="h-5 w-5 text-emerald-600" />
+                      Grading Methods
+                    </CardTitle>
+                    <Button
+                      onClick={() => {
+                        setSelectedAssessment(null)
+                        setGrades({})
+                        setActiveMode('grid')
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1.5 px-2 py-1 h-8 border-slate-300 hover:border-blue-400 bg-white/70 hover:bg-blue-50"
+                    >
+                      <ArrowRight className="h-3 w-3 rotate-180" />
+                      <span className="text-xs font-medium">Back</span>
+                    </Button>
+                  </div>
+                  <CardDescription className="text-sm text-slate-600">
+                    Choose your preferred grading approach
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {/* Quick Entry Section */}
+                  <div className="p-4 border-b border-slate-100">
+                    <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      Quick Entry
+                    </h4>
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => setActiveMode('grid')}
+                        className={`w-full text-left p-3 rounded-lg transition-all ${
+                          activeMode === 'grid' 
+                            ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 shadow-sm' 
+                            : 'hover:bg-slate-50 border-2 border-transparent'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg text-white">
+                            <Grid3X3 className="h-4 w-4" />
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              onClick={generateAnalytics}
-                              disabled={loading}
-                              size="sm"
-                              className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white border-0"
-                            >
-                              <BarChart3 className="h-4 w-4 mr-2" />
-                              Analytics
-                            </Button>
+                          <div>
+                            <div className="font-medium text-slate-800">Grid Entry</div>
+                            <div className="text-xs text-slate-500">Excel-like spreadsheet</div>
                           </div>
                         </div>
-                      </CardHeader>
-                      <CardContent className="p-4 sm:p-6">
-                        {students.length === 0 ? (
-                          <div className="text-center py-8 sm:py-12">
-                            <div className="p-4 bg-slate-100 rounded-2xl inline-block mb-4">
-                              <Users className="h-8 w-8 sm:h-12 sm:w-12 text-slate-400" />
+                      </button>
+                      <button
+                        onClick={() => setActiveMode('bulk')}
+                        className={`w-full text-left p-3 rounded-lg transition-all ${
+                          activeMode === 'bulk' 
+                            ? 'bg-gradient-to-r from-teal-50 to-cyan-50 border-2 border-teal-200 shadow-sm' 
+                            : 'hover:bg-slate-50 border-2 border-transparent'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-lg text-white">
+                            <Users className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-slate-800">Bulk Operations</div>
+                            <div className="text-xs text-slate-500">Mass grade updates</div>
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Advanced Methods Section */}
+                  <div className="p-4 border-b border-slate-100">
+                    <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                      Advanced Methods
+                    </h4>
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => setActiveMode('omr')}
+                        className={`w-full text-left p-3 rounded-lg transition-all ${
+                          activeMode === 'omr' 
+                            ? 'bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 shadow-sm' 
+                            : 'hover:bg-slate-50 border-2 border-transparent'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg text-white">
+                            <Scan className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-slate-800">OMR Scanning</div>
+                            <div className="text-xs text-slate-500">Upload bubble sheets</div>
+                          </div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => setActiveMode('rubric')}
+                        className={`w-full text-left p-3 rounded-lg transition-all ${
+                          activeMode === 'rubric' 
+                            ? 'bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-200 shadow-sm' 
+                            : 'hover:bg-slate-50 border-2 border-transparent'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg text-white">
+                            <Target className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-slate-800">Rubric Grading</div>
+                            <div className="text-xs text-slate-500">Criteria-based scoring</div>
+                          </div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => setActiveMode('digital')}
+                        className={`w-full text-left p-3 rounded-lg transition-all ${
+                          activeMode === 'digital' 
+                            ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 shadow-sm' 
+                            : 'hover:bg-slate-50 border-2 border-transparent'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg text-white">
+                            <FileText className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-slate-800">Digital Review</div>
+                            <div className="text-xs text-slate-500">Annotation tools</div>
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Export & Analytics Section */}
+                  <div className="p-4">
+                    <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-slate-500 rounded-full"></div>
+                      Export & Analytics
+                    </h4>
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => setActiveMode('export')}
+                        className={`w-full text-left p-3 rounded-lg transition-all ${
+                          activeMode === 'export' 
+                            ? 'bg-gradient-to-r from-slate-50 to-gray-50 border-2 border-slate-200 shadow-sm' 
+                            : 'hover:bg-slate-50 border-2 border-transparent'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-gradient-to-br from-slate-500 to-gray-600 rounded-lg text-white">
+                            <Download className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-slate-800">Export Results</div>
+                            <div className="text-xs text-slate-500">Download reports</div>
+                          </div>
+                        </div>
+                      </button>
+                      <Button
+                        onClick={generateAnalytics}
+                        disabled={loading}
+                        variant="outline"
+                        className="w-full justify-start gap-3 p-3 h-auto border-2 border-dashed border-emerald-300 hover:border-emerald-400 bg-gradient-to-r from-emerald-50 to-teal-50 hover:from-emerald-100 hover:to-teal-100"
+                      >
+                        <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg text-white">
+                          <BarChart3 className="h-4 w-4" />
+                        </div>
+                        <div className="text-left">
+                          <div className="font-medium text-slate-800">View Analytics</div>
+                          <div className="text-xs text-slate-500">Performance insights</div>
+                        </div>
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Main Content Area */}
+            <div className="flex-1 min-w-0">
+              <Tabs value={activeMode} onValueChange={(value) => setActiveMode(value as any)}>
+                {/* Assessment Overview Header */}
+                <Card className="bg-white/95 backdrop-blur-sm shadow-xl border-0 rounded-xl overflow-hidden mb-3 lg:mb-4">
+                  <CardHeader className="p-3 sm:p-4 lg:p-4 xl:p-5 bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50 border-b border-emerald-200/30">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                      {/* Assessment Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-emerald-700 via-teal-700 to-cyan-700 bg-clip-text text-transparent">
+                            {selectedAssessment.title}
+                          </h1>
+                          <Badge className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white border-0 px-2 py-1 text-xs font-medium">
+                            {selectedAssessment.type.toUpperCase()}
+                          </Badge>
+                        </div>
+                        
+                        {/* Assessment Details Grid */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-sm">
+                          {/* Max Score */}
+                          <div className="flex items-center gap-1.5 text-slate-600">
+                            <div className="w-2 h-2 bg-emerald-500 rounded-full flex-shrink-0"></div>
+                            <span className="truncate">
+                              <strong className="text-emerald-600">{selectedAssessment.max_score}</strong> points
+                            </span>
+                          </div>
+                          
+                          {/* Student Count */}
+                          <div className="flex items-center gap-1.5 text-slate-600">
+                            <Users className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
+                            <span className="truncate">
+                              <strong className="text-blue-600">
+                                {(() => {
+                                  const classInfo = teacherClasses.find(c => c.id === selectedAssessment.class_id)
+                                  return classInfo?.total_students || students.length || 0
+                                })()}
+                              </strong> students
+                            </span>
+                          </div>
+                          
+                          {/* Class Name */}
+                          {selectedAssessment.class_id && (
+                            <div className="flex items-center gap-1.5 text-slate-600">
+                              <BookOpen className="h-3.5 w-3.5 text-purple-500 flex-shrink-0" />
+                              <span className="truncate">
+                                {teacherClasses.find(c => c.id === selectedAssessment.class_id)?.class_name || 'Class'}
+                              </span>
                             </div>
-                            <h3 className="text-lg sm:text-xl font-semibold text-slate-800 mb-2">No Students Found</h3>
-                            <p className="text-sm sm:text-base text-slate-600 mb-4">
+                          )}
+                          
+                          {/* Due Date */}
+                          {selectedAssessment.due_date && (
+                            <div className="flex items-center gap-1.5 text-slate-600">
+                              <Calendar className="h-3.5 w-3.5 text-orange-500 flex-shrink-0" />
+                              <span className="truncate">
+                                Due: <strong className="text-orange-600">
+                                  {new Date(selectedAssessment.due_date).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                  })}
+                                </strong>
+                              </span>
+                            </div>
+                          )}
+                          
+                          {/* Created Date */}
+                          {selectedAssessment.created_at && (
+                            <div className="flex items-center gap-1.5 text-slate-600">
+                              <Clock className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                              <span className="truncate text-xs">
+                                Created {new Date(selectedAssessment.created_at).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric'
+                                })}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Current Method Info */}
+                      <div className="flex items-center gap-3 lg:gap-4">
+                        <div className="flex items-center gap-2 px-3 py-2 bg-white/70 rounded-lg border border-emerald-200/50">
+                          <div className={`p-1.5 rounded-md bg-gradient-to-br text-white ${
+                            activeMode === 'grid' ? 'from-blue-500 to-indigo-600' :
+                            activeMode === 'omr' ? 'from-purple-500 to-pink-600' :
+                            activeMode === 'rubric' ? 'from-orange-500 to-red-600' :
+                            activeMode === 'digital' ? 'from-green-500 to-emerald-600' :
+                            activeMode === 'bulk' ? 'from-teal-500 to-cyan-600' :
+                            'from-slate-500 to-gray-600'
+                          }`}>
+                            {activeMode === 'grid' && <Grid3X3 className="h-4 w-4" />}
+                            {activeMode === 'omr' && <Scan className="h-4 w-4" />}
+                            {activeMode === 'rubric' && <Target className="h-4 w-4" />}
+                            {activeMode === 'digital' && <FileText className="h-4 w-4" />}
+                            {activeMode === 'bulk' && <Users className="h-4 w-4" />}
+                            {activeMode === 'export' && <Download className="h-4 w-4" />}
+                          </div>
+                          <div className="text-left">
+                            <div className="font-semibold text-slate-800 text-sm">
+                              {activeMode === 'grid' && 'Grid Entry'}
+                              {activeMode === 'omr' && 'OMR Scanning'}
+                              {activeMode === 'rubric' && 'Rubric Grading'}
+                              {activeMode === 'digital' && 'Digital Review'}
+                              {activeMode === 'bulk' && 'Bulk Operations'}
+                              {activeMode === 'export' && 'Export Results'}
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              {activeMode === 'grid' && 'Spreadsheet interface'}
+                              {activeMode === 'omr' && 'Bubble sheet processing'}
+                              {activeMode === 'rubric' && 'Criteria-based scoring'}
+                              {activeMode === 'digital' && 'Annotation tools'}
+                              {activeMode === 'bulk' && 'Mass grade updates'}
+                              {activeMode === 'export' && 'Download reports'}
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          onClick={generateAnalytics}
+                          disabled={loading}
+                          size="sm"
+                          className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white border-0 px-3 py-2"
+                        >
+                          <BarChart3 className="h-4 w-4 mr-1.5" />
+                          <span className="hidden sm:inline">Analytics</span>
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  
+                  {/* Expandable Assessment Details */}
+                  <AnimatePresence>
+                    {showAssessmentDetails && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="overflow-hidden border-t border-emerald-200/30"
+                      >
+                        <CardContent className="p-3 sm:p-4 lg:p-5 bg-gradient-to-r from-emerald-50/50 via-teal-50/50 to-cyan-50/50">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {/* Class Details */}
+                            {selectedAssessment.class_id && (() => {
+                              const classInfo = teacherClasses.find(c => c.id === selectedAssessment.class_id)
+                              return classInfo ? (
+                                <div className="bg-white/80 rounded-lg p-3 border border-purple-200/50">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <BookOpen className="h-4 w-4 text-purple-600" />
+                                    <h4 className="font-semibold text-slate-800 text-sm">Class Information</h4>
+                                  </div>
+                                  <div className="space-y-1.5 text-sm text-slate-600">
+                                    <div><strong>Name:</strong> {classInfo.class_name}</div>
+                                    <div><strong>Subject:</strong> {classInfo.subject}</div>
+                                    <div><strong>Grade:</strong> {classInfo.grade_level}</div>
+                                    <div><strong>Students:</strong> {classInfo.total_students}</div>
+                                  </div>
+                                </div>
+                              ) : null
+                            })()}
+                            
+                            {/* Timeline */}
+                            <div className="bg-white/80 rounded-lg p-3 border border-blue-200/50">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Clock className="h-4 w-4 text-blue-600" />
+                                <h4 className="font-semibold text-slate-800 text-sm">Timeline</h4>
+                              </div>
+                              <div className="space-y-1.5 text-sm text-slate-600">
+                                {selectedAssessment.created_at && (
+                                  <div>
+                                    <strong>Created:</strong>{' '}
+                                    {new Date(selectedAssessment.created_at).toLocaleDateString('en-US', {
+                                      weekday: 'short',
+                                      month: 'short',
+                                      day: 'numeric',
+                                      year: 'numeric'
+                                    })}
+                                  </div>
+                                )}
+                                {selectedAssessment.due_date && (
+                                  <div>
+                                    <strong>Due Date:</strong>{' '}
+                                    {new Date(selectedAssessment.due_date).toLocaleDateString('en-US', {
+                                      weekday: 'short',
+                                      month: 'short',
+                                      day: 'numeric',
+                                      year: 'numeric'
+                                    })}{' '}
+                                    at{' '}
+                                    {new Date(selectedAssessment.due_date).toLocaleTimeString('en-US', {
+                                      hour: 'numeric',
+                                      minute: '2-digit',
+                                      hour12: true
+                                    })}
+                                  </div>
+                                )}
+                                {selectedAssessment.due_date && (
+                                  <div className={`font-medium ${
+                                    new Date(selectedAssessment.due_date) < new Date() 
+                                      ? 'text-red-600' 
+                                      : 'text-emerald-600'
+                                  }`}>
+                                    {new Date(selectedAssessment.due_date) < new Date() 
+                                      ? '⚠️ Past Due' 
+                                      : '✓ Active'}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Assessment Stats */}
+                            <div className="bg-white/80 rounded-lg p-3 border border-emerald-200/50">
+                              <div className="flex items-center gap-2 mb-2">
+                                <BarChart3 className="h-4 w-4 text-emerald-600" />
+                                <h4 className="font-semibold text-slate-800 text-sm">Quick Stats</h4>
+                              </div>
+                              <div className="space-y-1.5 text-sm text-slate-600">
+                                <div>
+                                  <strong>Enrolled Students:</strong>{' '}
+                                  {(() => {
+                                    const classInfo = teacherClasses.find(c => c.id === selectedAssessment.class_id)
+                                    return classInfo?.total_students || students.length || 0
+                                  })()}
+                                </div>
+                                <div><strong>Max Score:</strong> {selectedAssessment.max_score} points</div>
+                                <div><strong>Type:</strong> {selectedAssessment.type.charAt(0).toUpperCase() + selectedAssessment.type.slice(1)}</div>
+                                <div><strong>Assessment ID:</strong> <span className="text-xs font-mono">{selectedAssessment.id.slice(0, 8)}...</span></div>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  
+                  {/* Toggle Details Button */}
+                  <div className="flex justify-center -mt-3 mb-2">
+                    <Button
+                      onClick={() => setShowAssessmentDetails(!showAssessmentDetails)}
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-slate-600 hover:text-emerald-600 hover:bg-emerald-50"
+                    >
+                      {showAssessmentDetails ? (
+                        <>
+                          <ChevronRight className="h-3 w-3 mr-1 rotate-90 transition-transform" />
+                          Hide Details
+                        </>
+                      ) : (
+                        <>
+                          <ChevronRight className="h-3 w-3 mr-1 -rotate-90 transition-transform" />
+                          Show More Details
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </Card>
+
+                {/* Tab Content Area */}
+                <div className="space-y-3 lg:space-y-4">
+                  <TabsContent value="grid" className="space-y-3 lg:space-y-4">
+                    <Card className="bg-gradient-to-br from-white to-slate-50 border border-slate-200 rounded-xl shadow-lg">
+                      <CardContent className="p-3 lg:p-4 xl:p-5">
+                        {students.length === 0 ? (
+                          <div className="text-center py-6 sm:py-8">
+                            <div className="p-3 sm:p-4 bg-slate-100 rounded-xl sm:rounded-2xl inline-block mb-3 sm:mb-4">
+                              <Users className="h-6 w-6 sm:h-8 sm:w-8 lg:h-10 lg:w-10 text-slate-400" />
+                            </div>
+                            <h3 className="text-base sm:text-lg font-semibold text-slate-800 mb-1.5 sm:mb-2">No Students Found</h3>
+                            <p className="text-xs sm:text-sm text-slate-600 mb-3 sm:mb-4">
                               Students will appear here when you select an assessment with enrolled students.
                             </p>
                             <Button 
@@ -514,31 +921,31 @@ export default function UpdateResultsSystem() {
                             </Button>
                           </div>
                         ) : (
-                          <div className="space-y-4">
-                            <div className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg">
+                          <div className="space-y-2.5 sm:space-y-3">
+                            <div className="text-xs sm:text-sm text-slate-600 bg-slate-50 p-2 sm:p-3 rounded-lg">
                               <strong>{students.length}</strong> students enrolled • 
                               <strong className="ml-2">{selectedAssessment.max_score}</strong> max points
                             </div>
-                            <div className="grid gap-3 sm:gap-4">
+                            <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-2 sm:gap-3 lg:gap-4">
                               {students.map((student, index) => (
                                 <motion.div
                                   key={student.id}
                                   initial={{ opacity: 0, y: 20 }}
                                   animate={{ opacity: 1, y: 0 }}
                                   transition={{ delay: index * 0.05 }}
-                                  className="p-3 sm:p-4 bg-white border border-slate-200 rounded-xl hover:shadow-md transition-all"
+                                  className="p-3 lg:p-4 bg-white border border-slate-200 rounded-lg lg:rounded-xl hover:shadow-md transition-all"
                                 >
-                                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                                     <div className="flex-1 min-w-0">
-                                      <h4 className="font-semibold text-slate-800 truncate">
+                                      <h4 className="font-semibold text-sm sm:text-base text-slate-800 truncate">
                                         {student.full_name}
                                       </h4>
-                                      <p className="text-sm text-slate-500">
+                                      <p className="text-xs sm:text-sm text-slate-500">
                                         Student ID: {student.student_id || 'N/A'}
                                       </p>
                                     </div>
-                                    <div className="flex items-center gap-2 sm:gap-3">
-                                      <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1.5 sm:gap-2">
+                                      <div className="flex items-center gap-1.5 sm:gap-2">
                                         <Input
                                           type="number"
                                           placeholder="Score"
@@ -721,8 +1128,216 @@ export default function UpdateResultsSystem() {
                   </TabsContent>
                 </div>
               </Tabs>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+
+          {/* Mobile Bottom Sheet for Grading Methods */}
+          <AnimatePresence>
+            {mobileMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="lg:hidden fixed inset-0 bg-black/50 flex items-end justify-center z-50"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <motion.div
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  exit={{ y: "100%" }}
+                  className="bg-white rounded-t-2xl shadow-2xl w-full max-h-[80vh] overflow-y-auto"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+                    <h3 className="text-lg font-bold text-slate-800">Choose Grading Method</h3>
+                    <Button
+                      onClick={() => setMobileMenuOpen(false)}
+                      variant="ghost"
+                      size="sm"
+                      className="p-2"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  <div className="p-4">
+                    {/* Quick Entry Section */}
+                    <div className="mb-6">
+                      <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        Quick Entry
+                      </h4>
+                      <div className="grid grid-cols-1 gap-2">
+                        <button
+                          onClick={() => {
+                            setActiveMode('grid')
+                            setMobileMenuOpen(false)
+                          }}
+                          className={`text-left p-4 rounded-xl transition-all ${
+                            activeMode === 'grid' 
+                              ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200' 
+                              : 'bg-slate-50 hover:bg-slate-100 border-2 border-transparent'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg text-white">
+                              <Grid3X3 className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <div className="font-medium text-slate-800">Grid Entry</div>
+                              <div className="text-sm text-slate-500">Excel-like spreadsheet for quick grading</div>
+                            </div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setActiveMode('bulk')
+                            setMobileMenuOpen(false)
+                          }}
+                          className={`text-left p-4 rounded-xl transition-all ${
+                            activeMode === 'bulk' 
+                              ? 'bg-gradient-to-r from-teal-50 to-cyan-50 border-2 border-teal-200' 
+                              : 'bg-slate-50 hover:bg-slate-100 border-2 border-transparent'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-lg text-white">
+                              <Users className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <div className="font-medium text-slate-800">Bulk Operations</div>
+                              <div className="text-sm text-slate-500">Apply grades to multiple students</div>
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Advanced Methods Section */}
+                    <div className="mb-6">
+                      <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                        <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                        Advanced Methods
+                      </h4>
+                      <div className="grid grid-cols-1 gap-2">
+                        <button
+                          onClick={() => {
+                            setActiveMode('omr')
+                            setMobileMenuOpen(false)
+                          }}
+                          className={`text-left p-4 rounded-xl transition-all ${
+                            activeMode === 'omr' 
+                              ? 'bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200' 
+                              : 'bg-slate-50 hover:bg-slate-100 border-2 border-transparent'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg text-white">
+                              <Scan className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <div className="font-medium text-slate-800">OMR Scanning</div>
+                              <div className="text-sm text-slate-500">Upload and process bubble sheets</div>
+                            </div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setActiveMode('rubric')
+                            setMobileMenuOpen(false)
+                          }}
+                          className={`text-left p-4 rounded-xl transition-all ${
+                            activeMode === 'rubric' 
+                              ? 'bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-200' 
+                              : 'bg-slate-50 hover:bg-slate-100 border-2 border-transparent'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg text-white">
+                              <Target className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <div className="font-medium text-slate-800">Rubric Grading</div>
+                              <div className="text-sm text-slate-500">Detailed criteria-based scoring</div>
+                            </div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setActiveMode('digital')
+                            setMobileMenuOpen(false)
+                          }}
+                          className={`text-left p-4 rounded-xl transition-all ${
+                            activeMode === 'digital' 
+                              ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200' 
+                              : 'bg-slate-50 hover:bg-slate-100 border-2 border-transparent'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg text-white">
+                              <FileText className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <div className="font-medium text-slate-800">Digital Review</div>
+                              <div className="text-sm text-slate-500">Review with annotation tools</div>
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Export & Analytics Section */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                        <div className="w-2 h-2 bg-slate-500 rounded-full"></div>
+                        Export & Analytics
+                      </h4>
+                      <div className="grid grid-cols-1 gap-2">
+                        <button
+                          onClick={() => {
+                            setActiveMode('export')
+                            setMobileMenuOpen(false)
+                          }}
+                          className={`text-left p-4 rounded-xl transition-all ${
+                            activeMode === 'export' 
+                              ? 'bg-gradient-to-r from-slate-50 to-gray-50 border-2 border-slate-200' 
+                              : 'bg-slate-50 hover:bg-slate-100 border-2 border-transparent'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-gradient-to-br from-slate-500 to-gray-600 rounded-lg text-white">
+                              <Download className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <div className="font-medium text-slate-800">Export Results</div>
+                              <div className="text-sm text-slate-500">Download grades and reports</div>
+                            </div>
+                          </div>
+                        </button>
+                        <Button
+                          onClick={() => {
+                            generateAnalytics()
+                            setMobileMenuOpen(false)
+                          }}
+                          disabled={loading}
+                          variant="outline"
+                          className="justify-start gap-3 p-4 h-auto border-2 border-dashed border-emerald-300 hover:border-emerald-400 bg-gradient-to-r from-emerald-50 to-teal-50"
+                        >
+                          <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg text-white">
+                            <BarChart3 className="h-5 w-5" />
+                          </div>
+                          <div className="text-left">
+                            <div className="font-medium text-slate-800">View Analytics</div>
+                            <div className="text-sm text-slate-500">Performance insights and trends</div>
+                          </div>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </>
       )}
 
@@ -740,14 +1355,14 @@ export default function UpdateResultsSystem() {
               initial={{ y: 100, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 100, opacity: 0 }}
-              className="bg-white rounded-t-xl sm:rounded-xl shadow-2xl max-w-md w-full p-4 sm:p-6 max-h-[90vh] overflow-y-auto"
+              className="bg-white rounded-t-xl sm:rounded-xl shadow-2xl max-w-md w-full p-3 sm:p-4 lg:p-5 max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Create New Assessment</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">Create New Assessment</h2>
               
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                     Assessment Title
                   </label>
                   <Input
@@ -759,7 +1374,7 @@ export default function UpdateResultsSystem() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                     Type
                   </label>
                   <select
@@ -771,11 +1386,148 @@ export default function UpdateResultsSystem() {
                     <option value="test">Test</option>
                     <option value="assignment">Assignment</option>
                     <option value="project">Project</option>
+                    <option value="exam">Exam</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
+                    Class <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={newAssessment.class_id}
+                    onChange={(e) => setNewAssessment({ ...newAssessment, class_id: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    required
+                  >
+                    <option value="">Select a class...</option>
+                    {loadingClasses ? (
+                      <option disabled>Loading classes...</option>
+                    ) : (
+                      teacherClasses.map((cls) => (
+                        <option key={cls.id} value={cls.id}>
+                          {cls.class_name} - {cls.subject} (Grade {cls.grade_level}) - {cls.total_students} students
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
+                    Due Date & Time (Optional)
+                  </label>
+                  
+                  {/* Quick Preset Buttons */}
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const tomorrow = new Date()
+                        tomorrow.setDate(tomorrow.getDate() + 1)
+                        tomorrow.setHours(23, 59, 0, 0)
+                        setNewAssessment({ ...newAssessment, due_date: tomorrow.toISOString().slice(0, 16) })
+                      }}
+                      className="text-xs h-7 px-2"
+                    >
+                      <Clock className="h-3 w-3 mr-1" />
+                      Tomorrow
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const nextWeek = new Date()
+                        nextWeek.setDate(nextWeek.getDate() + 7)
+                        nextWeek.setHours(23, 59, 0, 0)
+                        setNewAssessment({ ...newAssessment, due_date: nextWeek.toISOString().slice(0, 16) })
+                      }}
+                      className="text-xs h-7 px-2"
+                    >
+                      <Calendar className="h-3 w-3 mr-1" />
+                      Next Week
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const twoWeeks = new Date()
+                        twoWeeks.setDate(twoWeeks.getDate() + 14)
+                        twoWeeks.setHours(23, 59, 0, 0)
+                        setNewAssessment({ ...newAssessment, due_date: twoWeeks.toISOString().slice(0, 16) })
+                      }}
+                      className="text-xs h-7 px-2"
+                    >
+                      <Calendar className="h-3 w-3 mr-1" />
+                      2 Weeks
+                    </Button>
+                    {newAssessment.due_date && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setNewAssessment({ ...newAssessment, due_date: '' })}
+                        className="text-xs h-7 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <X className="h-3 w-3 mr-1" />
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {/* Date & Time Input */}
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Input
+                        type="date"
+                        value={newAssessment.due_date ? newAssessment.due_date.split('T')[0] : ''}
+                        onChange={(e) => {
+                          const time = newAssessment.due_date?.split('T')[1] || '23:59'
+                          setNewAssessment({ ...newAssessment, due_date: e.target.value ? `${e.target.value}T${time}` : '' })
+                        }}
+                        className="w-full"
+                        min={new Date().toISOString().split('T')[0]}
+                      />
+                    </div>
+                    <div className="w-28">
+                      <Input
+                        type="time"
+                        value={newAssessment.due_date ? newAssessment.due_date.split('T')[1] : '23:59'}
+                        onChange={(e) => {
+                          const date = newAssessment.due_date?.split('T')[0] || new Date().toISOString().split('T')[0]
+                          setNewAssessment({ ...newAssessment, due_date: `${date}T${e.target.value}` })
+                        }}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Preview */}
+                  {newAssessment.due_date && (
+                    <div className="mt-2 text-xs text-gray-600 bg-blue-50 border border-blue-200 rounded-md p-2 flex items-center gap-2">
+                      <Calendar className="h-3 w-3 text-blue-600" />
+                      <span>
+                        Due: {new Date(newAssessment.due_date).toLocaleDateString('en-US', { 
+                          weekday: 'short',
+                          month: 'short', 
+                          day: 'numeric',
+                          year: 'numeric'
+                        })} at {new Date(newAssessment.due_date).toLocaleTimeString('en-US', {
+                          hour: 'numeric',
+                          minute: '2-digit',
+                          hour12: true
+                        })}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                     Max Score
                   </label>
                   <Input
@@ -787,11 +1539,16 @@ export default function UpdateResultsSystem() {
                   />
                 </div>
 
-                <div className="flex gap-3 mt-6">
+                <div className="flex gap-2 sm:gap-3 mt-4 sm:mt-5">
                   <Button
                     onClick={async () => {
                       if (!newAssessment.title) {
-                        alert('Please enter an assessment title')
+                        toast.error('Please enter an assessment title')
+                        return
+                      }
+                      
+                      if (!newAssessment.class_id) {
+                        toast.error('Please select a class')
                         return
                       }
                       
@@ -807,15 +1564,15 @@ export default function UpdateResultsSystem() {
                           const data = await response.json()
                           setAssessments([...assessments, data.assessment])
                           setShowCreateModal(false)
-                          setNewAssessment({ title: '', type: 'quiz', max_score: 100 })
-                          alert('Assessment created successfully!')
+                          setNewAssessment({ title: '', type: 'quiz', max_score: 100, class_id: '', due_date: '' })
+                          toast.success('Assessment created successfully!')
                         } else {
                           const error = await response.json()
-                          alert('Failed to create assessment: ' + (error.error || 'Unknown error'))
+                          toast.error('Failed to create assessment: ' + (error.error || 'Unknown error'))
                         }
                       } catch (error) {
                         console.error('Error creating assessment:', error)
-                        alert('Failed to create assessment. Please try again.')
+                        toast.error('Failed to create assessment. Please try again.')
                       } finally {
                         setLoading(false)
                       }
@@ -829,7 +1586,7 @@ export default function UpdateResultsSystem() {
                   <Button
                     onClick={() => {
                       setShowCreateModal(false)
-                      setNewAssessment({ title: '', type: 'quiz', max_score: 100 })
+                      setNewAssessment({ title: '', type: 'quiz', max_score: 100, class_id: '', due_date: '' })
                     }}
                     variant="outline"
                     className="flex-1"
