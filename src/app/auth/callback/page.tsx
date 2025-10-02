@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { useAppDispatch } from '@/lib/redux/hooks'
 import { setUser, setProfile } from '@/lib/redux/slices/authSlice'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { GraduationCap } from 'lucide-react'
 
 export default function AuthCallback() {
   const router = useRouter()
@@ -13,6 +14,8 @@ export default function AuthCallback() {
   const [error, setError] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(true)
   const [hasBeenCalled, setHasBeenCalled] = useState(false)
+  const [hasProcessed, setHasProcessed] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   const welcomeShownKey = 'catalyst_welcome_shown'
 
@@ -98,11 +101,7 @@ export default function AuthCallback() {
             sessionStorage.removeItem('catalyst_auth_processing')
             
             // Show informative message
-            addToast({
-              type: 'info',
-              title: '👋 Welcome to Catalyst!',
-              description: 'Please complete your registration to continue. We\'ve pre-filled some information from Google.'
-            })
+            console.log('👋 Welcome to Catalyst! Please complete your registration to continue.')
             
             // Redirect to registration page
             router.push('/register')
@@ -141,11 +140,7 @@ export default function AuthCallback() {
           sessionStorage.setItem('catalyst_dashboard_path', dashboardPath)
 
           // Show enhanced welcome message only once
-          addToast({
-            type: 'success',
-            title: '🎉 Welcome to Catalyst!',
-            description: `Welcome ${userProfile?.first_name || 'back'}! You're now signed in as ${userRole}. Taking you to your dashboard...`
-          })
+          console.log(`🎉 Welcome to Catalyst! You're now signed in as ${userRole}. Taking you to your dashboard...`)
 
           // Mark that welcome message has been shown
           sessionStorage.setItem(welcomeShownKey, 'true')
@@ -166,11 +161,7 @@ export default function AuthCallback() {
         console.error('Auth callback error:', error)
         setError(error.message || 'Authentication failed')
         
-        addToast({
-          type: 'error',
-          title: '❌ Authentication Failed',
-          description: error.message || 'Failed to complete sign-in. Please try again.'
-        })
+        console.error('❌ Authentication Failed:', error.message || 'Failed to complete sign-in. Please try again.')
 
         // Clear any processing flags on error
         sessionStorage.removeItem('catalyst_auth_processing')
