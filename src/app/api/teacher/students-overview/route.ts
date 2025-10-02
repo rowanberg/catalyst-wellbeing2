@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
           streak_days: profile?.streak_days || 0,
           current_mood: profile?.current_mood || 'neutral',
           class_name: classInfo?.class_name,
-          grade_level: Array.isArray(classInfo?.grade_levels) ? classInfo?.grade_levels[0]?.grade_level : classInfo?.grade_levels?.grade_level,
+          grade_level: Array.isArray(classInfo?.grade_levels) ? (classInfo?.grade_levels[0] as any)?.grade_level : (classInfo?.grade_levels as any)?.grade_level,
           updated_at: profile?.updated_at
         }
       }).filter((student: any) => student.id)

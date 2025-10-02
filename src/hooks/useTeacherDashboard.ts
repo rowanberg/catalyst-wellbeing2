@@ -1,5 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 
 interface TeacherDashboardData {
   analytics: {
@@ -56,71 +55,69 @@ const fetchTeacherDashboard = async (teacherId: string): Promise<TeacherDashboar
 }
 
 export const useTeacherDashboard = (teacherId: string | null) => {
-  const queryClient = useQueryClient()
-  const [refreshing, setRefreshing] = useState(false)
+  const [data, setData] = useState<TeacherDashboardData | undefined>(undefined)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isError, setIsError] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
+  const [isFetching, setIsFetching] = useState(false)
+  const [dataUpdatedAt, setDataUpdatedAt] = useState<number>(0)
 
-  const query = useQuery({
-    queryKey: ['teacher-dashboard', teacherId],
-    queryFn: () => fetchTeacherDashboard(teacherId!),
-    enabled: !!teacherId,
-    staleTime: 30 * 1000, // Consider data fresh for 30 seconds
-    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-    refetchOnWindowFocus: true,
-    refetchOnMount: 'always',
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-  })
+  const fetchData = useCallback(async () => {
+    if (!teacherId) return
+
+    setIsFetching(true)
+    setIsLoading(!data) // Only show loading on initial fetch
+    setIsError(false)
+    setError(null)
+
+    try {
+      const result = await fetchTeacherDashboard(teacherId)
+      setData(result)
+      setDataUpdatedAt(Date.now())
+    } catch (err) {
+      setIsError(true)
+      setError(err as Error)
+    } finally {
+      setIsFetching(false)
+      setIsLoading(false)
+    }
+  }, [teacherId, data])
+
+  // Initial fetch
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   // Manual refresh function
   const refresh = useCallback(async () => {
-    if (!teacherId) return
-    
-    setRefreshing(true)
-    try {
-      await queryClient.invalidateQueries({
-        queryKey: ['teacher-dashboard', teacherId]
-      })
-      await query.refetch()
-    } finally {
-      setRefreshing(false)
-    }
-  }, [teacherId, queryClient, query])
+    await fetchData()
+  }, [fetchData])
 
   // Background refresh function (silent)
   const backgroundRefresh = useCallback(() => {
-    if (!teacherId) return
-    
-    queryClient.invalidateQueries({
-      queryKey: ['teacher-dashboard', teacherId]
-    })
-  }, [teacherId, queryClient])
+    fetchData()
+  }, [fetchData])
 
-  // Prefetch function for performance
+  // Prefetch function for performance (just fetch)
   const prefetch = useCallback(() => {
-    if (!teacherId) return
-    
-    queryClient.prefetchQuery({
-      queryKey: ['teacher-dashboard', teacherId],
-      queryFn: () => fetchTeacherDashboard(teacherId),
-      staleTime: 30 * 1000,
-    })
-  }, [teacherId, queryClient])
+    fetchData()
+  }, [fetchData])
 
   return {
-    data: query.data,
-    isLoading: query.isLoading,
-    isError: query.isError,
-    error: query.error,
-    isRefetching: query.isRefetching || refreshing,
+    data,
+    isLoading,
+    isError,
+    error,
+    isRefetching: isFetching,
     refresh,
     backgroundRefresh,
     prefetch,
     // Derived states for better UX
-    hasData: !!query.data,
-    isEmpty: query.data?.students?.length === 0,
+    hasData: !!data,
+    isEmpty: data?.students?.length === 0,
     // Performance metrics
-    dataUpdatedAt: query.dataUpdatedAt,
-    isFetching: query.isFetching,
+    dataUpdatedAt,
+    isFetching,
   }
 }
 
@@ -129,7 +126,7 @@ export const useTeacherDashboardRealtime = (teacherId: string | null, intervalMs
   const { backgroundRefresh } = useTeacherDashboard(teacherId)
 
   // Set up interval for background updates
-  useState(() => {
+  useEffect(() => {
     if (!teacherId) return
 
     const interval = setInterval(() => {
@@ -137,5 +134,5 @@ export const useTeacherDashboardRealtime = (teacherId: string | null, intervalMs
     }, intervalMs)
 
     return () => clearInterval(interval)
-  })
+  }, [teacherId, intervalMs, backgroundRefresh])
 }

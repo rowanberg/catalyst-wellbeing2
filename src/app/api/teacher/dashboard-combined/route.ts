@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
     // Process student assignments
     let studentIds: string[] = []
     if (studentAssignmentsResult.status === 'fulfilled' && studentAssignmentsResult.value.data) {
-      studentIds = [...new Set(studentAssignmentsResult.value.data.map((sa: any) => sa.student_id))]
+      studentIds = Array.from(new Set(studentAssignmentsResult.value.data.map((sa: any) => sa.student_id)))
     }
 
     // Fetch student profiles if we have student IDs

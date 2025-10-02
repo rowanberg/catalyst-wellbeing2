@@ -171,7 +171,7 @@ export default function StudentResultsPage() {
   }
 
   const getAssessmentTypes = () => {
-    const types = [...new Set(results.map(r => r.assessment.type))]
+    const types = Array.from(new Set(results.map(r => r.assessment.type)))
     return types
   }
 

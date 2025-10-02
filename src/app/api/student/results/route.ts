@@ -42,9 +42,9 @@ export async function GET(request: NextRequest) {
           title,
           type,
           max_score,
-          created_at as assessment_date,
+          created_at,
           teacher_id,
-          profiles!assessments_teacher_id_fkey(
+          profiles!teacher_id(
             first_name,
             last_name
           )
@@ -65,28 +65,33 @@ export async function GET(request: NextRequest) {
     const stats = calculateResultsStats(results || [])
 
     // Format results for frontend
-    const formattedResults = (results || []).map(result => ({
-      id: result.id,
-      assessment: {
-        id: result.assessments.id,
-        title: result.assessments.title,
-        type: result.assessments.type,
-        max_score: result.assessments.max_score,
-        date: result.assessments.assessment_date,
-        teacher: result.assessments.profiles 
-          ? `${result.assessments.profiles.first_name} ${result.assessments.profiles.last_name}`
-          : 'Unknown Teacher'
-      },
-      grade: {
-        score: result.score,
-        percentage: result.percentage,
-        letter_grade: result.letter_grade,
-        feedback: result.feedback,
-        rubric_scores: result.rubric_scores
-      },
-      submitted_at: result.created_at,
-      updated_at: result.updated_at
-    }))
+    const formattedResults = (results || []).map(result => {
+      const assessment = Array.isArray(result.assessments) ? result.assessments[0] : result.assessments
+      return {
+        id: result.id,
+        assessment: {
+          id: assessment?.id || 'unknown',
+          title: assessment?.title || 'Unknown Assessment',
+          type: assessment?.type || 'Unknown',
+          max_score: assessment?.max_score || 0,
+          date: assessment?.created_at || result.created_at,
+          teacher: assessment?.profiles 
+            ? (Array.isArray(assessment.profiles) 
+               ? `${(assessment.profiles[0] as any)?.first_name || ''} ${(assessment.profiles[0] as any)?.last_name || ''}`.trim()
+               : `${(assessment.profiles as any)?.first_name || ''} ${(assessment.profiles as any)?.last_name || ''}`.trim())
+            : 'Unknown Teacher'
+        },
+        grade: {
+          score: result.score,
+          percentage: result.percentage,
+          letter_grade: result.letter_grade,
+          feedback: result.feedback,
+          rubric_scores: result.rubric_scores
+        },
+        submitted_at: result.created_at,
+        updated_at: result.updated_at
+      }
+    })
 
     return NextResponse.json({ 
       results: formattedResults,
