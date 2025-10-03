@@ -39,16 +39,12 @@ export default function StudentAnnouncementsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'announcements' | 'polls'>('announcements')
   
-  // Enhanced UI state
-  const [searchQuery, setSearchQuery] = useState('')
-  const [filterType, setFilterType] = useState<'all' | 'general' | 'academic' | 'event' | 'urgent'>('all')
+  // UI state
   const [bookmarkedItems, setBookmarkedItems] = useState<Set<string>>(new Set())
   const [viewedItems, setViewedItems] = useState<Set<string>>(new Set())
   const [likedItems, setLikedItems] = useState<Set<string>>(new Set())
+  const [expandedAnnouncements, setExpandedAnnouncements] = useState<Set<string>>(new Set())
   
-  // Performance testing
-  const [showPerformanceTest, setShowPerformanceTest] = useState(false)
-  const [performanceResults, setPerformanceResults] = useState<any>(null)
   
   // Poll modal state
   const [showPollModal, setShowPollModal] = useState(false)
@@ -64,13 +60,10 @@ export default function StudentAnnouncementsPage() {
   const [lastFetchTime, setLastFetchTime] = useState<Map<string, number>>(new Map())
   
   const fetchData = async (forceRefresh = false) => {
-    const startTime = performance.now()
-    console.log('🚀 [PERFORMANCE] Starting data fetch...', { forceRefresh, timestamp: new Date().toISOString() })
-    
-    const cacheKey = 'dashboard-data'
+    const cacheKey = 'announcements-data'
     const now = Date.now()
     const lastFetch = lastFetchTime.get(cacheKey) || 0
-    const cacheExpiry = 3 * 60 * 1000 // 3 minutes (matches API cache)
+    const cacheExpiry = 3 * 60 * 1000 // 3 minutes cache
     
     // Return cached data if still fresh and not forcing refresh
     if (!forceRefresh && requestCache.has(cacheKey) && (now - lastFetch) < cacheExpiry) {
@@ -78,32 +71,16 @@ export default function StudentAnnouncementsPage() {
       setAnnouncements(cached.announcements)
       setPolls(cached.polls)
       setIsLoading(false)
-      const cacheTime = performance.now() - startTime
-      console.log('⚡ [PERFORMANCE] Used cached data:', { 
-        time: `${cacheTime.toFixed(2)}ms`,
-        announcements: cached.announcements.length,
-        polls: cached.polls.length 
-      })
       return
     }
     
     try {
-      console.log('🌐 [PERFORMANCE] Fetching from combined endpoint...')
-      const fetchStart = performance.now()
-      
       // Use optimized combined endpoint
       const response = await fetch('/api/student/dashboard-data?announcements_limit=10&polls_limit=10', {
         headers: {
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
         }
-      })
-      
-      const fetchTime = performance.now() - fetchStart
-      console.log('📡 [PERFORMANCE] API Response received:', { 
-        time: `${fetchTime.toFixed(2)}ms`,
-        status: response.status,
-        ok: response.ok 
       })
       
       if (response.ok) {
@@ -119,87 +96,48 @@ export default function StudentAnnouncementsPage() {
         // Cache the results
         setRequestCache(prev => new Map(prev.set(cacheKey, {
           announcements: announcementsData,
-          polls: pollsData,
-          profile: dashboardData.profile,
-          schoolInfo: dashboardData.schoolInfo
+          polls: pollsData
         })))
         setLastFetchTime(prev => new Map(prev.set(cacheKey, now)))
-        
-        const totalTime = performance.now() - startTime
-        console.log('✅ [PERFORMANCE] Dashboard data loaded from combined endpoint:', {
-          totalTime: `${totalTime.toFixed(2)}ms`,
-          announcements: announcementsData.length,
-          polls: pollsData.length,
-          cached: false,
-          endpoint: 'combined'
-        })
       } else {
-        console.error('❌ [PERFORMANCE] Combined endpoint failed:', response.status)
         // Fallback to individual endpoints if combined fails
-        await fetchDataFallback(startTime)
+        await fetchDataFallback()
       }
       
     } catch (error) {
-      console.error('❌ [PERFORMANCE] Combined endpoint error:', error)
+      console.error('Error fetching data:', error)
       // Fallback to individual endpoints
-      await fetchDataFallback(startTime)
+      await fetchDataFallback()
     } finally {
       setIsLoading(false)
-      const totalTime = performance.now() - startTime
-      console.log('🏁 [PERFORMANCE] Data fetch completed:', `${totalTime.toFixed(2)}ms`)
     }
   }
 
   // Fallback method using individual endpoints
-  const fetchDataFallback = async (startTime?: number) => {
+  const fetchDataFallback = async () => {
     try {
       const [announcementsResponse, pollsResponse] = await Promise.all([
         fetch('/api/student/announcements'),
         fetch('/api/polls')
       ])
       
-      let announcementsData = []
-      let pollsData = []
-      
       if (announcementsResponse.ok) {
         const result = await announcementsResponse.json()
-        announcementsData = result.data || result // Handle both paginated and direct response
+        const announcementsData = result.data || result
         setAnnouncements(announcementsData)
       }
       
       if (pollsResponse.ok) {
         const pollsResult = await pollsResponse.json()
-        pollsData = pollsResult.polls || []
+        const pollsData = pollsResult.polls || []
         setPolls(pollsData)
       }
-      
-      const fallbackTime = startTime ? performance.now() - startTime : 0
-      console.log('⚠️ [PERFORMANCE] Used fallback endpoints:', {
-        totalTime: startTime ? `${fallbackTime.toFixed(2)}ms` : 'unknown',
-        announcements: announcementsData.length,
-        polls: pollsData.length,
-        endpoint: 'fallback'
-      })
       
     } catch (error) {
       console.error('Fallback fetch error:', error)
     }
   }
 
-  // Performance testing function
-  const runPerformanceTest = async () => {
-    console.log('🔍 [PERFORMANCE] Running diagnostic test...')
-    setShowPerformanceTest(true)
-    try {
-      const response = await fetch('/api/student/performance-test')
-      const results = await response.json()
-      setPerformanceResults(results)
-      console.log('📊 [PERFORMANCE] Test results:', results)
-    } catch (error) {
-      console.error('Performance test failed:', error)
-      setPerformanceResults({ error: 'Test failed', details: error })
-    }
-  }
 
 
   const getPriorityColor = (priority: string) => {
@@ -241,20 +179,18 @@ export default function StudentAnnouncementsPage() {
     }
   }
 
-  // Enhanced filtering and search
-  const filteredAnnouncements = announcements.filter(announcement => {
-    const matchesSearch = announcement.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         announcement.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         announcement.author.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesFilter = filterType === 'all' || announcement.type === filterType
-    return matchesSearch && matchesFilter
-  })
-
-  const filteredPolls = polls.filter(poll => {
-    const matchesSearch = poll.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         poll.description.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesSearch
-  })
+  // Toggle announcement expansion
+  const toggleExpanded = (id: string) => {
+    setExpandedAnnouncements(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(id)) {
+        newSet.delete(id)
+      } else {
+        newSet.add(id)
+      }
+      return newSet
+    })
+  }
 
   // Interactive functions
   const toggleBookmark = (id: string) => {
@@ -387,7 +323,7 @@ export default function StudentAnnouncementsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 relative overflow-hidden">
+    <div className="min-h-screen bg-gray-50 relative">
       <style jsx global>{`
         .scrollbar-hide {
           -ms-overflow-style: none;
@@ -402,237 +338,61 @@ export default function StudentAnnouncementsPage() {
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
-        .touch-manipulation {
-          touch-action: manipulation;
-        }
-        @media (max-width: 475px) {
-          .xs\\:flex { display: flex; }
-          .xs\\:inline { display: inline; }
-          .xs\\:hidden { display: none; }
-        }
       `}</style>
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-indigo-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-teal-400/10 to-green-400/10 rounded-full blur-3xl animate-pulse delay-2000"></div>
-      </div>
 
-      {/* Enhanced Mobile-First Header */}
-      <motion.div 
-        initial={{ y: -100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="bg-white/95 backdrop-blur-2xl shadow-2xl border-b border-white/30 sticky top-0 z-50"
-      >
-        <div className="px-3 py-3 sm:px-6 sm:py-6">
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-              <Button 
-                onClick={() => router.push('/student')} 
-                variant="ghost" 
-                size="sm"
-                className="p-2 hover:bg-gradient-to-r hover:from-purple-100 hover:to-pink-100 rounded-xl transition-all duration-300 flex-shrink-0 group active:scale-95"
-              >
-                <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 group-hover:scale-110 transition-transform duration-200" />
-              </Button>
-              <div className="min-w-0 flex-1">
-                <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
-                  🎓 School Hub
-                </h1>
-                <p className="text-xs sm:text-sm text-gray-600 flex items-center gap-1 sm:gap-2 hidden xs:flex">
-                  <Zap className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500" />
-                  Stay updated with school news
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 sm:gap-3">
-              <motion.div 
-                whileTap={{ scale: 0.95 }}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium shadow-lg"
-              >
-                {activeTab === 'announcements' ? filteredAnnouncements.length : filteredPolls.length}
-              </motion.div>
-              
-              {/* Performance Test Button (Development) */}
-              {process.env.NODE_ENV === 'development' && (
-                <Button
-                  onClick={runPerformanceTest}
-                  variant="outline"
-                  size="sm"
-                  className="text-xs bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100"
-                >
-                  🔍 Test
-                </Button>
-              )}
-
-            </div>
-          </div>
-
-          {/* Mobile-Optimized Search and Filter Bar */}
-          <div className="space-y-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder={`Search ${activeTab}...`}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-3 bg-white/90 backdrop-blur-sm border-white/50 focus:border-purple-300 focus:ring-purple-200 rounded-xl text-base"
-              />
-              {searchQuery && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 h-6 w-6 rounded-full hover:bg-gray-100"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              )}
-            </div>
-            
-            {activeTab === 'announcements' && (
-              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setFilterType('all')}
-                  className={`rounded-full whitespace-nowrap transition-all duration-200 ${
-                    filterType === 'all' 
-                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-transparent shadow-lg' 
-                      : 'bg-white/90 hover:bg-white border-white/50'
-                  }`}
-                >
-                  <Filter className="h-3 w-3 mr-1" />
-                  All
-                </Button>
-                {['urgent', 'academic', 'event', 'general'].map((type) => (
-                  <Button
-                    key={type}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setFilterType(type as any)}
-                    className={`rounded-full whitespace-nowrap transition-all duration-200 capitalize ${
-                      filterType === type 
-                        ? `bg-gradient-to-r ${getTypeGradient(type)} text-white border-transparent shadow-lg` 
-                        : 'bg-white/90 hover:bg-white border-white/50'
-                    }`}
-                  >
-                    <span className="text-sm">{getTypeEmoji(type)}</span>
-                    <span className="ml-1 hidden xs:inline">{type}</span>
-                  </Button>
-                ))}
-              </div>
-            )}
+      {/* Simple Header */}
+      <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+        <div className="px-4 py-4 sm:px-6">
+          <div className="flex items-center gap-3">
+            <Button 
+              onClick={() => router.push('/student')} 
+              variant="ghost" 
+              size="sm"
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+            >
+              <ArrowLeft className="h-5 w-5 text-gray-600" />
+            </Button>
+            <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">
+              School Hub
+            </h1>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* Main Content */}
       <div className="px-3 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-6xl mx-auto relative z-10">
-        {/* Mobile-Optimized Tab Navigation */}
-        <motion.div 
-          initial={{ y: 50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="mb-6 sm:mb-8"
-        >
-          <div className="bg-white/95 backdrop-blur-2xl rounded-2xl p-1.5 sm:p-2 shadow-2xl border border-white/40">
-            <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-              <motion.div
-                whileTap={{ scale: 0.98 }}
-                className="touch-manipulation"
+        {/* Tab Navigation */}
+        <div className="mb-6">
+          <div className="bg-white rounded-lg p-1 shadow-sm border border-gray-200 max-w-md mx-auto lg:mx-0">
+            <div className="grid grid-cols-2 gap-1">
+              <Button
+                onClick={() => setActiveTab('announcements')}
+                variant="ghost"
+                className={`h-10 rounded-md transition-colors duration-200 ${
+                  activeTab === 'announcements'
+                    ? 'bg-blue-500 text-white'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
               >
-                <Button
-                  onClick={() => setActiveTab('announcements')}
-                  variant="ghost"
-                  className={`relative h-14 sm:h-16 w-full rounded-xl transition-all duration-500 overflow-hidden ${
-                    activeTab === 'announcements'
-                      ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 text-white shadow-2xl'
-                      : 'text-gray-600 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 active:bg-purple-100'
-                  }`}
-                >
-                  {activeTab === 'announcements' && (
-                    <motion.div
-                      layoutId="activeTab"
-                      className="absolute inset-0 bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 rounded-xl"
-                      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                    />
-                  )}
-                  <div className="relative flex flex-col items-center gap-1 sm:gap-2">
-                    <div className="flex items-center gap-1 sm:gap-2">
-                      <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
-                      <span className="font-semibold text-sm sm:text-base">Announcements</span>
-                    </div>
-                    <div className="flex items-center gap-1 sm:gap-2">
-                      <Badge className={`text-xs ${
-                        activeTab === 'announcements' 
-                          ? 'bg-white/20 text-white border-white/30' 
-                          : 'bg-purple-100 text-purple-600 border-purple-200'
-                      }`}>
-                        {filteredAnnouncements.length}
-                      </Badge>
-                      {bookmarkedItems.size > 0 && (
-                        <Badge className={`text-xs ${
-                          activeTab === 'announcements' 
-                            ? 'bg-yellow-400/20 text-yellow-100 border-yellow-300/30' 
-                            : 'bg-yellow-100 text-yellow-600 border-yellow-200'
-                        }`}>
-                          <Bookmark className="h-3 w-3" />
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </Button>
-              </motion.div>
+                <Bell className="h-4 w-4 mr-2" />
+                <span className="font-medium">Announcements</span>
+              </Button>
               
-              <motion.div
-                whileTap={{ scale: 0.98 }}
-                className="touch-manipulation"
+              <Button
+                onClick={() => setActiveTab('polls')}
+                variant="ghost"
+                className={`h-10 rounded-md transition-colors duration-200 ${
+                  activeTab === 'polls'
+                    ? 'bg-blue-500 text-white'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
               >
-                <Button
-                  onClick={() => setActiveTab('polls')}
-                  variant="ghost"
-                  className={`relative h-14 sm:h-16 w-full rounded-xl transition-all duration-500 overflow-hidden ${
-                    activeTab === 'polls'
-                      ? 'bg-gradient-to-r from-green-500 via-teal-500 to-blue-500 text-white shadow-2xl'
-                      : 'text-gray-600 hover:bg-gradient-to-r hover:from-green-50 hover:to-teal-50 active:bg-green-100'
-                  }`}
-                >
-                  {activeTab === 'polls' && (
-                    <motion.div
-                      layoutId="activeTab"
-                      className="absolute inset-0 bg-gradient-to-r from-green-500 via-teal-500 to-blue-500 rounded-xl"
-                      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                    />
-                  )}
-                  <div className="relative flex flex-col items-center gap-1 sm:gap-2">
-                    <div className="flex items-center gap-1 sm:gap-2">
-                      <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5" />
-                      <span className="font-semibold text-sm sm:text-base">Polls</span>
-                    </div>
-                    <div className="flex items-center gap-1 sm:gap-2">
-                      <Badge className={`text-xs ${
-                        activeTab === 'polls' 
-                          ? 'bg-white/20 text-white border-white/30' 
-                          : 'bg-green-100 text-green-600 border-green-200'
-                      }`}>
-                        {filteredPolls.length}
-                      </Badge>
-                      <Badge className={`text-xs ${
-                        activeTab === 'polls' 
-                          ? 'bg-emerald-400/20 text-emerald-100 border-emerald-300/30' 
-                          : 'bg-emerald-100 text-emerald-600 border-emerald-200'
-                      }`}>
-                        <TrendingUp className="h-3 w-3" />
-                      </Badge>
-                    </div>
-                  </div>
-                </Button>
-              </motion.div>
+                <BarChart3 className="h-4 w-4 mr-2" />
+                <span className="font-medium">Polls</span>
+              </Button>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Content Area */}
         <AnimatePresence mode="wait">
@@ -641,28 +401,10 @@ export default function StudentAnnouncementsPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="text-center py-16"
+              className="text-center py-12"
             >
-              <div className="relative">
-                <motion.div 
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                  className="w-16 h-16 border-4 border-purple-200 border-t-purple-600 rounded-full mx-auto mb-6"
-                />
-                <motion.div 
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="absolute inset-0 w-16 h-16 border-2 border-purple-300 rounded-full mx-auto opacity-30"
-                />
-              </div>
-              <motion.p 
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="text-gray-600 font-medium text-lg"
-              >
-                Loading your updates...
-              </motion.p>
+              <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full mx-auto mb-4 animate-spin" />
+              <p className="text-gray-600 text-sm">Loading...</p>
             </motion.div>
           ) : (
             <>
@@ -674,7 +416,7 @@ export default function StudentAnnouncementsPage() {
                   transition={{ duration: 0.6 }}
                   className="space-y-6"
                 >
-                  {filteredAnnouncements.length === 0 ? (
+                  {announcements.length === 0 ? (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
@@ -698,7 +440,7 @@ export default function StudentAnnouncementsPage() {
                             transition={{ delay: 0.3 }}
                             className="text-2xl font-bold text-gray-800 mb-3"
                           >
-                            {searchQuery ? 'No matching announcements' : 'No announcements yet'}
+                            No announcements yet
                           </motion.h3>
                           <motion.p 
                             initial={{ y: 20, opacity: 0 }}
@@ -706,48 +448,30 @@ export default function StudentAnnouncementsPage() {
                             transition={{ delay: 0.4 }}
                             className="text-gray-600 text-lg"
                           >
-                            {searchQuery 
-                              ? `Try adjusting your search for "${searchQuery}"` 
-                              : 'Check back later for important school updates and news!'
-                            }
+                            Check back later for important school updates and news!
                           </motion.p>
                         </CardContent>
                       </Card>
                     </motion.div>
                   ) : (
-                    filteredAnnouncements.map((announcement, index) => {
+                    announcements.map((announcement: Announcement, index: number) => {
                       const TypeIcon = getTypeIcon(announcement.type)
                       return (
-                        <motion.div
+                        <div
                           key={announcement.id}
-                          initial={{ opacity: 0, y: 50, scale: 0.9 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          transition={{ duration: 0.5, delay: index * 0.1 }}
-                          whileHover={{ y: -5, scale: 1.02 }}
                           onClick={() => markAsViewed(announcement.id)}
                           className="cursor-pointer"
                         >
-                          <Card className={`bg-white/95 backdrop-blur-2xl border-white/40 shadow-2xl hover:shadow-3xl transition-all duration-500 overflow-hidden relative group ${
-                            !viewedItems.has(announcement.id) ? 'ring-2 ring-purple-200' : ''
+                          <Card className={`bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${
+                            !viewedItems.has(announcement.id) ? 'ring-2 ring-blue-200' : ''
                           }`}>
-                            {/* Gradient Border Effect */}
-                            <div className={`absolute inset-0 bg-gradient-to-r ${getTypeGradient(announcement.type)} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
-                            
-                            {/* Priority Indicator */}
-                            {announcement.priority === 'high' && (
-                              <div className="absolute top-0 right-0 w-0 h-0 border-l-[20px] border-l-transparent border-t-[20px] border-t-red-500">
-                                <div className="absolute -top-4 -right-1 text-white text-xs font-bold transform rotate-45">
-                                  !
-                                </div>
-                              </div>
-                            )}
                             
                             <CardContent className="p-4 sm:p-6">
                               <div className="flex gap-3 sm:gap-4">
-                                {/* Mobile-Optimized Icon Section */}
+                                {/* Icon Section */}
                                 <div className="flex-shrink-0">
-                                  <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br ${getTypeGradient(announcement.type)} flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                                    <TypeIcon className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
+                                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-blue-50 flex items-center justify-center">
+                                    <TypeIcon className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                                   </div>
                                 </div>
                                 
@@ -755,7 +479,7 @@ export default function StudentAnnouncementsPage() {
                                   {/* Mobile-Optimized Header Section */}
                                   <div className="flex items-start justify-between mb-2 sm:mb-3">
                                     <div className="flex-1 min-w-0">
-                                      <h3 className="font-bold text-gray-900 text-base sm:text-lg leading-tight mb-1 group-hover:text-purple-700 transition-colors duration-200 pr-2">
+                                      <h3 className="font-semibold text-gray-900 text-base sm:text-lg leading-tight mb-1">
                                         {announcement.title}
                                       </h3>
                                     </div>
@@ -781,10 +505,27 @@ export default function StudentAnnouncementsPage() {
                                     )}
                                   </div>
                                   
-                                  {/* Mobile-Optimized Content */}
-                                  <p className="text-gray-700 leading-relaxed mb-4 text-sm sm:text-base line-clamp-3 sm:line-clamp-none">
-                                    {announcement.content}
-                                  </p>
+                                  {/* Content with Read More */}
+                                  <div className="mb-4">
+                                    <p className={`text-gray-700 leading-relaxed text-sm sm:text-base ${
+                                      expandedAnnouncements.has(announcement.id) ? '' : 'line-clamp-3'
+                                    }`}>
+                                      {announcement.content}
+                                    </p>
+                                    {announcement.content.length > 150 && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          toggleExpanded(announcement.id)
+                                        }}
+                                        className="text-blue-600 hover:text-blue-800 p-0 h-auto font-medium mt-2"
+                                      >
+                                        {expandedAnnouncements.has(announcement.id) ? 'Read Less' : 'Read More'}
+                                      </Button>
+                                    )}
+                                  </div>
                                   
                                   {/* Mobile-Optimized Action Buttons */}
                                   <div className="flex items-center justify-between mb-3">
@@ -857,7 +598,7 @@ export default function StudentAnnouncementsPage() {
                               </div>
                             </CardContent>
                           </Card>
-                        </motion.div>
+                        </div>
                       )
                     })
                   )}
@@ -872,7 +613,7 @@ export default function StudentAnnouncementsPage() {
                 transition={{ duration: 0.6 }}
                 className="space-y-4 sm:space-y-6"
               >
-                {filteredPolls.length === 0 ? (
+                {polls.length === 0 ? (
                   <Card className="bg-white/90 backdrop-blur-xl border-white/30 shadow-xl">
                     <CardContent className="text-center py-12 sm:py-16">
                       <div className="mb-4 sm:mb-6">
@@ -1111,125 +852,6 @@ export default function StudentAnnouncementsPage() {
         </div>
       )}
 
-      {/* Performance Test Results Modal */}
-      {showPerformanceTest && performanceResults && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
-          >
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-gray-900">🔍 Performance Diagnostic Results</h3>
-                <Button
-                  onClick={() => setShowPerformanceTest(false)}
-                  variant="ghost"
-                  size="sm"
-                  className="p-2"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
-            </div>
-
-            <div className="p-6 space-y-6">
-              {/* Overall Performance */}
-              <div className="bg-gray-50 rounded-xl p-4">
-                <h4 className="font-semibold text-gray-900 mb-2">Overall Performance</h4>
-                <div className="flex items-center gap-4">
-                  <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    performanceResults.analysis?.overall === 'EXCELLENT' ? 'bg-green-100 text-green-700' :
-                    performanceResults.analysis?.overall === 'GOOD' ? 'bg-blue-100 text-blue-700' :
-                    performanceResults.analysis?.overall === 'SLOW' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-red-100 text-red-700'
-                  }`}>
-                    {performanceResults.analysis?.overall || 'UNKNOWN'}
-                  </div>
-                  <span className="text-lg font-mono">{performanceResults.totalTime?.toFixed(2)}ms</span>
-                </div>
-              </div>
-
-              {/* Step-by-step breakdown */}
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-3">Step Breakdown</h4>
-                <div className="space-y-2">
-                  {performanceResults.steps?.map((step: any, index: number) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-3 h-3 rounded-full ${step.success ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                        <span className="font-medium capitalize">{step.step.replace(/_/g, ' ')}</span>
-                        {step.count !== undefined && (
-                          <span className="text-sm text-gray-600">({step.count} items)</span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm">{step.time}</span>
-                        {step.error && (
-                          <span className="text-red-600 text-xs">❌ {step.error}</span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Recommendations */}
-              {performanceResults.analysis?.recommendations?.length > 0 && (
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-3">Recommendations</h4>
-                  <div className="space-y-2">
-                    {performanceResults.analysis.recommendations.map((rec: string, index: number) => (
-                      <div key={index} className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg">
-                        <span className="text-blue-600">💡</span>
-                        <span className="text-blue-800">{rec}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Environment Info */}
-              {performanceResults.environment && (
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-3">Environment</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <div className="text-sm text-gray-600">Supabase URL</div>
-                      <div className={`font-medium ${
-                        performanceResults.environment.supabaseUrl === 'PLACEHOLDER_DETECTED' 
-                          ? 'text-red-600' : 'text-green-600'
-                      }`}>
-                        {performanceResults.environment.supabaseUrl}
-                      </div>
-                    </div>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <div className="text-sm text-gray-600">Service Role</div>
-                      <div className={`font-medium ${
-                        performanceResults.environment.hasServiceRole ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {performanceResults.environment.hasServiceRole ? 'Configured' : 'Missing'}
-                      </div>
-                    </div>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <div className="text-sm text-gray-600">Environment</div>
-                      <div className="font-medium">{performanceResults.environment.nodeEnv}</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Raw Data (Collapsible) */}
-              <details className="border rounded-lg">
-                <summary className="p-3 cursor-pointer font-medium">Raw Diagnostic Data</summary>
-                <pre className="p-3 bg-gray-50 text-xs overflow-auto">
-                  {JSON.stringify(performanceResults, null, 2)}
-                </pre>
-              </details>
-            </div>
-          </motion.div>
-        </div>
-      )}
     </div>
   )
 }

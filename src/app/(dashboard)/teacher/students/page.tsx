@@ -482,16 +482,21 @@ export default function TeacherStudentsPage() {
     }
   }, [students, selectedClass, classes.length, assignedClasses.length])
 
-  // Set initial view based on data
+  // Set initial view based on data and ensure assigned classes are shown after assignment
   useEffect(() => {
     if (!loading) {
-      if (assignedClasses.length > 0) {
+      if (assignedClasses.length > 0 && currentView !== 'students') {
+        // Show assigned classes when they exist, but don't interrupt student view
         setCurrentView('assigned-classes')
-      } else if (grades.length > 0) {
+        // Reset navigation state to ensure we stay on assigned classes
+        setSelectedGrade('')
+        setSelectedClass('')
+      } else if (assignedClasses.length === 0 && grades.length > 0 && currentView === 'assigned-classes') {
+        // Only switch to grades if we're currently on assigned-classes but have no assignments
         setCurrentView('grades')
       }
     }
-  }, [loading, assignedClasses.length, grades.length])
+  }, [loading, assignedClasses.length, grades.length, currentView])
 
   // Helper functions - memoized for performance
   const handleClassSelect = useCallback(async (classId: string) => {
@@ -504,7 +509,10 @@ export default function TeacherStudentsPage() {
   }, [loadStudentsForClass, user])
 
   const handleAddMoreClasses = useCallback(() => {
+    // Allow navigation to grades view to add more classes
     setCurrentView('grades')
+    setSelectedGrade('')
+    setSelectedClass('')
   }, [])
 
   // Debug students data
@@ -608,7 +616,12 @@ export default function TeacherStudentsPage() {
   }
 
   const handleBackToAssignedClasses = () => {
-    setCurrentView('assigned-classes')
+    // Always return to assigned classes view when available
+    if (assignedClasses.length > 0) {
+      setCurrentView('assigned-classes')
+    } else {
+      setCurrentView('grades')
+    }
     setSelectedGrade('')
     setSelectedClass('')
     setClassId('')
@@ -685,8 +698,11 @@ export default function TeacherStudentsPage() {
       })
 
       if (response.ok) {
+        console.log('✅ Class assignment successful, refreshing data...')
         // Refresh data to get updated assignments
         await refreshData()
+        // Immediately redirect to assigned classes view after successful assignment
+        window.location.reload() // Force page reload to ensure clean state
       } else {
         console.error('Failed to assign teacher to class')
       }
@@ -699,38 +715,25 @@ export default function TeacherStudentsPage() {
 
   if (loading) {
     return (
-      <ClientOnly fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
-          <motion.div 
-            className="text-center"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-            >
-              <ProfessionalLoader size="md" />
-            </motion.div>
-            <motion.div 
-              className="mt-4 space-y-2"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-            >
-              <h3 className="text-lg font-semibold text-gray-800">Loading Your Classes</h3>
-              <p className="text-sm text-gray-600">Fetching your assigned classes and student data...</p>
-              <div className="flex items-center justify-center space-x-1 mt-3">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-              </div>
-            </motion.div>
-          </motion.div>
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center">
+        <div className="text-center space-y-6">
+          {/* Clean spinner */}
+          <div className="relative">
+            <div className="w-12 h-12 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
+          </div>
+          
+          {/* Content */}
+          <div className="space-y-2">
+            <h2 className="text-2xl font-semibold text-gray-900">Loading Classes</h2>
+            <p className="text-gray-600 max-w-sm">Getting your student data ready...</p>
+          </div>
+          
+          {/* Progress bar */}
+          <div className="w-64 h-1 bg-gray-200 rounded-full overflow-hidden">
+            <div className="h-full bg-blue-600 rounded-full animate-pulse"></div>
+          </div>
         </div>
-      </ClientOnly>
+      </div>
     )
   }
 
