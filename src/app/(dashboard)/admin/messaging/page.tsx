@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAppSelector } from '@/lib/redux/hooks'
-import { AuthGuard } from '@/components/auth/auth-guard'
+import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -155,7 +155,7 @@ export default function AdminMessagingPage() {
 
 
   return (
-    <AuthGuard requiredRole="admin">
+    <UnifiedAuthGuard requiredRole="admin">
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
         {/* Mobile-Optimized Header */}
         <div className="bg-white border-b border-gray-200 shadow-sm">
@@ -627,6 +627,6 @@ export default function AdminMessagingPage() {
           onClose={() => setIsNotificationOpen(false)}
         />
       </div>
-    </AuthGuard>
+    </UnifiedAuthGuard>
   )
 }

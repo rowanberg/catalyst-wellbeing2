@@ -51,15 +51,32 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 // Handle auth state changes and refresh token errors
 if (typeof window !== 'undefined') {
-  supabase.auth.onAuthStateChange((event, session) => {
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    console.log(`🔄 [AuthStateChange] Event: ${event}`, session ? 'Session exists' : 'No session')
+    
     if (event === 'TOKEN_REFRESHED') {
       console.log('✅ Token refreshed successfully')
     } else if (event === 'SIGNED_OUT') {
       console.log('🔒 User signed out')
       // Clear all auth-related data
       window.localStorage.clear()
+      // Clear Redux store
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+        console.log('🔄 Redirecting to login due to sign out')
+        window.location.href = '/login'
+      }
     } else if (event === 'USER_UPDATED') {
       console.log('👤 User updated')
+    } else if (event === 'SIGNED_IN') {
+      console.log('✅ User signed in successfully')
+    }
+  })
+
+  // Handle refresh token errors specifically
+  supabase.auth.getSession().catch((error) => {
+    if (error.message?.includes('Invalid Refresh Token') || error.message?.includes('Refresh Token Not Found')) {
+      console.log('🔄 [RefreshToken] Invalid or expired refresh token, signing out...')
+      supabase.auth.signOut()
     }
   })
 }

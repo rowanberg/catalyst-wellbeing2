@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAppSelector } from '@/lib/redux/hooks'
-import { AuthGuard } from '@/components/auth/auth-guard'
+import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
 import { AIStudyPlanner } from '@/components/student/tools/ai-study-planner'
 import { GradeAnalytics } from '@/components/student/tools/grade-analytics'
 import { AIHomeworkHelper } from '@/components/student/tools/ai-homework-helper'
@@ -2441,8 +2441,8 @@ function OptimisticMessageInput({ participantId, conversationId, currentUserId, 
 
 export default function StudentMessagingPage() {
   return (
-    <AuthGuard requiredRole="student">
+    <UnifiedAuthGuard requiredRole="student">
       <StudentMessagingContent />
-    </AuthGuard>
+    </UnifiedAuthGuard>
   )
 }

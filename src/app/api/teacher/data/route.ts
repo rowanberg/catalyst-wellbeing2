@@ -53,11 +53,13 @@ export async function GET(request: NextRequest) {
           .eq('user_id', teacherId)
           .eq('role', 'teacher'),
         // Get teacher assignments (try user_id first, then profile_id)
+        // Note: Handle school_id mismatch by checking both current school and null school_id
         supabase
           .from('teacher_class_assignments')
-          .select('class_id, is_primary_teacher, assigned_at, subject, teacher_id')
+          .select('class_id, is_primary_teacher, assigned_at, subject, teacher_id, school_id, is_active')
           .eq('teacher_id', teacherId)
-          .eq('school_id', schoolId),
+          .eq('is_active', true)
+          .or(`school_id.eq.${schoolId},school_id.is.null`),
         // Get grade levels for this school
         supabase
           .from('grade_levels')
@@ -69,16 +71,19 @@ export async function GET(request: NextRequest) {
         teacherProfile: { 
           found: !!teacherProfile.data?.length, 
           count: teacherProfile.data?.length || 0,
-          error: teacherProfile.error?.message 
+          error: teacherProfile.error?.message,
+          profileId: teacherProfile.data?.[0]?.id 
         },
         teacherAssignments: { 
           count: teacherAssignments.data?.length || 0, 
-          error: teacherAssignments.error?.message 
+          error: teacherAssignments.error?.message,
+          assignments: teacherAssignments.data
         },
         gradeLevels: { 
           count: gradeLevels.data?.length || 0, 
           error: gradeLevels.error?.message 
-        }
+        },
+        queryParams: { teacherId, schoolId }
       })
 
       // If no assignments found with user_id, try with profile_id
@@ -90,9 +95,10 @@ export async function GET(request: NextRequest) {
         
         const profileAssignmentsResult = await supabase
           .from('teacher_class_assignments')
-          .select('class_id, is_primary_teacher, assigned_at, subject, teacher_id')
+          .select('class_id, is_primary_teacher, assigned_at, subject, teacher_id, school_id, is_active')
           .eq('teacher_id', profileId)
-          .eq('school_id', schoolId)
+          .eq('is_active', true)
+          .or(`school_id.eq.${schoolId},school_id.is.null`)
         
         if (profileAssignmentsResult.data && profileAssignmentsResult.data.length > 0) {
           finalAssignments = profileAssignmentsResult

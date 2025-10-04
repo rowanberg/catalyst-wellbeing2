@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useAppSelector, useAppDispatch } from '@/lib/redux/hooks'
 import { fetchProfile } from '@/lib/redux/slices/authSlice'
-import { AuthGuard } from '@/components/auth/auth-guard'
+import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { LoadingSpinner, PageLoader } from '@/components/ui/loading-spinner'
@@ -451,8 +451,8 @@ function StudentDashboardContent() {
 
 export default function StudentDashboard() {
   return (
-    <AuthGuard requiredRole="student">
+    <UnifiedAuthGuard requiredRole="student">
       <StudentDashboardContent />
-    </AuthGuard>
+    </UnifiedAuthGuard>
   )
 }

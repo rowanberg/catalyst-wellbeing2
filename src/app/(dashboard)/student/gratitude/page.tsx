@@ -65,14 +65,44 @@ export default function GratitudeJournalPage() {
     fetchEntries()
   }, [user])
 
-  const fetchEntries = async () => {
+  const fetchEntries = async (skipCache = false) => {
     if (!user) return
 
     try {
-      const response = await fetch('/api/student/gratitude')
+      // Check sessionStorage cache first (5-minute TTL)
+      const cacheKey = `gratitude_entries_${user.id}`
+      const cacheTimestampKey = `${cacheKey}_timestamp`
+      
+      if (!skipCache) {
+        const cachedData = sessionStorage.getItem(cacheKey)
+        const cacheTimestamp = sessionStorage.getItem(cacheTimestampKey)
+        
+        if (cachedData && cacheTimestamp) {
+          const cacheAge = Date.now() - parseInt(cacheTimestamp)
+          const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+          
+          if (cacheAge < CACHE_TTL) {
+            setEntries(JSON.parse(cachedData))
+            return
+          }
+        }
+      }
+
+      // Fetch from API with cache headers
+      const response = await fetch('/api/student/gratitude', {
+        headers: {
+          'Cache-Control': 'max-age=300', // 5 minutes browser cache
+        }
+      })
+      
       if (response.ok) {
         const data = await response.json()
-        setEntries(data.entries || [])
+        const entries = data.entries || []
+        setEntries(entries)
+        
+        // Cache in sessionStorage
+        sessionStorage.setItem(cacheKey, JSON.stringify(entries))
+        sessionStorage.setItem(cacheTimestampKey, Date.now().toString())
       }
     } catch (error: any) {
       console.error('Error fetching gratitude entries:', error)
@@ -95,23 +125,28 @@ export default function GratitudeJournalPage() {
       if (response.ok) {
         const result = await response.json()
         
-        // Update Redux store with actual values from backend
-        dispatch(updateXP(result.xpGained || 15))
-        dispatch(updateGems(result.gemsGained || 3))
-        
-        // Show success animation and keep form open for celebration
+        // Show success message
         setShowSuccess(true)
+        setTimeout(() => setShowSuccess(false), 3000)
         
-        // Clear form but keep it open for a moment
+        // Update XP/gems in Redux
+        if (result.xpGained && result.gemsGained) {
+          dispatch(updateXP(result.xpGained))
+          dispatch(updateGems(result.gemsGained))
+        }
+        
+        // Reset form and hide modal
         reset()
+        setShowForm(false)
         setGratitudeText('')
         
-        // Close form after showing success message
-        setTimeout(() => {
-          setShowSuccess(false)
-          setShowForm(false)
-          fetchEntries()
-        }, 5000) // 5 seconds to show celebration
+        // Clear cache and refresh entries (skip cache to get fresh data)
+        const cacheKey = `gratitude_entries_${user.id}`
+        const cacheTimestampKey = `${cacheKey}_timestamp`
+        sessionStorage.removeItem(cacheKey)
+        sessionStorage.removeItem(cacheTimestampKey)
+        
+        fetchEntries(true) // Skip cache to ensure fresh data
       } else {
         const errorData = await response.text()
         console.error('API Error:', response.status, errorData)

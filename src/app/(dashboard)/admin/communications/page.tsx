@@ -29,7 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AuthGuard } from '@/components/auth/auth-guard';
+import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard';
 
 interface ModerationItem {
   id: string;
@@ -536,8 +536,8 @@ function AdminCommunicationsContent() {
 
 export default function AdminCommunications() {
   return (
-    <AuthGuard requiredRole="admin">
+    <UnifiedAuthGuard requiredRole="admin">
       <AdminCommunicationsContent />
-    </AuthGuard>
+    </UnifiedAuthGuard>
   );
 }

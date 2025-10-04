@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -48,6 +48,7 @@ import {
   ArrowRight,
   Rocket,
   GraduationCap,
+  Gem,
   HeartHandshake,
   School,
   Coffee,
@@ -61,9 +62,8 @@ import {
 import { supabase } from '@/lib/supabaseClient'
 import { MessagingNavButton } from '@/components/ui/messaging-nav-button'
 import { ProfileDropdown } from '@/components/ui/profile-dropdown'
-import { useAuth } from '@/lib/hooks/useAuth'
-import { AuthGuard } from '@/components/auth/auth-guard'
 import { useAppSelector } from '@/lib/redux/hooks'
+import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
 
 interface StudentOverview {
   id: string
@@ -141,6 +141,8 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
     averageStreak: 0
   })
   const [loading, setLoading] = useState(true)
+  const [isDataFetching, setIsDataFetching] = useState(false) // Prevent concurrent API calls
+  const fetchingRef = useRef(false) // More reliable concurrent call protection
   const [activeTab, setActiveTab] = useState<'analytics' | 'overview' | 'roster' | 'incidents' | 'shoutouts' | 'interventions' | 'quests' | 'messaging' | 'blackmarks' | 'activities' | 'communication' | 'settings' | 'results'>('overview')
   const [notifications, setNotifications] = useState<Array<{id: string, message: string, type: 'success' | 'error' | 'warning' | 'info'}>>([])
   const [realTimeData, setRealTimeData] = useState({
@@ -192,16 +194,21 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
   }
 
   useEffect(() => {
-    console.log('Teacher dashboard useEffect - user:', !!user, 'profile:', !!profile)
-    console.log('Profile data:', profile)
-    if (user && profile) {
+    console.log('🔄 Teacher dashboard useEffect triggered')
+    console.log('   - user exists:', !!user, 'user.id:', user?.id)
+    console.log('   - profile exists:', !!profile, 'profile.user_id:', profile?.user_id)
+    console.log('   - fetchingRef.current:', fetchingRef.current)
+    console.log('   - isDataFetching:', isDataFetching)
+    
+    if (user && profile && user.id && profile.user_id) {
+      console.log('✅ Conditions met, calling fetchClassData...')
       fetchClassData()
     } else {
       // If no user or profile, stop loading
-      console.log('No user or profile, stopping loading')
+      console.log('❌ Conditions not met, stopping loading')
       setLoading(false)
     }
-  }, [user, profile])
+  }, [user?.id, profile?.user_id]) // Use stable IDs instead of full objects
 
   // Add a timeout to prevent infinite loading
   useEffect(() => {
@@ -222,7 +229,21 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
       return
     }
 
+    // Prevent concurrent API calls using ref for immediate check
+    if (fetchingRef.current) {
+      console.log('Data fetch already in progress (ref check), skipping...')
+      return
+    }
+
+    // Double check with state as well
+    if (isDataFetching) {
+      console.log('Data fetch already in progress (state check), skipping...')
+      return
+    }
+
     try {
+      fetchingRef.current = true // Set ref guard immediately
+      setIsDataFetching(true) // Set state guard
       setLoading(true)
       console.log('Fetching teacher analytics for user:', user.id)
       
@@ -290,11 +311,13 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
       })
     } finally {
       console.log('Setting loading to false')
+      fetchingRef.current = false // Clear ref guard
+      setIsDataFetching(false) // Clear state guard
       setLoading(false)
     }
   }
 
-  if (loading) {
+  if (loading || !profile) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
         <div className="text-center">
@@ -367,7 +390,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
   }
 
   return (
-    <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative min-h-screen flex">
+    <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative min-h-screen flex overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-indigo-500/5 to-purple-500/5" />
       <FloatingParticles count={20} className="fixed inset-0 z-0" />
       
@@ -382,7 +405,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
       {/* Professional Left Sidebar */}
       <div className={`${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-50 lg:z-20 w-72 sm:w-80 lg:w-64 bg-white/95 backdrop-blur-xl border-r border-white/20 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out`}>
+      } lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-50 lg:z-20 w-64 sm:w-72 lg:w-64 bg-white/95 backdrop-blur-xl border-r border-white/20 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out`}>
         {/* Sidebar Header */}
         <div className="p-4 sm:p-6 border-b border-gray-200/50">
           <div className="flex items-center justify-between">
@@ -413,6 +436,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
             { id: 'overview', label: 'Overview', icon: School, color: 'text-blue-600', bgColor: 'bg-blue-50' },
             { id: 'roster', label: 'Students', icon: Users, color: 'text-emerald-600', bgColor: 'bg-emerald-50', isLink: true, href: '/teacher/students' },
             { id: 'analytics', label: 'Analytics', icon: Activity, color: 'text-violet-600', bgColor: 'bg-violet-50' },
+            { id: 'credits', label: 'Issue Credits', icon: Gem, color: 'text-purple-600', bgColor: 'bg-purple-50', isLink: true, href: '/teacher/issue-credits' },
             { id: 'shoutouts', label: 'Shout-outs', icon: Star, color: 'text-amber-500', bgColor: 'bg-amber-50' },
             { id: 'activities', label: 'Activities', icon: Play, color: 'text-cyan-600', bgColor: 'bg-cyan-50' },
             { id: 'communication', label: 'Parent Hub', icon: MessageSquare, color: 'text-sky-600', bgColor: 'bg-sky-50' },
@@ -488,7 +512,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
       </div>
       
       {/* Real-time Notifications */}
-      <div className="fixed top-16 right-2 sm:top-4 sm:right-4 z-50 max-w-xs sm:max-w-sm">
+      <div className="fixed top-20 right-2 sm:top-4 sm:right-4 z-50 max-w-xs sm:max-w-sm">
         {notifications.map(notification => (
           <motion.div 
             key={notification.id} 
@@ -514,65 +538,65 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col relative z-10 lg:ml-0">
-        {/* Enhanced Header */}
-        <header className="bg-white/95 backdrop-blur-xl border-b border-white/20 shadow-lg relative z-30">
-          <div className="px-4 sm:px-6 py-3 sm:py-4">
+      <div className="flex-1 flex flex-col relative z-10 lg:ml-0 min-w-0 overflow-hidden">
+        {/* Professional Header */}
+        <header className="bg-gradient-to-r from-slate-50 via-gray-50 to-blue-50 backdrop-blur-2xl border-b border-gray-300/60 shadow-sm relative z-30">
+          <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 sm:space-x-4 flex-1 min-w-0">
+              <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
                 {/* Mobile Menu Button */}
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="lg:hidden p-2 hover:bg-gray-100 rounded-lg flex-shrink-0"
+                  className="lg:hidden p-2.5 hover:bg-gray-100 rounded-xl flex-shrink-0 transition-colors"
                   onClick={() => setSidebarOpen(!sidebarOpen)}
                 >
-                  {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                  {sidebarOpen ? <X className="h-5 w-5 text-gray-600" /> : <Menu className="h-5 w-5 text-gray-600" />}
                 </Button>
                 
                 <div className="min-w-0 flex-1">
                   <motion.h1 
-                    className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-slate-800 via-blue-800 to-indigo-800 bg-clip-text text-transparent truncate"
+                    className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 truncate"
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6 }}
                   >
-                    Welcome back, {profile.first_name}!
+                    Welcome back, {profile?.first_name || 'Teacher'}
                   </motion.h1>
-                  <motion.p 
-                    className="text-xs sm:text-sm text-slate-600 flex items-center gap-1.5 sm:gap-2 mt-0.5 sm:mt-1"
+                  <motion.div 
+                    className="text-sm sm:text-base text-gray-600 flex items-center gap-2 mt-1"
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, delay: 0.2 }}
                   >
-                    <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-indigo-500 flex-shrink-0" />
-                    <span className="hidden sm:inline truncate">
-                      {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                    <span className="hidden sm:inline font-medium">
+                      {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                     </span>
-                    <span className="sm:hidden truncate">
+                    <span className="sm:hidden font-medium">
                       {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </span>
-                  </motion.p>
+                  </motion.div>
                 </div>
               </div>
               
-              <div className="flex items-center space-x-1.5 sm:space-x-3 flex-shrink-0">
-                {/* Mobile Real-time Stats */}
-                <div className="flex sm:hidden items-center space-x-2 px-2 py-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200/50">
-                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-xs font-medium text-gray-700">{analytics.activeToday}</span>
+              <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
+                {/* Mobile Stats Badge */}
+                <div className="flex sm:hidden items-center space-x-2 px-3 py-2 bg-blue-50 rounded-xl border border-blue-200/50">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span className="text-sm font-semibold text-gray-700">{analytics.activeToday}</span>
                 </div>
                 
-                {/* Desktop Real-time Stats */}
-                <div className="hidden md:flex items-center space-x-4 px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200/50">
+                {/* Desktop Stats */}
+                <div className="hidden md:flex items-center space-x-5 px-4 py-2.5 bg-gray-50/80 rounded-xl border border-gray-200/80 backdrop-blur-sm">
                   <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-medium text-gray-700">{analytics.activeToday} Active</span>
+                    <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full"></div>
+                    <span className="text-sm font-semibold text-gray-700">{analytics.activeToday} Active</span>
                   </div>
-                  <div className="w-px h-4 bg-gray-300"></div>
+                  <div className="w-px h-5 bg-gray-300"></div>
                   <div className="flex items-center space-x-2">
-                    <Bell className="h-4 w-4 text-amber-500" />
-                    <span className="text-sm font-medium text-gray-700">{analytics.helpRequests} Requests</span>
+                    <Bell className="h-4 w-4 text-amber-600" />
+                    <span className="text-sm font-semibold text-gray-700">{analytics.helpRequests}</span>
                   </div>
                 </div>
                 
@@ -588,11 +612,11 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
         </header>
         
         {/* Content Area */}
-        <div className="flex-1 p-4 sm:p-6 overflow-auto bg-gradient-to-br from-slate-50/50 via-blue-50/30 to-indigo-50/50">
+        <div className="flex-1 p-4 sm:p-5 lg:p-6 overflow-auto bg-gradient-to-br from-slate-50/50 via-blue-50/30 to-indigo-50/50">
 
 
           {/* Tab Content */}
-          <div className="min-h-[400px]">
+          <div className="min-h-[300px] sm:min-h-[400px]">
           <AnimatePresence>
             {activeTab === 'overview' && (
               <motion.div
@@ -600,7 +624,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="space-y-4 sm:space-y-8"
+                className="space-y-4 sm:space-y-6 lg:space-y-8"
               >
                 {/* Enhanced Analytics Cards - Mobile 2x2 Layout */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
@@ -757,7 +781,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
               </div>
 
               {/* Enhanced Quick Actions - Mobile 2x2 Layout */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-4 lg:gap-6">
                 {[
                   { 
                     icon: Star, 
@@ -2102,8 +2126,8 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
 
 export default function TeacherDashboard() {
   return (
-    <AuthGuard requiredRole="teacher">
+    <UnifiedAuthGuard requiredRole="teacher">
       <TeacherDashboardContent />
-    </AuthGuard>
+    </UnifiedAuthGuard>
   )
 }

@@ -573,9 +573,9 @@ function UserManagementContent() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <motion.div
-          className="relative w-16 h-16 mx-auto mb-6"
+          className="relative w-16 h-16 mb-6"
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
@@ -598,8 +598,9 @@ function UserManagementContent() {
             <School className="w-6 h-6 text-blue-600" />
           </motion.div>
         </motion.div>
+        
         <motion.div
-          className="flex justify-center mt-3 space-x-1"
+          className="flex items-center justify-center space-x-1"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
@@ -617,6 +618,15 @@ function UserManagementContent() {
             />
           ))}
         </motion.div>
+        
+        <motion.p
+          className="text-gray-600 mt-4 font-medium"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1 }}
+        >
+          Loading users...
+        </motion.p>
       </div>
     )
   }

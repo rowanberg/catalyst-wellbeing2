@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { apiCache, createCacheKey } from '@/lib/utils/apiCache'
+import { createCachedResponse, CacheStrategies } from '@/lib/api/cache-headers'
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,6 +27,21 @@ export async function GET(request: NextRequest) {
 
     const today = new Date().toISOString().split('T')[0]
     
+    // Check cache first (2 minutes for today's data, 10 minutes for weekly)
+    const todaysCacheKey = createCacheKey(`habits_today_${user.id}_${today}`)
+    const weeklyCacheKey = createCacheKey(`habits_weekly_${user.id}`)
+    
+    const cachedTodayData = apiCache.get(todaysCacheKey)
+    const cachedWeeklyData = apiCache.get(weeklyCacheKey)
+    
+    if (cachedTodayData && cachedWeeklyData) {
+      const responseData = {
+        todayHabits: cachedTodayData,
+        weeklyData: cachedWeeklyData
+      }
+      return createCachedResponse(responseData, CacheStrategies.SHORT_CACHE)
+    }
+    
     // Fetch today's habits
     const { data: todayData } = await supabase
       .from('habit_tracker')
@@ -44,18 +61,28 @@ export async function GET(request: NextRequest) {
       .gte('date', weekAgo.toISOString().split('T')[0])
       .order('date', { ascending: false })
 
-    return NextResponse.json({
-      todayHabits: todayData ? {
-        date: todayData.date,
-        sleep_hours: todayData.sleep_hours || 0,
-        water_glasses: todayData.water_glasses || 0
-      } : {
-        date: today,
-        sleep_hours: 0,
-        water_glasses: 0
-      },
-      weeklyData: weekData || []
-    })
+    const todayHabits = todayData ? {
+      date: todayData.date,
+      sleep_hours: todayData.sleep_hours || 0,
+      water_glasses: todayData.water_glasses || 0
+    } : {
+      date: today,
+      sleep_hours: 0,
+      water_glasses: 0
+    }
+    
+    const weeklyData = weekData || []
+    
+    // Cache today's data for 2 minutes, weekly data for 10 minutes  
+    apiCache.set(todaysCacheKey, todayHabits, 2)
+    apiCache.set(weeklyCacheKey, weeklyData, 10)
+    
+    const responseData = {
+      todayHabits,
+      weeklyData
+    }
+
+    return createCachedResponse(responseData, CacheStrategies.SHORT_CACHE)
 
   } catch (error) {
     console.error('Habits GET API error:', error)
@@ -131,6 +158,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 })
       }
     }
+
+    // Invalidate cache on habit update
+    const todaysCacheKey = createCacheKey(`habits_today_${user.id}_${today}`)
+    const weeklyCacheKey = createCacheKey(`habits_weekly_${user.id}`)
+    apiCache.delete(todaysCacheKey)
+    apiCache.delete(weeklyCacheKey)
 
     return NextResponse.json({ 
       success: true, 

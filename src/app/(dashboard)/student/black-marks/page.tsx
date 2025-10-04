@@ -1,12 +1,12 @@
 'use client'
 
-import { AuthGuard } from '@/components/auth/auth-guard'
+import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
 import BlackMarksView from '@/components/student/BlackMarksView'
 
 export default function StudentBlackMarksPage() {
   return (
-    <AuthGuard requiredRole="student">
+    <UnifiedAuthGuard requiredRole="student">
       <BlackMarksView />
-    </AuthGuard>
+    </UnifiedAuthGuard>
   )
 }

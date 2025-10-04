@@ -30,7 +30,7 @@ import {
   ChevronDown
 } from 'lucide-react'
 import { PageLoader } from '@/components/ui/loading-spinner'
-import { AuthGuard } from '@/components/auth/auth-guard'
+import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
 import { useAppSelector, useAppDispatch } from '@/lib/redux/hooks'
 import { signOut } from '@/lib/redux/slices/authSlice'
@@ -980,8 +980,8 @@ function AdminDashboardContent() {
 
 export default function AdminDashboard() {
   return (
-    <AuthGuard requiredRole="admin">
+    <UnifiedAuthGuard requiredRole="admin">
       <AdminDashboardContent />
-    </AuthGuard>
+    </UnifiedAuthGuard>
   )
 }

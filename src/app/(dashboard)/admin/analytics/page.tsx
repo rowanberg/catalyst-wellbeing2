@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAppSelector } from '@/lib/redux/hooks'
-import { AuthGuard } from '@/components/auth/auth-guard'
+import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { PageLoader } from '@/components/ui/loading-spinner'
@@ -344,9 +344,9 @@ function AnalyticsContent() {
 export default function AnalyticsPage() {
   return (
     <ClientWrapper>
-      <AuthGuard requiredRole="admin">
+      <UnifiedAuthGuard requiredRole="admin">
         <AnalyticsContent />
-      </AuthGuard>
+      </UnifiedAuthGuard>
     </ClientWrapper>
   )
 }

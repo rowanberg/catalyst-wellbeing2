@@ -230,6 +230,7 @@ export async function GET(request: NextRequest) {
     // Handle mood data
     let moodData = null
     if (todayMood) {
+      console.log('🎭 Using today\'s mood from mood_tracking table:', todayMood.mood)
       moodData = {
         current: todayMood.mood,
         energy: 50,
@@ -237,12 +238,13 @@ export async function GET(request: NextRequest) {
         lastUpdated: todayMood.created_at
       }
     } else {
-      // Check if user has current_mood in profile
+      // No mood logged today - return empty current mood
+      console.log('🎭 No mood for today, returning empty current mood')
       moodData = {
-        current: profile.current_mood || '',
+        current: '', // Always empty if no mood today
         energy: 50,
         stress: 30,
-        lastUpdated: profile.updated_at || ''
+        lastUpdated: ''
       }
     }
 

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AuthGuard } from '@/components/auth/auth-guard'
+import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -626,7 +626,7 @@ Please provide practical, data-driven insights that can help improve student out
   }
 
   return (
-    <AuthGuard requiredRole="admin">
+    <UnifiedAuthGuard requiredRole="admin">
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
           <div className="sticky top-0 z-40 backdrop-blur-xl bg-white/80 border-b border-white/20 shadow-lg">
@@ -1446,6 +1446,6 @@ Please provide practical, data-driven insights that can help improve student out
           </div>
         </div>
       </div>
-    </AuthGuard>
+    </UnifiedAuthGuard>
   )
 }

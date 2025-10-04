@@ -23,7 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
-import { AuthGuard } from '@/components/auth/auth-guard';
+import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard';
 
 interface Child {
   id: string;
@@ -649,8 +649,8 @@ function ParentCommunicationsContent() {
 
 export default function ParentCommunications() {
   return (
-    <AuthGuard requiredRole="parent">
+    <UnifiedAuthGuard requiredRole="parent">
       <ParentCommunicationsContent />
-    </AuthGuard>
+    </UnifiedAuthGuard>
   );
 }

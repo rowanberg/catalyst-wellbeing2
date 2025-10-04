@@ -19,7 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { AuthGuard } from '@/components/auth/auth-guard';
+import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard';
 import { ContentAnalysisEngine } from '@/lib/encryption';
 
 interface Teacher {
@@ -595,8 +595,8 @@ function StudentCommunicationsContent() {
 
 export default function StudentCommunications() {
   return (
-    <AuthGuard requiredRole="student">
+    <UnifiedAuthGuard requiredRole="student">
       <StudentCommunicationsContent />
-    </AuthGuard>
+    </UnifiedAuthGuard>
   );
 }

@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { useAppSelector, useAppDispatch } from '@/lib/redux/hooks'
 import { fetchProfile } from '@/lib/redux/slices/authSlice'
-import { AuthGuard } from '@/components/auth/auth-guard'
+import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { handleError } from '@/lib/utils/errorHandling'
@@ -573,8 +573,8 @@ export default function ParentPage() {
   }
 
   return (
-    <AuthGuard requiredRole="parent">
+    <UnifiedAuthGuard requiredRole="parent">
       <ParentDashboardContent />
-    </AuthGuard>
+    </UnifiedAuthGuard>
   )
 }

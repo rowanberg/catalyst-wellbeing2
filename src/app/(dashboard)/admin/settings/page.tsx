@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAppSelector } from '@/lib/redux/hooks'
-import { AuthGuard } from '@/components/auth/auth-guard'
+import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -952,8 +952,8 @@ function SchoolSettingsContent() {
 
 export default function SchoolSettingsPage() {
   return (
-    <AuthGuard requiredRole="admin">
+    <UnifiedAuthGuard requiredRole="admin">
       <SchoolSettingsContent />
-    </AuthGuard>
+    </UnifiedAuthGuard>
   )
 }

@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { AuthGuard } from '@/components/auth/auth-guard'
+import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
 import { supabase } from '@/lib/supabaseClient'
 import { 
   School, 
@@ -1509,8 +1509,8 @@ function SchoolSetupContent() {
 
 export default function SchoolSetupPage() {
   return (
-    <AuthGuard requiredRole="admin">
+    <UnifiedAuthGuard requiredRole="admin">
       <SchoolSetupContent />
-    </AuthGuard>
+    </UnifiedAuthGuard>
   )
 }

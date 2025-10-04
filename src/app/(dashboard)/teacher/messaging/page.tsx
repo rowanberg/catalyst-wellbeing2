@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAppSelector } from '@/lib/redux/hooks'
 import { ClientWrapper } from '@/components/providers/ClientWrapper'
-import { AuthGuard } from '@/components/auth/auth-guard'
+import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -389,16 +389,16 @@ function TeacherMessagingContent() {
 
   if (loading) {
     return (
-      <AuthGuard requiredRole="teacher">
+      <UnifiedAuthGuard requiredRole="teacher">
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
           <LoadingSpinner size="lg" />
         </div>
-      </AuthGuard>
+      </UnifiedAuthGuard>
     )
   }
 
   return (
-    <AuthGuard requiredRole="teacher">
+    <UnifiedAuthGuard requiredRole="teacher">
       <RealtimeProvider>
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
           {/* Mobile-Optimized Header */}
@@ -1413,14 +1413,14 @@ function TeacherMessagingContent() {
           </AnimatePresence>
         </div>
       </RealtimeProvider>
-    </AuthGuard>
+    </UnifiedAuthGuard>
   )
 }
 
 export default function TeacherMessagingPage() {
   return (
-    <AuthGuard requiredRole="teacher">
+    <UnifiedAuthGuard requiredRole="teacher">
       <TeacherMessagingContent />
-    </AuthGuard>
+    </UnifiedAuthGuard>
   )
 }

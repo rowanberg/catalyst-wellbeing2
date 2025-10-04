@@ -27,7 +27,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
-import { AuthGuard } from '@/components/auth/auth-guard';
+import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard';
 
 interface Conversation {
   id: string;
@@ -632,8 +632,8 @@ function TeacherCommunicationsContent() {
 
 export default function TeacherCommunications() {
   return (
-    <AuthGuard requiredRole="teacher">
+    <UnifiedAuthGuard requiredRole="teacher">
       <TeacherCommunicationsContent />
-    </AuthGuard>
+    </UnifiedAuthGuard>
   );
 }

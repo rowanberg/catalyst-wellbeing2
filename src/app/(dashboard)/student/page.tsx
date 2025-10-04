@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAppDispatch, useAppSelector } from '@/lib/redux/hooks'
+import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
 import { updateXP, updateGems } from '@/lib/redux/slices/authSlice'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
@@ -514,9 +515,11 @@ const StudentDashboardContent = () => {
         setMood(data.mood)
         // Only set locked date if there's actually a mood logged for today
         if (data.mood?.current && data.mood.current !== '') {
+          devLog('🔒 Setting mood as locked for today:', data.mood.current)
           setMoodLockedDate(getTodayDate())
         } else {
           // Clear locked date if no mood is set
+          devLog('🔓 Clearing mood lock - no mood logged today')
           setMoodLockedDate('')
         }
         setAcademicData({
@@ -2637,5 +2640,9 @@ const StudentDashboardContent = () => {
 }
 
 export default function StudentDashboard() {
-  return <StudentDashboardContent />
+  return (
+    <UnifiedAuthGuard requiredRole="student">
+      <StudentDashboardContent />
+    </UnifiedAuthGuard>
+  )
 }

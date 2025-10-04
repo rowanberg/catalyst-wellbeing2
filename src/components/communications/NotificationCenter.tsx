@@ -26,7 +26,23 @@ interface NotificationCenterProps {
 }
 
 export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps) {
-  const { manager, markNotificationAsRead } = useRealtime();
+  // Safe realtime context usage with comprehensive error handling
+  const [manager, setManager] = useState<any>(null);
+  const [markNotificationAsRead, setMarkNotificationAsRead] = useState<any>(null);
+  
+  useEffect(() => {
+    try {
+      const realtimeContext = useRealtime();
+      if (realtimeContext) {
+        setManager(realtimeContext.manager);
+        setMarkNotificationAsRead(() => realtimeContext.markNotificationAsRead);
+      }
+    } catch (error) {
+      console.warn('Realtime context not available:', error);
+      setManager(null);
+      setMarkNotificationAsRead(null);
+    }
+  }, []);
   const [notifications, setNotifications] = useState<RealtimeNotification[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -93,10 +109,12 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
 
   const handleMarkAsRead = async (notificationId: string) => {
     try {
-      await markNotificationAsRead(notificationId);
-      setNotifications(prev => 
-        prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
-      );
+      if (markNotificationAsRead && manager) {
+        await markNotificationAsRead(notificationId);
+        setNotifications(prev => 
+          prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+        );
+      }
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }

@@ -57,15 +57,24 @@ export async function GET(request: NextRequest) {
     
     // Get student IDs and fetch their profiles separately
     const studentIds = classAssignments.map(assignment => assignment.student_id).filter(Boolean)
+    console.log('👥 Student IDs to fetch:', studentIds)
     
     // Fetch student profiles separately to avoid join issues
     const { data: studentProfiles, error: profilesError } = await supabaseAdmin
       .from('profiles')
-      .select('*')
+      .select('*, gems')
       .in('user_id', studentIds)
+    
+    console.log('📊 Profiles query result:', { 
+      profilesCount: studentProfiles?.length || 0, 
+      hasError: !!profilesError,
+      errorMessage: profilesError?.message,
+      studentIds: studentIds
+    })
     
     if (profilesError) {
       console.error('❌ Failed to fetch student profiles:', profilesError.message)
+      console.error('❌ Full error details:', profilesError)
       return NextResponse.json({
         students: [],
         total: 0,
@@ -102,6 +111,7 @@ export async function GET(request: NextRequest) {
         // Gamification data
         xp: profile?.xp || 0,
         level: profile?.level || 1,
+        current_gems: profile?.gems || 0,
         streak_days: profile?.streak_days || 0,
         // Wellbeing data
         current_mood: profile?.current_mood || 'neutral',

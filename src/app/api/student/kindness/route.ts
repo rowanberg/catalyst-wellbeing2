@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { apiCache, createCacheKey } from '@/lib/utils/apiCache'
+import { createCachedResponse, CacheStrategies } from '@/lib/api/cache-headers'
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,6 +23,13 @@ export async function GET(request: NextRequest) {
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check cache first (25-minute cache for kindness counter)
+    const cacheKey = createCacheKey(`kindness_counter_${user.id}`)
+    const cachedData = apiCache.get(cacheKey)
+    if (cachedData) {
+      return createCachedResponse(cachedData, CacheStrategies.LONG_CACHE)
     }
 
     // Get kindness counter data
@@ -45,11 +54,16 @@ export async function GET(request: NextRequest) {
     ].filter(entry => entry.description !== 'Recent act of kindness') : []
 
     // Return data or default values
-    return NextResponse.json({
+    const responseData = {
       count: counterData?.count || 0,
       last_updated: counterData?.last_updated || new Date().toISOString(),
       recent_entries: mockRecentEntries
-    })
+    }
+    
+    // Cache the response for 25 minutes
+    apiCache.set(cacheKey, responseData, 25)
+    
+    return createCachedResponse(responseData, CacheStrategies.LONG_CACHE)
 
   } catch (error: any) {
     console.error('Kindness GET API error:', error)
@@ -134,11 +148,14 @@ export async function POST(request: NextRequest) {
         .eq('user_id', user.id)
     }
 
+    // Invalidate cache on new kindness entry
+    const cacheKey = createCacheKey(`kindness_counter_${user.id}`)
+    apiCache.delete(cacheKey)
+
     return NextResponse.json({ 
       success: true, 
       entry_id: updatedCounter?.id || Date.now().toString(),
       count: newCount,
-      xpGained: 15,
       gemsGained: 3
     })
 

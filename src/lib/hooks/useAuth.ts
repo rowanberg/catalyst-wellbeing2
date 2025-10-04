@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation'
 import { useAppSelector, useAppDispatch } from '@/lib/redux/hooks'
 import { setUser, setProfile, fetchProfile } from '@/lib/redux/slices/authSlice'
 import { supabase } from '@/lib/supabaseClient'
+import { clearInvalidSession } from '@/lib/utils/authUtils'
 import { User, Profile } from '@/types'
 
 interface UseAuthOptions {
@@ -28,13 +29,58 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
 
   const router = useRouter()
   const dispatch = useAppDispatch()
-  const { user, profile, isLoading } = useAppSelector((state) => state.auth)
   const [authError, setAuthError] = useState<string | null>(null)
   const [initializing, setInitializing] = useState(true)
+
+  // Get Redux state
+  const reduxAuth = useAppSelector((state) => state.auth)
+  const currentUser = reduxAuth.user
+  const currentProfile = reduxAuth.profile
+  const currentIsLoading = reduxAuth.isLoading
 
   useEffect(() => {
     const initializeAuth = async () => {
       try {
+        console.log('🔄 [useAuth] Initializing authentication...')
+        console.log('🔄 [useAuth] Current Redux state - user:', !!currentUser, 'profile:', !!currentProfile, 'isLoading:', currentIsLoading)
+        
+        // If Redux already has user and profile, don't interfere
+        if (currentUser && currentProfile && !currentIsLoading) {
+          console.log('✅ [useAuth] Redux state already authenticated, skipping initialization')
+          setInitializing(false)
+          return
+        }
+        
+        // If Redux is still loading, wait for it
+        if (currentIsLoading) {
+          console.log('🔄 [useAuth] Redux is loading, waiting...')
+          setInitializing(false)
+          return
+        }
+        
+        // First, clear any invalid session data
+        const wasCleared = await clearInvalidSession()
+        if (wasCleared) {
+          console.log('🔄 [useAuth] Invalid session cleared, redirecting to login...')
+          setAuthError('Session expired')
+          setInitializing(false)
+          router.push(redirectTo)
+          return
+        }
+        
+        // Check if we have a valid session locally
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        
+        if (sessionError) {
+          console.log('🔄 [useAuth] Local session error:', sessionError.message)
+          if (sessionError.message?.includes('Invalid Refresh Token') || sessionError.message?.includes('Refresh Token Not Found')) {
+            console.log('🔄 [useAuth] Invalid refresh token, signing out...')
+            await supabase.auth.signOut()
+            router.push(redirectTo)
+            return
+          }
+        }
+
         // Check current session via API
         const response = await fetch('/api/auth/session', {
           headers: {
@@ -45,6 +91,17 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
         const sessionData = await response.json()
         
         if (!response.ok) {
+          console.log(`🔄 [useAuth] Session API returned ${response.status}:`, sessionData?.error)
+          
+          // Handle refresh token errors specifically
+          if (sessionData?.code === 'REFRESH_TOKEN_INVALID' || 
+              sessionData?.error?.includes('Invalid refresh token')) {
+            console.log('🔄 [useAuth] Invalid refresh token from API, signing out...')
+            await supabase.auth.signOut()
+            router.push(redirectTo)
+            return
+          }
+          
           // Only log unexpected errors (not 401 unauthorized)
           if (response.status !== 401) {
             console.error('Session API error:', response.status, response.statusText)
@@ -52,8 +109,24 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
               console.error('Session error details:', sessionData.error)
             }
           }
+          
+          // If we have a local session but API fails, try to refresh
+          if (session && response.status === 401) {
+            console.log('🔄 [useAuth] Local session exists but API auth failed, attempting refresh...')
+            const { error: refreshError } = await supabase.auth.refreshSession()
+            if (refreshError) {
+              console.log('🔄 [useAuth] Refresh failed, redirecting to login:', refreshError.message)
+              await supabase.auth.signOut()
+              router.push(redirectTo)
+              return
+            }
+            // Retry after refresh
+            return initializeAuth()
+          }
+          
           setAuthError('Authentication required')
           setInitializing(false)
+          router.push(redirectTo)
           return
         }
         
@@ -73,7 +146,7 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
         }
 
         // User exists, fetch profile if needed
-        if (!profile && !isLoading) {
+        if (!currentProfile && !currentIsLoading) {
           try {
             const response = await fetch('/api/get-profile', {
               method: 'POST',
@@ -205,8 +278,8 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
           }
         } else {
           // Profile exists, check role requirements
-          if (requiredRole && profile?.role !== requiredRole) {
-            router.push(`/${profile?.role || 'login'}`)
+          if (requiredRole && currentProfile?.role !== requiredRole) {
+            router.push(`/${currentProfile?.role || 'login'}`)
             return
           }
           setInitializing(false)
@@ -219,13 +292,13 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
     }
 
     initializeAuth()
-  }, [dispatch, router, redirectTo])
+  }, [dispatch, router, redirectTo, currentUser, currentProfile, currentIsLoading])
 
   return {
-    user,
-    profile,
-    isLoading: isLoading || initializing,
-    isAuthenticated: !!user && (!requireProfile || !!profile),
+    user: currentUser,
+    profile: currentProfile,
+    isLoading: currentIsLoading || initializing,
+    isAuthenticated: !!currentUser && (!requireProfile || !!currentProfile),
     error: authError
   }
 }

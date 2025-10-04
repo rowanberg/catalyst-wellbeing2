@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { useAppSelector } from '@/lib/redux/hooks'
-import { AuthGuard } from '@/components/auth/auth-guard'
+import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -592,7 +592,7 @@ const StudentSettingsPage = () => {
   }
 
   return (
-    <AuthGuard>
+    <UnifiedAuthGuard requiredRole="student">
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
         {/* Premium Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 via-purple-500/10 to-fuchsia-500/10" />
@@ -1420,7 +1420,7 @@ const StudentSettingsPage = () => {
           </div>
         </div>
       </div>
-    </AuthGuard>
+    </UnifiedAuthGuard>
   )
 }
 

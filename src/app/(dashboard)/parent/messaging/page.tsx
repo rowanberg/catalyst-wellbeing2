@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { 
@@ -707,7 +708,7 @@ function ParentMessagingContent() {
   }
 
   return (
-    <AuthGuard requiredRole="parent">
+    <UnifiedAuthGuard requiredRole="parent">
       <RealtimeProvider>
         <motion.div 
           initial={{ opacity: 0 }}
@@ -1562,14 +1563,14 @@ function ParentMessagingContent() {
         </motion.div>
       </motion.div>
     </RealtimeProvider>
-  </AuthGuard>
+  </UnifiedAuthGuard>
   )
 }
 
 export default function ParentMessagingPage() {
   return (
-    <AuthGuard requiredRole="parent">
+    <UnifiedAuthGuard requiredRole="parent">
       <ParentMessagingContent />
-    </AuthGuard>
+    </UnifiedAuthGuard>
   )
 }
