@@ -26,23 +26,12 @@ interface NotificationCenterProps {
 }
 
 export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps) {
-  // Safe realtime context usage with comprehensive error handling
-  const [manager, setManager] = useState<any>(null);
-  const [markNotificationAsRead, setMarkNotificationAsRead] = useState<any>(null);
+  // Hooks must be called unconditionally at the top level
+  const realtimeContext = useRealtime();
   
-  useEffect(() => {
-    try {
-      const realtimeContext = useRealtime();
-      if (realtimeContext) {
-        setManager(realtimeContext.manager);
-        setMarkNotificationAsRead(() => realtimeContext.markNotificationAsRead);
-      }
-    } catch (error) {
-      console.warn('Realtime context not available:', error);
-      setManager(null);
-      setMarkNotificationAsRead(null);
-    }
-  }, []);
+  // Safe extraction of values with null checks
+  const manager = realtimeContext?.manager || null;
+  const markNotificationAsRead = realtimeContext?.markNotificationAsRead || null;
   const [notifications, setNotifications] = useState<RealtimeNotification[]>([]);
   const [loading, setLoading] = useState(true);
 
