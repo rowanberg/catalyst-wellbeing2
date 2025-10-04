@@ -58,17 +58,17 @@ export async function POST(request: NextRequest) {
     if (!schoolId) {
       console.log('Profile not found or missing school_id, trying alternative lookups...')
       
-      // Try 1: Check if user is admin_user_id in schools table
+      // Try 1: Check if user is admin_id in schools table
       const { data: school1, error: schoolError1 } = await supabaseAdmin
         .from('schools')
         .select('id, name')
-        .eq('admin_user_id', userId)
+        .eq('admin_id', userId)
         .single()
 
       if (school1 && !schoolError1) {
         schoolId = school1.id
         userRole = 'admin'
-        console.log('Found school via admin_user_id:', school1.name, schoolId)
+        console.log('Found school via admin_id:', school1.name, schoolId)
       }
 
       // Try 2: Check if user is associated via email in schools table

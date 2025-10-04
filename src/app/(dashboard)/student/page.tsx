@@ -67,10 +67,11 @@ const Badge = ({ children, variant = "default", className = "" }: {
 }
 
 // Enhanced FloatingCard component with better animations and styling
-const FloatingCard = ({ children, className = "", delay = 0 }: { 
+const FloatingCard = ({ children, className = "", delay = 0, onClick }: { 
   children: React.ReactNode
   className?: string
-  delay?: number 
+  delay?: number
+  onClick?: () => void
 }) => (
   <motion.div
     initial={{ opacity: 0, y: 20, scale: 0.95 }}
@@ -87,6 +88,7 @@ const FloatingCard = ({ children, className = "", delay = 0 }: {
       scale: 1.02,
       transition: { duration: 0.3, ease: "easeOut" }
     }}
+    onClick={onClick}
     className={`bg-white/90 backdrop-blur-xl rounded-3xl p-5 sm:p-7 shadow-xl border border-white/30 hover:shadow-2xl hover:border-white/50 transition-all duration-500 relative overflow-hidden ${className}`}
   >
     {/* Subtle gradient overlay */}
@@ -1822,8 +1824,12 @@ const StudentDashboardContent = () => {
             </div>
           </FloatingCard>
 
-          <FloatingCard delay={0.2} className="bg-gradient-to-br from-pink-50 via-rose-50 to-purple-50 border-pink-200/50 hover:border-pink-300/70">
-            <div className="text-center">
+          <FloatingCard 
+            delay={0.2} 
+            className="bg-gradient-to-br from-pink-50 via-rose-50 to-purple-50 border-pink-200/50 hover:border-pink-300/70 cursor-pointer group"
+            onClick={() => router.push('/student/wallet')}
+          >
+            <div className="text-center relative">
               <motion.div 
                 className="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-pink-400 to-purple-500 rounded-2xl flex items-center justify-center text-3xl shadow-lg"
                 key={`gems-icon-${stats.gems}`}
@@ -1838,6 +1844,12 @@ const StudentDashboardContent = () => {
                 {stats.gems}
               </div>
               <div className="text-xs text-pink-700 font-semibold uppercase tracking-wide">Mind Gems</div>
+              <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full shadow-lg flex items-center gap-1">
+                  <span>Open Wallet</span>
+                  <ChevronRight className="h-3 w-3" />
+                </div>
+              </div>
             </div>
           </FloatingCard>
 

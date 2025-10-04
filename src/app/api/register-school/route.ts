@@ -91,10 +91,37 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Create school_details record with basic information
+    // This ensures the school appears in the admin setup flow and other school-related features
+    const { data: schoolDetailsData, error: schoolDetailsError } = await supabaseAdmin
+      .from('school_details')
+      .insert({
+        school_id: schoolData.id,
+        school_name: schoolName,
+        school_code: schoolCode,
+        primary_email: schoolEmail,
+        primary_phone: phone,
+        street_address: address,
+        school_type: 'Public', // Default type
+        setup_completed: false, // Not completed - will trigger setup flow in admin dashboard
+        setup_completed_by: authData.user.id
+      })
+      .select()
+      .single()
+
+    if (schoolDetailsError) {
+      console.error('School details creation error:', schoolDetailsError)
+      // Don't fail the whole registration, but log the error
+      console.warn('School was created but school_details failed:', schoolDetailsError.message)
+    } else {
+      console.log('School details created successfully:', schoolDetailsData.id)
+    }
+
     console.log('School registration completed:', {
       schoolId: schoolData.id,
       adminUserId: authData.user.id,
       profileCreated: profileData ? 'yes' : 'no',
+      schoolDetailsCreated: schoolDetailsData ? 'yes' : 'no',
       schoolCode
     })
 
