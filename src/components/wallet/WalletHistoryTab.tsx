@@ -61,20 +61,23 @@ export function WalletHistoryTab({ transactions, wallet }: WalletHistoryTabProps
       exit={{ opacity: 0, y: -20 }}
       className="max-w-6xl mx-auto"
     >
-      <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-            <History className="h-6 w-6 text-purple-400" />
-            Transaction History
+      <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-white/20">
+        {/* Header - Mobile Optimized */}
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <h2 className="text-lg sm:text-2xl font-bold text-white flex items-center gap-2">
+            <History className="h-5 w-5 sm:h-6 sm:w-6 text-purple-400" />
+            <span className="hidden sm:inline">Transaction History</span>
+            <span className="sm:hidden">History</span>
           </h2>
-          <button className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-white transition-colors">
+          {/* Export button hidden on mobile */}
+          <button className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-white transition-colors">
             <Download className="h-4 w-4" />
             Export CSV
           </button>
         </div>
 
-        {/* Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+        {/* Filters - Hidden on mobile, compact on tablet+ */}
+        <div className="hidden sm:grid sm:grid-cols-3 gap-3 mb-6">
           {/* Type Filter */}
           <div>
             <label className="text-white/70 text-sm mb-2 block">Type</label>
@@ -141,8 +144,8 @@ export function WalletHistoryTab({ transactions, wallet }: WalletHistoryTabProps
           </div>
         </div>
 
-        {/* Transactions List */}
-        <div className="space-y-3">
+        {/* Transactions List - Mobile Optimized */}
+        <div className="space-y-2 sm:space-y-3">
           {filteredTransactions.length > 0 ? (
             filteredTransactions.map((tx, index) => (
               <motion.div
@@ -151,51 +154,62 @@ export function WalletHistoryTab({ transactions, wallet }: WalletHistoryTabProps
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
                 onClick={() => setSelectedTx(tx)}
-                className="p-4 bg-white/5 hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                className="p-3 sm:p-4 bg-white/5 hover:bg-white/10 rounded-xl transition-colors cursor-pointer active:scale-98"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className={`p-2 rounded-lg ${
+                <div className="flex items-start sm:items-center justify-between gap-2 sm:gap-3">
+                  {/* Left side - Icon and details */}
+                  <div className="flex items-start sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                    <div className={`p-1.5 sm:p-2 rounded-lg flex-shrink-0 ${
                       tx.transactionType === 'exchange' ? 'bg-blue-500/20' :
                       tx.fromAddress === wallet?.walletAddress ? 'bg-red-500/20' : 'bg-green-500/20'
                     }`}>
-                      {getTypeIcon(tx)}
+                      {tx.transactionType === 'exchange' ? <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400" /> :
+                       tx.fromAddress === wallet?.walletAddress ? <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 text-red-400" /> :
+                       <ArrowDownLeft className="h-4 w-4 sm:h-5 sm:w-5 text-green-400" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="text-white font-medium">{getTypeLabel(tx)}</p>
-                        <span className={`px-2 py-0.5 rounded-full text-xs border ${getStatusColor(tx.status)}`}>
+                      <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
+                        <p className="text-white font-medium text-sm sm:text-base">{getTypeLabel(tx)}</p>
+                        <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs border ${getStatusColor(tx.status)}`}>
                           {tx.status}
                         </span>
                       </div>
-                      <p className="text-white/50 text-sm truncate">
+                      {/* Hide memo/address on mobile, show only on desktop */}
+                      <p className="hidden sm:block text-white/50 text-sm truncate">
                         {tx.memo || (tx.fromAddress === wallet?.walletAddress ? `To: ${tx.toAddress}` : `From: ${tx.fromAddress}`)}
                       </p>
-                      <p className="text-white/30 text-xs mt-1">
-                        {new Date(tx.createdAt).toLocaleString()}
+                      <p className="text-white/30 text-[10px] sm:text-xs mt-0.5 sm:mt-1">
+                        {new Date(tx.createdAt).toLocaleString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric', 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
                       </p>
                     </div>
                   </div>
-                  <div className="text-right ml-4">
-                    <p className={`font-medium flex items-center gap-1 ${
+                  
+                  {/* Right side - Amount */}
+                  <div className="text-right flex-shrink-0">
+                    <p className={`font-bold text-sm sm:text-base flex items-center gap-0.5 sm:gap-1 justify-end ${
                       tx.fromAddress === wallet?.walletAddress ? 'text-red-400' : 'text-green-400'
                     }`}>
                       {tx.fromAddress === wallet?.walletAddress ? '-' : '+'}
                       {tx.amount}
-                      {tx.currencyType === 'mind_gems' ? <Gem className="h-4 w-4" /> : <Zap className="h-4 w-4" />}
+                      {tx.currencyType === 'mind_gems' ? <Gem className="h-3 w-3 sm:h-4 sm:w-4" /> : <Zap className="h-3 w-3 sm:h-4 sm:w-4" />}
                     </p>
-                    <p className="text-white/50 text-xs">
-                      {tx.currencyType === 'mind_gems' ? 'Mind Gems' : 'Fluxon'}
+                    <p className="text-white/50 text-[10px] sm:text-xs mt-0.5">
+                      {tx.currencyType === 'mind_gems' ? 'GEMS' : 'FLX'}
                     </p>
                   </div>
                 </div>
               </motion.div>
             ))
           ) : (
-            <div className="text-center py-12">
-              <History className="h-16 w-16 text-white/20 mx-auto mb-4" />
-              <p className="text-white/50">No transactions found</p>
-              <p className="text-white/30 text-sm mt-1">Try adjusting your filters</p>
+            <div className="text-center py-8 sm:py-12">
+              <History className="h-12 w-12 sm:h-16 sm:w-16 text-white/20 mx-auto mb-3 sm:mb-4" />
+              <p className="text-white/50 text-sm sm:text-base">No transactions found</p>
+              <p className="text-white/30 text-xs sm:text-sm mt-1">Try adjusting your filters</p>
             </div>
           )}
         </div>

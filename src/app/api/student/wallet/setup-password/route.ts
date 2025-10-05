@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
 import crypto from 'crypto';
 
 function hashPassword(password: string, salt: string): string {
@@ -9,8 +8,7 @@ function hashPassword(password: string, salt: string): string {
 
 export async function POST(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
+    const supabase = await createClient();
     const { password } = await request.json();
 
     if (!password || password.length < 6) {

@@ -37,7 +37,29 @@ export function PinEntryScreen({
       setTimeout(() => {
         inputRefs.current[0]?.focus();
       }, 300);
+      
+      // Hide bottom navigation bar
+      document.body.style.overflow = 'hidden';
+      const bottomBar = document.querySelector('[data-bottom-nav]');
+      if (bottomBar) {
+        (bottomBar as HTMLElement).style.display = 'none';
+      }
+    } else {
+      // Show bottom bar again
+      document.body.style.overflow = '';
+      const bottomBar = document.querySelector('[data-bottom-nav]');
+      if (bottomBar) {
+        (bottomBar as HTMLElement).style.display = '';
+      }
     }
+    
+    return () => {
+      document.body.style.overflow = '';
+      const bottomBar = document.querySelector('[data-bottom-nav]');
+      if (bottomBar) {
+        (bottomBar as HTMLElement).style.display = '';
+      }
+    };
   }, [isVisible]);
 
   const handleNumberClick = (number: string) => {

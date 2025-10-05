@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-const MONTHLY_LIMIT = 2000
+const MONTHLY_LIMIT = 7000
 
 export async function GET(request: NextRequest) {
   try {

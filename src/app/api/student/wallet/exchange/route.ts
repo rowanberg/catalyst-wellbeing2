@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
 import crypto from 'crypto';
 
 function verifyPassword(password: string, hash: string, salt: string): boolean {
@@ -10,8 +9,7 @@ function verifyPassword(password: string, hash: string, salt: string): boolean {
 
 export async function POST(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
+    const supabase = await createClient();
     const { fromCurrency, toCurrency, amount, password } = await request.json();
 
     // Validate inputs

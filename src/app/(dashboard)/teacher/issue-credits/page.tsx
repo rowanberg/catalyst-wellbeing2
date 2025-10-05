@@ -462,13 +462,14 @@ function IssueCreditsContent() {
   const [creditAmount, setCreditAmount] = useState('')
   const [reason, setReason] = useState('')
   const [customReason, setCustomReason] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [initialLoad, setInitialLoad] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [showPaymentAnimation, setShowPaymentAnimation] = useState(false)
   const [paymentSuccess, setPaymentSuccess] = useState(true)
   const [monthlyStats, setMonthlyStats] = useState<any>({
     total_issued: 0,
-    remaining_allowance: 2000,
+    remaining_allowance: 7000,
     transactions_count: 0
   })
   const [recentTransactions, setRecentTransactions] = useState<any[]>([])
@@ -589,10 +590,9 @@ function IssueCreditsContent() {
       const response = await fetch(`/api/teacher/assigned-classes?teacher_id=${user.id}`)
       if (response.ok) {
         const data = await response.json()
-        console.log('✅ Assigned classes loaded:', data.classes?.length || 0, data.classes)
+        console.log('✅ Loaded assigned classes:', data)
         setAssignedClasses(data.classes || [])
       } else {
-        console.error('❌ Failed to load assigned classes:', response.status, response.statusText)
         toast.error('Failed to load assigned classes')
       }
     } catch (error) {
@@ -600,6 +600,7 @@ function IssueCreditsContent() {
       toast.error('Error loading assigned classes')
     } finally {
       setLoading(false)
+      setInitialLoad(false)
     }
   }, [user?.id])
 
@@ -722,7 +723,7 @@ function IssueCreditsContent() {
     }
   }
 
-  if (loading && assignedClasses.length === 0) {
+  if (initialLoad) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-blue-50 flex items-center justify-center relative overflow-hidden">
         {/* Background Animation */}
@@ -732,22 +733,21 @@ function IssueCreditsContent() {
               key={i}
               className="absolute w-2 h-2 bg-purple-200/30 rounded-full"
               initial={{ 
-                x: Math.random() * window.innerWidth, 
-                y: Math.random() * window.innerHeight 
+                x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1920), 
+                y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 1080) 
               }}
               animate={{ 
-                y: -20,
-                opacity: [0, 1, 0]
+                x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1920),
+                y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 1080),
               }}
               transition={{
-                duration: 3 + Math.random() * 2,
+                duration: Math.random() * 10 + 20,
                 repeat: Infinity,
-                delay: Math.random() * 2
+                ease: "linear"
               }}
             />
           ))}
         </div>
-
         <div className="text-center relative z-10 max-w-md mx-auto px-6">
           {/* Professional Logo Animation */}
           <motion.div

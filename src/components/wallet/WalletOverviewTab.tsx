@@ -96,53 +96,73 @@ export function WalletOverviewTab({ wallet, transactions }: WalletOverviewTabPro
           </motion.div>
         </div>
 
-        {/* Recent Transactions */}
-        <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20">
-          <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <Activity className="h-5 w-5 text-purple-400" />
-            Recent Activity
+        {/* Recent Transactions - Mobile Optimized */}
+        <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-white/20">
+          <h3 className="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-4 flex items-center gap-2">
+            <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-purple-400" />
+            <span className="hidden sm:inline">Recent Activity</span>
+            <span className="sm:hidden">Activity</span>
           </h3>
           {transactions.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {transactions.slice(0, 5).map((tx, index) => (
                 <motion.div
                   key={tx.id}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="flex items-center justify-between p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+                  className="flex items-start sm:items-center justify-between p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors cursor-pointer gap-2"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${
+                  {/* Left side - Icon and details */}
+                  <div className="flex items-start sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                    <div className={`p-1.5 sm:p-2 rounded-lg flex-shrink-0 ${
                       tx.fromAddress === wallet?.walletAddress
                         ? 'bg-red-500/20'
                         : 'bg-green-500/20'
                     }`}>
                       {tx.fromAddress === wallet?.walletAddress ? (
-                        <ArrowUpRight className="h-4 w-4 text-red-400" />
+                        <ArrowUpRight className="h-3 w-3 sm:h-4 sm:w-4 text-red-400" />
                       ) : (
-                        <ArrowDownLeft className="h-4 w-4 text-green-400" />
+                        <ArrowDownLeft className="h-3 w-3 sm:h-4 sm:w-4 text-green-400" />
                       )}
                     </div>
-                    <div>
-                      <p className="text-white font-medium">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-medium text-sm sm:text-base">
                         {tx.fromAddress === wallet?.walletAddress ? 'Sent' : 'Received'}
                         {tx.memo && (
-                          <span className="ml-2 text-white/50 text-sm">"{tx.memo}"</span>
+                          <span className="hidden sm:inline ml-2 text-white/50 text-sm">"{tx.memo}"</span>
                         )}
                       </p>
-                      <p className="text-white/50 text-sm truncate max-w-[200px]">
+                      {/* Hide address on mobile, show on desktop */}
+                      <p className="hidden sm:block text-white/50 text-sm truncate max-w-[200px]">
                         {tx.fromAddress === wallet?.walletAddress ? tx.toAddress : tx.fromAddress}
+                      </p>
+                      {/* Show memo on mobile if exists */}
+                      {tx.memo && (
+                        <p className="sm:hidden text-white/50 text-xs truncate">"{tx.memo}"</p>
+                      )}
+                      {/* Show time on mobile */}
+                      <p className="text-white/40 text-[10px] sm:text-xs mt-0.5">
+                        {new Date(tx.createdAt).toLocaleString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-white font-medium flex items-center gap-1">
+                  
+                  {/* Right side - Amount and status */}
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-white font-bold text-sm sm:text-base flex items-center gap-0.5 sm:gap-1 justify-end">
                       {tx.fromAddress === wallet?.walletAddress ? '-' : '+'}
                       {tx.amount}
-                      {tx.currencyType === 'mind_gems' ? '💎' : '⚡'}
+                      <span className="text-base sm:text-lg">
+                        {tx.currencyType === 'mind_gems' ? '💎' : '⚡'}
+                      </span>
                     </p>
-                    <p className={`text-sm ${getStatusColor(tx.status)}`}>
+                    <p className={`text-[10px] sm:text-sm ${getStatusColor(tx.status)}`}>
                       {tx.status}
                     </p>
                   </div>
@@ -150,10 +170,10 @@ export function WalletOverviewTab({ wallet, transactions }: WalletOverviewTabPro
               ))}
             </div>
           ) : (
-            <div className="text-center py-8">
-              <Activity className="h-12 w-12 text-white/20 mx-auto mb-3" />
-              <p className="text-white/50">No transactions yet</p>
-              <p className="text-white/30 text-sm mt-1">Start by sending or receiving currency</p>
+            <div className="text-center py-6 sm:py-8">
+              <Activity className="h-10 w-10 sm:h-12 sm:w-12 text-white/20 mx-auto mb-2 sm:mb-3" />
+              <p className="text-white/50 text-sm sm:text-base">No transactions yet</p>
+              <p className="text-white/30 text-xs sm:text-sm mt-1">Start by sending or receiving currency</p>
             </div>
           )}
         </div>

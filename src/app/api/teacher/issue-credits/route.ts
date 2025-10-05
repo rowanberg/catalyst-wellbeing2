@@ -3,7 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { getSupabaseAdmin } from '@/lib/supabase/admin-client'
 
-const MONTHLY_LIMIT = 2000
+const MONTHLY_LIMIT = 7000
 
 export async function POST(request: NextRequest) {
   try {

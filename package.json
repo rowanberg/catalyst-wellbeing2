@@ -40,6 +40,7 @@
     "critters": "^0.0.24",
     "dotenv": "^17.2.2",
     "framer-motion": "^12.23.12",
+    "jsqr": "^1.4.0",
     "lucide-react": "^0.294.0",
     "next": "^15.0.0",
     "postcss": "^8.4.31",

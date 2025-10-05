@@ -212,31 +212,11 @@ export default function WalletPage() {
     }
   };
 
-  const handleSend = async (data: any) => {
-    setIsProcessing(true);
-    try {
-      const response = await fetch('/api/student/wallet/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        toast.success('Transaction sent successfully!');
-        fetchWalletData();
-        fetchTransactions();
-        setActiveTab('history');
-      } else {
-        toast.error(result.error || 'Transaction failed');
-      }
-    } catch (error) {
-      console.error('Error sending transaction:', error);
-      toast.error('An error occurred');
-    } finally {
-      setIsProcessing(false);
-    }
+  // Refresh wallet data after successful payment
+  const handlePaymentSuccess = () => {
+    fetchWalletData();
+    fetchTransactions();
+    setActiveTab('history');
   };
 
   const handleExchange = async (data: any) => {
@@ -382,7 +362,7 @@ export default function WalletPage() {
                   </motion.div>
                   <div>
                     <h1 className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
-                      Crypto Wallet
+                      Wells Wallet
                     </h1>
                     <p className="text-cyan-300/70 text-xs sm:text-sm mt-1 flex items-center gap-2">
                       <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
@@ -470,7 +450,7 @@ export default function WalletPage() {
               <WalletOverviewTab key="overview" wallet={wallet} transactions={transactions} />
             )}
             {activeTab === 'send' && (
-              <WalletSendTab key="send" wallet={wallet} onSend={handleSend} isProcessing={isProcessing} />
+              <WalletSendTab key="send" wallet={wallet} onSuccess={handlePaymentSuccess} isProcessing={isProcessing} />
             )}
             {activeTab === 'receive' && (
               <WalletReceiveTab key="receive" wallet={wallet} currentStudent={currentStudent} />
@@ -495,6 +475,7 @@ export default function WalletPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="fixed bottom-3 sm:bottom-4 left-0 right-0 z-50 flex justify-center px-3 sm:px-4"
+          data-bottom-nav
         >
           <div className="bg-gradient-to-r from-[#1a1f3a]/95 via-[#2d1b4e]/95 to-[#1a1f3a]/95 backdrop-blur-2xl rounded-full p-1.5 sm:p-2 border border-cyan-500/30 shadow-[0_0_50px_rgba(6,182,212,0.3)] w-full max-w-md">
             <div className="flex items-center justify-between gap-1 sm:gap-2">
