@@ -17,12 +17,15 @@ export async function GET(request: NextRequest) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role, school_id')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single()
 
     if (profileError || !profile || profile.role !== 'teacher') {
+      console.error('❌ GET /assessment-grades - Profile check failed:', { profileError, profile, userId: user.id })
       return NextResponse.json({ error: 'Teacher access required' }, { status: 403 })
     }
+    
+    console.log('✅ GET /assessment-grades - Teacher verified:', { role: profile.role, userId: user.id })
 
     if (assessmentId) {
       // Get grades for specific assessment
@@ -113,12 +116,15 @@ export async function POST(request: NextRequest) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role, school_id')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single()
 
     if (profileError || !profile || profile.role !== 'teacher') {
+      console.error('❌ POST /assessment-grades - Profile check failed:', { profileError, profile, userId: user.id })
       return NextResponse.json({ error: 'Teacher access required' }, { status: 403 })
     }
+    
+    console.log('✅ POST /assessment-grades - Teacher verified:', { role: profile.role, userId: user.id })
 
     const body = await request.json()
     const { 

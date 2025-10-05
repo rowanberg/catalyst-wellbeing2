@@ -249,317 +249,81 @@ function InstagramMessageBubble({ message, isFromCurrentUser, participantName, s
   )
 }
 
-// Instagram-style Messages Container
-function InstagramMessagesContainer({ conversationId, currentUserId, participantName, refreshTrigger, onOptimisticMessage }: {
-  conversationId: string
-  currentUserId: string
-  participantName: string
-  refreshTrigger?: number
-  onOptimisticMessage?: (callback: (message: any) => void) => void
+// WhatsApp Contact Card Component
+function WhatsAppContactCard({ parent, onOpenChat }: {
+  parent: any
+  onOpenChat: (phoneNumber: string, name: string) => void
 }) {
-  const [messages, setMessages] = useState<FamilyMessage[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isRealTimeSync, setIsRealTimeSync] = useState(false)
-  const [shouldAutoScroll, setShouldAutoScroll] = useState(true)
-  const [userHasScrolled, setUserHasScrolled] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const previousMessageCount = useRef(0)
-  const lastMessageId = useRef<string>('')
-  const scrollTimeout = useRef<ReturnType<typeof setTimeout>>()
-  const [isTyping, setIsTyping] = useState(false)
-
-  // Handle optimistic message updates
-  const handleOptimisticMessage = useCallback((messageUpdate: any) => {
-    // Add null/undefined check
-    if (!messageUpdate) {
-      console.warn('handleOptimisticMessage called with undefined messageUpdate')
-      return
-    }
-
-    if (messageUpdate.removeId) {
-      // Remove optimistic message
-      setMessages(prev => prev.filter(msg => msg.id !== messageUpdate.removeId))
-    } else if (messageUpdate.replaceId) {
-      // Replace optimistic message with real message
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageUpdate.replaceId ? { ...messageUpdate, id: messageUpdate.id } : msg
-      ))
-    } else if (messageUpdate.id || messageUpdate.message_text) {
-      // Add new optimistic message (only if it has valid data)
-      setMessages(prev => [...prev, messageUpdate])
-      // INSTANT scroll to show new message (immediate)
-      messagesEndRef.current?.scrollIntoView({ behavior: 'instant' })
-    } else {
-      console.warn('handleOptimisticMessage called with invalid messageUpdate:', messageUpdate)
-    }
-  }, [])
-
-  // Expose optimistic message handler
-  useEffect(() => {
-    if (onOptimisticMessage && typeof onOptimisticMessage === 'function') {
-      onOptimisticMessage(handleOptimisticMessage)
-    }
-  }, [onOptimisticMessage, handleOptimisticMessage])
-
-  // Simple cache functions
-  const clearCache = (key: string) => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(key)
-    }
-  }
-
-  useEffect(() => {
-    const handleTyping = (event: any) => {
-      if (event.detail?.isTyping) {
-        setIsTyping(event.detail.isTyping)
-      }
-    }
-    window.addEventListener('typing', handleTyping)
-    return () => window.removeEventListener('typing', handleTyping)
-  }, [])
-
-  const fetchMessages = useCallback(async (isRealTime: boolean = false) => {
-    if (!conversationId) return
-    
-    // Check cache first for non-real-time requests (but not for forced refreshes)
-    if (!isRealTime) {
-      const cacheKey = `messages_${conversationId}`
-      const cachedData = getCachedData(cacheKey)
-      if (cachedData) {
-        setMessages(cachedData)
-        setIsLoading(false)
-        return
-      }
-    }
-    
-    // Clear cache for real-time requests to ensure fresh data
-    if (isRealTime) {
-      clearCache(`messages_${conversationId}`)
-    }
-    
-    try {
-      const response = await fetch(`/api/family-messaging?conversation_id=${conversationId}`, {
-        headers: {
-          'Cache-Control': isRealTime ? 'no-cache' : 'max-age=30',
-        }
-      })
-      if (response.ok) {
-        const data = await response.json()
-        const newMessages = data.messages || []
-        
-        // Smart refresh: Only update if there are actually new messages (but always update for real-time/forced refreshes)
-        const hasNewMessages = newMessages.length > messages.length || 
-          (newMessages.length > 0 && newMessages[newMessages.length - 1]?.id !== lastMessageId.current)
-        
-        // Always update for real-time requests (forced refreshes) or when there are new messages
-        if (isRealTime || hasNewMessages) {
-          const wasAtBottom = isAtBottom()
-          setMessages(newMessages)
-          
-          // Cache the data
-          if (!isRealTime) {
-            setCachedData(`messages_${conversationId}`, newMessages, 30000)
-          }
-          
-          // Update tracking variables
-          if (newMessages.length > 0) {
-            lastMessageId.current = newMessages[newMessages.length - 1].id
-          }
-          previousMessageCount.current = newMessages.length
-          
-          // Only show sync indicator for real-time updates when there are new messages
-          if (isRealTime && hasNewMessages) {
-            setIsRealTimeSync(true)
-            setTimeout(() => setIsRealTimeSync(false), 1200)
-          }
-          
-          // Auto-scroll only if user was at bottom or it's a new conversation
-          if (wasAtBottom || !userHasScrolled) {
-            setTimeout(() => {
-              messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-            }, 100)
-          }
-        }
-      }
-    } catch (error: any) {
-      console.error('Error fetching family messages:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [conversationId, messages.length, userHasScrolled])
-
-  // Check if user is at bottom of scroll area
-  const isAtBottom = () => {
-    if (!scrollContainerRef.current) return true
-    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current
-    return scrollHeight - scrollTop - clientHeight < 100 // Increased threshold for mobile
-  }
-
-  // Handle scroll events - improved for mobile
-  const handleScroll = () => {
-    if (scrollTimeout.current) {
-      clearTimeout(scrollTimeout.current)
-    }
-    
-    scrollTimeout.current = setTimeout(() => {
-      setUserHasScrolled(true)
-      setShouldAutoScroll(isAtBottom())
-    }, 150) // Debounce scroll events
-  }
-
-  useEffect(() => {
-    fetchMessages()
-    setUserHasScrolled(false) // Reset scroll state for new conversations
-  }, [conversationId, fetchMessages])
-
-  // Separate effect for refresh trigger to force fresh data
-  useEffect(() => {
-    if (refreshTrigger && refreshTrigger > 0) {
-      // Force fresh fetch when refresh is triggered (after sending message)
-      fetchMessages(true) // Pass true to bypass cache and smart refresh
-    }
-  }, [refreshTrigger, fetchMessages])
-
-  // Optimized real-time sync with adaptive frequency
-  useEffect(() => {
-    if (!conversationId) return
-
-    let interval: ReturnType<typeof setInterval>
-    let retryCount = 0
-    const maxRetries = 3
-    const baseInterval = 10000 // Increased to 10 seconds since we have optimistic UI
-    
-    const startPolling = () => {
-      const currentInterval = Math.min(baseInterval * Math.pow(1.5, retryCount), 30000) // Max 30 seconds
-      
-      interval = setInterval(async () => {
-        try {
-          // Only sync if no optimistic messages are pending
-          const hasOptimisticMessages = messages.some(msg => (msg as any).isOptimistic)
-          if (!hasOptimisticMessages) {
-            await fetchMessages(true)
-          }
-          retryCount = 0 // Reset on success
-        } catch (error) {
-          retryCount = Math.min(retryCount + 1, maxRetries)
-          console.warn(`Real-time sync failed, retry ${retryCount}/${maxRetries}`)
-        }
-      }, currentInterval)
-    }
-    
-    startPolling()
-    return () => clearInterval(interval)
-  }, [conversationId, fetchMessages, messages])
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 space-y-4">
-        <div className="relative">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-200 border-t-blue-500"></div>
-          <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-pink-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
-        </div>
-        <div className="text-center">
-          <p className="text-gray-600 text-sm font-medium">Loading conversation...</p>
-          <p className="text-gray-400 text-xs mt-1">Getting your messages ready</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (messages.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 space-y-4">
-        <div className="relative">
-          <div className="w-16 h-16 bg-gradient-to-r from-pink-100 to-blue-100 rounded-full flex items-center justify-center">
-            <MessageCircle className="h-8 w-8 text-pink-500" />
-          </div>
-          <div className="absolute -top-1 -right-1 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-            <Heart className="h-3 w-3 text-white" />
-          </div>
-        </div>
-        <div className="text-center space-y-2">
-          <h3 className="text-gray-900 font-semibold">Start your conversation</h3>
-          <p className="text-gray-500 text-sm">Send a message to {participantName}</p>
-          <p className="text-gray-400 text-xs">Your messages are private and secure</p>
-        </div>
-      </div>
-    )
-  }
+  const quickMessages = [
+    "Hi! I'm on my way home 🏠",
+    "Need help with homework 📚",
+    "Running a bit late today ⏰",
+    "Can you pick me up? 🚗"
+  ]
 
   return (
-    <div 
-      ref={scrollContainerRef}
-      onScroll={handleScroll}
-      className="h-full overflow-y-auto px-4 py-4 bg-gradient-to-b from-gray-50/30 to-white"
-      style={{ 
-        WebkitOverflowScrolling: 'touch',
-        overscrollBehavior: 'contain'
-      }}
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
     >
-      {/* New message indicator - Instagram style */}
-      <AnimatePresence>
-        {isRealTimeSync && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="flex justify-center mb-4"
-          >
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full px-4 py-2 text-xs font-medium shadow-lg flex items-center space-x-2">
-              <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-              <span>New message</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      
-      {/* Typing indicator */}
-      <AnimatePresence>
-        {isTyping && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="flex items-center space-x-2 mb-4"
-          >
-            <Avatar className="w-6 h-6">
-              <AvatarFallback className="bg-gradient-to-r from-pink-400 to-rose-400 text-white text-xs">
-                {participantName.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="bg-gray-100 rounded-2xl px-4 py-2 flex items-center space-x-1">
-              <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      
-      <div className="space-y-2">
-        {messages.map((message, index) => {
-          const isFromCurrentUser = message.sender_id === currentUserId
-          const showAvatar = !isFromCurrentUser && (index === 0 || messages[index - 1]?.sender_id !== message.sender_id)
-          const isLastInGroup = index === messages.length - 1 || messages[index + 1]?.sender_id !== message.sender_id
-          
-          return (
-            <InstagramMessageBubble
-              key={message.id}
-              message={message}
-              isFromCurrentUser={isFromCurrentUser}
-              participantName={participantName}
-              showAvatar={showAvatar}
-              isLastInGroup={isLastInGroup}
-            />
-          )
-        })}
+      {/* Parent Info */}
+      <div className="flex items-center mb-4">
+        <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+          {parent.name.split(' ').map((n: string) => n[0]).join('')}
+        </div>
+        <div className="ml-3 flex-1">
+          <h3 className="font-semibold text-gray-900">{parent.name}</h3>
+          <p className="text-sm text-gray-500">Parent</p>
+        </div>
+        <div className="flex items-center text-green-500">
+          <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+          <span className="text-xs font-medium">WhatsApp</span>
+        </div>
       </div>
-      
-      <div ref={messagesEndRef} className="h-4" />
-    </div>
+
+      {/* Quick Action Button */}
+      <button
+        onClick={() => onOpenChat(parent.phone || '', parent.name)}
+        disabled={!parent.phone}
+        className={`w-full py-3 px-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl mb-4 ${
+          parent.phone 
+            ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700' 
+            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+        }`}
+      >
+        <MessageCircle className="w-5 h-5" />
+        {parent.phone ? 'Open WhatsApp Chat' : 'Phone Number Not Available'}
+      </button>
+
+      {/* Quick Messages */}
+      <div className="space-y-2">
+        <p className="text-xs font-medium text-gray-600 mb-3">
+          {parent.phone ? 'Quick messages:' : 'Phone number required for WhatsApp:'}
+        </p>
+        <div className="grid grid-cols-1 gap-2">
+          {quickMessages.map((message, index) => (
+            <button
+              key={index}
+              onClick={() => {
+                if (!parent.phone) return
+                const encodedMessage = encodeURIComponent(message)
+                const whatsappUrl = `https://wa.me/${parent.phone?.replace(/\D/g, '')}?text=${encodedMessage}`
+                window.open(whatsappUrl, '_blank')
+              }}
+              disabled={!parent.phone}
+              className={`text-left text-sm p-3 rounded-lg transition-colors duration-150 border ${
+                parent.phone
+                  ? 'bg-gray-50 hover:bg-green-50 text-gray-700 hover:text-green-700 border-gray-100 hover:border-green-200'
+                  : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+              }`}
+            >
+              {message}
+            </button>
+          ))}
+        </div>
+      </div>
+    </motion.div>
   )
 }
 
@@ -822,34 +586,27 @@ function QuickMessageButton({ message, conversationId, participantId, currentUse
 function StudentMessagingContent() {
   const { profile, user } = useAppSelector((state) => state.auth)
   const [selectedTab, setSelectedTab] = useState<'teachers' | 'parents' | 'community'>('teachers')
-  const [selectedTeacher, setSelectedTeacher] = useState<string | null>(null)
-  const [selectedParent, setSelectedParent] = useState<string | null>(null)
   const [selectedTool, setSelectedTool] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showEmergencyModal, setShowEmergencyModal] = useState(false)
   const [emergencyMessage, setEmergencyMessage] = useState('')
   const [parents, setParents] = useState<any[]>([])
-  const [messageRefreshTrigger, setMessageRefreshTrigger] = useState(0)
-  const [isLoadingParents, setIsLoadingParents] = useState(false)
-  const [familyConversations, setFamilyConversations] = useState<any[]>([])
   const [teachers, setTeachers] = useState<Teacher[]>([])
   const [isLoadingTeachers, setIsLoadingTeachers] = useState(false)
-  const [optimisticMessageHandler, setOptimisticMessageHandler] = useState<((message: any) => void) | undefined>(undefined)
-  
-  // Management messages and WhatsApp state
-  const [managementMessages, setManagementMessages] = useState<ManagementMessage[]>([])
+  const [isLoadingParents, setIsLoadingParents] = useState(false)
   const [whatsappConfig, setWhatsappConfig] = useState<WhatsAppConfig | null>(null)
+  
+  // Management messages state
+  const [managementMessages, setManagementMessages] = useState<ManagementMessage[]>([])
   const [isLoadingManagementMessages, setIsLoadingManagementMessages] = useState(false)
   const [selectedManagementMessage, setSelectedManagementMessage] = useState<ManagementMessage | null>(null)
   const [showManagementMessages, setShowManagementMessages] = useState(true)
 
-  // Function to refresh messages without page reload
-  const refreshMessages = () => {
-    console.log('refreshMessages called, updating trigger')
-    setMessageRefreshTrigger(prev => {
-      console.log('messageRefreshTrigger updated from', prev, 'to', prev + 1)
-      return prev + 1
-    })
+  // WhatsApp functions
+  const openWhatsAppChat = (phoneNumber: string, parentName: string) => {
+    const cleanPhone = phoneNumber.replace(/\D/g, '')
+    const whatsappUrl = `https://wa.me/${cleanPhone}`
+    window.open(whatsappUrl, '_blank')
   }
 
   // Fetch management messages and WhatsApp config
@@ -911,51 +668,8 @@ function StudentMessagingContent() {
     } catch (error) {
       console.error('Error marking message as read:', error)
     }
-  }, [])
+  }, [user?.id])
 
-  // Function to start a family conversation with a parent
-  const startFamilyConversation = async (parentId: string) => {
-    try {
-      // Create or get existing conversation
-      const response = await fetch('/api/family-messaging', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          participantId: parentId,
-          participantRole: 'parent'
-        })
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        const parentName = parents.find(parent => parent.id === parentId)?.name || 'Parent'
-        
-        // Update familyConversations to include this conversation with participant info
-        const conversationData = {
-          id: data.conversationId,
-          participantId: parentId,
-          participantName: parentName,
-          participantRole: 'parent'
-        }
-        
-        setFamilyConversations(prev => {
-          const existing = prev.find(c => c.id === data.conversationId)
-          if (existing) {
-            return prev
-          }
-          return [...prev, conversationData]
-        })
-        
-        setSelectedParent(parentId)
-        setSelectedTeacher(null) // Clear other selections
-      }
-    } catch (error: any) {
-      console.error('Error starting family conversation:', error)
-    }
-  }
 
   // Optimized fetch assigned teachers with caching
   const fetchAssignedTeachers = useCallback(async () => {
@@ -1002,38 +716,36 @@ function StudentMessagingContent() {
     }
   }, [selectedTab, user?.id, fetchAssignedTeachers, fetchManagementMessages])
 
-  // Fetch family data (parents and conversations)
+  // Load real parent contacts for WhatsApp
   useEffect(() => {
-    const fetchFamilyData = async () => {
-      if (selectedTab !== 'parents') return
+    const fetchParentContacts = async () => {
+      if (selectedTab !== 'parents' || !user?.id) return
       
       setIsLoadingParents(true)
       try {
         const response = await fetch('/api/family-messaging', {
+          method: 'GET',
           credentials: 'include'
         })
+        
         if (response.ok) {
           const data = await response.json()
-          console.log('Student family data response:', data)
-          console.log('Parents found:', data.parents)
-          setFamilyConversations(data.conversations || [])
+          console.log('Parent data received:', data)
           setParents(data.parents || [])
         } else {
-          const errorData = await response.text()
-          console.error('API Error Response:', errorData)
-          console.error('Failed to fetch family data:', response.status, response.statusText)
+          console.warn('Failed to fetch parent data:', response.status)
+          setParents([])
         }
       } catch (error: any) {
-        console.error('Error fetching family data:', error)
-        setFamilyConversations([])
+        console.error('Error loading parent contacts:', error)
         setParents([])
       } finally {
         setIsLoadingParents(false)
       }
     }
 
-    fetchFamilyData()
-  }, [selectedTab])
+    fetchParentContacts()
+  }, [selectedTab, user?.id])
 
   const conversationStarters = [
     { id: '1', text: 'I need help with today\'s homework', icon: BookOpen },
@@ -1193,7 +905,7 @@ function StudentMessagingContent() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
               {/* Enhanced Contact List - Mobile: Hide sidebar when chat is open */}
               <motion.div 
-                className={`lg:col-span-1 space-y-4 sm:space-y-6 ${selectedTeacher || selectedParent || selectedTool ? 'hidden lg:block' : 'block'}`}
+                className={`lg:col-span-1 space-y-4 sm:space-y-6 ${selectedTool ? 'hidden lg:block' : 'block'}`}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5, delay: 0.6 }}
@@ -1277,11 +989,10 @@ function StudentMessagingContent() {
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ duration: 0.3 }}
                               onClick={() => {
-                                setSelectedTeacher(teacher.id)
-                                setSelectedParent(null)
+                                
                               }}
                               className={`p-4 sm:p-5 rounded-2xl border cursor-pointer transition-all hover:shadow-2xl group ${
-                                selectedTeacher === teacher.id 
+                                false 
                                   ? 'bg-gradient-to-r from-violet-500/20 to-purple-500/20 border-violet-400/50 shadow-xl backdrop-blur-sm' 
                                   : 'bg-white/10 border-white/20 hover:bg-white/20 backdrop-blur-sm'
                               }`}
@@ -1473,50 +1184,24 @@ function StudentMessagingContent() {
                         {isLoadingParents ? (
                           <div className="flex flex-col items-center justify-center py-12 space-y-4">
                             <div className="relative">
-                              <div className="animate-spin rounded-full h-10 w-10 border-2 border-white/20 border-t-pink-400"></div>
-                              <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-rose-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+                              <div className="animate-spin rounded-full h-10 w-10 border-2 border-white/20 border-t-green-400"></div>
+                              <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-pink-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
                             </div>
                             <div className="text-center">
                               <p className="text-white/80 text-sm font-medium">Loading your family...</p>
-                              <p className="text-white/60 text-xs mt-1">Connecting with loved ones</p>
+                              <p className="text-white/60 text-xs mt-1">Getting parent contact information</p>
                             </div>
                           </div>
                         ) : parents.length > 0 ? (
-                          parents.map((parent: any) => (
-                            <motion.div
-                              key={parent.id || parent.user_id || `parent-${parent.name}`}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.3 }}
-                              className="p-4 sm:p-5 rounded-2xl border bg-white/10 border-white/20 hover:bg-white/20 backdrop-blur-sm transition-all hover:shadow-2xl group cursor-pointer"
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-3">
-                                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-pink-500 via-rose-500 to-red-500 rounded-2xl flex items-center justify-center text-white font-bold text-sm sm:text-base shadow-2xl border-2 border-white/20">
-                                    {parent.name?.split(' ').map((n: string) => n[0]).join('') || 'P'}
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                    <p className="font-bold text-white text-sm sm:text-base truncate group-hover:text-white/90">{parent.name}</p>
-                                    <p className="text-xs sm:text-sm text-white/70 group-hover:text-white/80">Family Member</p>
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <Button
-                                    onClick={() => startFamilyConversation(parent.id || parent.user_id)}
-                                    variant="outline"
-                                    size="sm"
-                                    className="bg-pink-500/20 hover:bg-pink-500/30 border-pink-400/30 text-pink-300 hover:text-pink-200 text-xs sm:text-sm px-3 sm:px-4 py-2 rounded-xl backdrop-blur-sm transition-all"
-                                  >
-                                    <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                                    <span className="hidden sm:inline">Message</span>
-                                    <span className="sm:hidden">Chat</span>
-                                  </Button>
-                                </div>
-                              </div>
-                            </motion.div>
-                          ))
+                          <div className="grid gap-4">
+                            {parents.map((parent: any) => (
+                              <WhatsAppContactCard
+                                key={parent.id}
+                                parent={parent}
+                                onOpenChat={openWhatsAppChat}
+                              />
+                            ))}
+                          </div>
                         ) : (
                           <div className="text-center py-12">
                             <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm border border-white/20">
@@ -2061,243 +1746,18 @@ function StudentMessagingContent() {
                 </Card>
               </motion.div>
 
-              {/* Chat Area - Mobile Optimized */}
-              <div className={`lg:col-span-2 ${selectedTeacher || selectedParent || selectedTool ? 'block' : 'hidden lg:block'}`}>
-                {selectedTool === 'study-planner' ? (
-                  <AIStudyPlanner onBack={() => setSelectedTool(null)} />
-                ) : selectedTool === 'grade-tracker' ? (
-                  <GradeAnalytics onBack={() => setSelectedTool(null)} />
-                ) : selectedTool === 'homework-assistant' ? (
-                  <AIHomeworkHelper onBack={() => setSelectedTool(null)} />
-                ) : selectedTool === 'study-groups' ? (
-                  <StudyGroups onBack={() => setSelectedTool(null)} />
-                ) : selectedTool === 'peer-tutoring' ? (
-                  <PeerTutoring onBack={() => setSelectedTool(null)} />
-                ) : selectedTool === 'school-events' ? (
-                  <SchoolEventsHub onBack={() => setSelectedTool(null)} />
-                ) : selectedTool === 'achievement-center' ? (
-                  <AchievementCenter onBack={() => setSelectedTool(null)} />
-                ) : selectedTool === 'learning-games' ? (
-                  <LearningGames onBack={() => setSelectedTool(null)} />
-                ) : selectedTool === 'digital-portfolio' ? (
-                  <DigitalPortfolio onBack={() => setSelectedTool(null)} />
-                ) : selectedTool === 'project-showcase' ? (
-                  <ProjectShowcase onBack={() => setSelectedTool(null)} />
-                ) : selectedTool ? (
+                            {/* Chat Area - Mobile Optimized */}
+                            <div className={`lg:col-span-2 ${selectedTool ? 'block' : 'hidden lg:block'}`}>
+                {selectedTool ? (
+                  // This part is for showing the selected tool - you can fill this in later
                   <div className="min-h-[600px] bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 flex items-center justify-center">
                     <div className="text-center">
-                      <div className="w-16 h-16 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <Settings className="h-8 w-8 text-blue-300" />
-                      </div>
-                      <p className="text-white/80 text-lg font-bold mb-2">Tool Coming Soon</p>
-                      <p className="text-white/60 text-sm mb-4">This advanced tool is under development</p>
-                      <Button
-                        onClick={() => setSelectedTool(null)}
-                        className="bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/30 text-blue-300"
-                      >
-                        <ArrowLeft className="h-4 w-4 mr-2" />
-                        Back to Tools
-                      </Button>
+                      <p className="text-white/80 text-lg font-bold mb-2">Tool Area</p>
+                      <Button onClick={() => setSelectedTool(null)}>Back</Button>
                     </div>
                   </div>
-                ) : selectedTeacher ? (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Card className="h-[70vh] sm:h-[600px] flex flex-col shadow-xl border-0 bg-white/90 backdrop-blur-sm">
-                      <CardHeader className="border-b border-gray-100 p-3 sm:p-4 bg-gradient-to-r from-purple-50 to-indigo-50">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3 min-w-0 flex-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setSelectedTeacher(null)}
-                              className="lg:hidden p-2 hover:bg-white/50 rounded-full"
-                            >
-                              <ArrowLeft className="h-4 w-4" />
-                            </Button>
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-purple-400 to-indigo-400 rounded-full flex items-center justify-center text-white font-semibold text-sm sm:text-base flex-shrink-0 shadow-lg">
-                              {teachers.find(t => t.id === selectedTeacher)?.name.split(' ').map(n => n[0]).join('')}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <h3 className="font-bold text-sm sm:text-base text-gray-900 truncate">
-                                {teachers.find(t => t.id === selectedTeacher)?.name}
-                              </h3>
-                              <p className="text-xs sm:text-sm text-gray-600 truncate">
-                                {teachers.find(t => t.id === selectedTeacher)?.subject}
-                              </p>
-                            </div>
-                          </div>
-                          <Badge className="bg-green-100 text-green-800 text-xs px-2 py-1 flex-shrink-0 font-medium">
-                            <Clock className="h-3 w-3 mr-1" />
-                            <span className="hidden sm:inline">Available</span>
-                            <span className="sm:hidden">●</span>
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      
-                      <CardContent className="flex-1 p-0 flex flex-col min-h-0">
-                        {/* Messages Area */}
-                        <div className="flex-1 overflow-y-auto p-3 sm:p-4 bg-gradient-to-b from-gray-50/50 to-white">
-                          <div className="space-y-4">
-                            {/* Welcome Message */}
-                            <div className="flex justify-center">
-                              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 max-w-xs text-center">
-                                <p className="text-xs text-blue-700 font-medium">
-                                  Start a conversation with your teacher! 
-                                  Remember to be respectful and ask clear questions. 📚
-                                </p>
-                              </div>
-                            </div>
-                            
-                            {/* Instagram-style Messages Display */}
-                            <div className="flex-1 flex items-center justify-center">
-                              <div className="text-center space-y-4">
-                                <div className="w-16 h-16 bg-gradient-to-r from-purple-100 to-indigo-100 rounded-full flex items-center justify-center mx-auto">
-                                  <MessageCircle className="h-8 w-8 text-purple-500" />
-                                </div>
-                                <div>
-                                  <h3 className="text-lg font-semibold text-gray-900">Start a conversation</h3>
-                                  <p className="text-gray-500 text-sm">Send a message to your teacher</p>
-                                  <p className="text-gray-400 text-xs mt-1">Your messages are safe and monitored</p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Message Input - Student Friendly */}
-                        <div className="border-t border-gray-100 p-3 sm:p-4 bg-white">
-                          <div className="space-y-3">
-                            {/* Quick Message Buttons */}
-                            <div className="flex flex-wrap gap-2">
-                              {[
-                                "I need help with homework",
-                                "Can you explain this?",
-                                "I'm confused about...",
-                                "Thank you!"
-                              ].map((quickMsg, index) => (
-                                <Button
-                                  key={index}
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-xs px-3 py-1 rounded-full bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-700"
-                                >
-                                  {quickMsg}
-                                </Button>
-                              ))}
-                            </div>
-                            
-                            {/* Instagram-style Message Input */}
-                            <InstagramMessageInput 
-                              teacherId={selectedTeacher}
-                              placeholder="Type your message to your teacher..."
-                            />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ) : selectedParent ? (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.3 }}
-                    className="fixed inset-0 z-50 lg:relative lg:inset-auto lg:z-auto"
-                  >
-                    {/* Instagram-like Chat Interface */}
-                    <div className="h-full lg:h-[calc(100vh-12rem)] xl:h-[600px] flex flex-col bg-white lg:rounded-2xl lg:shadow-xl lg:border lg:border-gray-200">
-                      {/* Instagram-style Header */}
-                      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white lg:rounded-t-2xl">
-                        <div className="flex items-center space-x-3 min-w-0 flex-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSelectedParent(null)}
-                            className="p-2 hover:bg-gray-100 rounded-full min-w-[40px] min-h-[40px]"
-                          >
-                            <ArrowLeft className="h-5 w-5 text-gray-700" />
-                          </Button>
-                          
-                          {/* Instagram-style Profile Picture */}
-                          <div className="relative">
-                            <div className="w-10 h-10 bg-gradient-to-br from-pink-400 via-red-400 to-yellow-400 rounded-full p-0.5">
-                              <div className="w-full h-full bg-gradient-to-r from-pink-500 to-rose-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                                {parents.find(p => p.id === selectedParent)?.name.split(' ').map((n: string) => n[0]).join('')}
-                              </div>
-                            </div>
-                            <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
-                          </div>
-                          
-                          <div className="min-w-0 flex-1">
-                            <h3 className="font-semibold text-gray-900 truncate text-base">
-                              {parents.find(p => p.id === selectedParent)?.name}
-                            </h3>
-                            <p className="text-xs text-green-600 font-medium">Active now</p>
-                          </div>
-                        </div>
-                        
-                        {/* Instagram-style Action Buttons */}
-                        <div className="flex items-center space-x-2">
-                          <Button variant="ghost" size="sm" className="p-2 hover:bg-gray-100 rounded-full">
-                            <Heart className="h-5 w-5 text-gray-600" />
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      {/* Instagram-style Messages Area */}
-                      <div className="flex-1 overflow-hidden bg-white">
-                        <div className="h-full flex flex-col">
-                          {/* Messages Container */}
-                          <div className="flex-1 overflow-y-auto">
-                            <InstagramMessagesContainer 
-                              conversationId={familyConversations.find((c: any) => c.participantId === selectedParent)?.id || ''}
-                              currentUserId={profile?.id || ''}
-                              participantName={parents.find(p => p.id === selectedParent)?.name || 'Parent'}
-                              refreshTrigger={messageRefreshTrigger}
-                              onOptimisticMessage={setOptimisticMessageHandler}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Instagram-style Message Input */}
-                      <div className="border-t border-gray-200 bg-white p-4 lg:rounded-b-2xl">
-                        <div className="space-y-3">
-                          {/* Quick Reactions - Instagram Style */}
-                          <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                            {[
-                              { emoji: "👋", text: "Hi Mom/Dad!" },
-                              { emoji: "😊", text: "I had a great day!" },
-                              { emoji: "🤔", text: "Can you help me?" },
-                              { emoji: "❤️", text: "I love you!" }
-                            ].map((quickMsg, index) => (
-                              <div key={index} className="flex-shrink-0">
-                                <QuickMessageButton
-                                  message={`${quickMsg.emoji} ${quickMsg.text}`}
-                                  conversationId={familyConversations.find(c => c.participantId === selectedParent)?.id || ''}
-                                  participantId={selectedParent}
-                                  currentUserId={profile?.id || ''}
-                                  onMessageSent={refreshMessages}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                          {/* Optimistic Message Input */}
-                          <OptimisticMessageInput 
-                            participantId={selectedParent}
-                            conversationId={familyConversations.find((c: any) => c.participantId === selectedParent)?.id || ''}
-                            currentUserId={profile?.id || ''}
-                            onMessageSent={refreshMessages}
-                            onOptimisticMessage={optimisticMessageHandler}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
                 ) : (
+                  // This is the default view when no tool is selected
                   <Card className="h-full flex flex-col">
                     <div className="text-center space-y-3 sm:space-y-4 px-4">
                       <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full flex items-center justify-center mx-auto">
@@ -2319,125 +1779,13 @@ function StudentMessagingContent() {
                 )}
               </div>
             </div>
-            </div>
           </div>
         </div>
       </div>
-  )
-}
-
-// Optimistic Message Input Component - Instant message display
-function OptimisticMessageInput({ participantId, conversationId, currentUserId, onMessageSent, onOptimisticMessage }: {
-  participantId: string | null
-  conversationId: string
-  currentUserId: string
-  onMessageSent?: () => void
-  onOptimisticMessage?: (message: any) => void
-}) {
-  const [message, setMessage] = useState('')
-
-  const handleSend = () => {
-    if (!message || !message.trim() || !participantId) return
-    
-    const messageText = message.trim()
-    if (!messageText) return
-    
-    const tempId = `temp_${Date.now()}_${Math.random()}`
-    
-    // Create optimistic message - appears INSTANTLY
-    const optimisticMessage = {
-      id: tempId,
-      message_text: messageText,
-      sender_id: currentUserId,
-      receiver_id: participantId,
-      created_at: new Date().toISOString(),
-      is_read: false,
-      isOptimistic: true // Flag to identify optimistic messages
-    }
-    
-    // INSTANT: Clear input and show message with zero delay
-    setMessage('') // Clear input FIRST for instant feel
-    
-    // Show message instantly in UI (no async, no delays)
-    if (onOptimisticMessage && optimisticMessage) {
-      onOptimisticMessage(optimisticMessage)
-    }
-    
-    // Fire-and-forget API call (non-blocking)
-    fetch('/api/family-messaging', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        participantId,
-        messageText,
-        conversationId
-      }),
-    })
-    .then(async response => {
-      if (response.ok) {
-        const data = await response.json()
-        
-        // Replace optimistic message with real message
-        if (onOptimisticMessage && data.message) {
-          onOptimisticMessage({ ...data.message, replaceId: tempId })
-        }
-      } else {
-        const errorData = await response.json()
-        console.error('Message send failed:', errorData)
-        
-        // Remove optimistic message and restore input
-        if (onOptimisticMessage) {
-          onOptimisticMessage({ removeId: tempId })
-        }
-        setMessage(messageText)
-        toast.error(errorData.error || 'Failed to send message')
-      }
-    })
-    .catch(error => {
-      console.error('Error sending message:', error)
-      
-      // Remove optimistic message and restore input
-      if (onOptimisticMessage) {
-        onOptimisticMessage({ removeId: tempId })
-      }
-      setMessage(messageText)
-      toast.error('Failed to send message')
-    })
-    
-    // Function returns immediately - no waiting!
-  }
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
-    }
-  }
-
-  return (
-    <div className="flex items-end space-x-3">
-      <div className="flex-1 relative">
-        <Input
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="Type a message..."
-          className="w-full rounded-full border-0 focus:border-pink-500 focus:ring-pink-500 py-3 px-4 pr-12 text-sm bg-gray-50 focus:bg-white transition-colors"
-          style={{ fontSize: '16px' }}
-        />
-      </div>
-      <Button
-        onClick={handleSend}
-        disabled={!message.trim() || !participantId}
-        className="rounded-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white px-4 py-3 min-h-[44px] min-w-[44px] shadow-lg transition-all duration-150"
-        size="sm"
-      >
-        <Send className="h-4 w-4" />
-      </Button>
     </div>
   )
-}
+} 
+
 
 export default function StudentMessagingPage() {
   return (

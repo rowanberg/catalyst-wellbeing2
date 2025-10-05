@@ -52,6 +52,7 @@ export async function GET(request: NextRequest) {
           first_name,
           last_name,
           email,
+          phone,
           role,
           updated_at,
           school_id
@@ -130,6 +131,7 @@ export async function GET(request: NextRequest) {
           first_name: teacher.first_name,
           last_name: teacher.last_name,
           email: teacher.email,
+          phone: teacher.phone,
           school_id: teacher.school_id,
           isOnline: isRecentlyActive(teacher.updated_at),
           lastSeen: getLastSeenText(teacher.updated_at),
@@ -150,6 +152,8 @@ export async function GET(request: NextRequest) {
     const teachers = Array.from(teacherMap.values()).map((teacher: any) => ({
       id: teacher.id,
       name: teacher.name,
+      email: teacher.email,
+      phone: teacher.phone,
       subject: teacher.classes.length === 1 
         ? teacher.classes[0].subject 
         : `${teacher.classes.length} subjects`,

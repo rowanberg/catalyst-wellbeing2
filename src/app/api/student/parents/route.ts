@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
           first_name,
           last_name,
           email,
+          phone,
           user_id
         )
       `)
@@ -72,6 +73,7 @@ export async function GET(request: NextRequest) {
       id: rel.parent_profile?.id,
       name: `${rel.parent_profile?.first_name || ''} ${rel.parent_profile?.last_name || ''}`.trim(),
       email: rel.parent_profile?.email,
+      phone: rel.parent_profile?.phone || '',
       user_id: rel.parent_profile?.user_id,
       relationship_id: rel.id
     })) || []

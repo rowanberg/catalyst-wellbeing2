@@ -61,10 +61,11 @@ interface Student {
   id: string
   first_name: string
   last_name: string
-  full_name: string
-  student_id: string
-  grade_level: string
-  class_name: string
+  full_name?: string
+  student_number?: string
+  student_id?: string
+  grade_level?: string
+  class_name?: string
 }
 
 interface Assessment {
@@ -183,18 +184,29 @@ export default function UpdateResultsSystem() {
     }
   }, [])
 
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async (classId: string) => {
+    if (!user || !profile) {
+      console.error('No user or profile found')
+      return
+    }
+
     try {
-      const response = await fetch('/api/teacher/students')
+      console.log('🔄 Fetching students for class:', classId)
+      const response = await fetch(`/api/teacher/students?school_id=${profile.school_id}&class_id=${classId}`)
       if (response.ok) {
         const data = await response.json()
+        console.log('✅ Students loaded:', data.students?.length || 0, 'students')
         setStudents(data.students || [])
+      } else {
+        console.error('❌ Failed to fetch students:', response.status)
+        setStudents([])
       }
     } catch (error) {
       console.error('Error fetching students:', error)
       toast.error('Failed to load students')
+      setStudents([])
     }
-  }
+  }, [user, profile])
 
   const fetchAssessments = async () => {
     try {
@@ -216,8 +228,8 @@ export default function UpdateResultsSystem() {
       
       // Get teacher ID from Redux state - use user.id directly
       if (!user) {
-        console.error('No user found in Redux state')
-        toast.error('Please log in to view classes')
+        console.warn('⚠️ User not yet loaded in Redux state - skipping class fetch')
+        setLoadingClasses(false)
         return
       }
       
@@ -276,6 +288,17 @@ export default function UpdateResultsSystem() {
       fetchTeacherClasses()
     }
   }, [user, fetchTeacherClasses])
+
+  // Fetch students when an assessment is selected
+  useEffect(() => {
+    if (selectedAssessment && selectedAssessment.class_id) {
+      console.log('📚 Assessment selected, fetching students for class:', selectedAssessment.class_id)
+      fetchStudents(selectedAssessment.class_id)
+    } else {
+      // Clear students when no assessment is selected
+      setStudents([])
+    }
+  }, [selectedAssessment, fetchStudents])
 
   const saveGrade = useCallback(async (studentId: string, score: number, feedback?: string) => {
     if (!selectedAssessment) return
@@ -406,7 +429,9 @@ export default function UpdateResultsSystem() {
               whileTap={{ scale: 0.98 }}
               onClick={() => {
                 setShowCreateModal(true)
-                fetchTeacherClasses() // Load classes when modal opens
+                if (user) {
+                  fetchTeacherClasses() // Load classes when modal opens (only if user is authenticated)
+                }
               }}
               className="group p-3 sm:p-4 lg:p-5 rounded-xl sm:rounded-2xl border-2 border-dashed border-slate-300 hover:border-emerald-400 bg-gradient-to-br from-slate-50 to-gray-100 hover:from-emerald-50 hover:to-teal-50 transition-all duration-300 flex flex-col items-center justify-center text-slate-600 hover:text-emerald-600 min-h-[120px] sm:min-h-[140px] lg:min-h-[160px] transform hover:-translate-y-1 hover:shadow-lg"
             >
@@ -938,10 +963,10 @@ export default function UpdateResultsSystem() {
                                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                                     <div className="flex-1 min-w-0">
                                       <h4 className="font-semibold text-sm sm:text-base text-slate-800 truncate">
-                                        {student.full_name}
+                                        {student.full_name || `${student.first_name} ${student.last_name}`}
                                       </h4>
                                       <p className="text-xs sm:text-sm text-slate-500">
-                                        Student ID: {student.student_id || 'N/A'}
+                                        Student ID: {student.student_number || student.student_id || 'N/A'}
                                       </p>
                                     </div>
                                     <div className="flex items-center gap-1.5 sm:gap-2">
@@ -952,7 +977,25 @@ export default function UpdateResultsSystem() {
                                           min="0"
                                           max={selectedAssessment.max_score}
                                           value={grades[student.id]?.score || ''}
-                                          onChange={(e) => saveGrade(student.id, parseFloat(e.target.value) || 0)}
+                                          onChange={(e) => {
+                                            const score = parseFloat(e.target.value) || 0
+                                            // Only update local state, don't auto-save
+                                            const percentage = (score / selectedAssessment.max_score) * 100
+                                            const letterGrade = calculateLetterGrade(percentage)
+                                            setGrades(prev => ({ 
+                                              ...prev, 
+                                              [student.id]: {
+                                                id: `temp_${Date.now()}_${student.id}`,
+                                                student_id: student.id,
+                                                assessment_id: selectedAssessment.id,
+                                                score,
+                                                percentage,
+                                                letter_grade: letterGrade,
+                                                created_at: new Date().toISOString(),
+                                                updated_at: new Date().toISOString()
+                                              }
+                                            }))
+                                          }}
                                           className="w-20 sm:w-24 text-center"
                                         />
                                         <span className="text-sm text-slate-500">
@@ -970,6 +1013,60 @@ export default function UpdateResultsSystem() {
                                 </motion.div>
                               ))}
                             </div>
+                            
+                            {/* Save All Grades Button */}
+                            {Object.keys(grades).length > 0 && (
+                              <div className="mt-6 flex justify-center">
+                                <Button
+                                  onClick={async () => {
+                                    setLoading(true)
+                                    let successCount = 0
+                                    let errorCount = 0
+                                    
+                                    for (const [studentId, grade] of Object.entries(grades)) {
+                                      try {
+                                        const response = await fetch('/api/teacher/assessment-grades', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify(grade)
+                                        })
+                                        
+                                        if (response.ok) {
+                                          successCount++
+                                        } else {
+                                          errorCount++
+                                        }
+                                      } catch (error) {
+                                        errorCount++
+                                      }
+                                    }
+                                    
+                                    setLoading(false)
+                                    
+                                    if (successCount > 0) {
+                                      toast.success(`${successCount} grade(s) saved successfully!`)
+                                    }
+                                    if (errorCount > 0) {
+                                      toast.error(`${errorCount} grade(s) failed to save`)
+                                    }
+                                  }}
+                                  disabled={loading}
+                                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-8 py-3 text-base font-semibold shadow-lg hover:shadow-xl transition-all"
+                                >
+                                  {loading ? (
+                                    <>
+                                      <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
+                                      Saving Grades...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Save className="h-5 w-5 mr-2" />
+                                      Save All Grades ({Object.keys(grades).length})
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         )}
                       </CardContent>
