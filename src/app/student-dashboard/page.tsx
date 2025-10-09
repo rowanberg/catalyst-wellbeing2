@@ -349,6 +349,20 @@ export default function StudentDashboard() {
                   </div>
                   <Sparkles className="w-4 h-4 text-blue-500 group-hover:animate-spin" />
                 </button>
+                {/* Examinations Section */}
+                <button className="w-full flex items-center space-x-3 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 rounded-xl border border-indigo-200 transition-all duration-200 hover:scale-105 hover:shadow-lg group">
+                  <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg group-hover:from-indigo-600 group-hover:to-purple-700 transition-colors">
+                    <BookOpen className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <span className="text-sm font-bold text-slate-900">Examinations</span>
+                    <p className="text-xs text-slate-600">Take tests & earn rewards</p>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <div className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">2</div>
+                    <Trophy className="w-4 h-4 text-indigo-500 group-hover:animate-bounce" />
+                  </div>
+                </button>
                 <button className="w-full flex items-center space-x-3 p-4 bg-gradient-to-r from-emerald-50 to-green-50 hover:from-emerald-100 hover:to-green-100 rounded-xl border border-emerald-200 transition-all duration-200 hover:scale-105 hover:shadow-lg group">
                   <div className="p-2 bg-emerald-500 rounded-lg group-hover:bg-emerald-600 transition-colors">
                     <MessageCircle className="w-5 h-5 text-white" />

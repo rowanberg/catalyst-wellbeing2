@@ -1001,6 +1001,15 @@ export default function TeacherStudentsPage() {
                   >
                     {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
                   </Button>
+                  
+                  {/* Mobile Examinations Button */}
+                  <Button
+                    onClick={() => router.push('/teacher/examinations')}
+                    className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-3 py-2.5 rounded-xl shadow-sm"
+                  >
+                    <GraduationCap className="h-4 w-4 mr-1" />
+                    Exams
+                  </Button>
                 </div>
               </div>
               
@@ -1071,6 +1080,15 @@ export default function TeacherStudentsPage() {
 
                 {/* View Controls */}
                 <div className="flex items-center space-x-2">
+                  {/* Examinations Button */}
+                  <Button
+                    onClick={() => router.push('/teacher/examinations')}
+                    className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-4 py-2 rounded-xl shadow-sm"
+                  >
+                    <GraduationCap className="h-4 w-4 mr-2" />
+                    Examinations
+                  </Button>
+                  
                   <div className="flex items-center bg-gray-100 rounded-xl p-1">
                     <Button
                       variant={viewMode === 'grid' ? 'default' : 'ghost'}

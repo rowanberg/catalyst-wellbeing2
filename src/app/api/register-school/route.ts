@@ -19,11 +19,11 @@ export async function POST(request: NextRequest) {
     // Generate unique school code
     const schoolCode = generateSchoolCode()
 
-    // Create admin user account with email confirmation enabled (admins get auto-confirmed)
+    // Create admin user account with email confirmation required
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: adminEmail,
       password: password,
-      email_confirm: true,
+      email_confirm: false, // Send confirmation email to admin
       user_metadata: {
         first_name: adminFirstName,
         last_name: adminLastName,
@@ -43,6 +43,24 @@ export async function POST(request: NextRequest) {
         { message: 'Failed to create user account' },
         { status: 400 }
       )
+    }
+
+    // Send confirmation email to admin
+    try {
+      const confirmationResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/send-confirmation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: adminEmail })
+      })
+      
+      if (confirmationResponse.ok) {
+        console.log('✅ Confirmation email sent to admin:', adminEmail)
+      } else {
+        console.error('❌ Failed to send confirmation email to admin:', adminEmail)
+      }
+    } catch (emailError) {
+      console.error('Error sending admin confirmation email:', emailError)
+      // Don't fail registration if email sending fails
     }
 
     // Create school record using admin client to bypass RLS

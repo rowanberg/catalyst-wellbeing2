@@ -561,7 +561,8 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6 }}
                   >
-                    Welcome back, {profile?.first_name || 'Teacher'}
+                    <span className="hidden sm:inline">Welcome back, {profile?.first_name || 'Teacher'}</span>
+                    <span className="sm:hidden">Welcome, {profile?.first_name || 'Teacher'}</span>
                   </motion.h1>
                   <motion.div 
                     className="text-sm sm:text-base text-gray-600 flex items-center gap-2 mt-1"

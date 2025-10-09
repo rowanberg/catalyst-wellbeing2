@@ -245,6 +245,10 @@ function TeacherDashboardContent() {
             <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
               <h2 className="text-lg font-semibold text-slate-900 mb-4">Quick Actions</h2>
               <div className="space-y-3">
+                <button className="w-full flex items-center space-x-3 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 rounded-lg border border-indigo-200 transition-colors">
+                  <BookOpen className="w-5 h-5 text-indigo-600" />
+                  <span className="text-sm font-medium text-slate-900">Examinations</span>
+                </button>
                 <button className="w-full flex items-center space-x-3 p-3 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-100 transition-colors">
                   <PlusCircle className="w-5 h-5 text-blue-600" />
                   <span className="text-sm font-medium text-slate-900">Create Activity</span>

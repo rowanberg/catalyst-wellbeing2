@@ -1,17 +1,15 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState, useCallback, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { useAppSelector } from '@/lib/redux/hooks'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { toast } from 'sonner'
-import { useAppSelector } from '@/lib/redux/hooks'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { 
   GraduationCap, 
-  ArrowLeft, 
   Search, 
   Star, 
   Clock, 
@@ -20,18 +18,11 @@ import {
   Video,
   Calendar,
   Award,
-  TrendingUp,
   Users,
-  Filter,
   Heart,
   CheckCircle2,
-  DollarSign,
-  Gift,
   Target,
-  Brain,
-  Zap,
-  Crown,
-  Settings
+  Brain
 } from 'lucide-react'
 
 interface Tutor {
@@ -48,8 +39,8 @@ interface Tutor {
   isVolunteer: boolean
   availability: {
     day: string
-    times: string[]
-  }[]
+    timeSlots: string[]
+  }
   bio: string
   achievements: string[]
   responseTime: string
@@ -71,18 +62,14 @@ interface TutoringSession {
   notes?: string
 }
 
-export function PeerTutoring({ onBack }: { onBack: () => void }) {
-  const { profile } = useAppSelector((state) => state.auth)
-  const [currentView, setCurrentView] = useState<'find-tutors' | 'my-sessions' | 'become-tutor'>('find-tutors')
+export function PeerTutoring({ onBack }: { onBack?: () => void }) {
   const [tutors, setTutors] = useState<Tutor[]>([])
-  const [sessions, setSessions] = useState<TutoringSession[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedSubject, setSelectedSubject] = useState<string>('All')
-  const [selectedTutor, setSelectedTutor] = useState<Tutor | null>(null)
-  const [showBookingModal, setShowBookingModal] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const profile = useAppSelector((state) => state.auth.user)
 
-  const subjects = ['All', 'Mathematics', 'Science', 'English', 'History', 'Art', 'Music', 'Computer Science']
+  const subjects = ['All', 'Mathematics', 'Science', 'English', 'History', 'Physics', 'Chemistry', 'Biology', 'Computer Science']
 
   // Fetch tutors from API
   const fetchTutors = useCallback(async () => {
@@ -91,502 +78,288 @@ export function PeerTutoring({ onBack }: { onBack: () => void }) {
     setLoading(true)
     try {
       const params = new URLSearchParams()
-      if (selectedSubject !== 'All') {
+      
+      if (selectedSubject && selectedSubject !== 'All') {
         params.append('subject', selectedSubject)
       }
       
       const response = await fetch(`/api/peer-tutoring/tutors?${params}`)
-      if (response.ok) {
-        const data = await response.json()
-        setTutors(data.tutors || [])
-      } else {
-        toast.error('Failed to load tutors')
+      if (!response.ok) {
+        throw new Error('Failed to fetch tutors')
       }
+      
+      const data = await response.json()
+      setTutors(data.tutors || [])
     } catch (error) {
       console.error('Error fetching tutors:', error)
       toast.error('Failed to load tutors')
+      setTutors([])
     } finally {
       setLoading(false)
     }
   }, [profile?.school_id, selectedSubject])
-
-  // Fetch user's tutoring sessions
-  const fetchSessions = useCallback(async () => {
-    if (!profile?.id) return
-    
-    try {
-      const response = await fetch('/api/peer-tutoring/sessions')
-      if (response.ok) {
-        const data = await response.json()
-        setSessions(data.sessions || [])
-      }
-    } catch (error) {
-      console.error('Error fetching sessions:', error)
-    }
-  }, [profile?.id])
-
+  
   useEffect(() => {
     fetchTutors()
-    fetchSessions()
-  }, [fetchTutors, fetchSessions])
+  }, [fetchTutors])
 
-  const getSubjectColor = (subject: string) => {
-    switch (subject) {
-      case 'Mathematics': return 'bg-blue-500/20 text-blue-300 border-blue-400/30'
-      case 'Science': return 'bg-green-500/20 text-green-300 border-green-400/30'
-      case 'English': return 'bg-purple-500/20 text-purple-300 border-purple-400/30'
-      case 'History': return 'bg-orange-500/20 text-orange-300 border-orange-400/30'
-      case 'Art': return 'bg-pink-500/20 text-pink-300 border-pink-400/30'
-      case 'Music': return 'bg-indigo-500/20 text-indigo-300 border-indigo-400/30'
-      case 'Computer Science': return 'bg-cyan-500/20 text-cyan-300 border-cyan-400/30'
-      default: return 'bg-gray-500/20 text-gray-300 border-gray-400/30'
-    }
-  }
-
+  // Filter tutors based on search (subject filtering is done server-side)
   const filteredTutors = tutors.filter(tutor => {
-    const matchesSearch = searchQuery === '' || 
-      tutor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tutor.subjects.some(subject => subject.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      tutor.specialties.some(specialty => specialty.toLowerCase().includes(searchQuery.toLowerCase()))
-    
-    const matchesSubject = selectedSubject === 'All' || tutor.subjects.includes(selectedSubject)
-    
-    return matchesSearch && matchesSubject
+    if (!searchQuery) return true
+    return tutor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           tutor.specialties.some(s => s.toLowerCase().includes(searchQuery.toLowerCase())) ||
+           tutor.bio?.toLowerCase().includes(searchQuery.toLowerCase())
   })
 
-  const bookSession = async (tutor: Tutor) => {
+  const bookSession = useCallback(async (tutorId: string) => {
     if (!profile?.id) {
       toast.error('Please log in to book a session')
       return
     }
-    
-    // For now, create a simple booking - in a real app, this would open a booking modal
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    tomorrow.setHours(16, 0, 0, 0)
-    
-    const endTime = new Date(tomorrow)
-    endTime.setHours(17, 0, 0, 0)
     
     try {
       const response = await fetch('/api/peer-tutoring/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tutor_id: tutor.id,
-          subject: tutor.subjects[0] || 'General',
-          title: `${tutor.subjects[0] || 'General'} Tutoring Session`,
-          scheduled_start: tomorrow.toISOString(),
-          scheduled_end: endTime.toISOString(),
-          description: 'Tutoring session booked through peer tutoring platform'
+          tutor_id: tutorId,
+          subject: selectedSubject !== 'All' ? selectedSubject : 'General',
+          title: `Tutoring Session`,
+          scheduled_start: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
+          scheduled_end: new Date(Date.now() + 90000000).toISOString(), // Tomorrow + 1 hour
+          description: 'Peer tutoring session booked through the platform'
         })
       })
       
-      if (response.ok) {
-        toast.success('Session booked successfully!')
-        fetchSessions()
-        setCurrentView('my-sessions')
-      } else {
+      if (!response.ok) {
         const error = await response.json()
-        toast.error(error.message || 'Failed to book session')
+        throw new Error(error.message || 'Failed to book session')
       }
-    } catch (error) {
+      
+      toast.success('Session booked successfully!')
+    } catch (error: any) {
       console.error('Error booking session:', error)
-      toast.error('Failed to book session')
+      toast.error(error.message || 'Failed to book session')
     }
-  }
+  }, [profile?.id, selectedSubject])
 
-  const renderFindTutors = () => (
-    <div className="space-y-6">
-      {/* Search and Filters */}
-      <div className="space-y-4">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-white/40" />
-          <Input
-            placeholder="Search tutors by name, subject, or specialty..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-12 pr-4 py-3 text-sm rounded-2xl bg-white/10 border border-white/20 text-white placeholder:text-white/50 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
-          />
-        </div>
-        
-        <div className="flex space-x-3 overflow-x-auto pb-2">
-          {subjects.map((subject) => (
-            <Button
-              key={subject}
-              onClick={() => setSelectedSubject(subject)}
-              className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm transition-all ${
-                selectedSubject === subject
-                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white'
-                  : 'bg-white/10 text-white/70 hover:text-white hover:bg-white/20'
-              }`}
-            >
-              {subject}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      {/* Tutors Grid */}
-      {loading ? (
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <GraduationCap className="h-8 w-8 text-white/40 animate-pulse" />
+  return (
+    <div className="h-full bg-gradient-to-br from-slate-900/50 via-purple-900/50 to-slate-900/50 relative overflow-hidden rounded-2xl">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-indigo-500/5 to-pink-500/5" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_2px_2px,rgba(139,92,246,0.1)_1px,transparent_0)] bg-[length:32px_32px]" />
+      
+      <div className="relative z-10 p-3 sm:p-4 h-full flex flex-col">
+        {/* Header */}
+        <motion.div 
+          className="flex items-center justify-between mb-4"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-gradient-to-br from-purple-500/20 to-indigo-500/20 rounded-xl border border-purple-400/30">
+              <GraduationCap className="h-5 w-5 text-purple-300" />
+            </div>
+            <div>
+              <h1 className="text-lg sm:text-xl font-bold text-white">Peer Tutoring</h1>
+              <p className="text-white/60 text-xs sm:text-sm">Learn from fellow students</p>
+            </div>
           </div>
-          <p className="text-white/60">Loading tutors...</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {filteredTutors.map((tutor) => (
-          <motion.div
-            key={tutor.id}
-            className="p-6 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-sm hover:bg-white/15 transition-all"
-            whileHover={{ scale: 1.02, y: -2 }}
+          
+          <Button
+            onClick={() => console.log('Become tutor')}
+            className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white"
           >
-            <div className="flex items-start space-x-4 mb-4">
-              <div className="relative">
-                <Avatar className="w-16 h-16">
-                  <AvatarFallback className="bg-gradient-to-r from-cyan-400 to-blue-400 text-white text-lg font-bold">
-                    {tutor.avatar}
-                  </AvatarFallback>
-                </Avatar>
-                {tutor.isOnline && (
-                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-400 border-2 border-white rounded-full"></div>
-                )}
-              </div>
-              
-              <div className="flex-1">
-                <div className="flex items-center space-x-2 mb-1">
-                  <h3 className="text-white/90 font-bold text-lg">{tutor.name}</h3>
-                  {tutor.isVolunteer && (
-                    <Badge className="bg-green-500/20 text-green-300 border-green-400/30 text-xs">
-                      <Heart className="h-3 w-3 mr-1" />
-                      Volunteer
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-white/60 text-sm mb-2">{tutor.grade}</p>
-                
-                <div className="flex items-center space-x-3 mb-3">
-                  <div className="flex items-center space-x-1">
-                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                    <span className="text-white/80 font-medium">{tutor.rating}</span>
-                    <span className="text-white/60 text-sm">({tutor.reviewCount})</span>
-                  </div>
-                  <div className="flex items-center space-x-1 text-white/60 text-sm">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span>{tutor.sessionsCompleted} sessions</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="text-right">
-                {tutor.isVolunteer ? (
-                  <Badge className="bg-green-500/20 text-green-300 border-green-400/30 text-sm">
-                    <Gift className="h-3 w-3 mr-1" />
-                    Free
-                  </Badge>
-                ) : (
-                  <div className="flex items-center space-x-1 text-white/80 font-bold">
-                    <DollarSign className="h-4 w-4" />
-                    <span>{tutor.hourlyRate}/hr</span>
-                  </div>
-                )}
-              </div>
-            </div>
+            <Target className="h-4 w-4 mr-2" />
+            Become Tutor
+          </Button>
+        </motion.div>
 
-            <p className="text-white/70 text-sm mb-4 line-clamp-2">{tutor.bio}</p>
-
-            <div className="space-y-3 mb-4">
-              <div>
-                <p className="text-white/60 text-xs font-medium mb-1">Subjects</p>
-                <div className="flex flex-wrap gap-1">
-                  {tutor.subjects.map((subject) => (
-                    <Badge key={subject} className={`text-xs px-2 py-1 ${getSubjectColor(subject)}`}>
-                      {subject}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              
-              <div>
-                <p className="text-white/60 text-xs font-medium mb-1">Specialties</p>
-                <div className="flex flex-wrap gap-1">
-                  {tutor.specialties.slice(0, 3).map((specialty) => (
-                    <Badge key={specialty} className="bg-white/10 text-white/60 text-xs px-2 py-1">
-                      {specialty}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4 text-xs text-white/60">
-                <div className="flex items-center space-x-1">
-                  <Clock className="h-3 w-3" />
-                  <span>Responds {tutor.responseTime}</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Calendar className="h-3 w-3" />
-                  <span>Next: {new Date(tutor.nextAvailable).toLocaleDateString()}</span>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="p-2 hover:bg-white/10 rounded-full text-white/70 hover:text-white"
-                >
-                  <MessageCircle className="h-4 w-4" />
-                </Button>
-                <Button
-                  onClick={() => bookSession(tutor)}
-                  className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-4 py-2 rounded-xl text-sm"
-                >
-                  Book Session
-                </Button>
-              </div>
-            </div>
-          </motion.div>
-          ))}
-        </div>
-      )}
-
-      {!loading && filteredTutors.length === 0 && (
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <GraduationCap className="h-8 w-8 text-white/40" />
+        {/* Search and Filters */}
+        <motion.div
+          className="flex flex-col sm:flex-row gap-3 mb-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/50" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search tutors or subjects..."
+              className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-purple-400 focus:ring-purple-400/20"
+            />
           </div>
-          <p className="text-white/80 text-lg font-medium mb-2">No tutors found</p>
-          <p className="text-white/60 text-sm">Try adjusting your search or subject filter</p>
-        </div>
-      )}
-    </div>
-  )
+          
+          <div className="flex gap-2">
+            {subjects.map((subject) => (
+              <Button
+                key={subject}
+                onClick={() => setSelectedSubject(subject)}
+                variant={selectedSubject === subject ? "default" : "outline"}
+                className={`text-xs ${
+                  selectedSubject === subject
+                    ? 'bg-purple-500 hover:bg-purple-600 text-white'
+                    : 'bg-white/5 border-white/20 text-white hover:bg-white/10'
+                }`}
+              >
+                {subject}
+              </Button>
+            ))}
+          </div>
+        </motion.div>
 
-  const renderMySessions = () => (
-    <div className="space-y-6">
-      {sessions.length > 0 ? (
-        <div className="space-y-4">
-          {sessions.map((session) => (
-            <motion.div
-              key={session.id}
-              className={`p-6 rounded-2xl border backdrop-blur-sm ${
-                session.status === 'upcoming' 
-                  ? 'bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border-cyan-400/20'
-                  : session.status === 'completed'
-                  ? 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-400/20'
-                  : 'bg-gradient-to-r from-red-500/10 to-pink-500/10 border-red-400/20'
-              }`}
-              whileHover={{ scale: 1.01 }}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <h3 className="text-white/90 font-bold text-lg">{session.topic}</h3>
-                    <Badge className={`text-xs px-2 py-1 ${
-                      session.status === 'upcoming' ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400/30' :
-                      session.status === 'completed' ? 'bg-green-500/20 text-green-300 border-green-400/30' :
-                      'bg-red-500/20 text-red-300 border-red-400/30'
-                    }`}>
-                      {session.status}
-                    </Badge>
+        {/* Tutors Grid */}
+        <motion.div
+          className="flex-1 overflow-y-auto"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {loading ? (
+              // Loading skeleton
+              Array.from({ length: 4 }).map((_, index) => (
+                <motion.div
+                  key={`skeleton-${index}`}
+                  className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4 animate-pulse"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <div className="flex items-start space-x-3 mb-3">
+                    <div className="w-12 h-12 bg-white/10 rounded-full"></div>
+                    <div className="flex-1">
+                      <div className="h-4 bg-white/10 rounded mb-2"></div>
+                      <div className="h-3 bg-white/10 rounded w-3/4"></div>
+                    </div>
                   </div>
-                  <p className="text-white/70 text-sm mb-1">with {session.tutorName}</p>
-                  <Badge className={`text-xs px-2 py-1 ${getSubjectColor(session.subject)}`}>
-                    {session.subject}
-                  </Badge>
+                  <div className="space-y-2">
+                    <div className="h-3 bg-white/10 rounded"></div>
+                    <div className="h-3 bg-white/10 rounded w-5/6"></div>
+                  </div>
+                </motion.div>
+              ))
+            ) : filteredTutors.length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <GraduationCap className="h-12 w-12 text-white/30 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-white mb-2">No tutors found</h3>
+                <p className="text-white/60 mb-4">Try adjusting your search or become a tutor yourself</p>
+                <Button
+                  onClick={() => console.log('Become tutor')}
+                  className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white"
+                >
+                  <Target className="h-4 w-4 mr-2" />
+                  Become a Tutor
+                </Button>
+              </div>
+            ) : (
+              filteredTutors.map((tutor, index) => (
+              <motion.div
+                key={tutor.id}
+                className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4 hover:bg-white/10 transition-all"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <div className="flex items-start space-x-3 mb-3">
+                  <Avatar className="w-12 h-12">
+                    <AvatarFallback className="bg-purple-500/20 text-purple-300">
+                      {tutor.name.split(' ').map(n => n[0]).join('')}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <h3 className="font-semibold text-white text-sm">{tutor.name}</h3>
+                      {tutor.isVolunteer && (
+                        <Heart className="h-3 w-3 text-red-400" />
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Badge className="bg-blue-500/20 text-blue-300 border-blue-400/30 text-xs">
+                        Grade {tutor.grade}
+                      </Badge>
+                      
+                      <div className="flex items-center space-x-1">
+                        <Star className="h-3 w-3 text-yellow-400 fill-current" />
+                        <span className="text-xs text-white/60">{tutor.rating}</span>
+                        <span className="text-xs text-white/40">({tutor.reviewCount})</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 
-                <div className="text-right">
-                  <p className="text-white/80 font-medium">
-                    {new Date(session.scheduledTime).toLocaleDateString()}
-                  </p>
-                  <p className="text-white/60 text-sm">
-                    {new Date(session.scheduledTime).toLocaleTimeString([], { 
-                      hour: 'numeric', 
-                      minute: '2-digit' 
-                    })}
-                  </p>
-                  <p className="text-white/60 text-xs mt-1">{session.duration} minutes</p>
-                </div>
-              </div>
-
-              {session.status === 'completed' && session.rating && (
-                <div className="flex items-center space-x-2 mb-3">
-                  <span className="text-white/60 text-sm">Your rating:</span>
-                  <div className="flex items-center space-x-1">
-                    {[...Array(5)].map((_, i) => (
-                      <Star 
-                        key={i} 
-                        className={`h-4 w-4 ${
-                          i < session.rating! ? 'text-yellow-400 fill-current' : 'text-gray-400'
-                        }`} 
-                      />
+                <p className="text-xs text-white/70 mb-3 line-clamp-2">{tutor.bio}</p>
+                
+                <div className="space-y-2 mb-3">
+                  <div className="flex flex-wrap gap-1">
+                    {tutor.subjects.map((subject) => (
+                      <Badge key={subject} className="bg-purple-500/20 text-purple-300 border-purple-400/30 text-xs">
+                        {subject}
+                      </Badge>
+                    ))}
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-1">
+                    {tutor.specialties.slice(0, 2).map((specialty) => (
+                      <Badge key={specialty} className="bg-white/10 text-white/60 text-xs">
+                        {specialty}
+                      </Badge>
                     ))}
                   </div>
                 </div>
-              )}
-
-              {session.notes && (
-                <div className="p-3 bg-white/10 rounded-xl mb-4">
-                  <p className="text-white/70 text-sm">{session.notes}</p>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  {session.status === 'upcoming' && (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="p-2 hover:bg-white/10 rounded-full text-white/70 hover:text-white"
-                      >
-                        <MessageCircle className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="p-2 hover:bg-white/10 rounded-full text-white/70 hover:text-white"
-                      >
-                        <Video className="h-4 w-4" />
-                      </Button>
-                    </>
-                  )}
+                
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-1">
+                      <CheckCircle2 className="h-3 w-3 text-green-400" />
+                      <span className="text-xs text-white/60">{tutor.sessionsCompleted} sessions</span>
+                    </div>
+                    
+                    <div className="flex items-center space-x-1">
+                      <Clock className="h-3 w-3 text-white/50" />
+                      <span className="text-xs text-white/60">{tutor.responseTime}</span>
+                    </div>
+                  </div>
                 </div>
                 
-                {session.status === 'upcoming' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-red-500/20 hover:bg-red-500/30 border-red-400/30 text-red-300 text-xs px-3 py-1"
-                  >
-                    Cancel Session
-                  </Button>
-                )}
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Calendar className="h-8 w-8 text-white/40" />
-          </div>
-          <p className="text-white/80 text-lg font-medium mb-2">No tutoring sessions yet</p>
-          <p className="text-white/60 text-sm mb-4">Book your first session to get started</p>
-          <Button
-            onClick={() => setCurrentView('find-tutors')}
-            className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-6 py-2 rounded-xl"
-          >
-            Find Tutors
-          </Button>
-        </div>
-      )}
-    </div>
-  )
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 via-purple-500/10 to-fuchsia-500/10" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_2px_2px,rgba(147,51,234,0.15)_1px,transparent_0)] bg-[length:32px_32px]" />
-      
-      <div className="relative z-10 p-4 sm:p-6 lg:p-8">
-        <div className="max-w-6xl mx-auto space-y-6">
-          
-          {/* Header */}
-          <motion.div 
-            className="flex items-center justify-between"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <div className="flex items-center space-x-4">
-              <Button
-                onClick={onBack}
-                variant="ghost"
-                className="p-2 hover:bg-white/10 rounded-full text-white/70 hover:text-white"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div className="flex items-center space-x-3">
-                <div className="p-3 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-2xl border border-cyan-400/30">
-                  <GraduationCap className="h-6 w-6 text-cyan-300" />
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-white/60">
+                    {tutor.isVolunteer ? (
+                      <span className="text-green-400 font-medium">Free</span>
+                    ) : (
+                      <span>${tutor.hourlyRate}/hour</span>
+                    )}
+                  </div>
+                  
+                  <div className="flex space-x-2">
+                    <Button
+                      onClick={() => console.log('Message tutor')}
+                      size="sm"
+                      variant="outline"
+                      className="bg-white/5 border-white/20 text-white hover:bg-white/10 p-2"
+                    >
+                      <MessageCircle className="h-3 w-3" />
+                    </Button>
+                    
+                    <Button
+                      onClick={() => bookSession(tutor.id)}
+                      size="sm"
+                      className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white text-xs"
+                    >
+                      <Calendar className="h-3 w-3 mr-1" />
+                      Book
+                    </Button>
+                  </div>
                 </div>
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-black text-white">Peer Tutoring</h1>
-                  <p className="text-white/60 text-sm">Connect with student tutors</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="ghost"
-                className="p-2 hover:bg-white/10 rounded-full text-white/70 hover:text-white"
-              >
-                <Settings className="h-5 w-5" />
-              </Button>
-            </div>
-          </motion.div>
-
-          {/* Navigation Tabs */}
-          <motion.div
-            className="flex space-x-2 bg-white/10 backdrop-blur-xl p-2 rounded-2xl border border-white/20"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            {[
-              { id: 'find-tutors', label: 'Find Tutors', icon: Search },
-              { id: 'my-sessions', label: 'My Sessions', icon: Calendar },
-              { id: 'become-tutor', label: 'Become a Tutor', icon: Crown }
-            ].map((tab) => {
-              const Icon = tab.icon
-              return (
-                <Button
-                  key={tab.id}
-                  onClick={() => setCurrentView(tab.id as any)}
-                  className={`flex-1 py-2 px-4 rounded-xl font-medium text-sm transition-all ${
-                    currentView === tab.id
-                      ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-lg'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  <Icon className="h-4 w-4 mr-2" />
-                  {tab.label}
-                </Button>
-              )
-            })}
-          </motion.div>
-
-          {/* Content */}
-          <motion.div
-            key={currentView}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            {currentView === 'find-tutors' && renderFindTutors()}
-            {currentView === 'my-sessions' && renderMySessions()}
-            {currentView === 'become-tutor' && (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Crown className="h-8 w-8 text-yellow-300" />
-                </div>
-                <p className="text-white/80 text-lg font-bold mb-2">Become a Tutor</p>
-                <p className="text-white/60 text-sm mb-4">Share your knowledge and help other students</p>
-                <Button className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white px-6 py-2 rounded-xl">
-                  Apply Now
-                </Button>
-              </div>
+              </motion.div>
+              ))
             )}
-          </motion.div>
-
-        </div>
+          </div>
+        </motion.div>
       </div>
     </div>
   )

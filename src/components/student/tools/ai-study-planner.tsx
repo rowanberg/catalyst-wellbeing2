@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -25,7 +25,11 @@ import {
   AlertCircle,
   Lightbulb,
   Timer,
-  BarChart3
+  BarChart3,
+  PlayCircle,
+  PauseCircle,
+  RotateCcw,
+  Sparkles
 } from 'lucide-react'
 
 interface StudySession {
@@ -51,12 +55,25 @@ interface StudyGoal {
   completedSessions: number
 }
 
-export function AIStudyPlanner({ onBack }: { onBack: () => void }) {
+export function AIStudyPlanner({ onBack }: { onBack?: () => void }) {
   const [currentView, setCurrentView] = useState<'dashboard' | 'planner' | 'goals' | 'analytics'>('dashboard')
   const [studySessions, setStudySessions] = useState<StudySession[]>([])
   const [studyGoals, setStudyGoals] = useState<StudyGoal[]>([])
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false)
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+  const [activeTimer, setActiveTimer] = useState<string | null>(null)
+  const [timerSeconds, setTimerSeconds] = useState(0)
+
+  // Timer effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout
+    if (activeTimer) {
+      interval = setInterval(() => {
+        setTimerSeconds(prev => prev + 1)
+      }, 1000)
+    }
+    return () => clearInterval(interval)
+  }, [activeTimer])
 
   // Mock data for demonstration
   useEffect(() => {
@@ -68,7 +85,7 @@ export function AIStudyPlanner({ onBack }: { onBack: () => void }) {
         duration: 45,
         difficulty: 'medium',
         priority: 'high',
-        scheduledTime: '2025-09-27T09:00:00',
+        scheduledTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
         completed: false,
         aiSuggested: true,
         type: 'new-material'
@@ -80,7 +97,7 @@ export function AIStudyPlanner({ onBack }: { onBack: () => void }) {
         duration: 30,
         difficulty: 'easy',
         priority: 'medium',
-        scheduledTime: '2025-09-27T14:30:00',
+        scheduledTime: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
         completed: true,
         aiSuggested: true,
         type: 'review'
@@ -92,7 +109,7 @@ export function AIStudyPlanner({ onBack }: { onBack: () => void }) {
         duration: 60,
         difficulty: 'hard',
         priority: 'urgent',
-        scheduledTime: '2025-09-27T16:00:00',
+        scheduledTime: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
         completed: false,
         aiSuggested: false,
         type: 'practice'
@@ -120,6 +137,47 @@ export function AIStudyPlanner({ onBack }: { onBack: () => void }) {
       }
     ])
   }, [])
+
+  // Optimized functions with useCallback
+  const toggleTimer = useCallback((sessionId: string) => {
+    if (activeTimer === sessionId) {
+      setActiveTimer(null)
+      setTimerSeconds(0)
+    } else {
+      setActiveTimer(sessionId)
+      setTimerSeconds(0)
+    }
+  }, [activeTimer])
+
+  const completeSession = useCallback((sessionId: string) => {
+    setStudySessions(prev => prev.map(session => 
+      session.id === sessionId ? { ...session, completed: true } : session
+    ))
+    if (activeTimer === sessionId) {
+      setActiveTimer(null)
+      setTimerSeconds(0)
+    }
+  }, [activeTimer])
+
+  const formatTime = useCallback((seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+  }, [])
+
+  // Memoized computed values
+  const todaySessions = useMemo(() => 
+    studySessions.filter(session => {
+      const sessionDate = new Date(session.scheduledTime).toDateString()
+      const today = new Date().toDateString()
+      return sessionDate === today
+    }), [studySessions]
+  )
+
+  const completionRate = useMemo(() => {
+    const completed = studySessions.filter(s => s.completed).length
+    return studySessions.length > 0 ? Math.round((completed / studySessions.length) * 100) : 0
+  }, [studySessions])
 
   const generateAIPlan = async () => {
     setIsGeneratingPlan(true)
@@ -372,105 +430,279 @@ export function AIStudyPlanner({ onBack }: { onBack: () => void }) {
   )
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+    <div className="h-full bg-gradient-to-br from-slate-900/50 via-purple-900/50 to-slate-900/50 relative overflow-hidden rounded-2xl">
       {/* Background Pattern */}
-      <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 via-purple-500/10 to-fuchsia-500/10" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_2px_2px,rgba(147,51,234,0.15)_1px,transparent_0)] bg-[length:32px_32px]" />
+      <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-purple-500/5 to-fuchsia-500/5" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_2px_2px,rgba(147,51,234,0.1)_1px,transparent_0)] bg-[length:32px_32px]" />
       
-      <div className="relative z-10 p-4 sm:p-6 lg:p-8">
-        <div className="max-w-6xl mx-auto space-y-6">
+      <div className="relative z-10 p-3 sm:p-4 h-full overflow-y-auto">
+        <div className="max-w-5xl mx-auto space-y-4">
           
-          {/* Header */}
+          {/* Compact Header */}
           <motion.div 
-            className="flex items-center justify-between"
+            className="flex items-center justify-between mb-4"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <div className="flex items-center space-x-4">
-              <Button
-                onClick={onBack}
-                variant="ghost"
-                className="p-2 hover:bg-white/10 rounded-full text-white/70 hover:text-white"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div className="flex items-center space-x-3">
-                <div className="p-3 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-2xl border border-blue-400/30">
-                  <Calendar className="h-6 w-6 text-blue-300" />
-                </div>
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-black text-white">AI Study Planner</h1>
-                  <p className="text-white/60 text-sm">Personalized learning schedules powered by AI</p>
-                </div>
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-xl border border-blue-400/30">
+                <Brain className="h-5 w-5 text-blue-300" />
+              </div>
+              <div>
+                <h1 className="text-lg sm:text-xl font-bold text-white">AI Study Planner</h1>
+                <p className="text-white/60 text-xs sm:text-sm">Smart learning schedules</p>
               </div>
             </div>
             
             <div className="flex items-center space-x-2">
+              <Badge className="bg-green-500/20 text-green-300 border-green-400/30 text-xs">
+                {completionRate}% Complete
+              </Badge>
               <Button
-                variant="ghost"
-                className="p-2 hover:bg-white/10 rounded-full text-white/70 hover:text-white"
+                onClick={() => generateAIPlan()}
+                disabled={isGeneratingPlan}
+                className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white text-xs px-3 py-1.5 h-auto"
               >
-                <Settings className="h-5 w-5" />
+                {isGeneratingPlan ? (
+                  <>
+                    <RotateCcw className="h-3 w-3 mr-1 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    AI Plan
+                  </>
+                )}
               </Button>
             </div>
           </motion.div>
 
-          {/* Navigation Tabs */}
+          {/* Quick Stats */}
           <motion.div
-            className="flex space-x-2 bg-white/10 backdrop-blur-xl p-2 rounded-2xl border border-white/20"
+            className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            {[
-              { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-              { id: 'planner', label: 'Planner', icon: Calendar },
-              { id: 'goals', label: 'Goals', icon: Target },
-              { id: 'analytics', label: 'Analytics', icon: TrendingUp }
-            ].map((tab) => {
-              const Icon = tab.icon
-              return (
-                <Button
-                  key={tab.id}
-                  onClick={() => setCurrentView(tab.id as any)}
-                  className={`flex-1 py-2 px-4 rounded-xl font-medium text-sm transition-all ${
-                    currentView === tab.id
-                      ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  <Icon className="h-4 w-4 mr-2" />
-                  {tab.label}
-                </Button>
-              )
-            })}
+            <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+              <CardContent className="p-3">
+                <div className="flex items-center space-x-2">
+                  <Clock className="h-4 w-4 text-blue-400" />
+                  <div>
+                    <p className="text-white text-xs font-medium">Today</p>
+                    <p className="text-white/60 text-xs">{todaySessions.length} sessions</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+              <CardContent className="p-3">
+                <div className="flex items-center space-x-2">
+                  <Target className="h-4 w-4 text-green-400" />
+                  <div>
+                    <p className="text-white text-xs font-medium">Goals</p>
+                    <p className="text-white/60 text-xs">{studyGoals.length} active</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+              <CardContent className="p-3">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle2 className="h-4 w-4 text-purple-400" />
+                  <div>
+                    <p className="text-white text-xs font-medium">Completed</p>
+                    <p className="text-white/60 text-xs">{studySessions.filter(s => s.completed).length} sessions</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+              <CardContent className="p-3">
+                <div className="flex items-center space-x-2">
+                  <Timer className="h-4 w-4 text-orange-400" />
+                  <div>
+                    <p className="text-white text-xs font-medium">Active</p>
+                    <p className="text-white/60 text-xs">{activeTimer ? formatTime(timerSeconds) : '00:00'}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </motion.div>
 
-          {/* Content */}
+          {/* Today's Sessions */}
           <motion.div
-            key={currentView}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
+            transition={{ delay: 0.2 }}
           >
-            {currentView === 'dashboard' && renderDashboard()}
-            {currentView === 'planner' && (
-              <div className="text-center py-12">
-                <p className="text-white/60">Advanced Planner View - Coming Soon</p>
-              </div>
-            )}
-            {currentView === 'goals' && (
-              <div className="text-center py-12">
-                <p className="text-white/60">Goals Management - Coming Soon</p>
-              </div>
-            )}
-            {currentView === 'analytics' && (
-              <div className="text-center py-12">
-                <p className="text-white/60">Study Analytics - Coming Soon</p>
-              </div>
-            )}
+            <Card className="bg-white/5 border-white/10 backdrop-blur-xl">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white text-base flex items-center space-x-2">
+                  <Calendar className="h-4 w-4 text-blue-400" />
+                  <span>Today's Schedule</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {todaySessions.length === 0 ? (
+                  <div className="text-center py-6">
+                    <BookOpen className="h-8 w-8 text-white/30 mx-auto mb-2" />
+                    <p className="text-white/60 text-sm">No sessions scheduled for today</p>
+                    <Button
+                      onClick={() => generateAIPlan()}
+                      className="mt-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-400/30 text-xs"
+                      variant="outline"
+                    >
+                      Generate AI Schedule
+                    </Button>
+                  </div>
+                ) : (
+                  todaySessions.map((session, index) => (
+                    <motion.div
+                      key={session.id}
+                      className="p-3 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-all"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <Badge 
+                              className={`text-xs ${
+                                session.priority === 'urgent' ? 'bg-red-500/20 text-red-300 border-red-400/30' :
+                                session.priority === 'high' ? 'bg-orange-500/20 text-orange-300 border-orange-400/30' :
+                                session.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-300 border-yellow-400/30' :
+                                'bg-green-500/20 text-green-300 border-green-400/30'
+                              }`}
+                            >
+                              {session.priority}
+                            </Badge>
+                            {session.aiSuggested && (
+                              <Badge className="bg-purple-500/20 text-purple-300 border-purple-400/30 text-xs">
+                                <Sparkles className="h-2 w-2 mr-1" />
+                                AI
+                              </Badge>
+                            )}
+                          </div>
+                          <h4 className="text-white font-medium text-sm truncate">{session.topic}</h4>
+                          <p className="text-white/60 text-xs">{session.subject} • {session.duration} min</p>
+                          <p className="text-white/50 text-xs">
+                            {new Date(session.scheduledTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2 ml-3">
+                          {session.completed ? (
+                            <Badge className="bg-green-500/20 text-green-300 border-green-400/30 text-xs">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Done
+                            </Badge>
+                          ) : (
+                            <>
+                              <Button
+                                onClick={() => toggleTimer(session.id)}
+                                variant="outline"
+                                size="sm"
+                                className="bg-white/5 border-white/20 text-white hover:bg-white/10 p-1.5 h-auto"
+                              >
+                                {activeTimer === session.id ? (
+                                  <PauseCircle className="h-3 w-3" />
+                                ) : (
+                                  <PlayCircle className="h-3 w-3" />
+                                )}
+                              </Button>
+                              <Button
+                                onClick={() => completeSession(session.id)}
+                                variant="outline"
+                                size="sm"
+                                className="bg-green-500/10 border-green-400/30 text-green-300 hover:bg-green-500/20 p-1.5 h-auto"
+                              >
+                                <CheckCircle2 className="h-3 w-3" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {activeTimer === session.id && (
+                        <motion.div
+                          className="mt-2 p-2 bg-blue-500/10 rounded-lg border border-blue-400/20"
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-blue-300 text-sm font-mono">{formatTime(timerSeconds)}</span>
+                            <span className="text-blue-300/60 text-xs">Session in progress</span>
+                          </div>
+                        </motion.div>
+                      )}
+                    </motion.div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
           </motion.div>
 
+          {/* Study Goals */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Card className="bg-white/5 border-white/10 backdrop-blur-xl">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white text-base flex items-center space-x-2">
+                  <Target className="h-4 w-4 text-green-400" />
+                  <span>Study Goals</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {studyGoals.map((goal, index) => (
+                  <motion.div
+                    key={goal.id}
+                    className="p-3 bg-white/5 rounded-xl border border-white/10"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-white font-medium text-sm truncate">{goal.title}</h4>
+                        <p className="text-white/60 text-xs">{goal.subject}</p>
+                      </div>
+                      <div className="text-right ml-3">
+                        <p className="text-white font-bold text-sm">{goal.progress}%</p>
+                        <p className="text-white/60 text-xs">{goal.completedSessions}/{goal.sessions}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="w-full bg-white/10 rounded-full h-1.5 mb-2">
+                      <motion.div
+                        className="bg-gradient-to-r from-green-400 to-emerald-400 h-1.5 rounded-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${goal.progress}%` }}
+                        transition={{ duration: 1, delay: 0.2 }}
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <p className="text-white/60 text-xs">
+                        Due: {new Date(goal.targetDate).toLocaleDateString()}
+                      </p>
+                      <Badge className="bg-blue-500/20 text-blue-300 border-blue-400/30 text-xs">
+                        {Math.max(0, Math.ceil((new Date(goal.targetDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))} days left
+                      </Badge>
+                    </div>
+                  </motion.div>
+                ))}
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
       </div>
     </div>

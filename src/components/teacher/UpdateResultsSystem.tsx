@@ -56,6 +56,7 @@ import OMRScanningInterface from './OMRScanningInterface'
 import RubricGradingInterface from './RubricGradingInterface'
 import GradeExportSystem from './GradeExportSystem'
 import BulkGradeOperations from './BulkGradeOperations'
+import StudentGradeList from './StudentGradeList'
 
 interface Student {
   id: string
@@ -132,6 +133,7 @@ export default function UpdateResultsSystem() {
   const [isOnline, setIsOnline] = useState(true)
   const [pendingSync, setPendingSync] = useState<Grade[]>([])
   const [loading, setLoading] = useState(false)
+  const [loadingStudents, setLoadingStudents] = useState(false)
   const [showAnalytics, setShowAnalytics] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showAssessmentDetails, setShowAssessmentDetails] = useState(false)
@@ -191,6 +193,7 @@ export default function UpdateResultsSystem() {
     }
 
     try {
+      setLoadingStudents(true)
       console.log('🔄 Fetching students for class:', classId)
       const response = await fetch(`/api/teacher/students?school_id=${profile.school_id}&class_id=${classId}`)
       if (response.ok) {
@@ -205,6 +208,8 @@ export default function UpdateResultsSystem() {
       console.error('Error fetching students:', error)
       toast.error('Failed to load students')
       setStudents([])
+    } finally {
+      setLoadingStudents(false)
     }
   }, [user, profile])
 
@@ -300,59 +305,71 @@ export default function UpdateResultsSystem() {
     }
   }, [selectedAssessment, fetchStudents])
 
-  const saveGrade = useCallback(async (studentId: string, score: number, feedback?: string) => {
+  const handleGradeChange = useCallback((studentId: string, grade: Grade) => {
+    setGrades(prev => ({ ...prev, [studentId]: grade }))
+  }, [])
+
+  const handleSaveGrades = useCallback(async () => {
     if (!selectedAssessment) return
 
-    const percentage = (score / selectedAssessment.max_score) * 100
-    const letterGrade = calculateLetterGrade(percentage)
+    setLoading(true)
+    let successCount = 0
+    let errorCount = 0
     
-    const grade: Grade = {
-      id: `temp_${Date.now()}_${studentId}`,
-      student_id: studentId,
-      assessment_id: selectedAssessment.id,
-      score,
-      percentage,
-      letter_grade: letterGrade,
-      feedback,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-
-    // Update local state immediately
-    setGrades(prev => ({ ...prev, [studentId]: grade }))
-
-    if (isOnline) {
-      try {
-        const response = await fetch('/api/teacher/assessment-grades', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(grade)
-        })
-        
-        if (response.ok) {
-          const savedGrade = await response.json()
-          setGrades(prev => ({ ...prev, [studentId]: savedGrade }))
-          toast.success('Grade saved successfully')
-        } else {
-          throw new Error('Failed to save grade')
+    for (const [studentId, grade] of Object.entries(grades)) {
+      if (isOnline) {
+        try {
+          const response = await fetch('/api/teacher/assessment-grades', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(grade)
+          })
+          
+          if (response.ok) {
+            successCount++
+          } else {
+            errorCount++
+          }
+        } catch (error) {
+          errorCount++
+          // Store for offline sync
+          setPendingSync(prev => [...prev, grade])
         }
-      } catch (error) {
+      } else {
         // Store for offline sync
         setPendingSync(prev => [...prev, grade])
-        toast.warning('Grade saved offline - will sync when online')
+        toast.warning('Grades saved offline - will sync when online')
       }
-    } else {
-      // Store for offline sync
-      setPendingSync(prev => [...prev, grade])
-      toast.warning('Grade saved offline - will sync when online')
     }
-  }, [selectedAssessment, isOnline])
+    
+    setLoading(false)
+    
+    if (successCount > 0) {
+      toast.success(`${successCount} grade(s) saved successfully!`)
+    }
+    if (errorCount > 0) {
+      toast.error(`${errorCount} grade(s) failed to save`)
+    }
+  }, [selectedAssessment, grades, isOnline])
 
   const applyToAll = (score: number) => {
     if (!selectedAssessment) return
     
+    const percentage = (score / selectedAssessment.max_score) * 100
+    const letterGrade = calculateLetterGrade(percentage)
+    
     students.forEach(student => {
-      saveGrade(student.id, score)
+      const grade: Grade = {
+        id: `temp_${Date.now()}_${student.id}`,
+        student_id: student.id,
+        assessment_id: selectedAssessment.id,
+        score,
+        percentage,
+        letter_grade: letterGrade,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+      handleGradeChange(student.id, grade)
     })
     toast.success(`Applied score ${score} to all students`)
   }
@@ -927,148 +944,27 @@ export default function UpdateResultsSystem() {
                 <div className="space-y-3 lg:space-y-4">
                   <TabsContent value="grid" className="space-y-3 lg:space-y-4">
                     <Card className="bg-gradient-to-br from-white to-slate-50 border border-slate-200 rounded-xl shadow-lg">
+                      <CardHeader className="p-3 lg:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200/30">
+                        <CardTitle className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                          <Grid3X3 className="h-5 w-5 text-blue-600" />
+                          Grid Entry Mode
+                        </CardTitle>
+                        <CardDescription className="text-sm text-slate-600 mt-1">
+                          Excel-like spreadsheet interface for quick grade entry
+                        </CardDescription>
+                      </CardHeader>
                       <CardContent className="p-3 lg:p-4 xl:p-5">
-                        {students.length === 0 ? (
-                          <div className="text-center py-6 sm:py-8">
-                            <div className="p-3 sm:p-4 bg-slate-100 rounded-xl sm:rounded-2xl inline-block mb-3 sm:mb-4">
-                              <Users className="h-6 w-6 sm:h-8 sm:w-8 lg:h-10 lg:w-10 text-slate-400" />
-                            </div>
-                            <h3 className="text-base sm:text-lg font-semibold text-slate-800 mb-1.5 sm:mb-2">No Students Found</h3>
-                            <p className="text-xs sm:text-sm text-slate-600 mb-3 sm:mb-4">
-                              Students will appear here when you select an assessment with enrolled students.
-                            </p>
-                            <Button 
-                              onClick={() => window.location.reload()} 
-                              variant="outline"
-                              className="border-slate-300 hover:bg-slate-50"
-                            >
-                              Refresh Page
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="space-y-2.5 sm:space-y-3">
-                            <div className="text-xs sm:text-sm text-slate-600 bg-slate-50 p-2 sm:p-3 rounded-lg">
-                              <strong>{students.length}</strong> students enrolled • 
-                              <strong className="ml-2">{selectedAssessment.max_score}</strong> max points
-                            </div>
-                            <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-2 sm:gap-3 lg:gap-4">
-                              {students.map((student, index) => (
-                                <motion.div
-                                  key={student.id}
-                                  initial={{ opacity: 0, y: 20 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  transition={{ delay: index * 0.05 }}
-                                  className="p-3 lg:p-4 bg-white border border-slate-200 rounded-lg lg:rounded-xl hover:shadow-md transition-all"
-                                >
-                                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                                    <div className="flex-1 min-w-0">
-                                      <h4 className="font-semibold text-sm sm:text-base text-slate-800 truncate">
-                                        {student.full_name || `${student.first_name} ${student.last_name}`}
-                                      </h4>
-                                      <p className="text-xs sm:text-sm text-slate-500">
-                                        Student ID: {student.student_number || student.student_id || 'N/A'}
-                                      </p>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 sm:gap-2">
-                                      <div className="flex items-center gap-1.5 sm:gap-2">
-                                        <Input
-                                          type="number"
-                                          placeholder="Score"
-                                          min="0"
-                                          max={selectedAssessment.max_score}
-                                          value={grades[student.id]?.score || ''}
-                                          onChange={(e) => {
-                                            const score = parseFloat(e.target.value) || 0
-                                            // Only update local state, don't auto-save
-                                            const percentage = (score / selectedAssessment.max_score) * 100
-                                            const letterGrade = calculateLetterGrade(percentage)
-                                            setGrades(prev => ({ 
-                                              ...prev, 
-                                              [student.id]: {
-                                                id: `temp_${Date.now()}_${student.id}`,
-                                                student_id: student.id,
-                                                assessment_id: selectedAssessment.id,
-                                                score,
-                                                percentage,
-                                                letter_grade: letterGrade,
-                                                created_at: new Date().toISOString(),
-                                                updated_at: new Date().toISOString()
-                                              }
-                                            }))
-                                          }}
-                                          className="w-20 sm:w-24 text-center"
-                                        />
-                                        <span className="text-sm text-slate-500">
-                                          / {selectedAssessment.max_score}
-                                        </span>
-                                      </div>
-                                      <div className="text-sm font-medium">
-                                        {grades[student.id]?.score ? 
-                                          `${Math.round((grades[student.id].score / selectedAssessment.max_score) * 100)}%` 
-                                          : '—'
-                                        }
-                                      </div>
-                                    </div>
-                                  </div>
-                                </motion.div>
-                              ))}
-                            </div>
-                            
-                            {/* Save All Grades Button */}
-                            {Object.keys(grades).length > 0 && (
-                              <div className="mt-6 flex justify-center">
-                                <Button
-                                  onClick={async () => {
-                                    setLoading(true)
-                                    let successCount = 0
-                                    let errorCount = 0
-                                    
-                                    for (const [studentId, grade] of Object.entries(grades)) {
-                                      try {
-                                        const response = await fetch('/api/teacher/assessment-grades', {
-                                          method: 'POST',
-                                          headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify(grade)
-                                        })
-                                        
-                                        if (response.ok) {
-                                          successCount++
-                                        } else {
-                                          errorCount++
-                                        }
-                                      } catch (error) {
-                                        errorCount++
-                                      }
-                                    }
-                                    
-                                    setLoading(false)
-                                    
-                                    if (successCount > 0) {
-                                      toast.success(`${successCount} grade(s) saved successfully!`)
-                                    }
-                                    if (errorCount > 0) {
-                                      toast.error(`${errorCount} grade(s) failed to save`)
-                                    }
-                                  }}
-                                  disabled={loading}
-                                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-8 py-3 text-base font-semibold shadow-lg hover:shadow-xl transition-all"
-                                >
-                                  {loading ? (
-                                    <>
-                                      <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
-                                      Saving Grades...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Save className="h-5 w-5 mr-2" />
-                                      Save All Grades ({Object.keys(grades).length})
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        )}
+                        <StudentGradeList
+                          students={students}
+                          assessment={selectedAssessment}
+                          grades={grades}
+                          onGradeChange={handleGradeChange}
+                          onSaveGrades={handleSaveGrades}
+                          loading={loadingStudents}
+                          mode="grid"
+                          showFeedback={false}
+                          showAnalytics={true}
+                        />
                       </CardContent>
                     </Card>
                   </TabsContent>
@@ -1085,18 +981,35 @@ export default function UpdateResultsSystem() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="p-4 sm:p-6">
-                        <div className="text-center py-8 sm:py-12">
+                        {/* OMR Upload Section */}
+                        <div className="mb-6 text-center py-6 bg-purple-50 rounded-xl border-2 border-dashed border-purple-300">
                           <div className="p-4 bg-purple-100 rounded-2xl inline-block mb-4">
-                            <Scan className="h-8 w-8 sm:h-12 sm:w-12 text-purple-600" />
+                            <Scan className="h-8 w-8 text-purple-600" />
                           </div>
-                          <h3 className="text-lg sm:text-xl font-semibold text-slate-800 mb-2">OMR Scanner</h3>
-                          <p className="text-sm sm:text-base text-slate-600 mb-4">
-                            Upload OMR sheets for automatic grade processing
+                          <h3 className="text-lg font-semibold text-slate-800 mb-2">Upload OMR Sheets</h3>
+                          <p className="text-sm text-slate-600 mb-4">
+                            Upload scanned OMR sheets for automatic processing
                           </p>
                           <Button className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white border-0">
                             <Upload className="h-4 w-4 mr-2" />
-                            Upload OMR Sheets
+                            Select OMR Files
                           </Button>
+                        </div>
+                        
+                        {/* Student List for Manual Entry */}
+                        <div className="mt-6">
+                          <h4 className="text-sm font-semibold text-slate-700 mb-3">Or Enter Scores Manually:</h4>
+                          <StudentGradeList
+                            students={students}
+                            assessment={selectedAssessment}
+                            grades={grades}
+                            onGradeChange={handleGradeChange}
+                            onSaveGrades={handleSaveGrades}
+                            loading={loadingStudents}
+                            mode="compact"
+                            showFeedback={false}
+                            showAnalytics={false}
+                          />
                         </div>
                       </CardContent>
                     </Card>
@@ -1114,19 +1027,32 @@ export default function UpdateResultsSystem() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="p-4 sm:p-6">
-                        <div className="text-center py-8 sm:py-12">
-                          <div className="p-4 bg-orange-100 rounded-2xl inline-block mb-4">
-                            <Target className="h-8 w-8 sm:h-12 sm:w-12 text-orange-600" />
+                        {/* Rubric Creation Section */}
+                        <div className="mb-6 p-4 bg-orange-50 rounded-xl border border-orange-200">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-sm font-semibold text-slate-700">Rubric Criteria</h4>
+                            <Button size="sm" className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white border-0">
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add Criteria
+                            </Button>
                           </div>
-                          <h3 className="text-lg sm:text-xl font-semibold text-slate-800 mb-2">Rubric Grading</h3>
-                          <p className="text-sm sm:text-base text-slate-600 mb-4">
-                            Create and use rubrics for consistent evaluation
+                          <p className="text-sm text-slate-600">
+                            Create rubric criteria to evaluate students consistently
                           </p>
-                          <Button className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white border-0">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Create Rubric
-                          </Button>
                         </div>
+                        
+                        {/* Student List with Rubric Grading */}
+                        <StudentGradeList
+                          students={students}
+                          assessment={selectedAssessment}
+                          grades={grades}
+                          onGradeChange={handleGradeChange}
+                          onSaveGrades={handleSaveGrades}
+                          loading={loadingStudents}
+                          mode="list"
+                          showFeedback={true}
+                          showAnalytics={false}
+                        />
                       </CardContent>
                     </Card>
                   </TabsContent>
@@ -1143,19 +1069,34 @@ export default function UpdateResultsSystem() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="p-4 sm:p-6">
-                        <div className="text-center py-8 sm:py-12">
-                          <div className="p-4 bg-green-100 rounded-2xl inline-block mb-4">
-                            <FileText className="h-8 w-8 sm:h-12 sm:w-12 text-green-600" />
-                          </div>
-                          <h3 className="text-lg sm:text-xl font-semibold text-slate-800 mb-2">Digital Review</h3>
-                          <p className="text-sm sm:text-base text-slate-600 mb-4">
-                            Grade digital submissions with rich feedback tools
-                          </p>
-                          <Button className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0">
-                            <Eye className="h-4 w-4 mr-2" />
+                        {/* Digital Submission Options */}
+                        <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <Button variant="outline" className="justify-start gap-2">
+                            <Eye className="h-4 w-4" />
                             View Submissions
                           </Button>
+                          <Button variant="outline" className="justify-start gap-2">
+                            <MessageSquare className="h-4 w-4" />
+                            Add Comments
+                          </Button>
+                          <Button variant="outline" className="justify-start gap-2">
+                            <PenTool className="h-4 w-4" />
+                            Annotate
+                          </Button>
                         </div>
+                        
+                        {/* Student List with Feedback */}
+                        <StudentGradeList
+                          students={students}
+                          assessment={selectedAssessment}
+                          grades={grades}
+                          onGradeChange={handleGradeChange}
+                          onSaveGrades={handleSaveGrades}
+                          loading={loadingStudents}
+                          mode="list"
+                          showFeedback={true}
+                          showAnalytics={true}
+                        />
                       </CardContent>
                     </Card>
                   </TabsContent>
@@ -1172,19 +1113,61 @@ export default function UpdateResultsSystem() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="p-4 sm:p-6">
-                        <div className="text-center py-8 sm:py-12">
-                          <div className="p-4 bg-teal-100 rounded-2xl inline-block mb-4">
-                            <Users className="h-8 w-8 sm:h-12 sm:w-12 text-teal-600" />
+                        {/* Bulk Actions */}
+                        <div className="mb-6 p-4 bg-teal-50 rounded-xl border border-teal-200">
+                          <h4 className="text-sm font-semibold text-slate-700 mb-3">Quick Actions</h4>
+                          <div className="flex flex-wrap gap-2">
+                            <Button 
+                              onClick={() => applyToAll(selectedAssessment?.max_score || 100)}
+                              size="sm" 
+                              variant="outline"
+                              className="border-teal-300 hover:bg-teal-50"
+                            >
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Full Score to All
+                            </Button>
+                            <Button 
+                              onClick={() => applyToAll((selectedAssessment?.max_score || 100) * 0.8)}
+                              size="sm" 
+                              variant="outline"
+                              className="border-teal-300 hover:bg-teal-50"
+                            >
+                              <Star className="h-3 w-3 mr-1" />
+                              80% to All
+                            </Button>
+                            <Button 
+                              onClick={() => applyToAll((selectedAssessment?.max_score || 100) * 0.7)}
+                              size="sm" 
+                              variant="outline"
+                              className="border-teal-300 hover:bg-teal-50"
+                            >
+                              <TrendingUp className="h-3 w-3 mr-1" />
+                              70% to All
+                            </Button>
+                            <Button 
+                              onClick={() => setGrades({})}
+                              size="sm" 
+                              variant="outline"
+                              className="border-red-300 hover:bg-red-50 text-red-600"
+                            >
+                              <RefreshCw className="h-3 w-3 mr-1" />
+                              Clear All
+                            </Button>
                           </div>
-                          <h3 className="text-lg sm:text-xl font-semibold text-slate-800 mb-2">Bulk Operations</h3>
-                          <p className="text-sm sm:text-base text-slate-600 mb-4">
-                            Efficiently manage grades for multiple students
-                          </p>
-                          <Button className="bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white border-0">
-                            <Zap className="h-4 w-4 mr-2" />
-                            Bulk Actions
-                          </Button>
                         </div>
+                        
+                        {/* Student List */}
+                        <StudentGradeList
+                          students={students}
+                          assessment={selectedAssessment}
+                          grades={grades}
+                          onGradeChange={handleGradeChange}
+                          onSaveGrades={handleSaveGrades}
+                          loading={loadingStudents}
+                          mode="list"
+                          showFeedback={false}
+                          showAnalytics={true}
+                        />
                       </CardContent>
                     </Card>
                   </TabsContent>
@@ -1201,24 +1184,47 @@ export default function UpdateResultsSystem() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="p-4 sm:p-6">
-                        <div className="text-center py-8 sm:py-12">
-                          <div className="p-4 bg-slate-100 rounded-2xl inline-block mb-4">
-                            <Download className="h-8 w-8 sm:h-12 sm:w-12 text-slate-600" />
-                          </div>
-                          <h3 className="text-lg sm:text-xl font-semibold text-slate-800 mb-2">Export Data</h3>
-                          <p className="text-sm sm:text-base text-slate-600 mb-4">
-                            Download grades in various formats for record keeping
-                          </p>
-                          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
+                        {/* Export Options */}
+                        <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                          <h4 className="text-sm font-semibold text-slate-700 mb-3">Export Options</h4>
+                          <div className="flex flex-wrap gap-2">
                             <Button className="bg-gradient-to-r from-slate-500 to-gray-600 hover:from-slate-600 hover:to-gray-700 text-white border-0">
                               <FileSpreadsheet className="h-4 w-4 mr-2" />
-                              Export Excel
+                              Export to Excel
                             </Button>
                             <Button variant="outline" className="border-slate-300 hover:bg-slate-50">
                               <FileText className="h-4 w-4 mr-2" />
-                              Export PDF
+                              Export to PDF
+                            </Button>
+                            <Button variant="outline" className="border-slate-300 hover:bg-slate-50">
+                              <Download className="h-4 w-4 mr-2" />
+                              Export to CSV
+                            </Button>
+                            <Button 
+                              onClick={generateAnalytics}
+                              variant="outline" 
+                              className="border-emerald-300 hover:bg-emerald-50 text-emerald-700"
+                            >
+                              <BarChart3 className="h-4 w-4 mr-2" />
+                              Generate Report
                             </Button>
                           </div>
+                        </div>
+                        
+                        {/* Grade Preview for Export */}
+                        <div>
+                          <h4 className="text-sm font-semibold text-slate-700 mb-3">Grade Preview:</h4>
+                          <StudentGradeList
+                            students={students}
+                            assessment={selectedAssessment}
+                            grades={grades}
+                            onGradeChange={handleGradeChange}
+                            onSaveGrades={handleSaveGrades}
+                            loading={loadingStudents}
+                            mode="compact"
+                            showFeedback={false}
+                            showAnalytics={true}
+                          />
                         </div>
                       </CardContent>
                     </Card>

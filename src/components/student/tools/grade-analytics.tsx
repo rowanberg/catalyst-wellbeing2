@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -25,7 +25,9 @@ import {
   Download,
   Filter,
   Eye,
-  Activity
+  Activity,
+  Sparkles,
+  RefreshCw
 } from 'lucide-react'
 
 interface Grade {
@@ -57,12 +59,12 @@ interface SubjectAnalytics {
   }
 }
 
-export function GradeAnalytics({ onBack }: { onBack: () => void }) {
-  const [currentView, setCurrentView] = useState<'overview' | 'subjects' | 'trends' | 'predictions'>('overview')
+export function GradeAnalytics({ onBack }: { onBack?: () => void }) {
   const [grades, setGrades] = useState<Grade[]>([])
   const [subjectAnalytics, setSubjectAnalytics] = useState<SubjectAnalytics[]>([])
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null)
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'semester' | 'year'>('month')
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Mock data for demonstration
   useEffect(() => {
@@ -188,334 +190,311 @@ export function GradeAnalytics({ onBack }: { onBack: () => void }) {
     ])
   }, [])
 
-  const getGradeColor = (percentage: number) => {
+  // Optimized functions with useCallback
+  const refreshData = useCallback(async () => {
+    setIsRefreshing(true)
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    setIsRefreshing(false)
+  }, [])
+
+  const getGradeColor = useCallback((percentage: number) => {
     if (percentage >= 90) return 'text-green-400'
     if (percentage >= 80) return 'text-blue-400'
     if (percentage >= 70) return 'text-yellow-400'
     if (percentage >= 60) return 'text-orange-400'
     return 'text-red-400'
-  }
+  }, [])
 
-  const getGradeBadgeColor = (percentage: number) => {
-    if (percentage >= 90) return 'bg-green-500/20 text-green-300 border-green-400/30'
-    if (percentage >= 80) return 'bg-blue-500/20 text-blue-300 border-blue-400/30'
-    if (percentage >= 70) return 'bg-yellow-500/20 text-yellow-300 border-yellow-400/30'
-    if (percentage >= 60) return 'bg-orange-500/20 text-orange-300 border-orange-400/30'
-    return 'bg-red-500/20 text-red-300 border-red-400/30'
-  }
+  const getGradeLetter = useCallback((percentage: number) => {
+    if (percentage >= 97) return 'A+'
+    if (percentage >= 93) return 'A'
+    if (percentage >= 90) return 'A-'
+    if (percentage >= 87) return 'B+'
+    if (percentage >= 83) return 'B'
+    if (percentage >= 80) return 'B-'
+    if (percentage >= 77) return 'C+'
+    if (percentage >= 73) return 'C'
+    if (percentage >= 70) return 'C-'
+    if (percentage >= 67) return 'D+'
+    if (percentage >= 65) return 'D'
+    return 'F'
+  }, [])
 
-  const getTrendIcon = (trend: string, percentage: number) => {
-    if (trend === 'up') return <TrendingUp className="h-4 w-4 text-green-400" />
-    if (trend === 'down') return <TrendingDown className="h-4 w-4 text-red-400" />
-    return <Activity className="h-4 w-4 text-gray-400" />
-  }
-
-  const getAssignmentTypeIcon = (type: string) => {
-    switch (type) {
-      case 'test': return <BookOpen className="h-4 w-4 text-red-400" />
-      case 'quiz': return <Zap className="h-4 w-4 text-yellow-400" />
-      case 'homework': return <Clock className="h-4 w-4 text-blue-400" />
-      case 'project': return <Star className="h-4 w-4 text-purple-400" />
-      case 'participation': return <Award className="h-4 w-4 text-green-400" />
-      default: return <BookOpen className="h-4 w-4" />
-    }
-  }
-
-  const calculateOverallGPA = () => {
+  // Memoized computed values
+  const overallGPA = useMemo(() => {
     const totalPoints = subjectAnalytics.reduce((sum, subject) => sum + subject.currentGrade, 0)
-    return (totalPoints / subjectAnalytics.length).toFixed(2)
-  }
+    return subjectAnalytics.length > 0 ? (totalPoints / subjectAnalytics.length).toFixed(2) : '0.00'
+  }, [subjectAnalytics])
 
-  const renderOverview = () => (
-    <div className="space-y-6">
-      {/* Overall Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <motion.div
-          className="p-4 rounded-2xl bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-400/20 backdrop-blur-sm"
-          whileHover={{ scale: 1.02 }}
-        >
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-500/20 rounded-lg">
-              <BarChart3 className="h-5 w-5 text-blue-300" />
-            </div>
-            <div>
-              <p className="text-white/90 font-bold text-lg">{calculateOverallGPA()}</p>
-              <p className="text-white/60 text-xs">Overall GPA</p>
-            </div>
-          </div>
-        </motion.div>
+  const recentGrades = useMemo(() => 
+    grades.slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5),
+    [grades]
+  )
 
-        <motion.div
-          className="p-4 rounded-2xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-400/20 backdrop-blur-sm"
-          whileHover={{ scale: 1.02 }}
-        >
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-green-500/20 rounded-lg">
-              <TrendingUp className="h-5 w-5 text-green-300" />
-            </div>
-            <div>
-              <p className="text-white/90 font-bold text-lg">{subjectAnalytics.filter(s => s.trend === 'up').length}</p>
-              <p className="text-white/60 text-xs">Improving Subjects</p>
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div
-          className="p-4 rounded-2xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-400/20 backdrop-blur-sm"
-          whileHover={{ scale: 1.02 }}
-        >
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-purple-500/20 rounded-lg">
-              <Award className="h-5 w-5 text-purple-300" />
-            </div>
-            <div>
-              <p className="text-white/90 font-bold text-lg">{grades.length}</p>
-              <p className="text-white/60 text-xs">Total Assignments</p>
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div
-          className="p-4 rounded-2xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-400/20 backdrop-blur-sm"
-          whileHover={{ scale: 1.02 }}
-        >
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-yellow-500/20 rounded-lg">
-              <Target className="h-5 w-5 text-yellow-300" />
-            </div>
-            <div>
-              <p className="text-white/90 font-bold text-lg">{subjectAnalytics.filter(s => s.currentGrade >= 90).length}</p>
-              <p className="text-white/60 text-xs">A Grades</p>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Subject Performance */}
-      <Card className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-white/90 text-lg font-bold flex items-center space-x-2">
-            <PieChart className="h-5 w-5 text-green-400" />
-            <span>Subject Performance</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {subjectAnalytics.map((subject) => (
-            <motion.div
-              key={subject.subject}
-              className="p-4 rounded-xl bg-white/5 border border-white/20 backdrop-blur-sm cursor-pointer hover:bg-white/10 transition-all"
-              whileHover={{ scale: 1.01, x: 4 }}
-              onClick={() => setSelectedSubject(subject.subject)}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-blue-500/20 rounded-lg">
-                    <BookOpen className="h-4 w-4 text-blue-300" />
-                  </div>
-                  <div>
-                    <p className="text-white/90 font-medium text-sm">{subject.subject}</p>
-                    <p className="text-white/60 text-xs">{subject.assignments} assignments</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className="flex items-center space-x-1">
-                    {getTrendIcon(subject.trend, subject.trendPercentage)}
-                    <span className={`text-xs font-medium ${
-                      subject.trend === 'up' ? 'text-green-400' : 
-                      subject.trend === 'down' ? 'text-red-400' : 'text-gray-400'
-                    }`}>
-                      {subject.trend === 'stable' ? '±' : ''}{Math.abs(subject.trendPercentage)}%
-                    </span>
-                  </div>
-                  <Badge className={`text-sm font-bold ${getGradeBadgeColor(subject.currentGrade)}`}>
-                    {subject.currentGrade.toFixed(1)}%
-                  </Badge>
-                </div>
-              </div>
-              
-              <div className="w-full bg-white/10 rounded-full h-2 mb-3">
-                <motion.div
-                  className={`h-2 rounded-full ${
-                    subject.currentGrade >= 90 ? 'bg-gradient-to-r from-green-400 to-emerald-400' :
-                    subject.currentGrade >= 80 ? 'bg-gradient-to-r from-blue-400 to-indigo-400' :
-                    subject.currentGrade >= 70 ? 'bg-gradient-to-r from-yellow-400 to-orange-400' :
-                    'bg-gradient-to-r from-red-400 to-pink-400'
-                  }`}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${subject.currentGrade}%` }}
-                  transition={{ duration: 1, delay: 0.2 }}
-                />
-              </div>
-
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-1">
-                    <CheckCircle2 className="h-3 w-3 text-green-400" />
-                    <span className="text-white/60">Strengths: {subject.strengths.slice(0, 2).join(', ')}</span>
-                  </div>
-                </div>
-                {subject.nextAssignment && (
-                  <div className="flex items-center space-x-1">
-                    <Calendar className="h-3 w-3 text-blue-400" />
-                    <span className="text-white/60">Next: {subject.nextAssignment.name}</span>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          ))}
-        </CardContent>
-      </Card>
-
-      {/* Recent Grades */}
-      <Card className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-white/90 text-lg font-bold flex items-center space-x-2">
-            <Clock className="h-5 w-5 text-blue-400" />
-            <span>Recent Assignments</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {grades.slice(0, 5).map((grade) => (
-            <motion.div
-              key={grade.id}
-              className="p-3 rounded-xl bg-white/5 border border-white/20 backdrop-blur-sm"
-              whileHover={{ scale: 1.01 }}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-gray-500/20 rounded-lg">
-                    {getAssignmentTypeIcon(grade.type)}
-                  </div>
-                  <div>
-                    <p className="text-white/90 font-medium text-sm">{grade.assignment}</p>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <p className="text-white/60 text-xs">{grade.subject}</p>
-                      <Badge className="bg-gray-500/20 text-gray-300 text-xs px-2 py-0 capitalize">
-                        {grade.type}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className={`font-bold text-sm ${getGradeColor(grade.percentage)}`}>
-                    {grade.score}/{grade.maxScore}
-                  </p>
-                  <p className="text-white/60 text-xs">{new Date(grade.date).toLocaleDateString()}</p>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </CardContent>
-      </Card>
-    </div>
+  const improvingSubjects = useMemo(() => 
+    subjectAnalytics.filter(subject => subject.trend === 'up').length,
+    [subjectAnalytics]
   )
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+    <div className="h-full bg-gradient-to-br from-slate-900/50 via-purple-900/50 to-slate-900/50 relative overflow-hidden rounded-2xl">
       {/* Background Pattern */}
-      <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 via-purple-500/10 to-fuchsia-500/10" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_2px_2px,rgba(147,51,234,0.15)_1px,transparent_0)] bg-[length:32px_32px]" />
+      <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-purple-500/5 to-fuchsia-500/5" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_2px_2px,rgba(147,51,234,0.1)_1px,transparent_0)] bg-[length:32px_32px]" />
       
-      <div className="relative z-10 p-4 sm:p-6 lg:p-8">
-        <div className="max-w-6xl mx-auto space-y-6">
+      <div className="relative z-10 p-3 sm:p-4 h-full overflow-y-auto">
+        <div className="max-w-5xl mx-auto space-y-4">
           
-          {/* Header */}
+          {/* Compact Header */}
           <motion.div 
-            className="flex items-center justify-between"
+            className="flex items-center justify-between mb-4"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <div className="flex items-center space-x-4">
-              <Button
-                onClick={onBack}
-                variant="ghost"
-                className="p-2 hover:bg-white/10 rounded-full text-white/70 hover:text-white"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div className="flex items-center space-x-3">
-                <div className="p-3 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-2xl border border-purple-400/30">
-                  <TrendingUp className="h-6 w-6 text-purple-300" />
-                </div>
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-black text-white">Grade Analytics</h1>
-                  <p className="text-white/60 text-sm">Track your academic progress and performance</p>
-                </div>
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl border border-purple-400/30">
+                <BarChart3 className="h-5 w-5 text-purple-300" />
+              </div>
+              <div>
+                <h1 className="text-lg sm:text-xl font-bold text-white">Grade Analytics</h1>
+                <p className="text-white/60 text-xs sm:text-sm">Academic performance tracker</p>
               </div>
             </div>
             
             <div className="flex items-center space-x-2">
+              <Badge className="bg-blue-500/20 text-blue-300 border-blue-400/30 text-xs">
+                GPA: {overallGPA}
+              </Badge>
               <Button
-                variant="ghost"
-                className="p-2 hover:bg-white/10 rounded-full text-white/70 hover:text-white"
+                onClick={refreshData}
+                disabled={isRefreshing}
+                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-xs px-3 py-1.5 h-auto"
               >
-                <Download className="h-5 w-5" />
-              </Button>
-              <Button
-                variant="ghost"
-                className="p-2 hover:bg-white/10 rounded-full text-white/70 hover:text-white"
-              >
-                <Settings className="h-5 w-5" />
+                {isRefreshing ? (
+                  <>
+                    <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    Refresh
+                  </>
+                )}
               </Button>
             </div>
           </motion.div>
 
-          {/* Navigation Tabs */}
+          {/* Quick Stats */}
           <motion.div
-            className="flex space-x-2 bg-white/10 backdrop-blur-xl p-2 rounded-2xl border border-white/20"
+            className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            {[
-              { id: 'overview', label: 'Overview', icon: BarChart3 },
-              { id: 'subjects', label: 'Subjects', icon: BookOpen },
-              { id: 'trends', label: 'Trends', icon: TrendingUp },
-              { id: 'predictions', label: 'Predictions', icon: Brain }
-            ].map((tab) => {
-              const Icon = tab.icon
-              return (
-                <Button
-                  key={tab.id}
-                  onClick={() => setCurrentView(tab.id as any)}
-                  className={`flex-1 py-2 px-4 rounded-xl font-medium text-sm transition-all ${
-                    currentView === tab.id
-                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  <Icon className="h-4 w-4 mr-2" />
-                  {tab.label}
-                </Button>
-              )
-            })}
+            <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+              <CardContent className="p-3">
+                <div className="flex items-center space-x-2">
+                  <Target className="h-4 w-4 text-green-400" />
+                  <div>
+                    <p className="text-white text-xs font-medium">Overall</p>
+                    <p className="text-white/60 text-xs">{overallGPA} GPA</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+              <CardContent className="p-3">
+                <div className="flex items-center space-x-2">
+                  <TrendingUp className="h-4 w-4 text-blue-400" />
+                  <div>
+                    <p className="text-white text-xs font-medium">Improving</p>
+                    <p className="text-white/60 text-xs">{improvingSubjects} subjects</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+              <CardContent className="p-3">
+                <div className="flex items-center space-x-2">
+                  <BookOpen className="h-4 w-4 text-purple-400" />
+                  <div>
+                    <p className="text-white text-xs font-medium">Subjects</p>
+                    <p className="text-white/60 text-xs">{subjectAnalytics.length} active</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white/5 border-white/10 backdrop-blur-sm">
+              <CardContent className="p-3">
+                <div className="flex items-center space-x-2">
+                  <Award className="h-4 w-4 text-yellow-400" />
+                  <div>
+                    <p className="text-white text-xs font-medium">Recent</p>
+                    <p className="text-white/60 text-xs">{recentGrades.length} grades</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </motion.div>
 
-          {/* Content */}
+          {/* Subject Performance */}
           <motion.div
-            key={currentView}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
+            transition={{ delay: 0.2 }}
           >
-            {currentView === 'overview' && renderOverview()}
-            {currentView === 'subjects' && (
-              <div className="text-center py-12">
-                <p className="text-white/60">Detailed Subject Analysis - Coming Soon</p>
-              </div>
-            )}
-            {currentView === 'trends' && (
-              <div className="text-center py-12">
-                <p className="text-white/60">Performance Trends - Coming Soon</p>
-              </div>
-            )}
-            {currentView === 'predictions' && (
-              <div className="text-center py-12">
-                <p className="text-white/60">AI Grade Predictions - Coming Soon</p>
-              </div>
-            )}
+            <Card className="bg-white/5 border-white/10 backdrop-blur-xl">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white text-base flex items-center space-x-2">
+                  <PieChart className="h-4 w-4 text-purple-400" />
+                  <span>Subject Performance</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {subjectAnalytics.map((subject, index) => (
+                  <motion.div
+                    key={subject.subject}
+                    className="p-3 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-all cursor-pointer"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    onClick={() => setSelectedSubject(selectedSubject === subject.subject ? null : subject.subject)}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-white font-medium text-sm truncate">{subject.subject}</h4>
+                        <p className="text-white/60 text-xs">{subject.assignments} assignments</p>
+                      </div>
+                      <div className="flex items-center space-x-3 ml-3">
+                        <div className="text-right">
+                          <p className={`font-bold text-sm ${getGradeColor(subject.currentGrade)}`}>
+                            {getGradeLetter(subject.currentGrade)}
+                          </p>
+                          <p className="text-white/60 text-xs">{subject.currentGrade.toFixed(1)}%</p>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          {subject.trend === 'up' ? (
+                            <TrendingUp className="h-3 w-3 text-green-400" />
+                          ) : subject.trend === 'down' ? (
+                            <TrendingDown className="h-3 w-3 text-red-400" />
+                          ) : (
+                            <Activity className="h-3 w-3 text-gray-400" />
+                          )}
+                          <span className={`text-xs ${
+                            subject.trend === 'up' ? 'text-green-400' : 
+                            subject.trend === 'down' ? 'text-red-400' : 'text-gray-400'
+                          }`}>
+                            {subject.trendPercentage.toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <AnimatePresence>
+                      {selectedSubject === subject.subject && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="mt-3 pt-3 border-t border-white/10"
+                        >
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                            <div>
+                              <p className="text-green-300 font-medium mb-1">Strengths:</p>
+                              <ul className="text-white/60 space-y-1">
+                                {subject.strengths.map((strength, i) => (
+                                  <li key={i}>• {strength}</li>
+                                ))}
+                              </ul>
+                            </div>
+                            <div>
+                              <p className="text-orange-300 font-medium mb-1">Improvements:</p>
+                              <ul className="text-white/60 space-y-1">
+                                {subject.improvements.map((improvement, i) => (
+                                  <li key={i}>• {improvement}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                          {subject.nextAssignment && (
+                            <div className="mt-3 p-2 bg-blue-500/10 rounded-lg border border-blue-400/20">
+                              <p className="text-blue-300 text-xs font-medium">Next Assignment:</p>
+                              <p className="text-white/80 text-xs">{subject.nextAssignment.name}</p>
+                              <p className="text-white/60 text-xs">Due: {new Date(subject.nextAssignment.date).toLocaleDateString()}</p>
+                            </div>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                ))}
+              </CardContent>
+            </Card>
           </motion.div>
 
+          {/* Recent Grades */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Card className="bg-white/5 border-white/10 backdrop-blur-xl">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white text-base flex items-center space-x-2">
+                  <Clock className="h-4 w-4 text-blue-400" />
+                  <span>Recent Grades</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {recentGrades.map((grade, index) => (
+                  <motion.div
+                    key={grade.id}
+                    className="p-3 bg-white/5 rounded-xl border border-white/10"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <Badge className={`text-xs ${
+                            grade.type === 'test' ? 'bg-red-500/20 text-red-300 border-red-400/30' :
+                            grade.type === 'quiz' ? 'bg-orange-500/20 text-orange-300 border-orange-400/30' :
+                            grade.type === 'project' ? 'bg-purple-500/20 text-purple-300 border-purple-400/30' :
+                            grade.type === 'homework' ? 'bg-blue-500/20 text-blue-300 border-blue-400/30' :
+                            'bg-green-500/20 text-green-300 border-green-400/30'
+                          }`}>
+                            {grade.type}
+                          </Badge>
+                          <Badge className={`text-xs ${
+                            grade.difficulty === 'hard' ? 'bg-red-500/20 text-red-300 border-red-400/30' :
+                            grade.difficulty === 'medium' ? 'bg-yellow-500/20 text-yellow-300 border-yellow-400/30' :
+                            'bg-green-500/20 text-green-300 border-green-400/30'
+                          }`}>
+                            {grade.difficulty}
+                          </Badge>
+                        </div>
+                        <h4 className="text-white font-medium text-sm truncate">{grade.assignment}</h4>
+                        <p className="text-white/60 text-xs">{grade.subject}</p>
+                      </div>
+                      
+                      <div className="text-right ml-3">
+                        <p className={`font-bold text-sm ${getGradeColor(grade.percentage)}`}>
+                          {getGradeLetter(grade.percentage)}
+                        </p>
+                        <p className="text-white/60 text-xs">{grade.score}/{grade.maxScore}</p>
+                        <p className="text-white/50 text-xs">{new Date(grade.date).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
       </div>
     </div>

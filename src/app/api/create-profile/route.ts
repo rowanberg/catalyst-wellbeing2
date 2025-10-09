@@ -10,11 +10,11 @@ export async function POST(request: NextRequest) {
 
     // Check if we need to create the user (for regular signups)
     if (email && password) {
-      // Create user with admin client - auto-confirm email for development
+      // Create user with admin client - send confirmation email
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email,
         password,
-        email_confirm: true, // Auto-confirm email to bypass email verification
+        email_confirm: false, // Send confirmation email instead of auto-confirming
       })
 
       if (authError) {
@@ -27,6 +27,24 @@ export async function POST(request: NextRequest) {
 
       user = authData.user
       shouldCreateUser = true
+
+      // Send confirmation email after user creation
+      try {
+        const confirmationResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/send-confirmation`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        })
+        
+        if (confirmationResponse.ok) {
+          console.log('✅ Confirmation email sent to:', email)
+        } else {
+          console.error('❌ Failed to send confirmation email to:', email)
+        }
+      } catch (emailError) {
+        console.error('Error sending confirmation email:', emailError)
+        // Don't fail registration if email sending fails
+      }
     } else {
       // Use provided userId (for admin-created users)
       user = { id: userId }

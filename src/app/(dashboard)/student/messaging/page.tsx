@@ -1749,11 +1749,44 @@ function StudentMessagingContent() {
                             {/* Chat Area - Mobile Optimized */}
                             <div className={`lg:col-span-2 ${selectedTool ? 'block' : 'hidden lg:block'}`}>
                 {selectedTool ? (
-                  // This part is for showing the selected tool - you can fill this in later
-                  <div className="min-h-[600px] bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 flex items-center justify-center">
-                    <div className="text-center">
-                      <p className="text-white/80 text-lg font-bold mb-2">Tool Area</p>
-                      <Button onClick={() => setSelectedTool(null)}>Back</Button>
+                  <div className="min-h-[600px] bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 p-4 sm:p-6">
+                    {/* Tool Header */}
+                    <div className="flex items-center justify-between mb-4 sm:mb-6">
+                      <h2 className="text-lg sm:text-xl font-bold text-white">
+                        {selectedTool === 'study-planner' && 'AI Study Planner'}
+                        {selectedTool === 'grade-tracker' && 'Grade Analytics'}
+                        {selectedTool === 'homework-assistant' && 'AI Homework Helper'}
+                        {selectedTool === 'study-groups' && 'Study Groups'}
+                        {selectedTool === 'peer-tutoring' && 'Peer Tutoring'}
+                        {selectedTool === 'school-events' && 'School Events'}
+                        {selectedTool === 'achievement-center' && 'Achievement Center'}
+                        {selectedTool === 'learning-games' && 'Learning Games'}
+                        {selectedTool === 'digital-portfolio' && 'Digital Portfolio'}
+                        {selectedTool === 'project-showcase' && 'Project Showcase'}
+                      </h2>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setSelectedTool(null)}
+                        className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                      >
+                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        Back
+                      </Button>
+                    </div>
+
+                    {/* Tool Content */}
+                    <div className="h-full">
+                      {selectedTool === 'study-planner' && <AIStudyPlanner onBack={() => setSelectedTool(null)} />}
+                      {selectedTool === 'grade-tracker' && <GradeAnalytics onBack={() => setSelectedTool(null)} />}
+                      {selectedTool === 'homework-assistant' && <AIHomeworkHelper onBack={() => setSelectedTool(null)} />}
+                      {selectedTool === 'study-groups' && <StudyGroups onBack={() => setSelectedTool(null)} />}
+                      {selectedTool === 'peer-tutoring' && <PeerTutoring onBack={() => setSelectedTool(null)} />}
+                      {selectedTool === 'school-events' && <SchoolEventsHub onBack={() => setSelectedTool(null)} />}
+                      {selectedTool === 'achievement-center' && <AchievementCenter onBack={() => setSelectedTool(null)} />}
+                      {selectedTool === 'learning-games' && <LearningGames onBack={() => setSelectedTool(null)} />}
+                      {selectedTool === 'digital-portfolio' && <DigitalPortfolio onBack={() => setSelectedTool(null)} />}
+                      {selectedTool === 'project-showcase' && <ProjectShowcase onBack={() => setSelectedTool(null)} />}
                     </div>
                   </div>
                 ) : (
