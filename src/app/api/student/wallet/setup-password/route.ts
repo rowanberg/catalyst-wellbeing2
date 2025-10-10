@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import crypto from 'crypto';
+import * as bcrypt from 'bcryptjs';
 
-function hashPassword(password: string, salt: string): string {
-  return crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
-}
+// Use bcrypt for secure password hashing
+// Cost factor of 12 provides good security/performance balance
+const BCRYPT_ROUNDS = 12;
 
 export async function POST(request: Request) {
   try {
@@ -21,16 +21,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Generate salt and hash password
-    const salt = crypto.randomBytes(16).toString('hex');
-    const passwordHash = hashPassword(password, salt);
+    // Hash password using bcrypt
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
-    // Update wallet with password
+    // Update wallet with password (bcrypt includes salt in the hash)
     const { error: updateError } = await supabase
       .from('student_wallets')
       .update({
         transaction_password_hash: passwordHash,
-        password_salt: salt,
+        password_salt: null, // bcrypt stores salt within the hash
         password_set_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })

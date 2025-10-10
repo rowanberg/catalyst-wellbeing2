@@ -31,13 +31,12 @@ export async function GET(request: NextRequest) {
       })
 
     if (blackMarksError) {
-      console.error('Error fetching student black marks:', blackMarksError)
       return NextResponse.json({ error: 'Failed to fetch black marks' }, { status: 500 })
     }
 
     // Get submissions for each black mark
     const blackMarkIds = blackMarks?.map((bm: any) => bm.id) || []
-    let submissions = []
+    let submissions: any[] = []
     
     if (blackMarkIds.length > 0) {
       const { data: submissionsData, error: submissionsError } = await supabase

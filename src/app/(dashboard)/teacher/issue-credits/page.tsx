@@ -125,6 +125,7 @@ function PaymentAnimation({
         clearTimeout(completeTimer)
       }
     }
+    return undefined // Explicitly return undefined for TypeScript
   }, [isVisible, onComplete, success])
 
   return (

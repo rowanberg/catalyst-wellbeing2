@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get teacher's assigned grade levels
-    let grades = []
+    let grades: any[] = []
     
     try {
       // If teacherId is provided, get only assigned grades

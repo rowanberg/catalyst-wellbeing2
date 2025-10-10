@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
 
     // Process data and get attendance statistics
     const classIds = teacherClasses?.map((assignment: any) => assignment.classes.id) || []
-    const processedClasses = []
+    const processedClasses: { class_id: any; class_name: any; grade_name: any; total_students: number; present_today: number; absent_today: number; attendance_rate: number; }[] = []
 
     for (const assignment of teacherClasses || []) {
       const classData = (assignment as any).classes

@@ -84,7 +84,14 @@ export async function GET(request: NextRequest) {
     }) || []
 
     // Get achievement stats (with error handling)
-    let stats = null
+    let stats: { 
+      total_achievements: any; 
+      unlocked_achievements: any; 
+      total_xp_from_achievements: any; 
+      total_gems_from_achievements: any; 
+      school_rank: any;
+      [key: string]: any 
+    } | null = null
     try {
       const { data: statsData } = await supabase
         .from('student_achievement_stats')
@@ -97,7 +104,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get current student data for additional stats (with error handling)
-    let profile = null
+    let profile: { xp: any; gems: any; level: any; streak_days: any; } | null = null
     try {
       const { data: profileData } = await supabase
         .from('profiles')

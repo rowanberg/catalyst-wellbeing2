@@ -74,6 +74,7 @@ export function MessageThread({
         unsubscribeFromChannel(channelId);
       };
     }
+    return undefined;
   }, [channelId, subscribeToChannel, unsubscribeFromChannel]);
 
   useEffect(() => {

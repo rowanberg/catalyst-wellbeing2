@@ -68,7 +68,7 @@ export async function GET(
     })
 
     // Generate recommendations
-    const recommendations = []
+    const recommendations: { type: string; message: string; action: string; }[] = []
     if (classAverage < 70) {
       recommendations.push({
         type: 'warning',

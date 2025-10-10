@@ -33,6 +33,7 @@ export function NotificationToast({
       }, duration)
       return () => clearTimeout(timer)
     }
+    return undefined
   }, [show, duration, onClose])
 
   const typeConfig = {

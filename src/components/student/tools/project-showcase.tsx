@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { toast } from 'sonner'
+import { useAppSelector } from '@/lib/redux/hooks'
 import { 
   Rocket, 
   ArrowLeft, 
@@ -18,8 +19,9 @@ import {
   Calendar,
   Users,
   Trophy,
-  Zap,
-  Settings
+  Loader2,
+  AlertCircle,
+  TrendingUp
 } from 'lucide-react'
 
 interface Project {
@@ -49,90 +51,91 @@ interface Project {
 }
 
 export function ProjectShowcase({ onBack }: { onBack: () => void }) {
+  const { profile } = useAppSelector((state) => state.auth)
   const [projects, setProjects] = useState<Project[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>('All')
   const [currentView, setCurrentView] = useState<'featured' | 'recent' | 'my-projects'>('featured')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const categories = [
-    { id: 'All', label: 'All Projects' },
-    { id: 'Science', label: 'Science' },
-    { id: 'Technology', label: 'Technology' },
-    { id: 'Art', label: 'Art & Design' },
-    { id: 'Literature', label: 'Literature' },
-    { id: 'Social', label: 'Social Studies' }
+    { id: 'All', label: 'All Projects', icon: '🚀' },
+    { id: 'Science', label: 'Science', icon: '🔬' },
+    { id: 'Technology', label: 'Technology', icon: '💻' },
+    { id: 'Art', label: 'Art & Design', icon: '🎨' },
+    { id: 'Literature', label: 'Literature', icon: '📚' },
+    { id: 'Social', label: 'Social Studies', icon: '🌍' }
   ]
 
-  useEffect(() => {
-    setProjects([
-      {
-        id: '1',
-        title: 'Solar System Explorer',
-        description: 'Interactive 3D model of our solar system with detailed planet information and orbital mechanics.',
-        category: 'Science',
-        subject: 'Astronomy',
-        author: {
-          name: 'Emma Chen',
-          avatar: 'EC',
-          grade: 'Grade 10'
+  // Optimized fetch function with real API integration
+  const fetchProjects = useCallback(async () => {
+    if (!profile?.id) return
+    
+    setLoading(true)
+    setError(null)
+    
+    try {
+      const response = await fetch(`/api/project-showcase?view=${currentView}&category=${selectedCategory}&userId=${profile.id}&schoolId=${profile.school_id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        collaborators: [
-          { name: 'Alex Kim', avatar: 'AK' },
-          { name: 'Sarah Johnson', avatar: 'SJ' }
-        ],
-        dateCreated: '2025-09-15',
-        views: 234,
-        likes: 45,
-        comments: 12,
-        isCollaborative: true,
-        status: 'featured',
-        tags: ['astronomy', '3d-modeling', 'interactive', 'planets'],
-        thumbnail: '🌌',
-        rating: 4.8
-      },
-      {
-        id: '2',
-        title: 'Climate Change Awareness App',
-        description: 'Mobile app prototype designed to educate users about climate change impacts and solutions.',
-        category: 'Technology',
-        subject: 'Environmental Science',
-        author: {
-          name: 'Marcus Rodriguez',
-          avatar: 'MR',
-          grade: 'Grade 11'
-        },
-        dateCreated: '2025-09-10',
-        views: 189,
-        likes: 38,
-        comments: 8,
-        isCollaborative: false,
-        status: 'published',
-        tags: ['app-design', 'climate-change', 'education', 'prototype'],
-        thumbnail: '🌍',
-        rating: 4.6
-      },
-      {
-        id: '3',
-        title: 'Digital Art Gallery',
-        description: 'Curated collection of student artwork with interactive viewing experience.',
-        category: 'Art',
-        subject: 'Visual Arts',
-        author: {
-          name: 'Luna Park',
-          avatar: 'LP',
-          grade: 'Grade 9'
-        },
-        dateCreated: '2025-09-20',
-        views: 156,
-        likes: 52,
-        comments: 15,
-        isCollaborative: false,
-        status: 'published',
-        tags: ['digital-art', 'gallery', 'curation', 'visual-design'],
-        thumbnail: '🎨',
-        rating: 4.9
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setProjects(data.projects || [])
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to load projects')
       }
-    ])
-  }, [])
+    } catch (error) {
+      console.error('Error fetching projects:', error)
+      setError(error instanceof Error ? error.message : 'Failed to load projects')
+      toast.error('Failed to load projects')
+    } finally {
+      setLoading(false)
+    }
+  }, [profile?.id, profile?.school_id, currentView, selectedCategory])
+
+  // Optimized like function
+  const likeProject = useCallback(async (projectId: string) => {
+    if (!profile?.id) return
+    
+    try {
+      const response = await fetch(`/api/project-showcase/${projectId}/like`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: profile.id,
+          schoolId: profile.school_id
+        }),
+      })
+      
+      if (response.ok) {
+        // Optimistically update the UI
+        setProjects(prev => 
+          prev.map(project => 
+            project.id === projectId 
+              ? { ...project, likes: project.likes + 1 }
+              : project
+          )
+        )
+        toast.success('Project liked!')
+      } else {
+        throw new Error('Failed to like project')
+      }
+    } catch (error) {
+      console.error('Error liking project:', error)
+      toast.error('Failed to like project')
+    }
+  }, [profile?.id, profile?.school_id])
+
+  useEffect(() => {
+    fetchProjects()
+  }, [fetchProjects])
 
   const filteredProjects = projects.filter(project => 
     selectedCategory === 'All' || project.category === selectedCategory
@@ -147,15 +150,6 @@ export function ProjectShowcase({ onBack }: { onBack: () => void }) {
     }
   }
 
-  const likeProject = (projectId: string) => {
-    setProjects(prev => 
-      prev.map(project => 
-        project.id === projectId 
-          ? { ...project, likes: project.likes + 1 }
-          : project
-      )
-    )
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
@@ -222,21 +216,51 @@ export function ProjectShowcase({ onBack }: { onBack: () => void }) {
             })}
           </div>
 
+          {/* Optimized Category Filter */}
           <div className="flex space-x-3 overflow-x-auto pb-2">
             {categories.map((category) => (
               <Button
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
-                className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm transition-all ${
+                className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm transition-all flex items-center space-x-2 ${
                   selectedCategory === category.id
                     ? 'bg-gradient-to-r from-teal-500 to-green-500 text-white'
                     : 'bg-white/10 text-white/70 hover:text-white hover:bg-white/20'
                 }`}
               >
-                {category.label}
+                <span>{category.icon}</span>
+                <span>{category.label}</span>
               </Button>
             ))}
           </div>
+
+          {/* Error State */}
+          {error && (
+            <div className="bg-red-500/20 border border-red-400/30 rounded-xl p-4 flex items-center space-x-3">
+              <AlertCircle className="h-5 w-5 text-red-400" />
+              <div>
+                <p className="text-red-300 font-medium">Error loading projects</p>
+                <p className="text-red-400/70 text-sm">{error}</p>
+              </div>
+              <Button
+                onClick={fetchProjects}
+                variant="ghost"
+                className="ml-auto text-red-300 hover:text-red-200"
+              >
+                Retry
+              </Button>
+            </div>
+          )}
+
+          {/* Loading State */}
+          {loading && (
+            <div className="flex justify-center py-12">
+              <div className="flex items-center space-x-3 text-white/60">
+                <Loader2 className="h-6 w-6 animate-spin" />
+                <span>Loading projects...</span>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {filteredProjects.map((project) => (

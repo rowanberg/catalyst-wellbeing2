@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     console.log('📋 Existing classes:', existingClasses)
 
-    let classToAssign = null
+    let classToAssign: { id: any; class_name: any; subject: any; room_number: any; grade_levels: { grade_level: any; }[]; } | null = null
 
     if (existingClasses && existingClasses.length > 0) {
       // Use existing class

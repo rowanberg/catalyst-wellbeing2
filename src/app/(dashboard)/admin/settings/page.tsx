@@ -23,8 +23,10 @@ import {
   MapPin,
   Save,
   RefreshCw,
-  Calendar
+  Calendar,
+  CreditCard
 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { AdvancedGradeLevelManager } from '@/components/admin/AdvancedGradeLevelManager'
 
 interface SchoolSettings {
@@ -49,7 +51,8 @@ interface SchoolSettings {
     data_retention_days: number
     allow_analytics: boolean
     share_anonymous_data: boolean
-    require_parent_consent: boolean
+    restrict_email_domains: boolean
+    allowed_email_domain: string
   }
   wellbeing_settings: {
     daily_check_ins: boolean
@@ -71,6 +74,7 @@ function SchoolSettingsContent() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const { addToast } = useToast()
+  const router = useRouter()
   
   // Gemini AI Configuration
   const [geminiConfig, setGeminiConfig] = useState<GeminiConfig>({
@@ -102,6 +106,18 @@ function SchoolSettingsContent() {
       }
 
       const data = await response.json()
+      
+      // Auto-populate email domain if not set
+      if (data && !data.privacy_settings?.allowed_email_domain && data.email) {
+        const emailParts = data.email.split('@')
+        if (emailParts.length === 2) {
+          data.privacy_settings = {
+            ...data.privacy_settings,
+            allowed_email_domain: emailParts[1]
+          }
+        }
+      }
+      
       setSettings(data)
     } catch (error) {
       console.error('Error fetching settings:', error)
@@ -213,6 +229,15 @@ function SchoolSettingsContent() {
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
               <ClientWrapper>
+                <Button 
+                  variant="default"
+                  onClick={() => router.push('/admin/subscription')}
+                  size="sm"
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white flex-1 sm:flex-none min-w-0 px-3 py-2 shadow-lg"
+                >
+                  <CreditCard className="h-4 w-4 mr-2 flex-shrink-0" />
+                  <span className="text-sm font-medium truncate">Subscription</span>
+                </Button>
                 <Button 
                   variant="outline" 
                   onClick={fetchSettings}
@@ -628,22 +653,61 @@ function SchoolSettingsContent() {
                     className="flex-shrink-0 scale-110"
                   />
                 </div>
-                <div className="flex items-start justify-between gap-4 p-4 bg-green-50 rounded-lg border border-green-200">
-                  <div className="flex-1 min-w-0">
-                    <Label htmlFor="parent-consent" className="text-sm font-medium cursor-pointer text-gray-900 flex items-center">
-                      <Users className="h-4 w-4 mr-2 text-green-600" />
-                      Require Parent Consent
-                    </Label>
-                    <p className="text-sm text-green-700 mt-1">Require explicit parent consent for student data</p>
+                <div className="p-4 bg-amber-50 rounded-lg border border-amber-200 space-y-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <Label htmlFor="restrict-email-domains" className="text-sm font-medium cursor-pointer text-gray-900 flex items-center">
+                        <Mail className="h-4 w-4 mr-2 text-amber-600" />
+                        Restrict Email Domains
+                      </Label>
+                      <p className="text-sm text-amber-700 mt-1">Only allow registration with your school's email domain</p>
+                    </div>
+                    <Switch
+                      id="restrict-email-domains"
+                      checked={settings.privacy_settings.restrict_email_domains}
+                      onCheckedChange={(checked: boolean) => 
+                        updateSettings('privacy_settings.restrict_email_domains', checked)
+                      }
+                      className="flex-shrink-0 scale-110"
+                    />
                   </div>
-                  <Switch
-                    id="parent-consent"
-                    checked={settings.privacy_settings.require_parent_consent}
-                    onCheckedChange={(checked: boolean) => 
-                      updateSettings('privacy_settings.require_parent_consent', checked)
-                    }
-                    className="flex-shrink-0 scale-110"
-                  />
+                  
+                  {/* Domain Configuration */}
+                  <div className="space-y-3">
+                    <Label htmlFor="allowed-domain" className="text-sm font-medium text-gray-900 flex items-center">
+                      <Mail className="h-4 w-4 mr-2 text-amber-600" />
+                      Allowed Email Domain
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600 font-mono">@</span>
+                      <Input
+                        id="allowed-domain"
+                        value={settings.privacy_settings.allowed_email_domain || (settings.email ? settings.email.split('@')[1] : '')}
+                        onChange={(e) => updateSettings('privacy_settings.allowed_email_domain', e.target.value)}
+                        className="flex-1 h-10 text-sm border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                        placeholder={settings.email ? settings.email.split('@')[1] : 'yourschool.edu'}
+                        disabled={!settings.privacy_settings.restrict_email_domains}
+                      />
+                    </div>
+                    <div className="flex items-start gap-2 text-xs text-amber-700">
+                      <Shield className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium">
+                          Registration will be restricted to: @{
+                            settings.privacy_settings.allowed_email_domain || 
+                            (settings.email ? settings.email.split('@')[1] : 'yourschool.edu')
+                          }
+                        </p>
+                        <p className="mt-1">
+                          {settings.email ? (
+                            <>Based on your school's primary email: <span className="font-mono font-medium">{settings.email}</span></>
+                          ) : (
+                            'Users with other email domains will not be able to register.'
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>

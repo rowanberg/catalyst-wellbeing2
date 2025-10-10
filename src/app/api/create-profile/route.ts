@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
   try {
     const { userId, firstName, lastName, role, schoolCode, email, password, gradeLevel, className } = await request.json()
 
-    let user = null
+    let user: { id: string } | null = null
     let shouldCreateUser = false
 
     // Check if we need to create the user (for regular signups)

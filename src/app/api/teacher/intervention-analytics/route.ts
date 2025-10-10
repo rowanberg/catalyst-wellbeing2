@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Identify stress indicators
-    const stressIndicators = []
+    const stressIndicators: string[] = []
     if (negativeMoodPercentage > 40) stressIndicators.push('High negative mood frequency')
     if (urgentHelpRequests > 0) stressIndicators.push('Urgent help requests')
     if (averageWellbeing < 5) stressIndicators.push('Low wellbeing scores')

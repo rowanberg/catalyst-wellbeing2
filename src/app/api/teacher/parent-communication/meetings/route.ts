@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
     }
 
-    const slotsToCreate = []
+    const slotsToCreate: { school_id: any; teacher_id: any; date: string; start_time: any; end_time: any; meeting_type: any; location: any; virtual_meeting_link: any; notes: any; }[] = []
     const baseDate = new Date(date)
 
     // Create slots (recurring if specified)

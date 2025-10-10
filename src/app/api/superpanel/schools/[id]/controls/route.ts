@@ -296,8 +296,8 @@ export async function POST(
 
       case 'bulk_import_users': {
         const { users: usersToImport } = data
-        const createdUsers = []
-        const errors = []
+        const createdUsers: any[] = []
+        const errors: { email: string; error: string; }[] = []
 
         for (const userData of usersToImport) {
           try {

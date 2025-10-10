@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     
     // Try to load Supabase admin
     let supabaseStatus = 'Not loaded'
-    let supabaseError = null
+    let supabaseError: string | null = null
     
     try {
       const { supabaseAdmin } = await import('@/lib/supabaseAdmin')

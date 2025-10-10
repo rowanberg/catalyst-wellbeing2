@@ -9,7 +9,7 @@ import { ApiResponse } from '@/lib/api/response'
 import { logger } from '@/lib/logger'
 import { createCachedResponse, CacheStrategies } from '@/lib/api/cache-headers'
 
-export async function GET(request: NextRequest) {
+export async function GET(request: NextRequest): Promise<Response> {
   const startTime = Date.now()
   logger.debug('School details API request received')
 
@@ -146,7 +146,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Find best setup record
-    let bestSetup = null
+    let bestSetup: { status?: string; setup_completed?: boolean; [key: string]: any } | null = null
     if (allSetups && allSetups.length > 0) {
       // Prefer status='completed'
       bestSetup = allSetups.find((s: any) => s.status === 'completed')
@@ -179,7 +179,18 @@ export async function GET(request: NextRequest) {
 
     logger.perf('School details fetch', Date.now() - startTime)
 
-    // Return will be handled by specific paths above
+    // Return school details
+    return createCachedResponse({
+      success: true,
+      data: {
+        currentUserId,
+        currentSchoolId,
+        currentSchoolCode,
+        actualStatus,
+        isCompleted,
+        setup: bestSetup
+      }
+    }, CacheStrategies.SHORT_CACHE)
 
   } catch (error: any) {
     logger.error('School details API error', error)

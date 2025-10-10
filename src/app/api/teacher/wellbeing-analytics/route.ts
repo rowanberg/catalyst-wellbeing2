@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
     else if (classAverage < 6.5 || negativeMoodPercentage > 25) riskLevel = 'medium'
 
     // Generate intervention suggestions
-    const interventionSuggestions = []
+    const interventionSuggestions: string[] = []
     if (riskLevel === 'high') {
       interventionSuggestions.push(
         "Consider implementing daily check-ins with students",
@@ -160,8 +160,8 @@ export async function GET(request: NextRequest) {
       const negativeMoodCount = studentMoods.filter(m => negativeMoods.includes(m.mood_emoji)).length
       const urgentHelpCount = studentHelp.filter(hr => hr.urgency_level === 'high').length
 
-      const concerns = []
-      const strengths = []
+      const concerns: string[] = []
+      const strengths: string[] = []
       
       if (negativeMoodCount >= 3) concerns.push('Frequent negative mood indicators')
       if (urgentHelpCount > 0) concerns.push('Recent urgent help requests')

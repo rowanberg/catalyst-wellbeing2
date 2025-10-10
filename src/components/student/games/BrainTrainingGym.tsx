@@ -189,7 +189,7 @@ export function BrainTrainingGym() {
   }
 
   const generateColorCircles = () => {
-    const circles = []
+    const circles: { id: number; color: string; x: number; y: number; }[] = []
     const colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange']
     
     for (let i = 0; i < 12; i++) {

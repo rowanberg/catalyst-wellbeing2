@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     const schoolEncryptionKey = studentSchool.messaging_encryption_key
 
     // Encrypt the message using school's encryption key (if key exists)
-    let encryptedMessage = null
+    let encryptedMessage: string | null = null
     if (schoolEncryptionKey) {
       try {
         encryptedMessage = encryptMessage(message, schoolEncryptionKey)

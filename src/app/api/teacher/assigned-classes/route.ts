@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdmin()
 
     // Try to use the database function first, fallback to direct query
-    let classes = []
+    let classes: any[] = []
     
     try {
       // Try using the database function if it exists
@@ -82,8 +82,8 @@ export async function GET(request: NextRequest) {
           logger.debug('Looking up class details', { classIds })
           
           // Try different possible table structures and column names
-          let classDetails = null
-          let classError = null
+          let classDetails: any[] | null = null
+          let classError: any = null
 
           // First attempt: Check what columns actually exist in classes table
           try {

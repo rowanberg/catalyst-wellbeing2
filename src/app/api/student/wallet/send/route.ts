@@ -295,7 +295,7 @@ export async function POST(request: Request) {
 
     // Update recipient balance (only if not sending to self)
     const isSelfTransfer = senderWallet.id === recipientWallet.id;
-    let recipientUpdateError = null;
+    let recipientUpdateError: any = null;
     
     if (!isSelfTransfer) {
       const newRecipientBalance = currencyType === 'mind_gems'

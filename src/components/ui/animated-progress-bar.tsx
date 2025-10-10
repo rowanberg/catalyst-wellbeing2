@@ -29,6 +29,7 @@ export function AnimatedProgressBar({
       return () => clearTimeout(timer)
     } else {
       setDisplayValue(percentage)
+      return undefined
     }
   }, [percentage, animated])
 

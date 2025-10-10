@@ -28,6 +28,7 @@ export default function VerifyEmailPage() {
       return () => clearTimeout(timer)
     } else {
       setCanResend(true)
+      return undefined // Explicitly return undefined for TypeScript
     }
   }, [timeLeft])
 

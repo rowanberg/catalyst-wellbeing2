@@ -145,7 +145,7 @@ export async function GET(
       .limit(10)
 
     // Fetch recent activities (simplified - you can expand this)
-    const recentActivities = []
+    const recentActivities: { type: string; message: string; status: any; timestamp: any; }[] = []
     
     // Add help requests as activities
     if (helpRequests) {
@@ -208,7 +208,15 @@ export async function GET(
 
     // Fetch wallet data for students
     const studentIds = users?.filter(u => u.role === 'student').map(u => u.id) || []
-    let walletData = []
+    let walletData: { 
+      student_id: any; 
+      wallet_address: any; 
+      mind_gems_balance: any; 
+      fluxon_balance: any; 
+      is_active: any; 
+      is_locked: any; 
+      [key: string]: any 
+    }[] = []
     if (studentIds.length > 0) {
       const { data: wallets } = await supabaseAdmin
         .from('student_wallets')

@@ -104,7 +104,7 @@ export default function InterventionToolkit() {
 
     const scored = activities.map(activity => {
       let score = 0
-      let reasoning = []
+      let reasoning: string[] = []
 
       // Risk level matching
       if (classAnalytics.riskLevel === 'high' && activity.category === 'emotional') {

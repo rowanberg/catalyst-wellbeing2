@@ -26,8 +26,8 @@ export async function GET(request: NextRequest) {
     )
 
     // Get the current user with retry logic
-    let user = null
-    let authError = null
+    let user: { id: string; [key: string]: any } | null = null
+    let authError: any = null
     
     try {
       const authResult = await supabase.auth.getUser()

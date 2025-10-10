@@ -137,7 +137,7 @@ export async function GET(request: NextRequest) {
       ].filter(Boolean).join(', ')
       
       // Format operating days
-      const operatingDays = []
+      const operatingDays: string[] = []
       if (schoolDetails.operates_monday) operatingDays.push('Monday')
       if (schoolDetails.operates_tuesday) operatingDays.push('Tuesday')
       if (schoolDetails.operates_wednesday) operatingDays.push('Wednesday')

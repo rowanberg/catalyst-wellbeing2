@@ -28,8 +28,19 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       setItem: (key: string, value: string) => {
         if (typeof window !== 'undefined') {
           window.localStorage.setItem(key, value)
-          // Also set as cookie for server-side access
-          document.cookie = `${key}=${value}; path=/; max-age=604800; SameSite=Lax; Secure`
+          // Set secure cookie with proper flags
+          const isProduction = process.env.NODE_ENV === 'production'
+          const cookieOptions = [
+            `${key}=${value}`,
+            'path=/',
+            'max-age=604800',
+            'SameSite=Strict',
+            isProduction ? 'Secure' : '',
+            'HttpOnly'
+          ].filter(Boolean).join('; ')
+          
+          // Note: HttpOnly can't be set from JavaScript, needs server-side setting
+          document.cookie = `${key}=${value}; path=/; max-age=604800; SameSite=Strict${isProduction ? '; Secure' : ''}`
         }
       },
       removeItem: (key: string) => {
@@ -52,23 +63,24 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 // Handle auth state changes and refresh token errors
 if (typeof window !== 'undefined') {
   supabase.auth.onAuthStateChange(async (event, session) => {
-    console.log(`🔄 [AuthStateChange] Event: ${event}`, session ? 'Session exists' : 'No session')
+    // Use debug logging only in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🔄 [AuthStateChange] Event: ${event}`, session ? 'Session active' : 'No session')
+    }
     
     if (event === 'TOKEN_REFRESHED') {
-      console.log('✅ Token refreshed successfully')
+      // Token refresh handled silently
     } else if (event === 'SIGNED_OUT') {
-      console.log('🔒 User signed out')
       // Clear all auth-related data
       window.localStorage.clear()
       // Clear Redux store
       if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
-        console.log('🔄 Redirecting to login due to sign out')
         window.location.href = '/login'
       }
     } else if (event === 'USER_UPDATED') {
-      console.log('👤 User updated')
+      // User update handled silently
     } else if (event === 'SIGNED_IN') {
-      console.log('✅ User signed in successfully')
+      // Sign in handled silently
     }
   })
 

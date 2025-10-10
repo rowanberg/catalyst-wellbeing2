@@ -22,7 +22,7 @@ const registerSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
   lastName: z.string().min(2, 'Last name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(6, 'Password must be at least 6 characters').optional(),
   role: z.enum(['student', 'parent', 'teacher', 'admin']),
   gradeLevel: z.string().optional(),
   className: z.string().optional(),
@@ -39,6 +39,10 @@ export default function RegisterPage() {
   const [isVerifyingSchool, setIsVerifyingSchool] = useState(false)
   const [schoolVerified, setSchoolVerified] = useState(false)
   const [schoolError, setSchoolError] = useState('')
+  
+  // Google OAuth state
+  const [isGoogleUser, setIsGoogleUser] = useState(false)
+  const [googleUserData, setGoogleUserData] = useState<any>(null)
   
   // Parent-specific state
   const [children, setChildren] = useState<Array<{
@@ -79,6 +83,31 @@ export default function RegisterPage() {
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema)
   })
+
+  // Load Google OAuth data on component mount
+  useEffect(() => {
+    const googleOAuthData = sessionStorage.getItem('google_oauth_data')
+    if (googleOAuthData) {
+      try {
+        const userData = JSON.parse(googleOAuthData)
+        setGoogleUserData(userData)
+        setIsGoogleUser(true)
+        
+        // Pre-fill form with Google data
+        setValue('firstName', userData.firstName || '')
+        setValue('lastName', userData.lastName || '')
+        setValue('email', userData.email || '')
+        
+        addToast({
+          type: 'success',
+          title: 'Welcome!',
+          description: 'Your Google account details have been pre-filled. Please complete your registration.'
+        })
+      } catch (error) {
+        console.error('Error parsing Google OAuth data:', error)
+      }
+    }
+  }, [setValue, addToast])
 
   const schoolId = watch('schoolId')
   const selectedRole = watch('role')
@@ -319,6 +348,18 @@ export default function RegisterPage() {
       return
     }
 
+    // Validate password for non-Google users
+    if (!isGoogleUser && !data.password) {
+      setSubmitError('Password is required')
+      return
+    }
+
+    // Validate mandatory fields based on role
+    if (data.role === 'student' && !data.gradeLevel) {
+      setSubmitError('Grade level is required for students')
+      return
+    }
+
     if (data.role === 'parent' && children.length === 0) {
       setSubmitError('Please add at least one child to your account')
       return
@@ -333,16 +374,24 @@ export default function RegisterPage() {
     setSubmitError(null)
     
     try {
-      const result = await dispatch(signUp({
+      const registrationData: any = {
         email: data.email,
-        password: data.password,
         firstName: data.firstName,
         lastName: data.lastName,
         role: data.role,
         schoolId: data.schoolId,
         gradeLevel: data.gradeLevel,
-        className: data.className
-      }))
+        className: data.className,
+        isGoogleUser,
+        googleUserId: googleUserData?.userId
+      }
+
+      // Only include password for non-Google users
+      if (!isGoogleUser) {
+        registrationData.password = data.password
+      }
+
+      const result = await dispatch(signUp(registrationData))
       
       if (signUp.fulfilled.match(result)) {
         addToast({
@@ -373,7 +422,7 @@ export default function RegisterPage() {
     }
   }
 
-  const canProceedToStep2 = schoolVerified && watch('firstName') && watch('lastName') && watch('email') && watch('password') && watch('role')
+  const canProceedToStep2 = schoolVerified && watch('firstName') && watch('lastName') && watch('email') && (isGoogleUser || watch('password')) && watch('role')
 
   const handleNextStep = () => {
     if (canProceedToStep2) {
@@ -602,6 +651,33 @@ export default function RegisterPage() {
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="">
+            {/* Google User Welcome Banner */}
+            {isGoogleUser && (
+              <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-blue-900 mb-1">
+                      Welcome, {googleUserData?.firstName}!
+                    </h3>
+                    <p className="text-xs text-blue-700">
+                      Your Google account details have been pre-filled. Complete the remaining fields to finish registration.
+                    </p>
+                  </div>
+                  <CheckCircle className="h-5 w-5 text-blue-600" />
+                </div>
+              </div>
+            )}
+
             {/* Step 1: Basic Information */}
             {currentStep === 1 && (
               <div className="space-y-4 lg:space-y-6">
@@ -761,7 +837,20 @@ export default function RegisterPage() {
                   <div className="space-y-3 lg:space-y-4">
                     {/* Email Field */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Email Address
+                        {isGoogleUser && (
+                          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                            <svg className="w-3 h-3 mr-1" viewBox="0 0 24 24">
+                              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                            </svg>
+                            Google Account
+                          </span>
+                        )}
+                      </label>
                       <div className="relative">
                         <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
                           <Mail className="h-4 w-4 text-gray-400" />
@@ -769,7 +858,12 @@ export default function RegisterPage() {
                         <input
                           {...register('email')}
                           type="email"
-                          className="w-full pl-9 pr-3 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-50 transition-all focus:outline-none text-sm"
+                          disabled={isGoogleUser}
+                          className={`w-full pl-9 pr-3 py-3 border-2 rounded-lg transition-all focus:outline-none text-sm ${
+                            isGoogleUser 
+                              ? 'border-blue-200 bg-blue-50 text-blue-900 cursor-not-allowed' 
+                              : 'border-gray-200 bg-gray-50 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-50'
+                          }`}
                           placeholder="your.email@school.edu"
                         />
                       </div>
@@ -781,35 +875,50 @@ export default function RegisterPage() {
                       )}
                     </div>
 
-                    {/* Password Field */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                      <div className="relative">
-                        <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                          <Lock className="h-4 w-4 text-gray-400" />
+                    {/* Password Field - Hidden for Google users */}
+                    {!isGoogleUser && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                        <div className="relative">
+                          <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                            <Lock className="h-4 w-4 text-gray-400" />
+                          </div>
+                          <input
+                            {...register('password')}
+                            type={showPassword ? 'text' : 'password'}
+                            className="w-full pl-9 pr-10 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-50 transition-all focus:outline-none text-sm"
+                            placeholder="Create a strong password"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
                         </div>
-                        <input
-                          {...register('password')}
-                          type={showPassword ? 'text' : 'password'}
-                          className="w-full pl-9 pr-10 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-50 transition-all focus:outline-none text-sm"
-                          placeholder="Create a strong password"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                        >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
+                        {errors.password && (
+                          <p className="mt-1 text-xs text-red-600 flex items-center">
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            {errors.password.message}
+                          </p>
+                        )}
+                        <div className="mt-1 text-xs text-gray-500">Minimum 6 characters</div>
                       </div>
-                      {errors.password && (
-                        <p className="mt-1 text-xs text-red-600 flex items-center">
-                          <AlertCircle className="h-3 w-3 mr-1" />
-                          {errors.password.message}
+                    )}
+
+                    {/* Google User Info */}
+                    {isGoogleUser && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CheckCircle className="h-4 w-4 text-blue-600" />
+                          <span className="text-sm font-medium text-blue-900">Authenticated with Google</span>
+                        </div>
+                        <p className="text-xs text-blue-700">
+                          Your account will be secured using Google authentication. No additional password required.
                         </p>
-                      )}
-                      <div className="mt-1 text-xs text-gray-500">Minimum 6 characters</div>
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -891,13 +1000,17 @@ export default function RegisterPage() {
                     
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5">
                       <div>
-                        <Label className="text-sm font-medium text-gray-700 mb-2 block">Grade Level</Label>
+                        <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                          Grade Level
+                          <span className="text-red-500 ml-1">*</span>
+                          <span className="text-xs text-gray-500 font-normal ml-2">(Required)</span>
+                        </Label>
                         <Select onValueChange={(value) => {
                           setValue('gradeLevel', value)
                           setSelectedGradeLevel(value)
                         }}>
                           <SelectTrigger className="h-11 lg:h-12 text-sm lg:text-base border-2 rounded-lg lg:rounded-xl focus:ring-2 focus:ring-indigo-50">
-                            <SelectValue placeholder="Select grade" />
+                            <SelectValue placeholder="Select grade *" />
                           </SelectTrigger>
                           <SelectContent>
                             {gradeSubjects.length > 0 ? (
@@ -965,18 +1078,28 @@ export default function RegisterPage() {
                       <div className="w-8 h-8 lg:w-10 lg:h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg lg:rounded-xl flex items-center justify-center mr-3">
                         <Users className="h-4 w-4 lg:h-5 lg:w-5 text-white" />
                       </div>
-                      <h4 className="text-base lg:text-lg font-semibold text-gray-800">Link Your Children</h4>
+                      <h4 className="text-base lg:text-lg font-semibold text-gray-800">
+                        Link Your Children
+                        <span className="text-red-500 ml-1">*</span>
+                      </h4>
                     </div>
                     
                     <div className="space-y-3 lg:space-y-4">
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg lg:rounded-xl p-3 lg:p-4">
-                        <p className="text-xs lg:text-sm text-blue-800">
-                          Add your children's school accounts to monitor progress
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg lg:rounded-xl p-3 lg:p-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          <AlertCircle className="h-4 w-4 text-amber-600" />
+                          <span className="text-sm font-medium text-amber-800">Required</span>
+                        </div>
+                        <p className="text-xs lg:text-sm text-amber-700">
+                          You must add at least one child's account to complete parent registration
                         </p>
                       </div>
                       
                       <div className="space-y-2 lg:space-y-3">
-                        <Label className="text-sm font-medium text-gray-700 block">Add Child Account</Label>
+                        <Label className="text-sm font-medium text-gray-700 block">
+                          Add Child Account
+                          <span className="text-red-500 ml-1">*</span>
+                        </Label>
                         <div className="flex gap-2 lg:gap-3">
                           <div className="flex-1">
                             <Input

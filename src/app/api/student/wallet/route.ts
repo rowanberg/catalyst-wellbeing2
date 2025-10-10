@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
-import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
 export async function GET() {
@@ -34,14 +33,9 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Use admin client to bypass RLS for reading profiles too
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
+    // Use Supabase client with proper RLS instead of admin bypass
     // Get user profile to access student_tag and gems
-    const { data: profiles, error: profileError } = await supabaseAdmin
+    const { data: profiles, error: profileError } = await supabase
       .from('profiles')
       .select('student_tag, first_name, last_name, gems')
       .eq('user_id', user.id);
@@ -56,9 +50,9 @@ export async function GET() {
     let profile = profiles?.[0];
     if (profileError || !profile) {
       
-      // Create profile using existing admin client
+      // Create profile using regular client with RLS
 
-      const { data: newProfile, error: createError } = await supabaseAdmin
+      const { data: newProfile, error: createError } = await supabase
         .from('profiles')
         .insert({
           user_id: user.id,
@@ -80,7 +74,7 @@ export async function GET() {
     }
 
     // Check if wallet exists for this user
-    const { data: wallet, error: walletError } = await supabaseAdmin
+    const { data: wallet, error: walletError } = await supabase
       .from('student_wallets')
       .select('*')
       .eq('student_id', user.id)

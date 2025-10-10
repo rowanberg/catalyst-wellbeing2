@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       results.issues.push('Student has no class assignments')
       
       // Try to find and assign a class
-      let classToAssign = null
+      let classToAssign: { id: any; class_name: any; [key: string]: any } | null = null
 
       // Method 1: Try UUID lookup
       if (profile.class_name && profile.class_name.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {

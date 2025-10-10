@@ -296,7 +296,7 @@ Answer:`
     // Questions about specific topics
     if (lowerMessage.includes('what') || lowerMessage.includes('tell me') || lowerMessage.includes('show me')) {
       if (lowerMessage.includes('problem') || lowerMessage.includes('issue') || lowerMessage.includes('concern')) {
-        const issues = []
+        const issues: string[] = []
         if (context.wellbeingMetrics.averageMoodScore < 6) issues.push('low mood scores')
         if (context.academicMetrics.strugglingStudents > 0) issues.push(`${context.academicMetrics.strugglingStudents} students struggling academically`)
         if ((context.behavioralMetrics?.interventionsNeeded || 0) > 0) issues.push(`${context.behavioralMetrics?.interventionsNeeded || 0} behavioral interventions needed`)

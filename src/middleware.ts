@@ -1,8 +1,28 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-// Super Admin Access Key (Hexadecimal) - CHANGE THIS IN PRODUCTION
-const SUPER_ADMIN_ACCESS_KEY = '4C4F52454D5F495053554D5F444F4C4F525F534954'
+// Get super admin access key from environment variable
+// This should be a strong, randomly generated key stored securely
+function getSecureSuperAdminKey(): string {
+  const key = process.env.SUPER_ADMIN_SECRET_KEY
+  if (!key) {
+    console.error('SUPER_ADMIN_SECRET_KEY environment variable is not set')
+    // Return a fallback for development - in production this should never happen
+    return 'development-only-fallback-key-not-secure'
+  }
+  return key
+}
+
+// Edge Runtime compatible timing-safe comparison
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  
+  let result = 0
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  }
+  return result === 0
+}
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
@@ -19,14 +39,20 @@ export async function middleware(req: NextRequest) {
 
   // For dashboard and other protected routes, verify access key
   const accessKey = req.cookies.get('super_admin_key')?.value
+  const validKey = getSecureSuperAdminKey()
 
-  // Redirect to auth if no valid key
-  if (!accessKey || accessKey !== SUPER_ADMIN_ACCESS_KEY) {
+  // Use timing-safe comparison to prevent timing attacks
+  if (!accessKey || !timingSafeEqual(accessKey, validKey)) {
     return NextResponse.redirect(new URL('/superpanel/auth', req.url))
   }
 
-  // Valid key - allow access
-  return NextResponse.next()
+  // Valid key - allow access with security headers
+  const response = NextResponse.next()
+  response.headers.set('X-Frame-Options', 'DENY')
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  
+  return response
 }
 
 export const config = {

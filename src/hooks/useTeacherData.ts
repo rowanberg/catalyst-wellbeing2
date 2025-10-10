@@ -313,6 +313,7 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
         }
       }
     }
+    return undefined
   }, [autoRefresh, refreshInterval, loading, fetchData])
 
   // Cleanup

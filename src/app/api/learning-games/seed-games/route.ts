@@ -327,7 +327,7 @@ export async function POST(request: NextRequest) {
     ]
 
     // Insert games into database
-    const insertedGames = []
+    const insertedGames: any[] = []
     for (const game of games) {
       const { data: insertedGame, error } = await supabase
         .from('learning_games')

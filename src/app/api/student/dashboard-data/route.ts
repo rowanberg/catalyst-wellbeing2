@@ -24,9 +24,9 @@ export async function GET(request: NextRequest) {
       }
     )
 
-    // Get current user
-    let user = null
-    let authError = null
+    // Get the current user with retry logic
+    let user: { id: string; [key: string]: any } | null = null
+    let authError: any = null
     
     try {
       const authResult = await supabase.auth.getUser()
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
         .eq('school_id', profile.school_id)
         .eq('is_active', true)
         .in('target_audience', ['all', 'students'])
-        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+        .or(`expires_at.is.null,expires_at.gte.now()`)
         .order('created_at', { ascending: false })
         .limit(announcementsLimit),
 

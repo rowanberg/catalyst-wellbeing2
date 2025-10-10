@@ -46,8 +46,8 @@ export async function POST(request: NextRequest) {
       .eq('id', userId)
       .single()
 
-    let schoolId = null
-    let userRole = null
+    let schoolId: string | null = null
+    let userRole: string | null = null
 
     if (profile && !profileError) {
       schoolId = profile.school_id

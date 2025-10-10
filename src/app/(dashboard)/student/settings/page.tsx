@@ -36,9 +36,7 @@ import {
   Tablet,
   Save,
   RefreshCw,
-  Brain,
   Key,
-  Cpu,
   AlertTriangle,
   ExternalLink,
   LogOut,
@@ -75,11 +73,6 @@ interface WhatsAppConfig {
   isEnabled: boolean
 }
 
-interface GeminiConfig {
-  apiKey: string
-  selectedModel: string
-  isConfigured: boolean
-}
 
 const StudentSettingsPage = () => {
   const router = useRouter()
@@ -90,12 +83,6 @@ const StudentSettingsPage = () => {
   const [showStudentId, setShowStudentId] = useState(false)
   const [copiedStudentId, setCopiedStudentId] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-  const [showApiKey, setShowApiKey] = useState(false)
-  const [geminiConfig, setGeminiConfig] = useState<GeminiConfig>({
-    apiKey: '',
-    selectedModel: 'gemini-1.5-flash',
-    isConfigured: false
-  })
   
   const [whatsappConfig, setWhatsappConfig] = useState<WhatsAppConfig>({
     phoneNumber: '',
@@ -116,45 +103,6 @@ const StudentSettingsPage = () => {
     language: 'English'
   })
 
-  // Gemini AI Models with their capabilities and limits
-  const geminiModels = [
-    {
-      id: 'gemini-1.5-flash',
-      name: 'Gemini 1.5 Flash',
-      description: 'Fast and efficient for everyday tasks',
-      features: ['Text', 'Images', 'Fast responses'],
-      limits: {
-        free: '15 requests/minute, 1,500 requests/day',
-        inputTokens: '1M tokens',
-        outputTokens: '8K tokens'
-      },
-      recommended: true
-    },
-    {
-      id: 'gemini-1.5-pro',
-      name: 'Gemini 1.5 Pro',
-      description: 'Most capable model for complex reasoning',
-      features: ['Text', 'Images', 'Advanced reasoning', 'Long context'],
-      limits: {
-        free: '2 requests/minute, 50 requests/day',
-        inputTokens: '2M tokens',
-        outputTokens: '8K tokens'
-      },
-      recommended: false
-    },
-    {
-      id: 'gemini-pro',
-      name: 'Gemini 1.0 Pro',
-      description: 'Reliable performance for general use',
-      features: ['Text only', 'Good reasoning'],
-      limits: {
-        free: '60 requests/minute, No daily limit',
-        inputTokens: '30K tokens',
-        outputTokens: '2K tokens'
-      },
-      recommended: false
-    }
-  ]
 
   // Optimized API cache
   const apiCache = useRef<Map<string, { data: any, timestamp: number }>>(new Map())
@@ -171,93 +119,8 @@ const StudentSettingsPage = () => {
     apiCache.current.set(key, { data, timestamp: Date.now() })
   }, [])
 
-  // Gemini API configuration functions
-  const checkGeminiConfig = useCallback(async () => {
-    try {
-      const response = await fetch('/api/student/gemini-config', {
-        method: 'GET',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache'
-        }
-      })
-      
-      if (response.ok) {
-        const geminiData = await response.json()
-        setGeminiConfig({
-          apiKey: geminiData.apiKey || '',
-          selectedModel: geminiData.selectedModel || 'gemini-1.5-flash',
-          isConfigured: !!geminiData.apiKey
-        })
-      }
-    } catch (error) {
-      console.error('Error fetching Gemini configuration:', error)
-    }
-  }, [])
 
-  const saveGeminiConfig = useCallback(async (config: GeminiConfig) => {
-    try {
-      setSaving(true)
-      const response = await fetch('/api/student/gemini-config', {
-        method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache'
-        },
-        body: JSON.stringify({ 
-          apiKey: config.apiKey,
-          selectedModel: config.selectedModel
-        })
-      })
-      
-      if (response.ok) {
-        setGeminiConfig(prev => ({ ...prev, isConfigured: !!config.apiKey }))
-        showToast('Gemini AI configuration saved successfully!', 'success')
-        setHasUnsavedChanges(false)
-      } else {
-        showToast('Failed to save Gemini configuration', 'error')
-      }
-    } catch (error) {
-      showToast('Failed to save Gemini configuration', 'error')
-    } finally {
-      setSaving(false)
-    }
-  }, [])
 
-  const testGeminiConnection = useCallback(async () => {
-    if (!geminiConfig.apiKey) {
-      showToast('Please enter your Gemini API key first', 'error')
-      return
-    }
-
-    try {
-      setSaving(true)
-      const response = await fetch('/api/student/gemini-test', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 
-          apiKey: geminiConfig.apiKey,
-          model: geminiConfig.selectedModel
-        })
-      })
-      
-      if (response.ok) {
-        const result = await response.json()
-        showToast(`✅ ${result.message || 'Connection successful!'}`, 'success')
-      } else {
-        const error = await response.json()
-        console.error('Test connection error:', error)
-        showToast(`❌ ${error.error || error.message || 'Connection failed'}`, 'error')
-      }
-    } catch (error: any) {
-      console.error('Network error:', error)
-      showToast(`❌ Network error: ${error.message || 'Failed to test connection'}`, 'error')
-    } finally {
-      setSaving(false)
-    }
-  }, [geminiConfig.apiKey, geminiConfig.selectedModel])
 
   // WhatsApp configuration functions
   const checkWhatsAppConfig = useCallback(async () => {
@@ -353,14 +216,11 @@ const StudentSettingsPage = () => {
       }
 
       // Parallel API calls for better performance
-      const [profileResponse, settingsResponse, geminiResponse] = await Promise.all([
+      const [profileResponse, settingsResponse] = await Promise.all([
         fetch('/api/student/profile', {
           headers: { 'Cache-Control': 'max-age=300' } // 5 min cache
         }),
         fetch('/api/student/settings', {
-          headers: { 'Cache-Control': 'max-age=300' }
-        }),
-        fetch('/api/student/gemini-config', {
           headers: { 'Cache-Control': 'max-age=300' }
         })
       ])
@@ -382,15 +242,6 @@ const StudentSettingsPage = () => {
         setHasUnsavedChanges(false) // Clear unsaved changes flag on initial load
       }
 
-      // Process Gemini configuration
-      if (geminiResponse.ok) {
-        const geminiData = await geminiResponse.json()
-        setGeminiConfig({
-          apiKey: geminiData.apiKey || '',
-          selectedModel: geminiData.selectedModel || 'gemini-1.5-flash',
-          isConfigured: !!geminiData.apiKey
-        })
-      }
     } catch (error) {
       console.error('Error fetching data:', error)
       setProfile(reduxProfile)
@@ -1048,165 +899,6 @@ const StudentSettingsPage = () => {
                 </Card>
               </motion.div>
 
-              {/* Gemini AI Configuration - New Section */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.5 }}
-                className="xl:col-span-3 lg:col-span-2"
-              >
-                <Card className="bg-white/10 backdrop-blur-xl shadow-2xl border border-white/20 rounded-2xl sm:rounded-3xl">
-                  <CardHeader className="pb-3 sm:pb-6">
-                    <CardTitle className="flex items-center justify-between text-base sm:text-lg text-white">
-                      <div className="flex items-center space-x-2 sm:space-x-3">
-                        <Brain className="h-4 w-4 sm:h-5 sm:w-5 text-purple-300" />
-                        <span className="truncate">Gemini AI Configuration</span>
-                        {geminiConfig.isConfigured && (
-                          <div className="flex items-center space-x-1 bg-green-500/20 text-green-300 px-2 py-1 rounded-lg text-xs">
-                            <Check className="h-3 w-3" />
-                            <span>Configured</span>
-                          </div>
-                        )}
-                      </div>
-                      <Button
-                        onClick={() => window.open('https://aistudio.google.com/app/apikey', '_blank')}
-                        variant="ghost"
-                        size="sm"
-                        className="text-white/60 hover:text-white hover:bg-white/10 rounded-lg"
-                      >
-                        <ExternalLink className="h-4 w-4 mr-1" />
-                        <span className="text-xs">Get API Key</span>
-                      </Button>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6 pb-6">
-                    
-                    {/* API Key Configuration */}
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <label className="text-white/80 font-medium text-sm">Gemini API Key</label>
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setShowApiKey(!showApiKey)}
-                            className="text-white/60 hover:text-white hover:bg-white/10 rounded-lg p-1"
-                          >
-                            {showApiKey ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                          </Button>
-                          {geminiConfig.apiKey && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={testGeminiConnection}
-                              disabled={saving}
-                              className="text-white/60 hover:text-white hover:bg-white/10 rounded-lg px-2 py-1"
-                            >
-                              {saving ? (
-                                <RefreshCw className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <Zap className="h-3 w-3" />
-                              )}
-                              <span className="text-xs ml-1">Test</span>
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                      <Input
-                        type={showApiKey ? 'text' : 'password'}
-                        placeholder="Enter your Gemini API key..."
-                        value={geminiConfig.apiKey}
-                        onChange={(e) => {
-                          setGeminiConfig(prev => ({ ...prev, apiKey: e.target.value }))
-                          setHasUnsavedChanges(true)
-                        }}
-                        className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20"
-                      />
-                      <div className="flex items-start space-x-2 p-3 bg-blue-500/10 border border-blue-400/20 rounded-lg">
-                        <AlertTriangle className="h-4 w-4 text-blue-400 flex-shrink-0 mt-0.5" />
-                        <div className="text-xs text-blue-300">
-                          <p className="font-medium mb-1">Your API key is stored securely and encrypted</p>
-                          <p className="text-blue-200/80">Get your free API key from Google AI Studio. The key is only used for your personal AI homework assistance.</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Model Selection */}
-                    <div className="space-y-3">
-                      <label className="text-white/80 font-medium text-sm">Select AI Model</label>
-                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-                        {geminiModels.map((model) => (
-                          <div
-                            key={model.id}
-                            className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                              geminiConfig.selectedModel === model.id
-                                ? 'bg-purple-500/20 border-purple-400/50'
-                                : 'bg-white/5 border-white/20 hover:bg-white/10'
-                            }`}
-                            onClick={() => {
-                              setGeminiConfig(prev => ({ ...prev, selectedModel: model.id }))
-                              setHasUnsavedChanges(true)
-                            }}
-                          >
-                            <div className="flex items-start justify-between mb-2">
-                              <div className="flex items-center space-x-2">
-                                <Cpu className="h-4 w-4 text-purple-300" />
-                                <h4 className="text-white font-medium text-sm">{model.name}</h4>
-                              </div>
-                              {model.recommended && (
-                                <div className="bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded text-xs">
-                                  Recommended
-                                </div>
-                              )}
-                            </div>
-                            <p className="text-white/70 text-xs mb-3">{model.description}</p>
-                            
-                            <div className="space-y-2">
-                              <div className="flex flex-wrap gap-1">
-                                {model.features.map((feature, index) => (
-                                  <span key={index} className="bg-white/10 text-white/80 px-2 py-0.5 rounded text-xs">
-                                    {feature}
-                                  </span>
-                                ))}
-                              </div>
-                              
-                              <div className="text-xs text-white/60">
-                                <p className="font-medium text-white/80 mb-1">Free Plan Limits:</p>
-                                <p>• {model.limits.free}</p>
-                                <p>• Input: {model.limits.inputTokens}</p>
-                                <p>• Output: {model.limits.outputTokens}</p>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Save Configuration */}
-                    <div className="flex items-center justify-between pt-4 border-t border-white/20">
-                      <div className="text-xs text-white/60">
-                        <p>Configure your personal AI assistant for homework help</p>
-                      </div>
-                      <Button
-                        onClick={() => saveGeminiConfig(geminiConfig)}
-                        disabled={saving || !geminiConfig.apiKey}
-                        className={`px-6 py-2 rounded-xl font-medium transition-all ${
-                          geminiConfig.apiKey 
-                            ? 'bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white' 
-                            : 'bg-gray-500/50 text-gray-300 cursor-not-allowed'
-                        }`}
-                      >
-                        {saving ? (
-                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <Save className="h-4 w-4 mr-2" />
-                        )}
-                        Save Configuration
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
 
               {/* WhatsApp Configuration Section */}
               <motion.div

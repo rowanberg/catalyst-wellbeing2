@@ -174,7 +174,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get school info using school_id from profile
-    let schoolData = null
+    let schoolData: { id: any; name: any; school_code: any; address: any; phone: any; email: any; } | null = null
     if (profile.school_id) {
       const { data: school, error: schoolError } = await supabase
         .from('schools')
@@ -228,7 +228,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Handle mood data
-    let moodData = null
+    let moodData: { current: any; energy: number; stress: number; lastUpdated: any; } | null = null
     if (todayMood) {
       console.log('🎭 Using today\'s mood from mood_tracking table:', todayMood.mood)
       moodData = {

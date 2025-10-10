@@ -51,7 +51,7 @@ export async function POST() {
       });
     }
 
-    const updatedProfiles = [];
+    const updatedProfiles: any[] = [];
     
     // Update each profile individually to ensure no conflicts
     for (const profile of profilesToUpdate) {

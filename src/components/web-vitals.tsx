@@ -5,7 +5,7 @@
  */
 'use client'
 
-import { useEffect } from 'react'
+import React, { useEffect } from 'react'
 
 interface WebVitalsMetric {
   name: string
@@ -25,24 +25,27 @@ function reportWebVitals(metric: WebVitalsMetric) {
     })
   }
 
-  // In production, you could send to analytics service
   // Example: analytics.track('web-vital', metric)
 }
 
 async function loadWebVitals() {
   try {
-    // Use eval to avoid TypeScript checking the import at compile time
-    const webVitals = await eval('import("web-vitals")')
+    // Use dynamic import instead of eval for security - make web-vitals optional
+    const webVitals = await import('web-vitals' as any).catch(() => null)
+    if (!webVitals) {
+      console.log('web-vitals package not installed')
+      return
+    }
     const { getCLS, getFID, getFCP, getLCP, getTTFB } = webVitals
     getCLS(reportWebVitals)
     getFID(reportWebVitals)
     getFCP(reportWebVitals)
     getLCP(reportWebVitals)
     getTTFB(reportWebVitals)
-  } catch {
-    // web-vitals package not installed or available, skip silently
+  } catch (err) {
+    // Web vitals not available in this environment
     if (process.env.NODE_ENV === 'development') {
-      console.log('📊 Web Vitals package not available (install with: npm install web-vitals)')
+      console.log('Web Vitals not available:', err)
     }
   }
 }

@@ -180,7 +180,7 @@ async function generateAutomaticNotifications(supabase: any) {
     }
 
     const now = new Date()
-    const notifications = []
+    const notifications: { school_id: string; type: string; title: string; message: string; severity: string; }[] = []
 
     for (const school of schools) {
       const usagePercentage = (school.current_users / school.user_limit) * 100

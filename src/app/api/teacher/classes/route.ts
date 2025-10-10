@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get teacher's assigned classes for this grade level
-    let classes = []
+    let classes: { id: any; class_name: any; subject: any; room_number: any; current_students: any; grade_level_id: any; school_id: any; }[] = []
     
     try {
       // If teacherId is provided, get only assigned classes

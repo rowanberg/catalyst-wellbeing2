@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     })) || []
 
     // Generate weekly activity data (mock data for now)
-    const weeklyActivity = []
+    const weeklyActivity: { week: string; students: number; teachers: number; parents: number; }[] = []
     for (let i = 6; i >= 0; i--) {
       const date = new Date()
       date.setDate(date.getDate() - i)

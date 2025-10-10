@@ -237,7 +237,7 @@ export default function AIAssistantPage() {
       // Fetch real school info from admin API
       console.log('🔍 Fetching school info from /api/admin/school...')
       const schoolResponse = await fetch('/api/admin/school')
-      let schoolInfo = null
+      let schoolInfo: { name: string; [key: string]: any } | null = null
       if (schoolResponse.ok) {
         const schoolData = await schoolResponse.json()
         schoolInfo = schoolData.school
@@ -249,7 +249,14 @@ export default function AIAssistantPage() {
       // Fetch real stats from admin API
       console.log('🔍 Fetching real stats from /api/admin/stats...')
       const statsResponse = await fetch('/api/admin/stats')
-      let stats = null
+      let stats: { 
+        totalStudents: number; 
+        totalTeachers: number; 
+        totalParents: number; 
+        helpRequests: number; 
+        atRisk: number;
+        [key: string]: any 
+      } | null = null
       if (statsResponse.ok) {
         const statsData = await statsResponse.json()
         stats = statsData.stats

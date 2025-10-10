@@ -1,21 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAppDispatch, useAppSelector } from '@/lib/redux/hooks'
 import { signIn } from '@/lib/redux/slices/authSlice'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { useToast } from '@/components/ui/toast'
-import { handleError, showErrorToast, AuthError } from '@/lib/utils/errorHandling'
+import { handleError } from '@/lib/utils/errorHandling'
 import Link from 'next/link'
-import { Eye, EyeOff, AlertCircle, GraduationCap, Mail, Lock, Sparkles } from 'lucide-react'
+import { Eye, EyeOff, AlertCircle, GraduationCap, Mail, Lock } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 
 const loginSchema = z.object({
@@ -30,21 +25,14 @@ export default function LoginPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const [isClient, setIsClient] = useState(false)
   const router = useRouter()
   const dispatch = useAppDispatch()
-  const { user, profile, isLoading: authLoading, error: authError } = useAppSelector((state) => state.auth)
+  const { error: authError } = useAppSelector((state) => state.auth)
   const { addToast } = useToast()
-
-  // Ensure client-side rendering to avoid hydration issues with browser extensions
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
   })
@@ -118,7 +106,7 @@ export default function LoginPage() {
     try {
       console.log('🔄 Starting Google Sign-In...')
       
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
@@ -136,12 +124,6 @@ export default function LoginPage() {
 
       console.log('✅ Google Sign-In initiated successfully')
       
-      addToast({
-        type: 'success',
-        title: 'Redirecting to Google...',
-        description: 'Please complete sign-in with Google'
-      })
-      
     } catch (error: any) {
       console.error('Google Sign-In error:', error)
       setSubmitError(error.message || 'Google Sign-In failed')
@@ -157,13 +139,11 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row lg:h-screen lg:overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative">
-      {/* Modern geometric background */}
+      {/* Optimized geometric background - reduced blur for better performance */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-32 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-indigo-600/20 rounded-full blur-3xl"></div>
-        <div className="absolute top-20 -left-32 w-64 h-64 bg-gradient-to-br from-violet-400/20 to-purple-600/20 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 left-1/3 w-48 h-48 bg-gradient-to-br from-cyan-400/20 to-blue-500/20 rounded-full blur-2xl"></div>
-        {/* Mobile-specific backgrounds */}
-        <div className="lg:hidden absolute top-1/2 right-0 w-64 h-64 bg-gradient-to-br from-pink-400/15 to-rose-500/15 rounded-full blur-3xl"></div>
+        <div className="absolute -top-40 -right-32 w-80 h-80 bg-gradient-to-br from-blue-400/15 to-indigo-600/15 rounded-full blur-2xl"></div>
+        <div className="absolute top-20 -left-32 w-64 h-64 bg-gradient-to-br from-violet-400/15 to-purple-600/15 rounded-full blur-2xl"></div>
+        <div className="absolute bottom-20 left-1/3 w-48 h-48 bg-gradient-to-br from-cyan-400/15 to-blue-500/15 rounded-full blur-xl"></div>
       </div>
 
       {/* Main Content Container */}
@@ -180,8 +160,8 @@ export default function LoginPage() {
             <p className="text-gray-600">Your school's well-being platform</p>
           </div>
 
-          {/* Login Form */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 shadow-xl border border-white/20">
+          {/* Optimized Login Form - removed backdrop blur for better performance */}
+          <div className="bg-white/95 rounded-2xl p-4 sm:p-6 shadow-xl border border-white/30">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-5">
               {/* Email Field */}
               <div>
@@ -194,7 +174,6 @@ export default function LoginPage() {
                     className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     placeholder="Enter your email"
                     suppressHydrationWarning={true}
-                    key={isClient ? 'client-email' : 'server-email'}
                   />
                 </div>
               </div>
@@ -210,7 +189,6 @@ export default function LoginPage() {
                     className="w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     placeholder="Enter your password"
                     suppressHydrationWarning={true}
-                    key={isClient ? 'client-password' : 'server-password'}
                   />
                   <button
                     type="button"
@@ -233,11 +211,17 @@ export default function LoginPage() {
               {/* Sign In Button */}
               <button
                 type="submit"
-                disabled={!isClient || isLoading || authLoading}
+                disabled={isLoading}
                 className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg transition-all duration-200 disabled:opacity-50 touch-manipulation"
               >
-                {isClient && (isLoading || authLoading) ? (
-                  <LoadingSpinner size="sm" text="Signing in..." />
+                {isLoading ? (
+                  <div className="flex items-center justify-center space-x-2">
+                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Signing in...</span>
+                  </div>
                 ) : (
                   'Sign In'
                 )}
@@ -247,8 +231,8 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
-                disabled={!isClient || isLoading || authLoading || isGoogleLoading}
-                className="w-full py-3 px-4 bg-white border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-all duration-200 flex items-center justify-center gap-2 touch-manipulation"
+                disabled={isLoading || isGoogleLoading}
+                className="w-full py-3 px-4 bg-white border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-all duration-200 flex items-center justify-center gap-2 touch-manipulation disabled:opacity-50"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -280,8 +264,8 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Right Section - Features (Visible on mobile below form) */}
-        <div className="flex flex-col lg:flex-1 items-center justify-center px-4 sm:px-6 py-6 sm:py-8 lg:p-6 xl:p-8 relative z-10 bg-gradient-to-b from-transparent via-white/20 to-white/30 lg:bg-transparent">
+        {/* Right Section - Features (Optimized for performance) */}
+        <div className="flex flex-col lg:flex-1 items-center justify-center px-4 sm:px-6 py-6 sm:py-8 lg:p-6 xl:p-8 relative z-10 bg-gradient-to-b from-transparent via-white/15 to-white/25 lg:bg-transparent">
           <div className="w-full max-w-md lg:max-w-lg space-y-4 sm:space-y-6 xl:space-y-8">
             {/* Mobile separator */}
             <div className="lg:hidden w-full max-w-xs mx-auto h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent mb-6"></div>
@@ -292,7 +276,7 @@ export default function LoginPage() {
             </div>
 
             <div className="grid gap-2 sm:gap-3 xl:gap-4">
-              <div className="bg-white/70 lg:bg-white/60 backdrop-blur-sm rounded-lg sm:rounded-xl p-3 sm:p-4 border border-white/40 lg:border-white/30 shadow-sm hover:shadow-md transition-shadow">
+              <div className="bg-white/85 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-white/50 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-r from-pink-500 to-rose-500 rounded-lg flex items-center justify-center flex-shrink-0">
                     <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -306,7 +290,7 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="bg-white/70 lg:bg-white/60 backdrop-blur-sm rounded-lg sm:rounded-xl p-3 sm:p-4 border border-white/40 lg:border-white/30 shadow-sm hover:shadow-md transition-shadow">
+              <div className="bg-white/85 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-white/50 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center flex-shrink-0">
                     <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -320,7 +304,7 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="bg-white/70 lg:bg-white/60 backdrop-blur-sm rounded-lg sm:rounded-xl p-3 sm:p-4 border border-white/40 lg:border-white/30 shadow-sm hover:shadow-md transition-shadow">
+              <div className="bg-white/85 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-white/50 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center flex-shrink-0">
                     <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -335,8 +319,8 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Stats Section */}
-            <div className="bg-white/50 lg:bg-transparent rounded-xl p-4 sm:p-5 backdrop-blur-sm">
+            {/* Stats Section - Optimized */}
+            <div className="bg-white/70 lg:bg-transparent rounded-xl p-4 sm:p-5">
               <div className="text-center grid grid-cols-3 gap-3 sm:gap-4 xl:gap-6">
                 <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-2 sm:p-3 lg:bg-transparent lg:p-0">
                   <div className="text-lg sm:text-xl xl:text-2xl font-bold text-gray-900">500+</div>

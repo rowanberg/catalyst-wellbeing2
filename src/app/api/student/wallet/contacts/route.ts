@@ -39,7 +39,7 @@ export async function GET() {
     });
 
     // Get contact details
-    const contacts = [];
+    const contacts: any[] = [];
     const contactEntries = Array.from(contactCounts.entries());
     
     for (let i = 0; i < contactEntries.length; i++) {

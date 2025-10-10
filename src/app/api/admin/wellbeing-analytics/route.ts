@@ -216,8 +216,8 @@ export async function GET(request: NextRequest) {
       const questCompletionRate = studentQuests.length > 0 ? 
         (studentQuests.filter(q => q.completed).length / studentQuests.length) * 100 : 0
       
-      const concerns = []
-      const strengths = []
+      const concerns: string[] = []
+      const strengths: string[] = []
       
       if (negativeMoodCount >= 3) concerns.push('Frequent negative mood indicators')
       if (questCompletionRate < 50) concerns.push('Low quest completion rate')

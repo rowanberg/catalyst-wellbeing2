@@ -103,9 +103,9 @@ export async function GET(request: NextRequest) {
       
       responseData.answers?.forEach((answer: any) => {
         // Determine the correct question type and value
-        let answerText = null
-        let answerOptions = null
-        let answerNumber = null
+        let answerText: string | null = null
+        let answerOptions: any[] | null = null
+        let answerNumber: number | null = null
         
         if (Array.isArray(answer.value)) {
           answerOptions = answer.value
