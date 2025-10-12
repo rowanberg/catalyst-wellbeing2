@@ -33,17 +33,23 @@ const nextConfig = {
   // Set the correct workspace root to silence lockfile warning
   outputFileTracingRoot: __dirname,
   
-  // Custom headers including CSP
+  // Custom headers including CSP - now handled by middleware.ts for better control
   async headers() {
     return [
       {
-        source: '/(.*)',
+        source: '/api/(.*)',
         headers: [
           {
-            key: 'Content-Security-Policy',
-            value: process.env.NODE_ENV === 'development' 
-              ? "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co;"
-              : "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co;"
+            key: 'Access-Control-Allow-Origin',
+            value: '*'
+          },
+          {
+            key: 'Access-Control-Allow-Methods', 
+            value: 'GET, POST, PUT, DELETE, OPTIONS'
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization'
           },
         ],
       },

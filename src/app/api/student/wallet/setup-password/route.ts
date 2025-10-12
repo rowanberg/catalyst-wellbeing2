@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 import * as bcrypt from 'bcryptjs';
+import { invalidateUserCaches } from '@/lib/cache/cacheManager';
 
 // Use bcrypt for secure password hashing
 // Cost factor of 12 provides good security/performance balance
@@ -8,7 +10,28 @@ const BCRYPT_ROUNDS = 12;
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // Ignore server component errors
+            }
+          },
+        },
+      }
+    );
+    
     const { password } = await request.json();
 
     if (!password || password.length < 6) {
@@ -18,6 +41,7 @@ export async function POST(request: Request) {
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
+      console.error('Auth error in setup-password:', userError);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -29,8 +53,6 @@ export async function POST(request: Request) {
       .from('student_wallets')
       .update({
         transaction_password_hash: passwordHash,
-        password_salt: null, // bcrypt stores salt within the hash
-        password_set_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
       .eq('student_id', user.id);
@@ -39,6 +61,9 @@ export async function POST(request: Request) {
       console.error('Error setting password:', updateError);
       return NextResponse.json({ error: 'Failed to set password' }, { status: 500 });
     }
+
+    // Invalidate wallet cache so fresh data is fetched
+    invalidateUserCaches(user.id);
 
     // Log security event
     await supabase

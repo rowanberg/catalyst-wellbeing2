@@ -3,16 +3,53 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { encryptMessage } from '@/lib/schoolEncryption'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
+import { withRateLimit } from '@/lib/security/rateLimiter'
+
+// Sanitize user input to prevent XSS attacks
+function sanitizeInput(input: string): string {
+  return input
+    .replace(/<script[^>]*?>.*?<\/script>/gi, '') // Remove script tags
+    .replace(/<[^>]*>/g, '') // Remove all HTML tags
+    .replace(/javascript:/gi, '') // Remove javascript: protocol
+    .replace(/on\w+="[^"]*"/gi, '') // Remove event handlers
+    .trim()
+    .substring(0, 5000); // Limit message length
+}
 
 export async function POST(request: NextRequest) {
-  try {
-    const { message, urgency } = await request.json()
+  return withRateLimit(request, async () => {
+    try {
+      const { message, urgency } = await request.json()
 
-    if (!message || !urgency) {
-      return NextResponse.json({ 
-        error: 'Message and urgency are required' 
-      }, { status: 400 })
-    }
+      if (!message || !urgency) {
+        return NextResponse.json({ 
+          error: 'Message and urgency are required' 
+        }, { status: 400 })
+      }
+      
+      // Validate message length and content
+      if (message.length < 10) {
+        return NextResponse.json({ 
+          error: 'Message must be at least 10 characters long' 
+        }, { status: 400 })
+      }
+      
+      if (message.length > 5000) {
+        return NextResponse.json({ 
+          error: 'Message is too long (maximum 5000 characters)' 
+        }, { status: 400 })
+      }
+      
+      // Validate urgency level
+      const validUrgencyLevels = ['low', 'medium', 'high'];
+      if (!validUrgencyLevels.includes(urgency)) {
+        return NextResponse.json({ 
+          error: 'Invalid urgency level' 
+        }, { status: 400 })
+      }
+      
+      // Sanitize message to prevent XSS
+      const sanitizedMessage = sanitizeInput(message);
 
     // Get student's session
     const cookieStore = await cookies()
@@ -80,11 +117,12 @@ export async function POST(request: NextRequest) {
         student_id: user.id,
         school_id: studentSchool.id,
         school_code: studentProfile.school_code,
-        message: message, // Store plain text for fallback
+        message: sanitizedMessage, // Store sanitized text
         encrypted_message: encryptedMessage,
         school_encryption_key: schoolEncryptionKey || null,
         urgency: urgency,
-        status: 'pending'
+        status: 'pending',
+        created_at: new Date().toISOString()
       })
       .select()
       .single()
@@ -97,26 +135,27 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    return NextResponse.json({
-      success: true,
-      helpRequest: {
-        id: helpRequest.id,
-        message: message,
-        urgency: urgency,
-        status: helpRequest.status,
-        school: studentSchool.name,
-        created_at: helpRequest.created_at
-      }
-    })
+      return NextResponse.json({
+        success: true,
+        helpRequest: {
+          id: helpRequest.id,
+          urgency: urgency,
+          status: helpRequest.status,
+          created_at: helpRequest.created_at
+        },
+        message: 'Your help request has been submitted successfully. A trusted adult will respond soon.'
+      })
 
-  } catch (error: any) {
-    console.error('Submit help request API error:', error)
-    return NextResponse.json(
-      { 
-        error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
-  }
+    } catch (error: any) {
+      console.error('Submit help request API error');
+      // Never expose internal error details to client
+      return NextResponse.json(
+        { 
+          error: 'Failed to submit help request. Please try again.',
+          code: 'HELP_REQUEST_ERROR'
+        },
+        { status: 500 }
+      )
+    }
+  }, 'helpRequest');
 }

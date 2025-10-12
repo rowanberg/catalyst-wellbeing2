@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
@@ -12,53 +12,11 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_A
   console.warn('NEXT_PUBLIC_SUPABASE_ANON_KEY=your_actual_anon_key')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-    flowType: 'pkce',
-    storage: {
-      getItem: (key: string) => {
-        if (typeof window !== 'undefined') {
-          return window.localStorage.getItem(key)
-        }
-        return null
-      },
-      setItem: (key: string, value: string) => {
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem(key, value)
-          // Set secure cookie with proper flags
-          const isProduction = process.env.NODE_ENV === 'production'
-          const cookieOptions = [
-            `${key}=${value}`,
-            'path=/',
-            'max-age=604800',
-            'SameSite=Strict',
-            isProduction ? 'Secure' : '',
-            'HttpOnly'
-          ].filter(Boolean).join('; ')
-          
-          // Note: HttpOnly can't be set from JavaScript, needs server-side setting
-          document.cookie = `${key}=${value}; path=/; max-age=604800; SameSite=Strict${isProduction ? '; Secure' : ''}`
-        }
-      },
-      removeItem: (key: string) => {
-        if (typeof window !== 'undefined') {
-          window.localStorage.removeItem(key)
-          // Also remove cookie
-          document.cookie = `${key}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`
-        }
-      }
-    }
-  },
-  global: {
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    }
-  }
-})
+// Use SSR-compatible browser client that properly syncs cookies with server
+export const supabase = createBrowserClient(
+  supabaseUrl,
+  supabaseAnonKey
+)
 
 // Handle auth state changes and refresh token errors
 if (typeof window !== 'undefined') {

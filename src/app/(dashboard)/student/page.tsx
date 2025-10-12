@@ -280,6 +280,9 @@ const StudentDashboardContent = () => {
     message: ''
   })
 
+  // Whiskers animation state
+  const [showWhiskersAnimation, setShowWhiskersAnimation] = useState(false)
+
   // Optimized polls fetch with caching
   const fetchPolls = useCallback(async () => {
     // Check cache first
@@ -1252,7 +1255,7 @@ const StudentDashboardContent = () => {
               {/* Render Polls (only non-completed ones) */}
               {polls.filter(poll => !poll.hasResponded).slice(0, 2).map((poll) => (
                 <div key={`poll-${poll.id}`} className="bg-white/80 rounded-lg p-4 hover:bg-white/90 transition-colors border border-purple-100">
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2 mb-2">
                         <div className="p-1 bg-gradient-to-r from-purple-500 to-pink-500 rounded text-white text-xs font-bold px-2">
@@ -1293,7 +1296,7 @@ const StudentDashboardContent = () => {
                 const remainingSlots = Math.max(0, 2 - availablePolls);
                 return announcements.slice(0, remainingSlots).map((announcement) => (
                   <div key={`announcement-${announcement.id}`} className="bg-white/80 rounded-lg p-4 hover:bg-white/90 transition-colors border border-blue-100">
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-2 mb-2">
                           <div className="p-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded text-white text-xs font-bold px-2">
@@ -1597,15 +1600,26 @@ const StudentDashboardContent = () => {
                   <Calendar className="h-5 w-5 text-orange-600" />
                   <h3 className="text-lg font-bold text-gray-800">Upcoming Exams</h3>
                 </div>
-                <Button
-                  onClick={() => router.push('/student/calendar')}
-                  variant="outline"
-                  size="sm"
-                  className="text-xs bg-orange-100 hover:bg-orange-200 border-orange-300"
-                >
-                  Full Calendar
-                  <ChevronRight className="w-3 h-3 ml-1" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={() => router.push('/student/examinations')}
+                    variant="outline"
+                    size="sm"
+                    className="text-xs bg-blue-100 hover:bg-blue-200 border-blue-300 text-blue-700"
+                  >
+                    <GraduationCap className="w-3 h-3 mr-1" />
+                    Exams
+                  </Button>
+                  <Button
+                    onClick={() => router.push('/student/calendar')}
+                    variant="outline"
+                    size="sm"
+                    className="text-xs bg-orange-100 hover:bg-orange-200 border-orange-300"
+                  >
+                    Calendar
+                    <ChevronRight className="w-3 h-3 ml-1" />
+                  </Button>
+                </div>
               </div>
               
               <div className="space-y-3">
@@ -1692,7 +1706,7 @@ const StudentDashboardContent = () => {
             </div>
 
             {/* Mobile-Optimized Analytics Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {/* Grade Distribution - Mobile Enhanced */}
               <div className="bg-white/80 rounded-lg p-3 sm:p-4">
                 <h4 className="font-semibold text-gray-800 mb-3 flex items-center text-sm sm:text-base">
@@ -2105,6 +2119,9 @@ const StudentDashboardContent = () => {
                     transition: { duration: 0.6, ease: "easeInOut" }
                   }}
                   onClick={() => {
+                    // Show full-screen Whiskers animation
+                    setShowWhiskersAnimation(true)
+                    
                     // Pet interaction - small happiness boost with visual feedback
                     setStats(prev => ({
                       ...prev,
@@ -2304,6 +2321,197 @@ const StudentDashboardContent = () => {
           </div>
         </div>
       )}
+
+      {/* Whiskers Full-Screen Animation */}
+      <AnimatePresence>
+        {showWhiskersAnimation && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden"
+            onClick={() => setShowWhiskersAnimation(false)}
+          >
+            {/* Gradient Background */}
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="absolute inset-0 bg-gradient-to-br from-yellow-400 via-orange-400 to-pink-500"
+            />
+            
+            {/* Animated Background Pattern */}
+            <div className="absolute inset-0 overflow-hidden">
+              {Array.from({ length: 20 }).map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute text-2xl sm:text-4xl opacity-20"
+                  initial={{ 
+                    x: `${Math.random() * 100}%`,
+                    y: `${Math.random() * 100}%`,
+                    rotate: 0
+                  }}
+                  animate={{
+                    y: [`${Math.random() * 100}%`, `${Math.random() * 100}%`],
+                    x: [`${Math.random() * 100}%`, `${Math.random() * 100}%`],
+                    rotate: 360,
+                    opacity: [0.2, 0.5, 0.2]
+                  }}
+                  transition={{
+                    duration: 8 + Math.random() * 10,
+                    repeat: Infinity,
+                    ease: "linear",
+                    delay: Math.random() * 2
+                  }}
+                >
+                  {['✨', '💖', '🌟', '💫', '⭐', '💕'][Math.floor(Math.random() * 6)]}
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Main Content */}
+            <div className="relative z-10 text-center px-4 sm:px-6 max-w-4xl mx-auto">
+              {/* Giant Whiskers */}
+              <motion.div
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ 
+                  scale: 1, 
+                  rotate: 0,
+                  y: [0, -15, 0]
+                }}
+                transition={{
+                  scale: { duration: 0.6, ease: "backOut" },
+                  rotate: { duration: 0.6, ease: "backOut" },
+                  y: {
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }
+                }}
+                className="text-[120px] sm:text-[180px] md:text-[220px] mb-4 sm:mb-6 cursor-pointer leading-none"
+                onClick={(e) => {
+                  e.stopPropagation()
+                }}
+              >
+                🐱
+              </motion.div>
+
+              {/* Floating Hearts - Mobile Optimized */}
+              {Array.from({ length: 8 }).map((_, i) => (
+                <motion.div
+                  key={`heart-${i}`}
+                  className="absolute text-3xl sm:text-5xl md:text-6xl pointer-events-none"
+                  initial={{
+                    x: 0,
+                    y: 0,
+                    opacity: 0,
+                    scale: 0
+                  }}
+                  animate={{
+                    x: (Math.random() - 0.5) * (typeof window !== 'undefined' ? window.innerWidth * 0.4 : 300),
+                    y: -150 - Math.random() * 200,
+                    opacity: [0, 1, 0],
+                    scale: [0, 1.2, 0],
+                    rotate: (Math.random() - 0.5) * 180
+                  }}
+                  transition={{
+                    duration: 2 + Math.random() * 1,
+                    repeat: Infinity,
+                    delay: i * 0.25,
+                    ease: "easeOut"
+                  }}
+                  style={{
+                    left: '50%',
+                    top: '30%'
+                  }}
+                >
+                  💖
+                </motion.div>
+              ))}
+
+              {/* Title */}
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.6 }}
+                className="mb-4 sm:mb-6"
+              >
+                <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white mb-2 sm:mb-4 drop-shadow-2xl px-2">
+                  {stats.petName} is happy now!
+                </h1>
+                <p className="text-lg sm:text-2xl md:text-3xl text-white/90 font-bold drop-shadow-lg px-2">
+                  You're the best friend ever! 🌟
+                </p>
+              </motion.div>
+
+              {/* Stats Display - Mobile Responsive */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.6, duration: 0.5 }}
+                className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-6 mb-6 sm:mb-8 px-2"
+              >
+                <div className="bg-white/20 backdrop-blur-xl rounded-2xl sm:rounded-3xl px-6 sm:px-8 py-3 sm:py-4 border-2 border-white/40">
+                  <div className="text-3xl sm:text-4xl font-black text-white mb-1">{stats.petHappiness}%</div>
+                  <div className="text-sm sm:text-base text-white/90 font-semibold">Happiness</div>
+                </div>
+                <div className="bg-white/20 backdrop-blur-xl rounded-2xl sm:rounded-3xl px-6 sm:px-8 py-3 sm:py-4 border-2 border-white/40">
+                  <div className="text-3xl sm:text-4xl font-black text-white mb-1">+1</div>
+                  <div className="text-sm sm:text-base text-white/90 font-semibold">Love Points</div>
+                </div>
+              </motion.div>
+
+              {/* Sparkle Ring - Mobile Optimized */}
+              {Array.from({ length: 8 }).map((_, i) => {
+                const angle = (i / 8) * Math.PI * 2
+                const radius = typeof window !== 'undefined' && window.innerWidth < 640 ? 120 : 180
+                return (
+                  <motion.div
+                    key={`sparkle-${i}`}
+                    className="absolute text-3xl sm:text-4xl md:text-5xl pointer-events-none"
+                    initial={{
+                      x: 0,
+                      y: 0,
+                      scale: 0,
+                      rotate: 0
+                    }}
+                    animate={{
+                      x: Math.cos(angle) * radius,
+                      y: Math.sin(angle) * radius,
+                      scale: [0, 1, 0],
+                      rotate: 360,
+                      opacity: [0, 1, 0]
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      delay: i * 0.15,
+                      ease: "easeInOut"
+                    }}
+                    style={{
+                      left: '50%',
+                      top: '30%'
+                    }}
+                  >
+                    ✨
+                  </motion.div>
+                )
+              })}
+
+              {/* Close Button - Mobile Responsive */}
+              <motion.button
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1 }}
+                onClick={() => setShowWhiskersAnimation(false)}
+                className="mt-4 sm:mt-8 bg-white/30 hover:bg-white/40 backdrop-blur-xl text-white font-bold px-6 sm:px-8 py-3 sm:py-4 rounded-full text-base sm:text-lg border-2 border-white/50 transition-all duration-300 shadow-2xl hover:scale-105"
+              >
+                Close (Tap anywhere)
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Poll Response Modal */}
       {showPollModal && selectedPoll && (

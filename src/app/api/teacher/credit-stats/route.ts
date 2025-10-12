@@ -1,23 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 const MONTHLY_LIMIT = 7000
 
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      }
-    )
+    const supabase = await createSupabaseServerClient()
 
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser()

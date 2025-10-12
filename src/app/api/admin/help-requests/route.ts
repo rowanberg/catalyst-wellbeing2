@@ -98,23 +98,25 @@ export async function GET(request: Request) {
 
     // Check if admin has school_code (preferred) or fallback to school_id
     let adminSchoolCode = adminProfile.school_code
+    let adminSchoolId = adminProfile.school_id
+    
     if (!adminSchoolCode && adminProfile.schools) {
       adminSchoolCode = (adminProfile.schools as any).school_code
     }
     
-    if (!adminSchoolCode) {
+    if (!adminSchoolCode && !adminSchoolId) {
       console.log('Admin has no school association:', adminProfile)
       return NextResponse.json({ error: 'Admin not associated with a school' }, { status: 400 })
     }
 
-    console.log('Admin school code:', adminSchoolCode)
+    console.log('Admin school identifiers:', { schoolCode: adminSchoolCode, schoolId: adminSchoolId })
     
     // Add timeout to prevent hanging
     const timeoutPromise = new Promise((_, reject) => 
       setTimeout(() => reject(new Error('Request timeout')), 10000)
     )
     
-    // Build query based on status filter
+    // Build query based on status filter - use school_code if available, otherwise school_id
     let helpRequestsQuery = supabaseAdmin
       .from('help_requests')
       .select(`
@@ -131,8 +133,16 @@ export async function GET(request: Request) {
         resolver,
         notes
       `)
-      .eq('school_code', adminSchoolCode)
       .order('created_at', { ascending: false })
+
+    // Filter by school_code if available, otherwise by school_id
+    if (adminSchoolCode) {
+      helpRequestsQuery = helpRequestsQuery.eq('school_code', adminSchoolCode)
+      console.log('Filtering by school_code:', adminSchoolCode)
+    } else if (adminSchoolId) {
+      helpRequestsQuery = helpRequestsQuery.eq('school_id', adminSchoolId)
+      console.log('Filtering by school_id:', adminSchoolId)
+    }
 
     // Apply status filter
     if (statusFilter === 'resolved') {
@@ -150,13 +160,15 @@ export async function GET(request: Request) {
     console.log('Help requests query result:', {
       count: helpRequests?.length || 0,
       error: helpRequestsError?.message,
-      adminSchoolCode,
+      filterUsed: adminSchoolCode ? 'school_code' : 'school_id',
+      filterValue: adminSchoolCode || adminSchoolId,
       sampleRequest: helpRequests?.[0]
     })
 
-    // No need to filter in JavaScript since we're now filtering in SQL by help_requests.school_code
-    console.log('Help requests filtered by school_code in SQL:', { 
-      schoolCode: adminSchoolCode, 
+    // No need to filter in JavaScript since we're now filtering in SQL
+    console.log('Help requests filtered in SQL:', { 
+      filterType: adminSchoolCode ? 'school_code' : 'school_id',
+      filterValue: adminSchoolCode || adminSchoolId,
       count: helpRequests?.length || 0 
     })
 
@@ -312,21 +324,30 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Help request not found' }, { status: 404 })
     }
 
-    // Use school_code from admin profile for verification
+    // Use school_code or school_id from admin profile for verification
     const adminSchoolCode = adminProfile.school_code
+    const adminSchoolId = adminProfile.school_id
 
-    if (!adminSchoolCode) {
-      return NextResponse.json({ error: 'Admin school code not found' }, { status: 403 })
+    if (!adminSchoolCode && !adminSchoolId) {
+      return NextResponse.json({ error: 'Admin school association not found' }, { status: 403 })
     }
 
-    // Verify the help request belongs to the admin's school using school_code
+    // Verify the help request belongs to the admin's school using school_code or school_id
     const { data: helpRequestWithSchool, error: schoolVerifyError } = await supabaseAdmin
       .from('help_requests')
-      .select('school_code')
+      .select('school_code, school_id')
       .eq('id', id)
       .single()
 
-    if (schoolVerifyError || !helpRequestWithSchool || helpRequestWithSchool.school_code !== adminSchoolCode) {
+    if (schoolVerifyError || !helpRequestWithSchool) {
+      return NextResponse.json({ error: 'Help request not found' }, { status: 404 })
+    }
+
+    // Check if help request belongs to admin's school (by school_code or school_id)
+    const belongsToSchool = (adminSchoolCode && helpRequestWithSchool.school_code === adminSchoolCode) ||
+                           (adminSchoolId && helpRequestWithSchool.school_id === adminSchoolId)
+
+    if (!belongsToSchool) {
       return NextResponse.json({ error: 'Forbidden - Cannot access help requests from other schools' }, { status: 403 })
     }
 

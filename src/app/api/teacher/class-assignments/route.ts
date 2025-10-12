@@ -16,21 +16,9 @@ export async function GET(request: NextRequest) {
       console.log('🔍 No teacher_id parameter, trying to get from session...')
       
       // Try to get user from session like other APIs do
-      const { createServerClient } = await import('@supabase/ssr')
-      const { cookies } = await import('next/headers')
+      const { createSupabaseServerClient } = await import('@/lib/supabase-server')
       
-      const cookieStore = await cookies()
-      const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          cookies: {
-            get(name: string) {
-              return cookieStore.get(name)?.value
-            },
-          },
-        }
-      )
+      const supabase = await createSupabaseServerClient()
 
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) {

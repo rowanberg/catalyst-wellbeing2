@@ -134,7 +134,7 @@ function SubscriptionContent() {
       features: [
         { text: 'All features in Catalyst Core, plus:', icon: 'check' },
         { text: 'Full School & User Management', icon: 'check' },
-        { text: 'Unlimited Users (Students, Teachers, Parents)', icon: 'check' },
+        { text: 'Unlimited Teachers & Parents', icon: 'check' },
         { text: 'Advanced Examination Module', icon: 'check' },
         { text: 'Custom Rubric Grading System', icon: 'check' },
         { text: 'Performance Analytics & Reports', icon: 'check' },
@@ -330,6 +330,14 @@ function SubscriptionContent() {
           0% { background-position: -200% 0; }
           100% { background-position: 200% 0; }
         }
+        
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
       `}</style>
 
       {/* Header */}
@@ -447,19 +455,33 @@ function SubscriptionContent() {
       {/* Main Content */}
       <div className={`relative z-10 max-w-6xl mx-auto ${isMobile ? 'px-3 py-6' : 'px-4 sm:px-6 lg:px-8 py-12'}`}>
         {/* Refined Plan Cards */}
-        <div className={`${isMobile ? 'space-y-4' : 'grid grid-cols-1 lg:grid-cols-3 gap-6'} ${isMobile ? 'mb-8' : 'mb-12'}`}>
-          {plans.map((plan) => {
+        <div className={`${isMobile ? 'mb-8' : 'grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12'}`}>
+          {isMobile ? (
+            /* Mobile: Horizontal 3D Scrolling */
+            <div className="relative overflow-hidden pb-8">
+              <div 
+                className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-4"
+                style={{
+                  WebkitOverflowScrolling: 'touch',
+                  perspective: '1000px'
+                }}
+              >
+                {plans.map((plan, index) => {
             const isCore = plan.id === 'core'
             const isStandard = plan.id === 'standard'
             const isAiPro = plan.id === 'ai-pro'
             const savings = calculateAnnualSavings(plan.price.monthly, plan.price.annually)
             
-            return (
-              <Card 
-                key={plan.id}
-                className={`group relative overflow-hidden cursor-pointer transition-all duration-300 will-change-transform ${
-                  isMobile ? 'mx-auto w-full' : ''
-                } ${
+                  return (
+                    <Card
+                      key={plan.id}
+                      style={{
+                        minWidth: '85vw',
+                        maxWidth: '85vw',
+                        transformStyle: 'preserve-3d',
+                        WebkitTapHighlightColor: 'transparent'
+                      }}
+                      className={`group relative overflow-hidden cursor-pointer transition-all duration-300 will-change-transform snap-center active:scale-98 touch-manipulation ${
                   isAiPro 
                     ? `bg-gradient-to-br from-purple-900/40 via-blue-900/40 to-indigo-900/40 border border-purple-400/60 shadow-xl hover:shadow-purple-500/20 hover:border-purple-300/80` 
                     : isStandard
@@ -469,10 +491,7 @@ function SubscriptionContent() {
                   selectedPlan === plan.id ? 'ring-2 ring-purple-400/70 shadow-purple-500/40' : ''
                 } ${
                   hoveredPlan === plan.id ? 'shadow-xl' : 'shadow-md'
-                } ${
-                  isMobile ? 'active:scale-98 touch-manipulation hover:scale-102' : 'hover:scale-102'
                 } rounded-xl`}
-                style={isMobile ? { WebkitTapHighlightColor: 'transparent' } : {}}
                 onMouseEnter={() => setHoveredPlan(plan.id)}
                 onMouseLeave={() => setHoveredPlan(null)}
                 onClick={() => !isLoading && handlePlanSelect(plan.id)}
@@ -643,9 +662,222 @@ function SubscriptionContent() {
                     )}
                   </div>
                 </CardContent>
-              </Card>
-            )
-          })}
+                    </Card>
+                  )
+                })}
+              </div>
+              {/* Scroll Indicator Dots */}
+              <div className="flex justify-center gap-2 mt-4">
+                {plans.map((plan, idx) => (
+                  <div
+                    key={plan.id}
+                    className="h-1.5 rounded-full transition-all duration-300"
+                    style={{
+                      width: idx === 1 ? '24px' : '6px',
+                      backgroundColor: idx === 1 ? 'rgb(168, 85, 247)' : 'rgba(255, 255, 255, 0.3)'
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : (
+            /* Desktop: Grid Layout */
+            <>
+              {plans.map((plan) => {
+                const isCore = plan.id === 'core'
+                const isStandard = plan.id === 'standard'
+                const isAiPro = plan.id === 'ai-pro'
+                const savings = calculateAnnualSavings(plan.price.monthly, plan.price.annually)
+                
+                return (
+                  <Card 
+                    key={plan.id}
+                    className={`group relative overflow-hidden cursor-pointer transition-all duration-300 will-change-transform ${
+                      isAiPro 
+                        ? `bg-gradient-to-br from-purple-900/40 via-blue-900/40 to-indigo-900/40 border border-purple-400/60 shadow-xl hover:shadow-purple-500/20 hover:border-purple-300/80` 
+                        : isStandard
+                        ? `bg-gradient-to-br from-blue-900/30 via-indigo-900/30 to-purple-900/30 border border-blue-400/40 hover:border-blue-400/70 hover:shadow-blue-500/15`
+                        : `bg-gradient-to-br from-gray-900/20 via-slate-900/20 to-gray-800/20 border border-gray-600/40 hover:border-gray-400/70 hover:shadow-gray-500/15`
+                    } backdrop-blur-xl ${
+                      selectedPlan === plan.id ? 'ring-2 ring-purple-400/70 shadow-purple-500/40' : ''
+                    } ${
+                      hoveredPlan === plan.id ? 'shadow-xl' : 'shadow-md'
+                    } hover:scale-102 rounded-xl`}
+                    onMouseEnter={() => setHoveredPlan(plan.id)}
+                    onMouseLeave={() => setHoveredPlan(null)}
+                    onClick={() => !isLoading && handlePlanSelect(plan.id)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        !isLoading && handlePlanSelect(plan.id)
+                      }
+                    }}
+                  >
+                    {/* Subtle Background Pattern */}
+                    <div className="absolute inset-0 opacity-3">
+                      <div className="absolute inset-0" style={{
+                        backgroundImage: `radial-gradient(circle at 20% 20%, currentColor 1px, transparent 1px)`,
+                        backgroundSize: '40px 40px'
+                      }}></div>
+                    </div>
+
+                    {/* Premium Badge */}
+                    {plan.badge && (
+                      <div className="absolute top-4 right-4 z-20">
+                        <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-2 py-1 font-bold text-xs shadow-md">
+                          <Star className="h-3 w-3 mr-1" />
+                          {plan.badge}
+                        </Badge>
+                      </div>
+                    )}
+                    
+                    {/* Compact Card Header */}
+                    <CardHeader className="relative pb-4 pt-6 text-white">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <span className="text-3xl">{plan.icon}</span>
+                        <div className="flex-1">
+                          <CardTitle className="text-xl font-bold text-white leading-tight">
+                            {plan.name}
+                          </CardTitle>
+                          <CardDescription className="text-sm mt-1 text-white/80">
+                            {plan.subheading}
+                          </CardDescription>
+                        </div>
+                      </div>
+                      
+                      {/* Compact Price */}
+                      <div className="mb-3">
+                        <div className="flex items-baseline">
+                          {plan.price[billingCycle] !== 'Free' && (
+                            <span className="text-lg font-medium text-white/80">
+                              {plan.currency}
+                            </span>
+                          )}
+                          <span className={`text-4xl font-black bg-gradient-to-r ${
+                            isAiPro 
+                              ? 'from-white via-purple-200 to-blue-200 bg-clip-text text-transparent' 
+                              : isStandard 
+                              ? 'from-white via-blue-200 to-indigo-200 bg-clip-text text-transparent'
+                              : 'from-white via-gray-100 to-gray-200 bg-clip-text text-transparent'
+                          } leading-tight`}>
+                            {calculatePrice(plan.price[billingCycle])}
+                          </span>
+                          {plan.perUnit && (
+                            <span className="ml-2 text-sm font-medium text-white/70">
+                              {plan.perUnit}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Compact Savings Badge */}
+                        {billingCycle === 'annually' && savings > 0 && (
+                          <div className="mt-2">
+                            <Badge className="bg-gradient-to-r from-emerald-500 to-green-500 text-white px-2 py-1 text-xs font-bold">
+                              💰 Save {savings}%
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    </CardHeader>
+                    
+                    <CardContent className="pt-4 pb-6">
+                      {/* Refined User Limits */}
+                      {plan.userLimits && (
+                        <div className="mb-4 p-3 bg-white/5 border border-white/10 rounded-lg backdrop-blur-sm">
+                          <h4 className="text-xs font-semibold text-white uppercase tracking-wider mb-3">User Limits</h4>
+                          <div className="space-y-2">
+                            <div className="flex items-center text-sm text-white/90">
+                              <Users className="h-3 w-3 mr-2 text-purple-400" />
+                              <span className="font-medium text-xs">{plan.userLimits.students}</span>
+                            </div>
+                            <div className="flex items-center text-sm text-white/90">
+                              <UserCheck className="h-3 w-3 mr-2 text-blue-400" />
+                              <span className="font-medium text-xs">{plan.userLimits.teachers}</span>
+                            </div>
+                            <div className="flex items-center text-sm text-white/90">
+                              <Users className="h-3 w-3 mr-2 text-emerald-400" />
+                              <span className="font-medium text-xs">{plan.userLimits.parents}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Compact Features */}
+                      <div className="space-y-3">
+                        <h4 className="text-xs font-semibold text-white uppercase tracking-wider">Features</h4>
+                        <ul className="space-y-2">
+                          {plan.features.map((feature, index) => (
+                            <li key={index} className="flex items-start">
+                              <div className="flex-shrink-0 mt-0.5">
+                                {getFeatureIcon(feature.icon)}
+                              </div>
+                              <span className={`ml-3 text-xs ${
+                                feature.isHighlight 
+                                  ? 'font-semibold text-white' 
+                                  : 'font-medium text-white/90'
+                              } leading-relaxed`}>
+                                {feature.text}
+                                {feature.tooltip && (
+                                  <button className="ml-1 inline-flex items-center justify-center w-3 h-3 rounded-full hover:bg-white/10 transition-colors">
+                                    <Info className="h-2 w-2 text-purple-400" />
+                                    <span className="sr-only">More info</span>
+                                  </button>
+                                )}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      
+                      {/* Refined CTA Button */}
+                      <div className="mt-6">
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handlePlanSelect(plan.id)
+                          }}
+                          disabled={isLoading}
+                          className={`relative w-full py-3 font-semibold text-sm transition-all duration-200 ${
+                            plan.ctaVariant === 'gradient'
+                              ? 'bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 hover:from-purple-700 hover:via-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl' 
+                              : plan.ctaVariant === 'default'
+                              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg'
+                              : 'bg-white/90 backdrop-blur-sm border border-gray-300 text-gray-800 hover:bg-white hover:border-purple-300 hover:text-purple-700 shadow-md hover:shadow-lg'
+                          } ${selectedPlan === plan.id ? 'ring-2 ring-purple-400/50' : ''} ${
+                            isLoading && selectedPlan === plan.id ? 'cursor-not-allowed opacity-80' : 'cursor-pointer hover:scale-102'
+                          } rounded-lg`}
+                        >
+                          <span className="flex items-center justify-center">
+                            {isLoading && selectedPlan === plan.id ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
+                                <span>Processing...</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>{plan.ctaText}</span>
+                                <ArrowRight className="ml-2 h-4 w-4" />
+                              </>
+                            )}
+                          </span>
+                        </Button>
+                        
+                        {/* Selection Indicator */}
+                        {selectedPlan === plan.id && (
+                          <div className="mt-2 flex items-center justify-center text-xs text-emerald-400">
+                            <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2 animate-pulse"></div>
+                            Selected
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </>
+          )}
         </div>
 
         {/* Compact Compare Link */}

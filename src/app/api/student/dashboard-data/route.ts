@@ -2,13 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { withCache, generateUserCacheKey } from '@/lib/cache/cacheManager'
+import { withRateLimit } from '@/lib/security/rateLimiter'
 
 export async function GET(request: NextRequest) {
-  try {
-    // Get pagination parameters
-    const { searchParams } = new URL(request.url)
-    const announcementsLimit = Math.min(parseInt(searchParams.get('announcements_limit') || '5'), 20)
-    const pollsLimit = Math.min(parseInt(searchParams.get('polls_limit') || '5'), 20)
+  return withRateLimit(request, async () => {
+    try {
+      // Get pagination parameters
+      const { searchParams } = new URL(request.url)
+      const announcementsLimit = Math.min(parseInt(searchParams.get('announcements_limit') || '5'), 20)
+      const pollsLimit = Math.min(parseInt(searchParams.get('polls_limit') || '5'), 20)
+      const forceRefresh = searchParams.get('force_refresh') === 'true'
     
     // Enhanced authentication
     const cookieStore = await cookies()
@@ -168,40 +172,70 @@ export async function GET(request: NextRequest) {
       type: poll.type
     }))
 
-    // Combine all data
-    const dashboardData = {
-      profile: {
-        id: user.id,
-        firstName: profile.first_name,
-        lastName: profile.last_name,
-        role: profile.role,
-        schoolId: profile.school_id
-      },
-      announcements: {
-        data: announcements,
-        total: announcements.length,
-        limit: announcementsLimit
-      },
-      polls: {
-        data: polls,
-        total: polls.length,
-        limit: pollsLimit
-      },
-      schoolInfo: schoolInfoResult.data || null,
-      timestamp: new Date().toISOString()
+      // Create cache key for this user's dashboard data
+      const cacheKey = generateUserCacheKey(
+        user.id, 
+        'dashboard', 
+        announcementsLimit.toString(), 
+        pollsLimit.toString()
+      );
+
+      // Function to fetch fresh data
+      const fetchDashboardData = async () => {
+        return {
+          profile: {
+            id: user.id,
+            firstName: profile.first_name,
+            lastName: profile.last_name,
+            role: profile.role,
+            schoolId: profile.school_id
+          },
+          announcements: {
+            data: announcements,
+            total: announcements.length,
+            limit: announcementsLimit
+          },
+          polls: {
+            data: polls,
+            total: polls.length,
+            limit: pollsLimit
+          },
+          schoolInfo: schoolInfoResult.data || null,
+          timestamp: new Date().toISOString(),
+          cached: false
+        };
+      };
+
+      // Get data from cache or fetch fresh
+      const dashboardData = await withCache(
+        'dashboard',
+        cacheKey,
+        fetchDashboardData,
+        { forceRefresh }
+      );
+
+      // Mark if data came from cache
+      if (!forceRefresh && dashboardData.cached !== false) {
+        dashboardData.cached = true;
+        dashboardData.timestamp = new Date().toISOString();
+      }
+
+      // Add performance headers
+      const response = NextResponse.json(dashboardData)
+      response.headers.set('Cache-Control', 's-maxage=180, stale-while-revalidate=300') // 3min cache, 5min stale
+      response.headers.set('CDN-Cache-Control', 'max-age=180')
+      response.headers.set('Vary', 'Cookie')
+      response.headers.set('X-API-Performance', 'optimized-cached-endpoint')
+      response.headers.set('X-Cache-Status', dashboardData.cached ? 'HIT' : 'MISS')
+      
+      return response
+
+    } catch (error) {
+      console.error('Dashboard API error')
+      return NextResponse.json({ 
+        error: 'Failed to load dashboard data. Please try again.',
+        code: 'DASHBOARD_ERROR'
+      }, { status: 500 })
     }
-
-    // Add performance headers
-    const response = NextResponse.json(dashboardData)
-    response.headers.set('Cache-Control', 's-maxage=180, stale-while-revalidate=300') // 3min cache, 5min stale
-    response.headers.set('CDN-Cache-Control', 'max-age=180')
-    response.headers.set('Vary', 'Cookie')
-    response.headers.set('X-API-Performance', 'optimized-combined-endpoint')
-    
-    return response
-
-  } catch (error) {
-    console.error('Combined dashboard API error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
+  }, 'general');
 }

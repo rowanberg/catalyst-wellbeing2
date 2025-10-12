@@ -1,23 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
-// Create Supabase client with cookie-based auth
-async function createSupabaseServerClient() {
-  const cookieStore = await cookies()
-  
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-      },
-    }
-  )
-}
 
 // GET - Fetch teacher's assigned grades for attendance
 export async function GET(request: NextRequest) {

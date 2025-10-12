@@ -170,13 +170,36 @@ export async function GET(request: NextRequest) {
         responseData.school = { id: schoolId }
       }
 
-      // Process assigned classes
+      // Process assigned classes with actual student counts
       if (assignedClasses.data && assignedClasses.data.length > 0) {
+        // Get actual student counts from student_class_assignments for all classes
+        const classIds = assignedClasses.data
+          .filter((assignment: any) => assignment.classes?.id)
+          .map((assignment: any) => assignment.classes.id)
+        
+        // Query actual student counts
+        const studentCounts = new Map<string, number>()
+        if (classIds.length > 0) {
+          const { data: studentCountData } = await supabase
+            .from('student_class_assignments')
+            .select('class_id')
+            .in('class_id', classIds)
+            .eq('is_active', true)
+          
+          if (studentCountData) {
+            studentCountData.forEach((row: any) => {
+              const count = studentCounts.get(row.class_id) || 0
+              studentCounts.set(row.class_id, count + 1)
+            })
+          }
+        }
+        
         responseData.assignedClasses = assignedClasses.data
           .filter((assignment: any) => assignment.classes?.id)
           .map((assignment: any) => {
             const classData = assignment.classes
             const gradeLevel = classData.grade_levels?.grade_level || 'Unknown'
+            const actualStudentCount = studentCounts.get(classData.id) || 0
             
             return {
               id: classData.id,
@@ -184,8 +207,8 @@ export async function GET(request: NextRequest) {
               class_code: classData.class_code || 'N/A',
               subject: classData.subject || assignment.subject || 'General',
               room_number: classData.room_number || 'TBD',
-              current_students: classData.current_students || 0,
-              total_students: classData.current_students || 0,
+              current_students: actualStudentCount,
+              total_students: actualStudentCount,
               max_students: classData.max_students || 30,
               grade_level: gradeLevel,
               grade_name: `Grade ${gradeLevel}`,

@@ -482,21 +482,16 @@ export default function TeacherStudentsPage() {
     }
   }, [students, selectedClass, classes.length, assignedClasses.length])
 
-  // Set initial view based on data and ensure assigned classes are shown after assignment
+  // Initial view setup: Show appropriate starting view
   useEffect(() => {
     if (!loading) {
-      if (assignedClasses.length > 0 && currentView !== 'students') {
-        // Show assigned classes when they exist, but don't interrupt student view
-        setCurrentView('assigned-classes')
-        // Reset navigation state to ensure we stay on assigned classes
-        setSelectedGrade('')
-        setSelectedClass('')
-      } else if (assignedClasses.length === 0 && grades.length > 0 && currentView === 'assigned-classes') {
-        // Only switch to grades if we're currently on assigned-classes but have no assignments
+      // Only auto-navigate on initial load, not when user explicitly navigates
+      if (currentView === 'assigned-classes' && assignedClasses.length === 0 && grades.length > 0) {
+        // If no assigned classes, show grades view to let teacher assign classes
         setCurrentView('grades')
       }
     }
-  }, [loading, assignedClasses.length, grades.length, currentView])
+  }, [loading, assignedClasses.length, grades.length])
 
   // Helper functions - memoized for performance
   const handleClassSelect = useCallback(async (classId: string) => {
@@ -715,23 +710,14 @@ export default function TeacherStudentsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center">
-        <div className="text-center space-y-6">
-          {/* Clean spinner */}
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          {/* Minimal spinner */}
           <div className="relative">
-            <div className="w-12 h-12 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
+            <div className="w-10 h-10 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
           </div>
-          
-          {/* Content */}
-          <div className="space-y-2">
-            <h2 className="text-2xl font-semibold text-gray-900">Loading Classes</h2>
-            <p className="text-gray-600 max-w-sm">Getting your student data ready...</p>
-          </div>
-          
-          {/* Progress bar */}
-          <div className="w-64 h-1 bg-gray-200 rounded-full overflow-hidden">
-            <div className="h-full bg-blue-600 rounded-full animate-pulse"></div>
-          </div>
+          {/* Simple text */}
+          <p className="text-sm text-gray-500 font-medium">Loading...</p>
         </div>
       </div>
     )
@@ -1781,8 +1767,9 @@ export default function TeacherStudentsPage() {
                 </div>
 
                 {loadingGradeClasses ? (
-                <div className="flex items-center justify-center py-12">
-                  <ProfessionalLoader size="md" text="Loading classes..." />
+                <div className="flex flex-col items-center justify-center py-12 space-y-3">
+                  <div className="w-8 h-8 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
+                  <p className="text-sm text-gray-500">Loading classes...</p>
                 </div>
               ) : getClassesForSelectedGrade().length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

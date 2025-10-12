@@ -1,23 +1,34 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import crypto from 'crypto';
+import bcrypt from 'bcrypt';
+import { withRateLimit } from '@/lib/security/rateLimiter';
+import { logWallet, logSecurity, AUDIT_EVENTS } from '@/lib/security/auditLogger';
 
-function verifyPassword(password: string, hash: string, salt?: string): boolean {
+async function verifyPassword(password: string, hash: string, salt?: string): Promise<boolean> {
   if (!salt) {
     // Fallback to SHA256 for wallets created with old method
     const testHash = crypto.createHash('sha256').update(password).digest('hex');
     return testHash === hash;
+  } else if (salt.startsWith('$2b$') || salt.startsWith('$2a$')) {
+    // New bcrypt format - salt is included in the hash
+    try {
+      return await bcrypt.compare(password, hash);
+    } catch {
+      return false;
+    }
   } else {
-    // Use PBKDF2 for newer wallets
+    // Legacy PBKDF2 format
     const testHash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
     return testHash === hash;
   }
 }
 
-export async function POST(request: Request) {
-  try {
+export async function POST(request: NextRequest) {
+  return withRateLimit(request, async () => {
+    try {
     const cookieStore = await cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,7 +50,11 @@ export async function POST(request: Request) {
         },
       }
     );
-    const { toAddress, toStudentTag, amount, currencyType, memo, password, requestId } = await request.json();
+      const { toAddress, toStudentTag, amount, currencyType, memo, password, requestId } = await request.json();
+      
+      // Sanitize inputs to prevent XSS
+      const sanitizedMemo = memo?.replace(/<[^>]*>/g, '').trim() || '';
+      const sanitizedAmount = parseFloat(amount.toString());
     
     // Generate unique request ID if not provided
     const uniqueRequestId = requestId || `${Date.now()}-${crypto.randomBytes(8).toString('hex')}`;
@@ -49,9 +64,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    if (amount <= 0) {
-      return NextResponse.json({ error: 'Amount must be greater than 0' }, { status: 400 });
-    }
+      if (sanitizedAmount <= 0 || isNaN(sanitizedAmount) || !isFinite(sanitizedAmount)) {
+        return NextResponse.json({ error: 'Invalid amount specified' }, { status: 400 });
+      }
+      
+      // Add maximum transaction limits
+      const maxLimits = {
+        mind_gems: 10000,
+        fluxon: 1000
+      };
+      
+      if (sanitizedAmount > maxLimits[currencyType as keyof typeof maxLimits]) {
+        return NextResponse.json({ 
+          error: `Amount exceeds maximum limit of ${maxLimits[currencyType as keyof typeof maxLimits]} ${currencyType}`
+        }, { status: 400 });
+      }
 
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -96,27 +123,43 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
     
-    if (!verifyPassword(password, senderWallet.transaction_password_hash, senderWallet.password_salt)) {
-      // Log failed attempt
-      await supabaseAdmin
-        .from('wallet_security_logs')
-        .insert({
-          wallet_id: senderWallet.id,
-          action_type: 'failed_password',
-          action_details: 'Invalid transaction password',
-          success: false
-        });
+      const isPasswordValid = await verifyPassword(password, senderWallet.transaction_password_hash, senderWallet.password_salt);
+      if (!isPasswordValid) {
+        // Audit log failed password attempt
+        await logWallet(
+          AUDIT_EVENTS.WALLET_PASSWORD_FAILED,
+          senderWallet.id,
+          user.id,
+          {
+            attempted_amount: sanitizedAmount,
+            currency_type: currencyType,
+            recipient: toStudentTag || toAddress,
+            attempt_count: (senderWallet.failed_password_attempts || 0) + 1
+          },
+          false,
+          request
+        );
 
-      // Increment failed attempts
-      await supabaseAdmin
-        .from('student_wallets')
-        .update({
-          failed_password_attempts: senderWallet.failed_password_attempts + 1
-        })
-        .eq('id', senderWallet.id);
+        // Log failed attempt in security logs
+        await supabaseAdmin
+          .from('wallet_security_logs')
+          .insert({
+            wallet_id: senderWallet.id,
+            action_type: 'failed_password',
+            action_details: 'Invalid transaction password',
+            success: false
+          });
 
-      return NextResponse.json({ error: 'Invalid transaction password' }, { status: 401 });
-    }
+        // Increment failed attempts
+        await supabaseAdmin
+          .from('student_wallets')
+          .update({
+            failed_password_attempts: (senderWallet.failed_password_attempts || 0) + 1
+          })
+          .eq('id', senderWallet.id);
+
+        return NextResponse.json({ error: 'Invalid transaction password' }, { status: 401 });
+      }
 
     // Check if wallet is locked
     if (senderWallet.is_locked) {
@@ -192,211 +235,120 @@ export async function POST(request: Request) {
       recipientProfile = wallet.profiles;
     }
 
-    // Generate transaction hash
-    const generateTransactionHash = (): string => {
-      const timestamp = Date.now().toString();
-      const random = crypto.randomBytes(16).toString('hex');
-      return crypto.createHash('sha256').update(timestamp + random).digest('hex');
-    };
+      // Execute atomic transaction using database function (prevents race conditions)
+      const { data: transactionResult, error: txError } = await supabaseAdmin
+        .rpc('execute_wallet_transaction', {
+          p_sender_wallet_id: senderWallet.id,
+          p_recipient_wallet_id: recipientWallet.id,
+          p_currency_type: currencyType,
+          p_amount: sanitizedAmount,
+          p_memo: sanitizedMemo,
+          p_transaction_hash: crypto.randomBytes(32).toString('hex')
+        });
 
-    // Start transaction with minimal required fields - try different combinations
-    let transaction, txError;
-    
-    // First attempt with common field values
-    const transactionData = {
-      from_wallet_id: senderWallet.id,
-      to_wallet_id: recipientWallet.id,
-      from_address: senderWallet.wallet_address,
-      to_address: recipientWallet.wallet_address,
-      currency_type: currencyType,
-      amount: amount,
-      transaction_hash: generateTransactionHash(),
-      memo: memo || ''
-    };
+      if (txError || !transactionResult?.success) {
+        // Audit log failed transaction
+        await logWallet(
+          AUDIT_EVENTS.WALLET_TRANSACTION,
+          senderWallet.id,
+          user.id,
+          {
+            amount: sanitizedAmount,
+            currency_type: currencyType,
+            recipient: toStudentTag || toAddress,
+            error: transactionResult?.error || txError?.message
+          },
+          false,
+          request
+        );
 
-    // Try different status and transaction_type combinations
-    const attempts = [
-      { status: 'completed', transaction_type: 'send' },
-      { status: 'success', transaction_type: 'send' },
-      { status: 'completed', transaction_type: 'payment' },
-      { status: 'success', transaction_type: 'payment' },
-      { status: 'completed', transaction_type: 'transfer' },
-      { status: 'pending', transaction_type: 'send' }
-    ];
-
-    for (const attempt of attempts) {
-      const result = await supabaseAdmin
-        .from('wallet_transactions')
-        .insert({ ...transactionData, ...attempt })
-        .select()
-        .single();
-      
-      if (!result.error) {
-        transaction = result.data;
-        txError = null;
-        break; // Exit immediately after first success
-      } else {
-        txError = result.error;
-        // Continue to next attempt only if this one failed
+        console.error('Transaction failed:', txError || transactionResult?.error);
+        return NextResponse.json({ 
+          error: transactionResult?.error || 'Transaction failed. Please try again.',
+          code: 'TRANSACTION_FAILED'
+        }, { status: 400 });
       }
-    }
 
-    if (txError) {
-      console.error('Error creating transaction:', txError);
-      return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 });
-    }
+      // Audit log successful transaction
+      await logWallet(
+        AUDIT_EVENTS.WALLET_TRANSACTION,
+        senderWallet.id,
+        user.id,
+        {
+          transaction_id: transactionResult.transaction_id,
+          amount: sanitizedAmount,
+          currency_type: currencyType,
+          recipient: toStudentTag || toAddress,
+          recipient_wallet_id: recipientWallet.id,
+          memo: sanitizedMemo,
+          new_sender_balance: transactionResult.new_sender_balance,
+          new_recipient_balance: transactionResult.new_recipient_balance
+        },
+        true,
+        request
+      );
 
-    // Update sender balance
-    const newSenderBalance = currencyType === 'mind_gems'
-      ? { 
-          mind_gems_balance: senderWallet.mind_gems_balance - totalAmount,
-          daily_spent_gems: senderWallet.daily_spent_gems + amount,
-          total_transactions_sent: senderWallet.total_transactions_sent + 1
-        }
-      : {
-          fluxon_balance: (parseFloat(senderWallet.fluxon_balance) - totalAmount).toFixed(8),
-          daily_spent_fluxon: (parseFloat(senderWallet.daily_spent_fluxon) + amount).toFixed(8),
-          total_transactions_sent: senderWallet.total_transactions_sent + 1
-        };
-
-    const { error: senderUpdateError } = await supabaseAdmin
-      .from('student_wallets')
-      .update({
-        ...newSenderBalance,
-        last_transaction_at: new Date().toISOString(),
-        wallet_xp: senderWallet.wallet_xp + 10
-      })
-      .eq('id', senderWallet.id);
-
-    if (senderUpdateError) {
-      // Rollback transaction
-      await supabaseAdmin
-        .from('wallet_transactions')
-        .update({ status: 'failed', failed_reason: 'Failed to update sender balance' })
-        .eq('id', transaction.id);
-      
-      return NextResponse.json({ error: 'Failed to update balance' }, { status: 500 });
-    }
-
-    // Update sender profile gems (for mind gems only - sync with dashboard)
-    if (currencyType === 'mind_gems') {
-      const { error: senderProfileError } = await supabaseAdmin
-        .from('profiles')
-        .update({
-          gems: senderWallet.mind_gems_balance - totalAmount
-        })
-        .eq('user_id', user.id);
-
-      if (senderProfileError) {
-        console.error('Failed to update sender profile gems:', senderProfileError);
-        // Don't fail the transaction, but log the error
+      // Create notification for recipient (optional - won't fail transaction if this fails)
+      try {
+        await supabaseAdmin
+          .from('wallet_notifications')
+          .insert({
+            wallet_id: recipientWallet.id,
+            notification_type: 'received_payment',
+            title: 'Payment Received',
+            message: `You received ${sanitizedAmount} ${currencyType === 'mind_gems' ? 'Mind Gems' : 'Fluxon'} from ${senderWallet.wallet_nickname || senderWallet.wallet_address}`,
+            transaction_id: transactionResult.transaction_id,
+            priority: 'normal'
+          });
+      } catch (notificationError) {
+        console.error('Failed to create notification (non-critical)');
       }
-    }
 
-    // Update recipient balance (only if not sending to self)
-    const isSelfTransfer = senderWallet.id === recipientWallet.id;
-    let recipientUpdateError: any = null;
-    
-    if (!isSelfTransfer) {
-      const newRecipientBalance = currencyType === 'mind_gems'
-        ? { 
-            mind_gems_balance: recipientWallet.mind_gems_balance + amount,
-            total_transactions_received: recipientWallet.total_transactions_received + 1
+      // Update profile gems for dashboard sync (optional - won't fail transaction)
+      if (currencyType === 'mind_gems') {
+        try {
+          // Update sender profile
+          await supabaseAdmin
+            .from('profiles')
+            .update({ gems: transactionResult.new_sender_balance })
+            .eq('user_id', user.id);
+          
+          // Update recipient profile (if different user)
+          if (senderWallet.id !== recipientWallet.id) {
+            await supabaseAdmin
+              .from('profiles')
+              .update({ gems: transactionResult.new_recipient_balance })
+              .eq('user_id', recipientProfile.user_id);
           }
-        : {
-            fluxon_balance: (parseFloat(recipientWallet.fluxon_balance) + amount).toFixed(8),
-            total_transactions_received: recipientWallet.total_transactions_received + 1
-          };
-
-      const result = await supabaseAdmin
-        .from('student_wallets')
-        .update(newRecipientBalance)
-        .eq('id', recipientWallet.id);
-      
-      recipientUpdateError = result.error;
-    }
-
-    if (recipientUpdateError) {
-      // Rollback sender balance
-      await supabaseAdmin
-        .from('student_wallets')
-        .update({
-          ...senderWallet,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', senderWallet.id);
-
-      // Mark transaction as failed
-      await supabaseAdmin
-        .from('wallet_transactions')
-        .update({ status: 'failed', failed_reason: 'Failed to update recipient balance' })
-        .eq('id', transaction.id);
-      
-      return NextResponse.json({ error: 'Failed to complete transaction' }, { status: 500 });
-    }
-
-    // Update recipient profile gems (for mind gems only - sync with dashboard)
-    if (currencyType === 'mind_gems' && !isSelfTransfer) {
-      const { error: recipientProfileError } = await supabaseAdmin
-        .from('profiles')
-        .update({
-          gems: recipientWallet.mind_gems_balance + amount
-        })
-        .eq('user_id', recipientProfile.user_id);
-
-      if (recipientProfileError) {
-        console.error('Failed to update recipient profile gems:', recipientProfileError);
-        // Don't fail the transaction, but log the error
+        } catch (profileError) {
+          console.error('Failed to update profile gems (non-critical)');
+        }
       }
-    }
 
-    // Mark transaction as completed
-    const { error: completeTxError } = await supabaseAdmin
-      .from('wallet_transactions')
-      .update({
-        status: 'completed',
-        completed_at: new Date().toISOString()
-      })
-      .eq('id', transaction.id);
+      // Check for achievements (optional)
+      try {
+        await supabaseAdmin.rpc('check_wallet_achievements', { wallet_uuid: senderWallet.id });
+      } catch (achievementError) {
+        console.error('Failed to check achievements (non-critical)');
+      }
 
-    if (completeTxError) {
-      console.error('Error completing transaction:', completeTxError);
-    }
-
-    // Create notification for recipient
-    await supabaseAdmin
-      .from('wallet_notifications')
-      .insert({
-        wallet_id: recipientWallet.id,
-        notification_type: 'received_payment',
-        title: 'Payment Received',
-        message: `You received ${amount} ${currencyType === 'mind_gems' ? 'Mind Gems' : 'Fluxon'} from ${senderWallet.wallet_nickname || senderWallet.wallet_address}`,
-        transaction_id: transaction.id,
-        priority: 'normal'
+      return NextResponse.json({
+        success: true,
+        transaction: {
+          id: transactionResult.transaction_id,
+          amount: sanitizedAmount,
+          fee: 0,
+          status: 'completed'
+        }
       });
 
-    // Check for achievements
-    await supabaseAdmin.rpc('check_wallet_achievements', { wallet_uuid: senderWallet.id });
-
-    return NextResponse.json({
-      success: true,
-      transaction: {
-        id: transaction.id,
-        hash: transaction.transaction_hash,
-        amount: amount,
-        fee: 0,
-        status: 'completed'
-      }
-    });
-
-  } catch (error) {
-    console.error('=== Error in wallet send ===');
-    console.error('Full error:', error);
-    console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
-    return NextResponse.json({ 
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error occurred'
-    }, { status: 500 });
-  }
+    } catch (error) {
+      console.error('Error in wallet send transaction');
+      // Never expose internal error details to client
+      return NextResponse.json({ 
+        error: 'Transaction failed. Please try again.',
+        code: 'TRANSACTION_ERROR'
+      }, { status: 500 });
+    }
+  }, 'wallet');
 }

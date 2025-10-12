@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,54 +19,47 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Create authenticated Supabase client
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      }
-    )
+    // Create authenticated Supabase client for auth verification
+    const supabase = await createSupabaseServerClient()
 
     // Get current user and verify they're a teacher
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) {
+      console.log('❌ Auth error:', userError?.message || 'No user found')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Verify user is a teacher in the correct school
-    const { data: teacherProfile } = await supabase
+    const { data: teacherProfile } = await supabaseAdmin
       .from('profiles')
       .select('role, school_id')
       .eq('user_id', user.id)
       .single()
 
     if (!teacherProfile || teacherProfile.role !== 'teacher' || teacherProfile.school_id !== schoolId) {
+      console.log('❌ Access denied - Teacher role:', teacherProfile?.role, 'School:', teacherProfile?.school_id)
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
+
+    console.log('✅ Teacher verified:', user.email, 'School:', schoolId)
 
     // Try to fetch class assignments, but fallback to all students if table doesn't exist
     let studentProfiles: any[] = []
     let classAssignments: any[] = []
     
-    // First try to get class assignments if the table exists
-    const { data: classAssignmentsData, error: assignmentError } = await supabase
-      .from('class_assignments')
+    // Use admin client to bypass RLS and get class assignments
+    const { data: classAssignmentsData, error: assignmentError } = await supabaseAdmin
+      .from('student_class_assignments')
       .select('student_id, class_id')
       .eq('class_id', classId)
       .eq('is_active', true)
     
     if (assignmentError) {
-      console.log('⚠️ class_assignments table not found, falling back to all students in school')
+      console.log('⚠️ student_class_assignments query failed, falling back to all students in school')
       console.log('Error details:', assignmentError.message)
       
-      // Fallback: Get all students from the same school
-      const { data: allStudentProfiles, error: profilesError } = await supabase
+      // Fallback: Get all students from the same school using admin client
+      const { data: allStudentProfiles, error: profilesError } = await supabaseAdmin
         .from('profiles')
         .select('*')
         .eq('school_id', schoolId)
@@ -102,8 +95,8 @@ export async function GET(request: NextRequest) {
       const studentIds = classAssignments.map(assignment => assignment.student_id).filter(Boolean)
       console.log('👥 Student IDs to fetch:', studentIds)
       
-      // Fetch student profiles separately to avoid join issues
-      const { data: studentProfilesData, error: profilesError } = await supabase
+      // Fetch student profiles separately using admin client to bypass RLS
+      const { data: studentProfilesData, error: profilesError } = await supabaseAdmin
         .from('profiles')
         .select('*')
         .in('user_id', studentIds)
@@ -125,8 +118,8 @@ export async function GET(request: NextRequest) {
       usingFallback: !classAssignments.length
     })
 
-    // Fetch class information separately
-    const { data: classInfo, error: classError } = await supabase
+    // Fetch class information separately using admin client
+    const { data: classInfo, error: classError } = await supabaseAdmin
       .from('classes')
       .select('id, class_name, subject, room_number')
       .eq('id', classId)

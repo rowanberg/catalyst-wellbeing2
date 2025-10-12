@@ -1,23 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
-// Create Supabase client with cookie-based auth
-async function createSupabaseServerClient() {
-  const cookieStore = await cookies()
-  
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-      },
-    }
-  )
-}
 
 // GET - Fetch teacher's classes for a specific grade
 export async function GET(request: NextRequest) {
@@ -90,17 +73,21 @@ export async function GET(request: NextRequest) {
         .eq('class_id', classId)
         .eq('is_active', true)
 
-      // Get today's attendance
+      // Get today's attendance (using correct column names: 'status' and 'date')
       const today = new Date().toISOString().split('T')[0]
-      const { data: todayAttendance } = await supabase
+      const { data: todayAttendance, error: attendanceError } = await supabase
         .from('attendance')
-        .select('attendance_status')
+        .select('status')
         .in('student_id', studentCount?.map((s: any) => s.student_id) || [])
-        .eq('attendance_date', today)
+        .eq('date', today)
+      
+      if (attendanceError) {
+        console.error('Error fetching attendance for class', classId, ':', attendanceError)
+      }
 
       const totalStudents = studentCount?.length || 0
-      const presentToday = todayAttendance?.filter((a: any) => a.attendance_status === 'present').length || 0
-      const absentToday = todayAttendance?.filter((a: any) => a.attendance_status === 'absent').length || 0
+      const presentToday = todayAttendance?.filter((a: any) => a.status === 'present').length || 0
+      const absentToday = todayAttendance?.filter((a: any) => a.status === 'absent').length || 0
       const attendanceRate = totalStudents > 0 ? Math.round((presentToday / totalStudents) * 100) : 0
 
       processedClasses.push({

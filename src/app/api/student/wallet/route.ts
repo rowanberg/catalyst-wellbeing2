@@ -1,9 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { withCache, generateUserCacheKey, invalidateUserCaches } from '@/lib/cache/cacheManager';
+import { withRateLimit } from '@/lib/security/rateLimiter';
 
-export async function GET() {
-  try {
+export async function GET(request: NextRequest) {
+  return withRateLimit(request, async () => {
+    try {
     const cookieStore = await cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -85,34 +88,91 @@ export async function GET() {
       return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
     }
 
-    // Format response
-    const walletData = {
-      id: wallet.id,
-      studentTag: profile.student_tag,
-      walletAddress: wallet.wallet_address,
-      mindGemsBalance: profile.gems || 0, // Use gems from profiles table (same as dashboard)
-      fluxonBalance: parseFloat(wallet.fluxon_balance),
-      walletNickname: wallet.wallet_nickname,
-      walletLevel: wallet.wallet_level,
-      walletXp: wallet.wallet_xp,
-      trustScore: wallet.trust_score,
-      dailyLimitGems: wallet.daily_limit_gems,
-      dailyLimitFluxon: parseFloat(wallet.daily_limit_fluxon),
-      dailySpentGems: wallet.daily_spent_gems,
-      dailySpentFluxon: parseFloat(wallet.daily_spent_fluxon),
-      totalTransactionsSent: wallet.total_transactions_sent,
-      totalTransactionsReceived: wallet.total_transactions_received,
-      isLocked: wallet.is_locked,
-      hasTransactionPassword: !!wallet.transaction_password_hash,
-      achievements: wallet.achievements || [],
-      lastTransactionAt: wallet.last_transaction_at
-    };
+      // Check for cache refresh parameter
+      const { searchParams } = new URL(request.url);
+      const forceRefresh = searchParams.get('force_refresh') === 'true';
+      
+      // Generate cache key
+      const cacheKey = generateUserCacheKey(user.id, 'wallet');
+      
+      // Function to fetch fresh wallet data
+      const fetchWalletData = async () => {
+        return {
+          id: wallet.id,
+          studentTag: profile.student_tag,
+          walletAddress: wallet.wallet_address,
+          mindGemsBalance: profile.gems || 0, // Use gems from profiles table (same as dashboard)
+          fluxonBalance: parseFloat(wallet.fluxon_balance),
+          walletNickname: wallet.wallet_nickname,
+          walletLevel: wallet.wallet_level,
+          walletXp: wallet.wallet_xp,
+          trustScore: wallet.trust_score,
+          dailyLimitGems: wallet.daily_limit_gems,
+          dailyLimitFluxon: parseFloat(wallet.daily_limit_fluxon),
+          dailySpentGems: wallet.daily_spent_gems,
+          dailySpentFluxon: parseFloat(wallet.daily_spent_fluxon),
+          totalTransactionsSent: wallet.total_transactions_sent,
+          totalTransactionsReceived: wallet.total_transactions_received,
+          isLocked: wallet.is_locked,
+          hasTransactionPassword: !!wallet.transaction_password_hash, // Check if password is set
+          achievements: wallet.achievements || [],
+          lastTransactionAt: wallet.last_transaction_at,
+          cached: false
+        };
+      };
 
-    return NextResponse.json(walletData);
-  } catch (error) {
-    console.error('Error in wallet GET:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
+      // Get wallet data from cache or fetch fresh
+      const walletData = await withCache(
+        'wallet',
+        cacheKey,
+        fetchWalletData,
+        { forceRefresh }
+      );
+      
+      // Mark if data came from cache
+      if (!forceRefresh && walletData.cached !== false) {
+        walletData.cached = true;
+      }
+
+      const response = NextResponse.json({
+        success: true,
+        wallet: walletData
+      });
+      
+      // Add cache headers
+      response.headers.set('X-Cache-Status', walletData.cached ? 'HIT' : 'MISS');
+      response.headers.set('Cache-Control', 'private, max-age=300'); // 5 minutes
+      
+      return response;
+    } catch (error: any) {
+      console.error('Wallet API error');
+      return NextResponse.json({ 
+        error: 'Failed to load wallet data. Please try again.',
+        code: 'WALLET_ERROR'
+      }, { status: 500 });
+    }
+  }, 'wallet');
+}
+
+// POST method to invalidate cache when wallet data changes
+export async function POST(request: NextRequest) {
+  return withRateLimit(request, async () => {
+    try {
+      const { action, userId } = await request.json();
+      
+      if (action === 'invalidate_cache' && userId) {
+        invalidateUserCaches(userId);
+        return NextResponse.json({ success: true, message: 'Cache invalidated' });
+      }
+      
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    } catch (error) {
+      return NextResponse.json({ 
+        error: 'Failed to process request',
+        code: 'CACHE_ERROR'
+      }, { status: 500 });
+    }
+  }, 'general');
 }
 
 export async function PATCH(request: Request) {
@@ -163,9 +223,15 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Failed to update wallet' }, { status: 500 });
     }
 
+    // Invalidate cache after update
+    invalidateUserCaches(user.id);
+    
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error in wallet PATCH:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Error in wallet PATCH');
+    return NextResponse.json({ 
+      error: 'Failed to update wallet. Please try again.',
+      code: 'WALLET_UPDATE_ERROR'
+    }, { status: 500 });
   }
 }

@@ -1,23 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
-// Create Supabase client with cookie-based auth
-async function createSupabaseServerClient() {
-  const cookieStore = await cookies()
-  
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-      },
-    }
-  )
-}
 
 // GET - Fetch students in a specific class for attendance
 export async function GET(request: NextRequest) {
@@ -107,11 +90,15 @@ export async function GET(request: NextRequest) {
 
     // Get attendance records for the date
     const studentIds = classStudents?.map((s: any) => s.student_id) || []
-    const { data: attendanceRecords } = await supabase
+    const { data: attendanceRecords, error: attendanceError } = await supabase
       .from('attendance')
-      .select('student_id, attendance_status, notes, created_at')
+      .select('student_id, status, notes, marked_at')
       .in('student_id', studentIds)
-      .eq('attendance_date', date)
+      .eq('date', date)
+    
+    if (attendanceError) {
+      console.error('Error fetching attendance records:', attendanceError)
+    }
 
     // Create attendance map
     const attendanceMap = new Map()
@@ -128,9 +115,9 @@ export async function GET(request: NextRequest) {
         last_name: assignment.profiles.last_name,
         student_number: assignment.profiles.student_number,
         attendance: attendance ? {
-          status: attendance.attendance_status,
+          status: attendance.status,
           notes: attendance.notes,
-          marked_at: attendance.created_at
+          marked_at: attendance.marked_at
         } : null
       }
     }) || []
@@ -220,34 +207,54 @@ export async function POST(request: NextRequest) {
 
     const attendanceDate = date || new Date().toISOString().split('T')[0]
 
-    // Prepare attendance records for upsert
+    // Validate attendance data size for performance
+    if (attendance_data.length > 100) {
+      return NextResponse.json({ 
+        error: 'Too many students. Please process in batches of 100 or less.' 
+      }, { status: 400 })
+    }
+
+    // Prepare attendance records for upsert with correct column names
     const attendanceRecords = attendance_data.map((record: { student_id: string; status: string; notes?: string }) => ({
       student_id: record.student_id,
       teacher_id: profile.id,
       school_id: profile.school_id,
-      attendance_date: attendanceDate,
-      attendance_status: record.status,
+      class_id: class_id,
+      date: attendanceDate,  // Fixed: use 'date' not 'attendance_date'
+      status: record.status,  // Fixed: use 'status' not 'attendance_status'
       notes: record.notes || null,
+      marked_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }))
 
-    // Upsert attendance records
-    const { error: upsertError } = await supabase
+    console.log('📝 Saving attendance for', attendanceRecords.length, 'students on', attendanceDate)
+
+    // Upsert attendance records with correct conflict resolution
+    const { data: upsertData, error: upsertError } = await supabase
       .from('attendance')
       .upsert(attendanceRecords, {
-        onConflict: 'student_id,attendance_date'
+        onConflict: 'student_id,date',  // Fixed: match the UNIQUE constraint
+        ignoreDuplicates: false  // Update existing records
       })
+      .select()
 
     if (upsertError) {
-      console.error('Error upserting attendance:', upsertError)
-      return NextResponse.json({ error: 'Failed to save attendance' }, { status: 500 })
+      console.error('❌ Error upserting attendance:', upsertError)
+      console.error('Error details:', JSON.stringify(upsertError, null, 2))
+      return NextResponse.json({ 
+        error: 'Failed to save attendance', 
+        details: upsertError.message 
+      }, { status: 500 })
     }
+
+    console.log('✅ Successfully saved attendance for', attendanceRecords.length, 'students')
 
     return NextResponse.json({ 
       success: true, 
       message: `Attendance marked for ${attendanceRecords.length} students`,
       date: attendanceDate,
-      class_id: class_id
+      class_id: class_id,
+      records_saved: attendanceRecords.length
     })
 
   } catch (error) {

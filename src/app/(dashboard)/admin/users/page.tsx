@@ -557,6 +557,141 @@ function UserManagementContent() {
     }
   }
 
+  // Comprehensive export function
+  const exportUsersToCSV = () => {
+    try {
+      if (filteredUsers.length === 0) {
+        addToast('No users to export. Try adjusting your filters.', 'error')
+        return
+      }
+
+      // Define comprehensive CSV headers
+      const headers = [
+        'User ID',
+        'First Name',
+        'Last Name',
+        'Full Name',
+        'Email',
+        'Role',
+        'Phone',
+        'Date of Birth',
+        'Address',
+        'Emergency Contact',
+        'School ID',
+        'Grade Level',
+        'Class Name',
+        'Status',
+        'Current Streak',
+        'Total XP',
+        'Level',
+        'Gems',
+        'Avatar URL',
+        'Created At',
+        'Updated At',
+        'Last Sign In',
+        'Account Age (Days)',
+        'Engagement Score'
+      ]
+
+      // Convert users to CSV format with comprehensive data
+      const csvData = filteredUsers.map(user => {
+        const createdDate = user.created_at ? new Date(user.created_at) : null
+        const updatedDate = user.updated_at ? new Date(user.updated_at) : null
+        const lastSignIn = user.last_sign_in_at ? new Date(user.last_sign_in_at) : null
+        const accountAge = createdDate ? Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24)) : 0
+        
+        // Calculate engagement score based on XP, streak, and recent activity
+        let engagementScore = 0
+        if (user.total_xp) engagementScore += Math.min(user.total_xp / 1000, 50) // Max 50 points from XP
+        if (user.current_streak) engagementScore += Math.min(user.current_streak * 2, 30) // Max 30 points from streak
+        if (lastSignIn && Date.now() - lastSignIn.getTime() < 7 * 24 * 60 * 60 * 1000) engagementScore += 20 // 20 points for recent activity
+        
+        return [
+          user.user_id || user.id || 'N/A',
+          user.first_name || '',
+          user.last_name || '',
+          `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'N/A',
+          user.email || '',
+          (user.role || '').charAt(0).toUpperCase() + (user.role || '').slice(1),
+          user.phone || '',
+          user.date_of_birth || '',
+          user.address || '',
+          user.emergency_contact || '',
+          user.school_id || '',
+          user.grade_level || '',
+          user.class_name || '',
+          user.status || 'Active',
+          user.current_streak || 0,
+          user.total_xp || user.xp || 0,
+          user.level || 0,
+          user.gems || 0,
+          user.avatar_url || '',
+          createdDate ? createdDate.toLocaleDateString('en-US') + ' ' + createdDate.toLocaleTimeString('en-US') : '',
+          updatedDate ? updatedDate.toLocaleDateString('en-US') + ' ' + updatedDate.toLocaleTimeString('en-US') : '',
+          lastSignIn ? lastSignIn.toLocaleDateString('en-US') + ' ' + lastSignIn.toLocaleTimeString('en-US') : '',
+          accountAge,
+          Math.round(engagementScore)
+        ]
+      })
+
+      // Create CSV content with proper escaping
+      const csvContent = [
+        headers.join(','),
+        ...csvData.map(row => 
+          row.map(field => {
+            // Escape commas, quotes, and newlines in field values
+            const stringField = String(field)
+            if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n') || stringField.includes('\r')) {
+              return `"${stringField.replace(/"/g, '""')}"`
+            }
+            return stringField
+          }).join(',')
+        )
+      ].join('\n')
+
+      // Add BOM for proper UTF-8 encoding in Excel
+      const BOM = '\uFEFF'
+      const csvWithBOM = BOM + csvContent
+
+      // Create and download the file
+      const blob = new Blob([csvWithBOM], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      
+      if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        
+        // Generate descriptive filename with filters and timestamp
+        const now = new Date()
+        const dateStr = now.toISOString().split('T')[0] // YYYY-MM-DD format
+        const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-') // HH-MM-SS format
+        
+        let filterStr = ''
+        if (roleFilter !== 'all') filterStr += `_${roleFilter}`
+        if (gradeFilter !== 'all') filterStr += `_grade${gradeFilter}`
+        if (classFilter !== 'all') filterStr += `_${classFilter.replace(/\s+/g, '')}`
+        if (searchTerm) filterStr += '_filtered'
+        
+        const filename = `Wells_Users_Export_${dateStr}_${timeStr}${filterStr}.csv`
+        link.setAttribute('download', filename)
+        
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+        
+        // Show success message with export details
+        addToast(`Successfully exported ${filteredUsers.length} users to ${filename}`, 'success')
+      } else {
+        throw new Error('File download not supported')
+      }
+    } catch (error) {
+      console.error('Error exporting users:', error)
+      addToast('Failed to export users. Please try again.', 'error')
+    }
+  }
+
   const renderStatusBadge = (status: string) => {
     return status === 'active' ? (
       <Badge className="bg-green-100 text-green-800 border-green-200">
@@ -675,9 +810,16 @@ function UserManagementContent() {
             
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <div className="flex items-center gap-2 order-2 sm:order-1">
-                <Button variant="outline" size="sm" className="bg-white/50 backdrop-blur-sm hover:bg-white/80 text-xs sm:text-sm">
+                <Button 
+                  onClick={exportUsersToCSV}
+                  variant="outline" 
+                  size="sm" 
+                  className="bg-white/50 backdrop-blur-sm hover:bg-white/80 text-xs sm:text-sm hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 hover:border-green-300"
+                  title="Export filtered users to CSV"
+                >
                   <Download className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Export</span>
+                  <span className="hidden sm:inline">Export CSV</span>
+                  <span className="sm:hidden">Export</span>
                 </Button>
                 <Button variant="outline" size="sm" className="bg-white/50 backdrop-blur-sm hover:bg-white/80 text-xs sm:text-sm">
                   <Upload className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
@@ -853,10 +995,11 @@ function UserManagementContent() {
                   <Button 
                     variant="outline" 
                     className="h-20 sm:h-24 flex-col space-y-1 sm:space-y-2 bg-white/50 hover:bg-white/80 border-2 hover:border-purple-300"
-                    onClick={() => setShowExportDialog(true)}
+                    onClick={exportUsersToCSV}
+                    title="Export user data to CSV report"
                   >
                     <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
-                    <span className="font-medium text-xs sm:text-sm">Report</span>
+                    <span className="font-medium text-xs sm:text-sm">Export CSV</span>
                   </Button>
                   <Button 
                     variant="outline" 

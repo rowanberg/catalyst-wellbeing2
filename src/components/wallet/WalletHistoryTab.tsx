@@ -16,9 +16,9 @@ export function WalletHistoryTab({ transactions, wallet }: WalletHistoryTabProps
   const [selectedTx, setSelectedTx] = useState<any>(null);
 
   const filteredTransactions = transactions.filter(tx => {
-    // Type filter
-    if (filter === 'sent' && tx.fromAddress !== wallet?.walletAddress) return false;
-    if (filter === 'received' && tx.fromAddress === wallet?.walletAddress) return false;
+    // Type filter - Fixed: use direction indicators from API
+    if (filter === 'sent' && !tx.isSent) return false;
+    if (filter === 'received' && !tx.isReceived) return false;
     if (filter === 'exchange' && tx.transactionType !== 'exchange') return false;
     
     // Currency filter
@@ -44,14 +44,120 @@ export function WalletHistoryTab({ transactions, wallet }: WalletHistoryTabProps
 
   const getTypeIcon = (tx: any) => {
     if (tx.transactionType === 'exchange') return <RefreshCw className="h-5 w-5 text-blue-400" />;
-    if (tx.fromAddress === wallet?.walletAddress) return <ArrowUpRight className="h-5 w-5 text-red-400" />;
+    if (tx.isSent) return <ArrowUpRight className="h-5 w-5 text-red-400" />;
     return <ArrowDownLeft className="h-5 w-5 text-green-400" />;
   };
 
   const getTypeLabel = (tx: any) => {
     if (tx.transactionType === 'exchange') return 'Exchange';
-    if (tx.fromAddress === wallet?.walletAddress) return 'Sent';
+    if (tx.isSent) return 'Sent';
     return 'Received';
+  };
+
+  const exportToCSV = () => {
+    try {
+      if (filteredTransactions.length === 0) {
+        alert('No transactions to export. Try adjusting your filters.');
+        return;
+      }
+
+      // Define comprehensive CSV headers
+      const headers = [
+        'Date',
+        'Time',
+        'Transaction Hash',
+        'Type',
+        'Status',
+        'Currency Type',
+        'Amount',
+        'Direction',
+        'From Address',
+        'To Address',
+        'Memo',
+        'Block Number',
+        'Created At (ISO)',
+        'Completed At (ISO)',
+        'Transaction ID'
+      ];
+
+      // Convert transactions to CSV format with better data handling
+      const csvData = filteredTransactions.map(tx => {
+        const date = new Date(tx.createdAt);
+        const completedDate = tx.completedAt ? new Date(tx.completedAt) : null;
+        const isOutgoing = tx.fromAddress === wallet?.walletAddress;
+        
+        return [
+          date.toLocaleDateString('en-US'), // Date
+          date.toLocaleTimeString('en-US'), // Time
+          tx.transactionHash || 'N/A', // Transaction Hash
+          getTypeLabel(tx), // Type
+          (tx.status || 'Unknown').toUpperCase(), // Status
+          tx.currencyType === 'mind_gems' ? 'Mind Gems (MGM)' : 'Fluxon (FLX)', // Currency Type
+          tx.amount || 0, // Amount
+          isOutgoing ? 'Outgoing' : 'Incoming', // Direction
+          tx.fromAddress || 'N/A', // From Address
+          tx.toAddress || 'N/A', // To Address
+          tx.memo || '', // Memo
+          tx.blockNumber || 'N/A', // Block Number
+          tx.createdAt || '', // Created At (ISO)
+          tx.completedAt || '', // Completed At (ISO)
+          tx.id || '' // Transaction ID
+        ];
+      });
+
+      // Create CSV content with proper escaping
+      const csvContent = [
+        headers.join(','),
+        ...csvData.map(row => 
+          row.map(field => {
+            // Escape commas, quotes, and newlines in field values
+            const stringField = String(field);
+            if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n') || stringField.includes('\r')) {
+              return `"${stringField.replace(/"/g, '""')}"`;
+            }
+            return stringField;
+          }).join(',')
+        )
+      ].join('\n');
+
+      // Add BOM for proper UTF-8 encoding in Excel
+      const BOM = '\uFEFF';
+      const csvWithBOM = BOM + csvContent;
+
+      // Create and download the file
+      const blob = new Blob([csvWithBOM], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      
+      if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        
+        // Generate descriptive filename
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+        const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS format
+        const filterStr = filter !== 'all' ? `_${filter}` : '';
+        const currencyStr = currencyFilter !== 'all' ? `_${currencyFilter}` : '';
+        const searchStr = searchQuery ? `_search` : '';
+        
+        const filename = `Wells_Wallet_Transactions_${dateStr}_${timeStr}${filterStr}${currencyStr}${searchStr}.csv`;
+        link.setAttribute('download', filename);
+        
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        // Show success message
+        alert(`Successfully exported ${filteredTransactions.length} transactions to ${filename}`);
+      } else {
+        throw new Error('File download not supported');
+      }
+    } catch (error) {
+      console.error('Error exporting CSV:', error);
+      alert('Failed to export transactions. Please try again.');
+    }
   };
 
   return (
@@ -70,7 +176,11 @@ export function WalletHistoryTab({ transactions, wallet }: WalletHistoryTabProps
             <span className="sm:hidden">History</span>
           </h2>
           {/* Export button hidden on mobile */}
-          <button className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-white transition-colors">
+          <button 
+            onClick={exportToCSV}
+            className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-white transition-colors hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-blue-500/20"
+            title="Export filtered transactions to CSV"
+          >
             <Download className="h-4 w-4" />
             Export CSV
           </button>
@@ -144,6 +254,17 @@ export function WalletHistoryTab({ transactions, wallet }: WalletHistoryTabProps
           </div>
         </div>
 
+        {/* Mobile Export Button */}
+        <div className="sm:hidden mb-4">
+          <button 
+            onClick={exportToCSV}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500/20 to-blue-500/20 hover:from-purple-500/30 hover:to-blue-500/30 rounded-xl text-white transition-colors border border-purple-500/30"
+          >
+            <Download className="h-4 w-4" />
+            Export Transactions to CSV
+          </button>
+        </div>
+
         {/* Transactions List - Mobile Optimized */}
         <div className="space-y-2 sm:space-y-3">
           {filteredTransactions.length > 0 ? (
@@ -161,10 +282,10 @@ export function WalletHistoryTab({ transactions, wallet }: WalletHistoryTabProps
                   <div className="flex items-start sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
                     <div className={`p-1.5 sm:p-2 rounded-lg flex-shrink-0 ${
                       tx.transactionType === 'exchange' ? 'bg-blue-500/20' :
-                      tx.fromAddress === wallet?.walletAddress ? 'bg-red-500/20' : 'bg-green-500/20'
+                      tx.isSent ? 'bg-red-500/20' : 'bg-green-500/20'
                     }`}>
                       {tx.transactionType === 'exchange' ? <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400" /> :
-                       tx.fromAddress === wallet?.walletAddress ? <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 text-red-400" /> :
+                       tx.isSent ? <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 text-red-400" /> :
                        <ArrowDownLeft className="h-4 w-4 sm:h-5 sm:w-5 text-green-400" />}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -176,7 +297,7 @@ export function WalletHistoryTab({ transactions, wallet }: WalletHistoryTabProps
                       </div>
                       {/* Hide memo/address on mobile, show only on desktop */}
                       <p className="hidden sm:block text-white/50 text-sm truncate">
-                        {tx.memo || (tx.fromAddress === wallet?.walletAddress ? `To: ${tx.toAddress}` : `From: ${tx.fromAddress}`)}
+                        {tx.memo || (tx.isSent ? `To: ${tx.toAddress}` : `From: ${tx.fromAddress}`)}
                       </p>
                       <p className="text-white/30 text-[10px] sm:text-xs mt-0.5 sm:mt-1">
                         {new Date(tx.createdAt).toLocaleString('en-US', { 
@@ -192,9 +313,9 @@ export function WalletHistoryTab({ transactions, wallet }: WalletHistoryTabProps
                   {/* Right side - Amount */}
                   <div className="text-right flex-shrink-0">
                     <p className={`font-bold text-sm sm:text-base flex items-center gap-0.5 sm:gap-1 justify-end ${
-                      tx.fromAddress === wallet?.walletAddress ? 'text-red-400' : 'text-green-400'
+                      tx.isSent ? 'text-red-400' : 'text-green-400'
                     }`}>
-                      {tx.fromAddress === wallet?.walletAddress ? '-' : '+'}
+                      {tx.isSent ? '-' : '+'}
                       {tx.amount}
                       {tx.currencyType === 'mind_gems' ? <Gem className="h-3 w-3 sm:h-4 sm:w-4" /> : <Zap className="h-3 w-3 sm:h-4 sm:w-4" />}
                     </p>

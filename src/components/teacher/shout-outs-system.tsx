@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useAppSelector } from '@/lib/redux/hooks'
 import { 
   Star, 
   Heart, 
@@ -17,7 +18,11 @@ import {
   Sparkles,
   CheckCircle,
   Clock,
-  User
+  User,
+  ArrowLeft,
+  ArrowRight,
+  GraduationCap,
+  XCircle
 } from 'lucide-react'
 
 interface Student {
@@ -98,46 +103,23 @@ export default function ShoutOutsSystem() {
     fetchTemplates()
   }, [])
 
+  // Get user from Redux (same pattern as other teacher components)
+  const { user } = useAppSelector((state) => state.auth)
+
   const fetchTeacherClasses = async () => {
     try {
       setLoadingClasses(true)
-      console.log('🔍 Fetching teacher profile...')
       
-      // Use the same pattern as other parts of the app - get user from auth first
-      const { createClient } = await import('@supabase/supabase-js')
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
-      
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      if (userError || !user) {
-        throw new Error('Not authenticated')
+      if (!user?.id) {
+        console.error('❌ No authenticated user found')
+        setLoadingClasses(false)
+        return
       }
       
-      // Use the working /api/get-profile endpoint like other parts of the app
-      const profileResponse = await fetch('/api/get-profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id }),
-      })
-      
-      console.log('📋 Profile response status:', profileResponse.status)
-      
-      if (!profileResponse.ok) {
-        const errorText = await profileResponse.text()
-        console.error('❌ Profile API error:', profileResponse.status, errorText)
-        throw new Error(`Failed to fetch profile: ${profileResponse.status} - ${errorText}`)
-      }
-      
-      const profileData = await profileResponse.json()
-      console.log('✅ Profile data received:', profileData)
-      const teacherId = profileData.id
+      console.log('🔍 Fetching teacher classes for user:', user.id)
 
-      console.log('🔍 Fetching teacher classes for ID:', teacherId)
-      console.log('🔗 API URL (same as teacher students page):', `/api/teacher/class-assignments`)
       
-      // Use the same pattern as teacher students page - let API get teacher_id from session
+      // Fetch class assignments (API gets teacher_id from session)
       const response = await fetch(`/api/teacher/class-assignments`)
       
       console.log('📋 Response status:', response.status)
@@ -166,23 +148,40 @@ export default function ShoutOutsSystem() {
   const fetchStudentsByClass = async (classId: string, schoolId: string) => {
     try {
       setLoadingStudents(true)
+      console.log('🔍 Fetching students for class:', { classId, schoolId })
+      
       const response = await fetch(`/api/teacher/students?school_id=${schoolId}&class_id=${classId}`)
+      console.log('📋 Response status:', response.status)
+      
       if (response.ok) {
         const data = await response.json()
-        const formattedStudents = data.students.map((student: any) => ({
-          id: student.id,
-          name: `${student.first_name} ${student.last_name}`,
-          first_name: student.first_name,
-          last_name: student.last_name,
-          grade: student.grade_level || 'N/A',
-          class_id: student.class_id,
-          class_name: student.class_name,
-          recentShoutOuts: 0 // This would come from shout-outs API
-        }))
-        setStudents(formattedStudents)
+        console.log('✅ Students data received:', data)
+        
+        if (data.students && Array.isArray(data.students)) {
+          const formattedStudents = data.students.map((student: any) => ({
+            id: student.id,
+            name: `${student.first_name} ${student.last_name}`,
+            first_name: student.first_name,
+            last_name: student.last_name,
+            grade: student.grade_level || 'N/A',
+            class_id: student.class_id,
+            class_name: student.class_name,
+            recentShoutOuts: 0
+          }))
+          console.log('📊 Formatted students count:', formattedStudents.length)
+          setStudents(formattedStudents)
+        } else {
+          console.warn('⚠️ No students array in response:', data)
+          setStudents([])
+        }
+      } else {
+        const errorText = await response.text()
+        console.error('❌ Failed to fetch students:', response.status, errorText)
+        setStudents([])
       }
     } catch (error: any) {
-      console.error('Error fetching students by class:', error)
+      console.error('❌ Error fetching students by class:', error)
+      setStudents([])
     } finally {
       setLoadingStudents(false)
     }
@@ -327,47 +326,37 @@ export default function ShoutOutsSystem() {
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
       {/* Professional Header Section */}
-      <div className="bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 rounded-2xl shadow-2xl p-6 sm:p-8 text-white relative overflow-hidden mb-8">
+      <div className="bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 rounded-2xl shadow-2xl p-4 sm:p-6 lg:p-8 text-white relative overflow-hidden mb-6 sm:mb-8">
         <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-50" />
         <div className="relative z-10">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
-                <Award className="h-8 w-8" />
-              </div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold">Positive Shout-Outs</h1>
-                <p className="text-white/90 text-sm sm:text-base">Recognize and celebrate student achievements</p>
-              </div>
+          {/* Title Section */}
+          <div className="flex items-center gap-3 sm:gap-4 mb-6">
+            <div className="p-2 sm:p-3 bg-white/20 backdrop-blur-sm rounded-xl flex-shrink-0">
+              <Award className="h-6 w-6 sm:h-8 sm:w-8" />
             </div>
-            <motion.button
-              onClick={() => setShowCreateModal(true)}
-              className="px-4 sm:px-6 py-3 bg-white/20 backdrop-blur-sm text-white rounded-xl hover:bg-white/30 transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-xl border border-white/20"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              <span className="font-medium">Create Shout-Out</span>
-            </motion.button>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold truncate">Positive Shout-Outs</h1>
+              <p className="text-white/90 text-xs sm:text-sm lg:text-base mt-0.5">Recognize and celebrate student achievements</p>
+            </div>
           </div>
           
           {/* Quick Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4">
-              <div className="text-xl sm:text-2xl font-bold">{shoutOuts.length}</div>
-              <div className="text-xs sm:text-sm text-white/80">Total Shout-Outs</div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl p-3 sm:p-4 hover:bg-white/20 transition-colors">
+              <div className="text-lg sm:text-xl lg:text-2xl font-bold">{shoutOuts.length}</div>
+              <div className="text-xs sm:text-sm text-white/80 mt-0.5">Total Shout-Outs</div>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4">
-              <div className="text-xl sm:text-2xl font-bold">{students.length}</div>
-              <div className="text-xs sm:text-sm text-white/80">Students</div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl p-3 sm:p-4 hover:bg-white/20 transition-colors">
+              <div className="text-lg sm:text-xl lg:text-2xl font-bold">{students.length}</div>
+              <div className="text-xs sm:text-sm text-white/80 mt-0.5">Students</div>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4">
-              <div className="text-xl sm:text-2xl font-bold">{shoutOuts.filter(s => s.createdAt > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()).length}</div>
-              <div className="text-xs sm:text-sm text-white/80">This Week</div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl p-3 sm:p-4 hover:bg-white/20 transition-colors">
+              <div className="text-lg sm:text-xl lg:text-2xl font-bold">{shoutOuts.filter(s => s.createdAt > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()).length}</div>
+              <div className="text-xs sm:text-sm text-white/80 mt-0.5">This Week</div>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4">
-              <div className="text-xl sm:text-2xl font-bold">{Math.round((shoutOuts.filter(s => s.isPublic).length / Math.max(shoutOuts.length, 1)) * 100)}%</div>
-              <div className="text-xs sm:text-sm text-white/80">Public</div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl p-3 sm:p-4 hover:bg-white/20 transition-colors">
+              <div className="text-lg sm:text-xl lg:text-2xl font-bold">{Math.round((shoutOuts.filter(s => s.isPublic).length / Math.max(shoutOuts.length, 1)) * 100)}%</div>
+              <div className="text-xs sm:text-sm text-white/80 mt-0.5">Public</div>
             </div>
           </div>
         </div>
@@ -553,10 +542,11 @@ export default function ShoutOutsSystem() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white/95 backdrop-blur-sm rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-8 shadow-2xl border-0"
+              className="bg-white/95 backdrop-blur-sm rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-4 sm:p-8 shadow-2xl border-0"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between mb-8">
+              {/* Header - Hidden on Mobile */}
+              <div className="hidden sm:flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-xl text-white">
                     <Award className="h-6 w-6" />
@@ -582,43 +572,63 @@ export default function ShoutOutsSystem() {
                   ✕
                 </button>
               </div>
+              
+              {/* Mobile Close Button - Top Right */}
+              <div className="sm:hidden flex justify-end mb-4">
+                <button
+                  onClick={() => {
+                    setShowCreateModal(false)
+                    setModalStep('classes')
+                    setSelectedClass(null)
+                    setSelectedStudent(null)
+                  }}
+                  className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
 
               {/* Step 1: Class Selection */}
               {modalStep === 'classes' && (
-                <div className="mb-8">
-                  <h3 className="font-bold text-lg text-gray-900 mb-4">Select Your Class</h3>
+                <div>
+                  <h3 className="font-bold text-base sm:text-lg text-gray-900 mb-3 sm:mb-4">Select Your Class</h3>
                   {loadingClasses ? (
                     <div className="flex items-center justify-center py-12">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto">
+                    <div className="grid grid-cols-1 gap-3">
                       {teacherClasses.map((classAssignment) => (
                         <motion.button
                           key={classAssignment.id}
                           onClick={async () => {
                             setSelectedClass(classAssignment)
                             setModalStep('students')
-                            // Get school_id from profile using the working API
+                            
+                            // Use Redux user instead of creating new Supabase client
+                            if (!user?.id) {
+                              console.error('❌ No user found in Redux')
+                              return
+                            }
+                            
                             try {
-                              const { createClient } = await import('@supabase/supabase-js')
-                              const supabase = createClient(
-                                process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-                              )
-                              const { data: { user } } = await supabase.auth.getUser()
-                              if (user) {
-                                const profileResponse = await fetch('/api/get-profile', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ userId: user.id }),
-                                })
+                              // Fetch profile to get school_id
+                              const profileResponse = await fetch('/api/get-profile', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ userId: user.id }),
+                              })
+                              
+                              if (profileResponse.ok) {
                                 const profileData = await profileResponse.json()
                                 const schoolId = profileData.school_id
+                                console.log('🏫 Using school_id:', schoolId)
                                 await fetchStudentsByClass(classAssignment.class_id, schoolId)
+                              } else {
+                                console.error('❌ Failed to fetch profile:', profileResponse.status)
                               }
                             } catch (error) {
-                              console.error('Error fetching profile for school ID:', error)
+                              console.error('❌ Error fetching students:', error)
                             }
                           }}
                           className="p-4 text-left border-2 border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
@@ -667,62 +677,165 @@ export default function ShoutOutsSystem() {
                 </div>
               )}
 
-              {/* Step 2: Student Selection */}
+              {/* Step 2: Enhanced Student Selection */}
               {modalStep === 'students' && (
-                <div className="mb-8">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-bold text-lg text-gray-900">Select a Student</h3>
-                    <button
-                      onClick={() => {
-                        setModalStep('classes')
-                        setSelectedClass(null)
-                        setStudents([])
-                      }}
-                      className="text-sm text-blue-600 hover:text-blue-800 px-3 py-1 hover:bg-blue-100 rounded-lg transition-colors"
-                    >
-                      ← Back to Classes
-                    </button>
-                  </div>
+                <div className="space-y-3">
+                  {/* Search Bar - Top Priority */}
+                  {!loadingStudents && students.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 h-4.5 w-4.5 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Search students..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="w-full pl-11 pr-11 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 placeholder-gray-400 shadow-sm hover:border-gray-300 text-base font-medium"
+                          autoFocus
+                        />
+                        {searchTerm && (
+                          <button
+                            onClick={() => setSearchTerm('')}
+                            className="absolute right-3.5 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-1"
+                          >
+                            <XCircle className="h-4.5 w-4.5" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-gray-600 font-medium">
+                          {filteredStudents.length} {filteredStudents.length === 1 ? 'student' : 'students'} {searchTerm ? 'found' : 'available'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   
+                  {/* Compact Class Info + Back Button */}
                   {selectedClass && (
-                    <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <div className="text-sm font-medium text-blue-900">{selectedClass.classes?.class_name}</div>
-                      <div className="text-xs text-blue-700">{selectedClass.classes?.subject} • Grade {selectedClass.classes?.grade_levels?.grade_level}</div>
+                    <div className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+                      <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                        <div className="p-2 bg-blue-500 rounded-lg flex-shrink-0">
+                          <GraduationCap className="h-4 w-4 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-blue-900 text-sm leading-tight truncate">{selectedClass.classes?.class_name}</div>
+                          <div className="text-xs text-blue-600 mt-0.5 hidden sm:block">{selectedClass.classes?.subject} • Grade {selectedClass.classes?.grade_levels?.grade_level}</div>
+                        </div>
+                        <div className="text-right flex-shrink-0 px-2">
+                          <div className="text-xl font-bold text-blue-600 leading-none">{students.length}</div>
+                          <div className="text-[10px] text-blue-600 uppercase tracking-wide mt-0.5">students</div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setModalStep('classes')
+                          setSelectedClass(null)
+                          setStudents([])
+                          setSearchTerm('')
+                        }}
+                        className="ml-2.5 flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 px-3 py-2 hover:bg-blue-100 rounded-lg transition-all duration-200 flex-shrink-0 font-medium"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                        <span className="hidden sm:inline">Back</span>
+                      </button>
                     </div>
                   )}
 
                   {loadingStudents ? (
-                    <div className="flex items-center justify-center py-12">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <div className="flex flex-col items-center justify-center py-16">
+                      <div className="relative">
+                        <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600"></div>
+                        <Users className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-6 w-6 text-blue-600" />
+                      </div>
+                      <p className="mt-4 text-gray-600 font-medium">Loading students...</p>
+                      <p className="text-sm text-gray-400 mt-1">Please wait</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 gap-3 max-h-96 overflow-y-auto">
-                      {students.map((student) => (
-                        <motion.button
-                          key={student.id}
-                          onClick={() => {
-                            setSelectedStudent(student)
-                            setModalStep('create')
-                          }}
-                          className="p-4 text-left border-2 border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <div className="font-semibold text-gray-900">{student.name}</div>
-                          <div className="text-sm text-gray-600">{student.grade}</div>
-                          <div className="flex items-center mt-1">
-                            <Star className="h-3 w-3 text-yellow-500 mr-1" />
-                            <span className="text-xs text-gray-600">{student.recentShoutOuts} recent</span>
-                          </div>
-                        </motion.button>
-                      ))}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {filteredStudents.map((student, index) => {
+                        // Generate initials and color for avatar
+                        const initials = `${student.first_name?.[0] || ''}${student.last_name?.[0] || ''}`.toUpperCase() || 'ST'
+                        const colors = [
+                          'bg-gradient-to-br from-blue-500 to-blue-600',
+                          'bg-gradient-to-br from-purple-500 to-purple-600',
+                          'bg-gradient-to-br from-green-500 to-green-600',
+                          'bg-gradient-to-br from-orange-500 to-orange-600',
+                          'bg-gradient-to-br from-pink-500 to-pink-600',
+                          'bg-gradient-to-br from-indigo-500 to-indigo-600'
+                        ]
+                        const colorClass = colors[index % colors.length]
+                        
+                        return (
+                          <motion.button
+                            key={student.id}
+                            onClick={() => {
+                              setSelectedStudent(student)
+                              setModalStep('create')
+                            }}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.05 }}
+                            className="group relative p-3.5 text-left bg-white border-2 border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-lg transition-all duration-300 overflow-hidden"
+                            whileHover={{ scale: 1.03, y: -2 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            {/* Gradient overlay on hover */}
+                            <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            
+                            <div className="relative flex items-center gap-3">
+                              {/* Avatar with initials */}
+                              <div className={`flex-shrink-0 w-11 h-11 ${colorClass} rounded-lg flex items-center justify-center text-white font-bold text-base shadow-md`}>
+                                {initials}
+                              </div>
+                              
+                              <div className="flex-1 min-w-0">
+                                <div className="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors truncate text-[15px] leading-tight">
+                                  {student.name}
+                                </div>
+                                <div className="text-xs text-gray-600 flex items-center gap-1 mt-1">
+                                  <GraduationCap className="h-3 w-3" />
+                                  Grade {student.grade}
+                                </div>
+                                
+                                {/* Stats */}
+                                <div className="flex items-center gap-2.5 mt-1.5">
+                                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                                    <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                                    <span className="font-medium">{student.recentShoutOuts}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                                    <Sparkles className="h-3 w-3" />
+                                    Ready
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Arrow indicator */}
+                              <div className="flex-shrink-0 text-gray-400 group-hover:text-blue-600 transition-colors">
+                                <ArrowRight className="h-4.5 w-4.5" />
+                              </div>
+                            </div>
+                          </motion.button>
+                        )
+                      })}
                     </div>
                   )}
                   
                   {!loadingStudents && students.length === 0 && (
                     <div className="text-center py-12 text-gray-500">
-                      <p className="text-lg font-medium mb-2">No students found</p>
-                      <p className="text-sm">This class doesn't have any students assigned yet.</p>
+                      <div className="bg-blue-50 rounded-full p-6 w-24 h-24 mx-auto mb-4 flex items-center justify-center">
+                        <Users className="h-12 w-12 text-blue-400" />
+                      </div>
+                      <p className="text-lg font-medium mb-2 text-gray-800">No students found</p>
+                      <p className="text-sm text-gray-600">This class doesn't have any students assigned yet.</p>
+                    </div>
+                  )}
+                  
+                  {!loadingStudents && students.length > 0 && filteredStudents.length === 0 && (
+                    <div className="text-center py-12 text-gray-500">
+                      <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-lg font-medium mb-2 text-gray-800">No matching students</p>
+                      <p className="text-sm text-gray-600">Try adjusting your search term</p>
                     </div>
                   )}
                 </div>

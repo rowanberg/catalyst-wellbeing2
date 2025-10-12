@@ -19,9 +19,8 @@ export async function createSupabaseServerClient() {
               cookieStore.set(name, value, options)
             })
           } catch (error: any) {
-            // In some contexts (like API routes), we can't set cookies
-            // This is expected and safe to ignore
-            console.warn('Unable to set cookies:', error.message)
+            // This is expected in some contexts like Server Components
+            // The SSR package will handle this appropriately
           }
         },
       },

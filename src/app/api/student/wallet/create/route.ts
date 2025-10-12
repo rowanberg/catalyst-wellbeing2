@@ -1,7 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import crypto from 'crypto';
+import bcrypt from 'bcrypt';
+import { withRateLimit } from '@/lib/security/rateLimiter';
 
 // Generate unique 12-digit student tag
 function generateStudentTag(): string {
@@ -17,27 +19,42 @@ function generateWalletAddress(): string {
   return prefix + hash;
 }
 
-// Hash PIN for security
-function hashPin(pin: string): string {
-  return crypto.createHash('sha256').update(pin).digest('hex');
+// Hash PIN with bcrypt for better security
+async function hashPin(pin: string): Promise<{ hash: string; salt: string }> {
+  const saltRounds = 12;
+  const salt = await bcrypt.genSalt(saltRounds);
+  const hash = await bcrypt.hash(pin, salt);
+  return { hash, salt };
 }
 
-export async function POST(request: Request) {
-  try {
-    console.log('🔄 Wallet creation API called');
-    
-    const body = await request.json();
-    const { walletNickname, securityPin } = body;
+export async function POST(request: NextRequest) {
+  return withRateLimit(request, async () => {
+    try {
+      console.log('🔄 Wallet creation API called');
+      
+      const body = await request.json();
+      const { walletNickname, securityPin } = body;
     
     console.log('📥 Request received:', { 
       walletNickname, 
       hasPin: !!securityPin
     });
 
-    // Validate input
-    if (!securityPin || securityPin.length < 6) {
-      return NextResponse.json({ error: 'Security PIN must be at least 6 digits' }, { status: 400 });
-    }
+      // Validate input with stronger requirements
+      if (!securityPin || securityPin.length < 6) {
+        return NextResponse.json({ error: 'Security PIN must be at least 6 digits' }, { status: 400 });
+      }
+      
+      // Validate PIN is numeric
+      if (!/^\d+$/.test(securityPin)) {
+        return NextResponse.json({ error: 'Security PIN must contain only numbers' }, { status: 400 });
+      }
+      
+      // Validate wallet nickname for XSS
+      const sanitizedNickname = walletNickname?.replace(/<[^>]*>/g, '').trim() || 'My Wallet';
+      if (sanitizedNickname.length > 50) {
+        return NextResponse.json({ error: 'Wallet nickname is too long (max 50 characters)' }, { status: 400 });
+      }
 
     // Create Supabase client with SSR
     const cookieStore = await cookies();
@@ -75,10 +92,10 @@ export async function POST(request: Request) {
 
     console.log('✅ User authenticated:', user.id);
 
-    // Generate wallet data
-    const studentTag = generateStudentTag();
-    const walletAddress = generateWalletAddress();
-    const hashedPin = hashPin(securityPin);
+      // Generate wallet data
+      const studentTag = generateStudentTag();
+      const walletAddress = generateWalletAddress();
+      const { hash: hashedPin, salt: pinSalt } = await hashPin(securityPin);
 
     console.log('🔐 Generated wallet data:', { studentTag, walletAddress });
 
@@ -110,8 +127,9 @@ export async function POST(request: Request) {
         wallet_address: walletAddress,
         mind_gems_balance: 100, // Starting balance
         fluxon_balance: 10.0,   // Starting bonus
-        wallet_nickname: walletNickname || 'My Wallet',
+        wallet_nickname: sanitizedNickname,
         transaction_password_hash: hashedPin,
+        password_salt: pinSalt,
         wallet_level: 1,
         wallet_xp: 0,
         trust_score: 50,
@@ -198,11 +216,13 @@ export async function POST(request: Request) {
       });
     }
 
-  } catch (error: any) {
-    console.error('❌ Wallet creation API error:', error);
-    return NextResponse.json({ 
-      error: 'Internal server error: ' + (error?.message || 'Unknown error'),
-      stack: error?.stack 
-    }, { status: 500 });
-  }
+    } catch (error: any) {
+      console.error('❌ Wallet creation API error');
+      // Never expose internal error details to client
+      return NextResponse.json({ 
+        error: 'An error occurred while creating your wallet. Please try again.',
+        code: 'WALLET_CREATE_ERROR'
+      }, { status: 500 });
+    }
+  }, 'wallet');
 }

@@ -162,9 +162,8 @@ export default function SchoolRegistrationWizard() {
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [currentFeatureIndex, setCurrentFeatureIndex] = useState(0)
-  const [showTermsModal, setShowTermsModal] = useState(false)
-  const [hasReadTerms, setHasReadTerms] = useState(false)
   const [showMobileIntro, setShowMobileIntro] = useState(true) // Mobile intro state
+  const [introDismissed, setIntroDismissed] = useState(false) // Track if user dismissed intro
   const [success, setSuccess] = useState(false)
   const [schoolCode, setSchoolCode] = useState('')
   const [codeCopied, setCodeCopied] = useState(false)
@@ -179,14 +178,10 @@ export default function SchoolRegistrationWizard() {
     return () => clearInterval(interval)
   }, [])
 
-  // Check if mobile on mount
+  // Check if mobile on mount only (don't recheck on resize to avoid keyboard issues)
   useEffect(() => {
-    const checkMobile = () => {
-      setShowMobileIntro(window.innerWidth < 1024) // Show intro on mobile/tablet
-    }
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
+    const isMobile = window.innerWidth < 1024
+    setShowMobileIntro(isMobile && !introDismissed)
   }, [])
 
   const {
@@ -466,7 +461,10 @@ export default function SchoolRegistrationWizard() {
 
           {/* Continue button */}
           <button
-            onClick={() => setShowMobileIntro(false)}
+            onClick={() => {
+              setShowMobileIntro(false)
+              setIntroDismissed(true) // Mark as dismissed so it won't reappear
+            }}
             className="w-full max-w-sm bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold py-4 px-8 rounded-2xl shadow-lg shadow-violet-500/25 hover:from-violet-700 hover:to-fuchsia-700 transition-all duration-300 transform hover:scale-105"
           >
             Continue to Registration
@@ -654,7 +652,7 @@ export default function SchoolRegistrationWizard() {
               <div className="relative z-10 p-6">
 
                 {/* Enterprise Progress Steps */}
-                <div className="mb-6">
+                <div className="mb-6 sticky top-0 bg-black/80 backdrop-blur-2xl z-20 -mx-6 px-6 pt-6 pb-4 border-b border-violet-500/20">
                   {/* Mobile-optimized progress bar */}
                   <div className="block lg:hidden mb-4">
                     {/* Current step indicator */}
@@ -771,79 +769,152 @@ export default function SchoolRegistrationWizard() {
                 </div>
 
               <form onSubmit={handleSubmit(onSubmit)}>
-                {/* Step 1: Futuristic Terms & Conditions */}
+                {/* Step 1: Professional Terms & Conditions */}
                 {currentStep === 1 && (
                   <div className="space-y-4">
+                    {/* Terms Content Card */}
                     <div className="relative">
-                      {/* Holographic card */}
                       <div className="absolute inset-0 bg-gradient-to-br from-violet-900/20 to-fuchsia-900/20 rounded-2xl border border-violet-500/30 backdrop-blur-xl"></div>
-                      <div className="relative z-10 p-5">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            <div className="relative">
-                              <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-xl blur-sm opacity-50"></div>
-                              <div className="relative p-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-xl">
-                                <ScrollText className="w-4 h-4 text-white" />
-                              </div>
+                      <div className="relative z-10 p-6">
+                        {/* Header */}
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="relative">
+                            <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-xl blur-sm opacity-50"></div>
+                            <div className="relative p-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-xl">
+                              <ScrollText className="w-5 h-5 text-white" />
                             </div>
-                            <h3 className="text-lg font-bold bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+                          </div>
+                          <div>
+                            <h3 className="text-xl font-bold bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
                               Terms & Conditions
                             </h3>
+                            <p className="text-violet-300/60 text-sm">Please review before proceeding</p>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => setShowTermsModal(true)}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-lg hover:from-violet-700 hover:to-fuchsia-700 transition-all duration-200 shadow-lg shadow-violet-500/25 text-sm"
-                          >
-                            <Eye className="w-3 h-3" />
-                            <span>Read Full</span>
-                          </button>
                         </div>
                         
-                        <div className="mb-4">
-                          <p className="text-violet-200 mb-3 text-sm">By registering your school, you agree to:</p>
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-violet-300 text-xs">
-                              <Shield className="w-3 h-3 text-violet-400" />
-                              <span>Provide accurate school information</span>
+                        {/* Scrollable Terms Content */}
+                        <div className="max-h-64 lg:max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-violet-500/50 scrollbar-track-violet-900/20 pr-3 mb-4">
+                          <div className="space-y-4 text-violet-200 text-sm leading-relaxed">
+                            {/* Introduction */}
+                            <div>
+                              <h4 className="text-violet-300 font-semibold mb-2 flex items-center gap-2">
+                                <Shield className="w-4 h-4" /> 1. Acceptance of Terms
+                              </h4>
+                              <p className="text-violet-200/80">
+                                By registering your educational institution on the Catalyst platform, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions. You confirm that you are authorized to register your institution and accept these terms on its behalf.
+                              </p>
                             </div>
-                            <div className="flex items-center gap-2 text-violet-300 text-xs">
-                              <Lock className="w-3 h-3 text-violet-400" />
-                              <span>Ensure data privacy & student protection</span>
+
+                            {/* Trial Period */}
+                            <div>
+                              <h4 className="text-violet-300 font-semibold mb-2 flex items-center gap-2">
+                                <Clock className="w-4 h-4" /> 2. Trial Period
+                              </h4>
+                              <ul className="list-disc list-inside space-y-1 text-violet-200/80">
+                                <li>7-day free trial with full platform access</li>
+                                <li>Maximum 100 active members during trial</li>
+                                <li>No credit card required for trial period</li>
+                                <li>Automatic notifications before trial expiration</li>
+                              </ul>
                             </div>
-                            <div className="flex items-center gap-2 text-violet-300 text-xs">
-                              <GraduationCap className="w-3 h-3 text-violet-400" />
-                              <span>Use for educational purposes only</span>
+
+                            {/* Data Privacy */}
+                            <div>
+                              <h4 className="text-violet-300 font-semibold mb-2 flex items-center gap-2">
+                                <Lock className="w-4 h-4" /> 3. Data Privacy & Security
+                              </h4>
+                              <ul className="list-disc list-inside space-y-1 text-violet-200/80">
+                                <li>FERPA compliant student data protection</li>
+                                <li>Enterprise-grade encryption for all data</li>
+                                <li>Regular security audits and compliance checks</li>
+                                <li>No third-party data sharing without consent</li>
+                                <li>Right to data export and deletion</li>
+                              </ul>
                             </div>
-                            <div className="flex items-center gap-2 text-violet-300 text-xs">
-                              <CheckCircle className="w-3 h-3 text-violet-400" />
-                              <span>7-day trial with 100 member limit</span>
+
+                            {/* Educational Use */}
+                            <div>
+                              <h4 className="text-violet-300 font-semibold mb-2 flex items-center gap-2">
+                                <GraduationCap className="w-4 h-4" /> 4. Educational Use Only
+                              </h4>
+                              <p className="text-violet-200/80">
+                                This platform is designed exclusively for educational institutions and purposes. Commercial use, data scraping, or unauthorized access is strictly prohibited and may result in immediate account termination.
+                              </p>
+                            </div>
+
+                            {/* Responsibilities */}
+                            <div>
+                              <h4 className="text-violet-300 font-semibold mb-2 flex items-center gap-2">
+                                <UserCheck className="w-4 h-4" /> 5. Institution Responsibilities
+                              </h4>
+                              <ul className="list-disc list-inside space-y-1 text-violet-200/80">
+                                <li>Provide accurate and up-to-date institution information</li>
+                                <li>Maintain secure administrator credentials</li>
+                                <li>Ensure appropriate use by staff and students</li>
+                                <li>Monitor and manage user activities</li>
+                                <li>Comply with local educational regulations</li>
+                              </ul>
+                            </div>
+
+                            {/* Service Availability */}
+                            <div>
+                              <h4 className="text-violet-300 font-semibold mb-2 flex items-center gap-2">
+                                <Globe className="w-4 h-4" /> 6. Service Availability
+                              </h4>
+                              <p className="text-violet-200/80">
+                                While we strive for 99.9% uptime, we cannot guarantee uninterrupted service. Scheduled maintenance will be announced in advance. We are not liable for damages resulting from service interruptions.
+                              </p>
+                            </div>
+
+                            {/* Termination */}
+                            <div>
+                              <h4 className="text-violet-300 font-semibold mb-2 flex items-center gap-2">
+                                <XCircle className="w-4 h-4" /> 7. Account Termination
+                              </h4>
+                              <p className="text-violet-200/80">
+                                You may terminate your account at any time. We reserve the right to suspend or terminate accounts that violate these terms. Upon termination, all data will be retained for 30 days before permanent deletion.
+                              </p>
+                            </div>
+
+                            {/* Updates */}
+                            <div>
+                              <h4 className="text-violet-300 font-semibold mb-2 flex items-center gap-2">
+                                <FileText className="w-4 h-4" /> 8. Terms Updates
+                              </h4>
+                              <p className="text-violet-200/80">
+                                We may update these terms periodically. Significant changes will be communicated via email. Continued use of the platform after updates constitutes acceptance of the revised terms.
+                              </p>
+                            </div>
+
+                            {/* Contact */}
+                            <div className="bg-violet-900/20 border border-violet-500/20 rounded-lg p-4 mt-4">
+                              <h4 className="text-violet-300 font-semibold mb-2">Questions?</h4>
+                              <p className="text-violet-200/80 text-sm">
+                                For questions about these terms, contact us at{' '}
+                                <a href="mailto:legal@catalyst-edu.com" className="text-violet-400 hover:text-violet-300 underline">
+                                  legal@catalyst-edu.com
+                                </a>
+                              </p>
                             </div>
                           </div>
                         </div>
 
-                        <div className="flex items-start gap-3">
+                        {/* Acceptance Checkbox */}
+                        <div className="flex items-start gap-3 pt-4 border-t border-violet-500/20">
                           <input
                             {...register('termsAccepted')}
                             type="checkbox"
                             id="termsAccepted"
-                            className="mt-1 w-4 h-4 text-violet-600 bg-violet-900/20 border-violet-500/30 rounded focus:ring-2 focus:ring-violet-500 focus:ring-offset-0"
+                            className="mt-1 w-5 h-5 text-violet-600 bg-violet-900/20 border-violet-500/30 rounded focus:ring-2 focus:ring-violet-500 focus:ring-offset-0"
                           />
                           <label htmlFor="termsAccepted" className="text-violet-200 text-sm leading-relaxed">
-                            I have read and agree to the{' '}
-                            <button
-                              type="button"
-                              onClick={() => setShowTermsModal(true)}
-                              className="text-violet-400 hover:text-violet-300 underline font-medium"
-                            >
-                              Terms & Conditions
-                            </button>
-                            {' '}and confirm that I am authorized to register this school.
+                            <span className="font-semibold text-violet-300">I have read and agree to the Terms & Conditions</span> and confirm that I am authorized to register this institution on behalf of the school administration.
                           </label>
                         </div>
+                        
                         {errors.termsAccepted && (
                           <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-3 backdrop-blur-xl mt-3">
-                            <p className="text-red-400 text-sm text-center flex items-center justify-center gap-2">
+                            <p className="text-red-400 text-sm flex items-center gap-2">
                               <XCircle className="w-4 h-4" />
                               {errors.termsAccepted?.message}
                             </p>

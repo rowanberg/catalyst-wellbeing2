@@ -923,7 +923,7 @@ function AdminDashboardContent() {
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-red-800 text-sm sm:text-base">Attention Required</h3>
                         <p className="text-red-700 text-xs sm:text-sm mt-1">
-                          {schoolStats.helpRequests} pending help requests need immediate review
+                          {schoolStats.helpRequests} active help requests need review
                         </p>
                       </div>
                       <Link href="/admin/help-requests" className="w-full sm:w-auto">

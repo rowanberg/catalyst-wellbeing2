@@ -19,12 +19,19 @@ export const signIn = createAsyncThunk(
     })
     
     if (error) throw error
-    if (!data.user) throw new Error('Login failed')
+    if (!data.user || !data.session) throw new Error('Login failed')
     
     // Check if email is confirmed
     if (!data.user.email_confirmed_at) {
       throw new Error('Please confirm your email before logging in. Check your inbox for a confirmation link.')
     }
+    
+    // Force session refresh to ensure cookies are set properly
+    // This is critical for server-side API routes to read the session
+    await supabase.auth.refreshSession()
+    
+    // Small delay to ensure cookies are propagated
+    await new Promise(resolve => setTimeout(resolve, 100))
     
     // Fetch user profile via API route (bypasses RLS)
     const response = await fetch('/api/get-profile', {
@@ -39,8 +46,8 @@ export const signIn = createAsyncThunk(
     }
     
     const profile = await response.json()
-    console.log('SignIn - Profile fetched:', profile)
-    return { user: data.user, profile }
+    console.log('✅ SignIn - Session established, profile fetched:', profile)
+    return { user: data.user, profile, session: data.session }
   }
 )
 

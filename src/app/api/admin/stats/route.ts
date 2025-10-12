@@ -94,12 +94,12 @@ export async function GET(request: NextRequest) {
       }).length
     }
 
-    // Get help requests count
+    // Get help requests count (only truly active requests - pending + in_progress)
     const { count: helpRequestsCount, error: helpError } = await supabaseAdmin
       .from('help_requests')
       .select('*', { count: 'exact', head: true })
       .eq('school_id', schoolId)
-      .eq('status', 'pending')
+      .in('status', ['pending', 'in_progress'])
 
     if (helpError) {
       console.warn('Help requests fetch error:', helpError.message)
@@ -195,12 +195,12 @@ export async function POST(request: NextRequest) {
       }).length
     }
 
-    // Get help requests count
+    // Get help requests count (only truly active requests - pending + in_progress)
     const { count: helpRequestsCount, error: helpError } = await supabaseAdmin
       .from('help_requests')
       .select('*', { count: 'exact', head: true })
       .eq('school_id', schoolId)
-      .eq('status', 'pending')
+      .in('status', ['pending', 'in_progress'])
 
     if (helpError) {
       console.warn('Help requests fetch error:', helpError.message)

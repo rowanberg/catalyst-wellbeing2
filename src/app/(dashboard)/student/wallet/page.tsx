@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Wallet, Send, ArrowDownLeft, RefreshCw, History, 
@@ -9,14 +9,15 @@ import {
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { WalletOverviewTab } from '@/components/wallet/WalletOverviewTab';
-import { WalletSendTab } from '@/components/wallet/WalletSendTab';
-import { WalletReceiveTab } from '@/components/wallet/WalletReceiveTab';
-import { WalletExchangeTab } from '@/components/wallet/WalletExchangeTab';
-import { WalletHistoryTab } from '@/components/wallet/WalletHistoryTab';
-import { WalletContactsTab } from '@/components/wallet/WalletContactsTab';
-import { WalletNotifications } from '@/components/wallet/WalletNotifications';
-import { WalletAnalytics } from '@/components/wallet/WalletAnalytics';
+
+// Lazy load components for better performance
+const WalletOverviewTab = lazy(() => import('@/components/wallet/WalletOverviewTab').then(m => ({ default: m.WalletOverviewTab })));
+const WalletSendTab = lazy(() => import('@/components/wallet/WalletSendTab').then(m => ({ default: m.WalletSendTab })));
+const WalletReceiveTab = lazy(() => import('@/components/wallet/WalletReceiveTab').then(m => ({ default: m.WalletReceiveTab })));
+const WalletExchangeTab = lazy(() => import('@/components/wallet/WalletExchangeTab').then(m => ({ default: m.WalletExchangeTab })));
+const WalletHistoryTab = lazy(() => import('@/components/wallet/WalletHistoryTab').then(m => ({ default: m.WalletHistoryTab })));
+const WalletContactsTab = lazy(() => import('@/components/wallet/WalletContactsTab').then(m => ({ default: m.WalletContactsTab })));
+const WalletAnalytics = lazy(() => import('@/components/wallet/WalletAnalytics').then(m => ({ default: m.WalletAnalytics })));
 
 interface WalletData {
   id: string;
@@ -56,6 +57,22 @@ interface Transaction {
   blockNumber?: number;
 }
 
+// Cache for API responses
+const cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
+
+const getCachedData = (key: string) => {
+  const cached = cache.get(key);
+  if (cached && Date.now() - cached.timestamp < cached.ttl) {
+    return cached.data;
+  }
+  cache.delete(key);
+  return null;
+};
+
+const setCachedData = (key: string, data: any, ttl = 300000) => { // 5 minutes default
+  cache.set(key, { data, timestamp: Date.now(), ttl });
+};
+
 export default function WalletPage() {
   const router = useRouter();
   const { user, profile, isLoading: authLoading } = useAuth();
@@ -64,9 +81,16 @@ export default function WalletPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'send' | 'receive' | 'exchange' | 'history' | 'contacts' | 'analytics'>('overview');
-  const [showBalance, setShowBalance] = useState(true);
+  const [showBalance, setShowBalance] = useState(() => {
+    // Persist balance visibility preference
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('wallet-show-balance') !== 'false';
+    }
+    return true;
+  });
   const [copied, setCopied] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Temporary function to fix student tags
   const fixStudentTags = async () => {
@@ -79,7 +103,7 @@ export default function WalletPage() {
         const data = await response.json();
         toast.success(data.message);
         // Refresh wallet data
-        fetchWalletData();
+        refreshData();
       } else {
         const error = await response.json();
         toast.error(error.error);
@@ -93,88 +117,113 @@ export default function WalletPage() {
   const [showPasswordSetup, setShowPasswordSetup] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordJustSet, setPasswordJustSet] = useState(false);
 
-  useEffect(() => {
-    // Wait for authentication to complete before fetching data
-    if (!authLoading && user && profile) {
-      fetchWalletData();
-      fetchTransactions();
-      fetchCurrentStudent();
-    }
-  }, [authLoading, user, profile]);
-
-  const fetchWalletData = async () => {
+  // Optimized data fetching with caching and parallel requests
+  const fetchAllData = useCallback(async () => {
+    if (!user || !profile) return;
+    
+    setLoading(true);
+    setError(null);
+    
     try {
-      const response = await fetch('/api/student/wallet', {
-        credentials: 'include'  // Include cookies for authentication
-      });
+      // Check cache first
+      const cachedWallet = getCachedData('wallet');
+      const cachedTransactions = getCachedData('transactions');
+      const cachedStudent = getCachedData('currentStudent');
       
-      // If wallet doesn't exist (404) or unauthorized (401), redirect to creation
-      if (response.status === 404 || response.status === 401) {
-        console.log('Wallet not found or unauthorized, redirecting to creation flow');
-        router.push('/student/wallet/create');
+      if (cachedWallet && cachedTransactions && cachedStudent) {
+        setWallet(cachedWallet);
+        setTransactions(cachedTransactions);
+        setCurrentStudent(cachedStudent);
+        setLoading(false);
         return;
       }
-      
-      if (response.ok) {
-        const data = await response.json();
-        setWallet(data);
-        if (!data.hasTransactionPassword) {
-          setShowPasswordSetup(true);
+
+      // Fetch all data in parallel for better performance
+      const [walletResponse, transactionsResponse, studentResponse] = await Promise.allSettled([
+        fetch('/api/student/wallet', { credentials: 'include' }),
+        fetch('/api/student/wallet/transactions', { credentials: 'include' }),
+        fetch('/api/student/wallet/classmates', { credentials: 'include' })
+      ]);
+
+      // Handle wallet response
+      if (walletResponse.status === 'fulfilled') {
+        const response = walletResponse.value;
+        if (response.status === 404 || response.status === 401) {
+          router.push('/student/wallet/create');
+          return;
         }
-      } else {
-        // For other errors, also try creation flow as fallback
-        console.log(`API error (${response.status}), redirecting to creation flow`);
-        router.push('/student/wallet/create');
-        return;
+        if (response.ok) {
+          const responseData = await response.json();
+          const data = responseData.wallet || responseData;
+          setWallet(data);
+          setCachedData('wallet', data, 60000); // Cache for 1 minute
+          
+          // Only show password setup if not already set in current state
+          // This prevents the modal from reappearing after it's been set
+          if (!data.hasTransactionPassword && !wallet?.hasTransactionPassword && !passwordJustSet) {
+            setShowPasswordSetup(true);
+          } else if (data.hasTransactionPassword || passwordJustSet) {
+            // Ensure modal is closed if password is now set
+            setShowPasswordSetup(false);
+          }
+        } else {
+          throw new Error(`Wallet API error: ${response.status}`);
+        }
       }
+
+      // Handle transactions response
+      if (transactionsResponse.status === 'fulfilled' && transactionsResponse.value.ok) {
+        const data = await transactionsResponse.value.json();
+        setTransactions(data);
+        setCachedData('transactions', data, 30000); // Cache for 30 seconds
+      }
+
+      // Handle student response
+      if (studentResponse.status === 'fulfilled' && studentResponse.value.ok) {
+        const data = await studentResponse.value.json();
+        setCurrentStudent(data.currentStudent);
+        setCachedData('currentStudent', data.currentStudent, 300000); // Cache for 5 minutes
+      }
+
     } catch (error) {
-      console.error('Error fetching wallet:', error);
-      // On network error, redirect to creation flow
-      console.log('Network error, redirecting to creation flow');
-      router.push('/student/wallet/create');
-      return;
+      console.error('Error fetching wallet data:', error);
+      setError('Failed to load wallet data. Please try again.');
+      // Don't redirect on error, show retry option instead
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, profile, router]);
 
-  const fetchTransactions = async () => {
-    try {
-      const response = await fetch('/api/student/wallet/transactions', {
-        credentials: 'include'
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setTransactions(data);
-      }
-    } catch (error) {
-      console.error('Error fetching transactions:', error);
+  useEffect(() => {
+    if (!authLoading && user && profile) {
+      fetchAllData();
     }
-  };
+  }, [authLoading, fetchAllData]);
 
-  const fetchCurrentStudent = async () => {
-    try {
-      const response = await fetch('/api/student/wallet/classmates', {
-        credentials: 'include'
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setCurrentStudent(data.currentStudent);
-      }
-    } catch (error) {
-      console.error('Error fetching current student:', error);
-    }
-  };
+  // Refresh function for manual refresh
+  const refreshData = useCallback(async () => {
+    // Clear cache and refetch
+    cache.clear();
+    await fetchAllData();
+  }, [fetchAllData]);
 
-  const copyAddress = () => {
+  // Optimized functions with useCallback
+  const copyAddress = useCallback(() => {
     if (wallet?.walletAddress) {
       navigator.clipboard.writeText(wallet.walletAddress);
       setCopied(true);
       toast.success('Wallet address copied!');
       setTimeout(() => setCopied(false), 2000);
     }
-  };
+  }, [wallet?.walletAddress]);
+
+  const toggleBalanceVisibility = useCallback(() => {
+    const newShowBalance = !showBalance;
+    setShowBalance(newShowBalance);
+    localStorage.setItem('wallet-show-balance', newShowBalance.toString());
+  }, [showBalance]);
 
   const setupTransactionPassword = async () => {
     if (newPassword !== confirmPassword) {
@@ -197,12 +246,41 @@ export default function WalletPage() {
 
       if (response.ok) {
         toast.success('Transaction password set successfully!');
+        
+        // Set flag to prevent modal from reappearing
+        setPasswordJustSet(true);
+        
+        // Update wallet state immediately to reflect password is set
+        setWallet(prev => prev ? { ...prev, hasTransactionPassword: true } : null);
+        
+        // Close the modal immediately
         setShowPasswordSetup(false);
         setNewPassword('');
         setConfirmPassword('');
-        fetchWalletData();
+        
+        // Clear cache and refresh data with force_refresh parameter
+        cache.clear();
+        
+        // Force refresh after delay with cache busting
+        setTimeout(async () => {
+          try {
+            const freshResponse = await fetch('/api/student/wallet?force_refresh=true', { 
+              credentials: 'include',
+              cache: 'no-store'
+            });
+            if (freshResponse.ok) {
+              const responseData = await freshResponse.json();
+              const freshData = responseData.wallet || responseData;
+              setWallet(freshData);
+              setCachedData('wallet', freshData, 60000);
+            }
+          } catch (error) {
+            console.error('Error refreshing wallet:', error);
+          }
+        }, 1000);
       } else {
-        toast.error('Failed to set password');
+        const errorData = await response.json();
+        toast.error(errorData.error || 'Failed to set password');
       }
     } catch (error) {
       console.error('Error setting password:', error);
@@ -213,11 +291,10 @@ export default function WalletPage() {
   };
 
   // Refresh wallet data after successful payment
-  const handlePaymentSuccess = () => {
-    fetchWalletData();
-    fetchTransactions();
+  const handlePaymentSuccess = useCallback(() => {
+    refreshData();
     setActiveTab('history');
-  };
+  }, [refreshData]);
 
   const handleExchange = async (data: any) => {
     setIsProcessing(true);
@@ -232,8 +309,7 @@ export default function WalletPage() {
 
       if (response.ok) {
         toast.success('Exchange completed successfully!');
-        fetchWalletData();
-        fetchTransactions();
+        refreshData();
         setActiveTab('overview');
       } else {
         toast.error(result.error || 'Exchange failed');
@@ -251,48 +327,60 @@ export default function WalletPage() {
     // The send tab will handle the contact selection
   };
 
-  if (authLoading || loading) {
-    return (
-      <div className="min-h-screen bg-[#0a0e27] flex items-center justify-center">
-        <div className="text-center">
-          <motion.div
-            className="inline-block p-4 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-3xl mb-4"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          >
-            <Wallet className="h-12 w-12 text-white" />
-          </motion.div>
-          <p className="text-cyan-300 text-xl">Loading wallet...</p>
-        </div>
+  // Memoized loading component
+  const LoadingScreen = useMemo(() => (
+    <div className="min-h-screen bg-[#0a0e27] flex items-center justify-center">
+      <div className="text-center">
+        <motion.div
+          className="inline-block p-4 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-3xl mb-4"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+        >
+          <Wallet className="h-12 w-12 text-white" />
+        </motion.div>
+        <p className="text-cyan-300 text-xl">Loading wallet...</p>
       </div>
-    );
-  }
+    </div>
+  ), []);
 
-  // Show error if wallet failed to load
-  if (!wallet && !loading && !authLoading) {
-    return (
-      <div className="min-h-screen bg-[#0a0e27] flex items-center justify-center p-6">
-        <div className="text-center space-y-6 max-w-md">
-          <div className="text-6xl">💼</div>
-          <h1 className="text-2xl font-bold text-white">Wallet Not Found</h1>
-          <p className="text-white/70">It looks like you don't have a wallet set up yet.</p>
-          <div className="space-y-3">
+  // Memoized error screen
+  const ErrorScreen = useMemo(() => (
+    <div className="min-h-screen bg-[#0a0e27] flex items-center justify-center p-6">
+      <div className="text-center space-y-6 max-w-md">
+        <div className="text-6xl">⚠️</div>
+        <h1 className="text-2xl font-bold text-white">
+          {error ? 'Connection Error' : 'Wallet Not Found'}
+        </h1>
+        <p className="text-white/70">
+          {error || "It looks like you don't have a wallet set up yet."}
+        </p>
+        <div className="space-y-3">
+          {!error && (
             <button
               onClick={() => router.push('/student/wallet/create')}
               className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 px-6 rounded-xl font-medium hover:opacity-90 transition-opacity"
             >
               Create Wallet
             </button>
-            <button
-              onClick={() => window.location.reload()}
-              className="w-full bg-white/10 text-white py-3 px-6 rounded-xl font-medium hover:bg-white/20 transition-colors"
-            >
-              Refresh Page
-            </button>
-          </div>
+          )}
+          <button
+            onClick={refreshData}
+            className="w-full bg-white/10 text-white py-3 px-6 rounded-xl font-medium hover:bg-white/20 transition-colors"
+          >
+            Try Again
+          </button>
         </div>
       </div>
-    );
+    </div>
+  ), [error, router, refreshData]);
+
+  if (authLoading || loading) {
+    return LoadingScreen;
+  }
+
+  // Show error if wallet failed to load
+  if ((!wallet && !loading && !authLoading) || error) {
+    return ErrorScreen;
   }
 
   return (
@@ -382,7 +470,7 @@ export default function WalletPage() {
                         <Gem className="h-4 w-4 sm:h-5 sm:w-5 text-purple-400" />
                         <span className="text-purple-200 text-xs sm:text-sm font-medium">Mind Gems</span>
                         <button
-                          onClick={() => setShowBalance(!showBalance)}
+                          onClick={toggleBalanceVisibility}
                           className="ml-auto text-purple-300/50 hover:text-purple-300 transition-colors"
                         >
                           {showBalance ? <Eye className="h-3 w-3 sm:h-4 sm:w-4" /> : <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" />}
@@ -412,7 +500,7 @@ export default function WalletPage() {
                         <span className="text-yellow-200 text-xs sm:text-sm font-medium">Fluxon</span>
                       </div>
                       <p className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent">
-                        {showBalance ? wallet.fluxonBalance.toFixed(4) : '••••••'}
+                        {showBalance ? (wallet?.fluxonBalance ?? 0).toFixed(4) : '••••••'}
                       </p>
                       <p className="text-yellow-400/60 text-[10px] sm:text-xs mt-0.5 sm:mt-1">FLX</p>
                     </motion.div>
@@ -446,27 +534,39 @@ export default function WalletPage() {
         {/* Tab Content */}
         <div className="mb-8">
           <AnimatePresence mode="wait">
-            {activeTab === 'overview' && (
-              <WalletOverviewTab key="overview" wallet={wallet} transactions={transactions} />
-            )}
-            {activeTab === 'send' && (
-              <WalletSendTab key="send" wallet={wallet} onSuccess={handlePaymentSuccess} isProcessing={isProcessing} />
-            )}
-            {activeTab === 'receive' && (
-              <WalletReceiveTab key="receive" wallet={wallet} currentStudent={currentStudent} />
-            )}
-            {activeTab === 'exchange' && (
-              <WalletExchangeTab key="exchange" wallet={wallet} onExchange={handleExchange} isProcessing={isProcessing} />
-            )}
-            {activeTab === 'history' && (
-              <WalletHistoryTab key="history" transactions={transactions} wallet={wallet} />
-            )}
-            {activeTab === 'contacts' && (
-              <WalletContactsTab key="contacts" onQuickSend={handleQuickSend} />
-            )}
-            {activeTab === 'analytics' && (
-              <WalletAnalytics key="analytics" wallet={wallet} transactions={transactions} />
-            )}
+            <Suspense fallback={
+              <div className="flex items-center justify-center py-12">
+                <motion.div
+                  className="p-3 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-2xl"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                >
+                  <RefreshCw className="h-6 w-6 text-white" />
+                </motion.div>
+              </div>
+            }>
+              {activeTab === 'overview' && (
+                <WalletOverviewTab key="overview" wallet={wallet} transactions={transactions} />
+              )}
+              {activeTab === 'send' && (
+                <WalletSendTab key="send" wallet={wallet} onSuccess={handlePaymentSuccess} isProcessing={isProcessing} />
+              )}
+              {activeTab === 'receive' && (
+                <WalletReceiveTab key="receive" wallet={wallet} currentStudent={currentStudent} />
+              )}
+              {activeTab === 'exchange' && (
+                <WalletExchangeTab key="exchange" wallet={wallet} onExchange={handleExchange} isProcessing={isProcessing} />
+              )}
+              {activeTab === 'history' && (
+                <WalletHistoryTab key="history" transactions={transactions} wallet={wallet} />
+              )}
+              {activeTab === 'contacts' && (
+                <WalletContactsTab key="contacts" onQuickSend={handleQuickSend} />
+              )}
+              {activeTab === 'analytics' && (
+                <WalletAnalytics key="analytics" wallet={wallet} transactions={transactions} />
+              )}
+            </Suspense>
           </AnimatePresence>
         </div>
 

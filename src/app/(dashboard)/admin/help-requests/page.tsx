@@ -6,27 +6,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
 import { ClientWrapper } from '@/components/providers/ClientWrapper'
 import { 
   AlertTriangle, 
-  Clock, 
+  MessageSquare, 
+  User, 
+  Eye, 
+  MessageCircle, 
   CheckCircle, 
-  MessageCircle,
-  User,
-  Calendar,
   Filter,
   Search,
+  FileText,
+  Users,
   Heart,
   Shield,
   BookOpen,
-  Users,
-  Phone,
+  Home,
+  Clock,
   Mail,
-  Eye,
-  MessageSquare,
   Archive
 } from 'lucide-react'
 import Link from 'next/link'
@@ -62,39 +62,94 @@ export default function HelpRequestsPage() {
     const fetchHelpRequests = async () => {
       try {
         setLoading(true)
-        const response = await fetch('/api/admin/help-requests')
+        console.log('Fetching help requests...')
         
-        if (!response.ok) {
-          throw new Error(`Failed to fetch help requests: ${response.status}`)
+        // Fetch both active and resolved requests, plus all requests for comparison
+        const [activeResponse, resolvedResponse, allResponse] = await Promise.all([
+          fetch('/api/admin/help-requests?status=active'),
+          fetch('/api/admin/help-requests?status=resolved'),
+          fetch('/api/admin/help-requests?status=all')
+        ])
+        
+        if (!activeResponse.ok) {
+          throw new Error(`Failed to fetch active help requests: ${activeResponse.status}`)
         }
         
-        const data = await response.json()
+        if (!resolvedResponse.ok) {
+          throw new Error(`Failed to fetch resolved help requests: ${resolvedResponse.status}`)
+        }
         
-        if (data.error) {
-          console.error('API Error:', data.error)
-          setHelpRequests([])
-          setFilteredRequests([])
-          return
+        if (!allResponse.ok) {
+          throw new Error(`Failed to fetch all help requests: ${allResponse.status}`)
+        }
+        
+        const [activeData, resolvedData, allData] = await Promise.all([
+          activeResponse.json(),
+          resolvedResponse.json(),
+          allResponse.json()
+        ])
+        
+        console.log('API Response - Active:', activeData)
+        console.log('API Response - Resolved:', resolvedData)
+        console.log('API Response - All:', allData)
+        
+        // Compare counts for debugging
+        console.log('Count comparison:', {
+          active: activeData.helpRequests?.length || 0,
+          resolved: resolvedData.helpRequests?.length || 0,
+          all: allData.helpRequests?.length || 0,
+          combined: (activeData.helpRequests?.length || 0) + (resolvedData.helpRequests?.length || 0)
+        })
+        
+        if (activeData.error) {
+          console.error('Active API Error:', activeData.error)
+        }
+        
+        if (resolvedData.error) {
+          console.error('Resolved API Error:', resolvedData.error)
+        }
+        
+        if (allData.error) {
+          console.error('All API Error:', allData.error)
         }
         
         // Transform API data to match component interface
-        const transformedRequests: HelpRequest[] = data.helpRequests?.map((request: any) => ({
+        const transformActiveRequests = (requests: any[]): HelpRequest[] => requests?.map((request: any) => ({
           id: request.id,
           studentName: request.sender || 'Anonymous Student',
           grade: 'N/A', // Grade not available in current API response
-          urgency: request.severity || 'medium',
-          category: 'other', // Category not available in current API response
+          urgency: (request.severity || 'medium') as 'urgent' | 'high' | 'medium' | 'low',
+          category: 'other' as const, // Category not available in current API response
           subject: request.flagReason || 'Help Request',
           message: request.content || '',
-          status: request.status || 'pending',
+          status: (request.status || 'pending') as 'pending' | 'in_progress' | 'resolved' | 'escalated',
           timestamp: request.timestamp,
           lastUpdated: request.timestamp,
           assignedTo: request.resolver || undefined,
           isAnonymous: !request.sender || request.sender.includes('Student ID:')
         })) || []
         
-        setHelpRequests(transformedRequests)
-        setFilteredRequests(transformedRequests)
+        const activeRequests = transformActiveRequests(activeData.helpRequests || [])
+        const resolvedRequests = transformActiveRequests(resolvedData.helpRequests || [])
+        const allRequestsFromAPI = transformActiveRequests(allData.helpRequests || [])
+        
+        // Use the "all" API response as the primary source, but also combine active+resolved for comparison
+        const combinedRequests = [...activeRequests, ...resolvedRequests]
+        
+        // Use whichever gives us more requests (in case of filtering issues)
+        const finalRequests = allRequestsFromAPI.length >= combinedRequests.length ? allRequestsFromAPI : combinedRequests
+        
+        console.log('Transformed requests:', {
+          active: activeRequests.length,
+          resolved: resolvedRequests.length,
+          combined: combinedRequests.length,
+          allFromAPI: allRequestsFromAPI.length,
+          finalUsed: finalRequests.length,
+          usingSource: allRequestsFromAPI.length >= combinedRequests.length ? 'all-api' : 'combined'
+        })
+        
+        setHelpRequests(finalRequests)
+        setFilteredRequests(finalRequests)
         
       } catch (error) {
         console.error('Error fetching help requests:', error)
@@ -383,113 +438,320 @@ export default function HelpRequestsPage() {
           </CardContent>
         </Card>
 
-        {/* Help Requests List - Mobile Optimized */}
-        <div className="grid grid-cols-1 gap-4 sm:gap-6">
-          {filteredRequests.map((request, index) => (
-            <motion.div
-              key={request.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+        {/* Tabbed Interface for Pending, Active, and Resolved */}
+        <Tabs defaultValue="pending" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 bg-white/70 backdrop-blur-sm border-0 shadow-xl mb-6">
+            <TabsTrigger 
+              value="pending" 
+              className="data-[state=active]:bg-orange-500 data-[state=active]:text-white"
             >
-              <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300">
-                <CardContent className="p-4 sm:p-6">
-                  <div className="flex flex-col sm:flex-row items-start justify-between mb-4 gap-3 sm:gap-0">
-                    <div className="flex items-center space-x-3 flex-1 min-w-0">
-                      <div className="p-2 bg-gray-100 rounded-lg flex-shrink-0">
-                        {getCategoryIcon(request.category)}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold text-base sm:text-lg flex items-center space-x-2">
-                          <span className="truncate">{request.isAnonymous ? 'Anonymous Student' : request.studentName}</span>
-                          {request.isAnonymous && <Eye className="w-4 h-4 text-gray-400 flex-shrink-0" />}
-                        </h3>
-                        <p className="text-xs sm:text-sm text-gray-600">Grade {request.grade} • {new Date(request.timestamp).toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-row sm:flex-col items-start sm:items-end space-x-2 sm:space-x-0 sm:space-y-2 flex-shrink-0">
-                      <Badge variant="outline" className={`${getUrgencyColor(request.urgency)} text-xs`}>
-                        {request.urgency}
-                      </Badge>
-                      <Badge variant="outline" className={`${getStatusColor(request.status)} text-xs`}>
-                        {request.status.replace('_', ' ')}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div className="mb-4">
-                    <h4 className="font-medium text-gray-900 mb-2">{request.subject}</h4>
-                    <p className="text-gray-700 text-sm line-clamp-3">{request.message}</p>
-                  </div>
+              Pending ({filteredRequests.filter(r => r.status === 'pending').length})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="active" 
+              className="data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+            >
+              In Progress ({filteredRequests.filter(r => r.status === 'in_progress').length})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="resolved"
+              className="data-[state=active]:bg-green-500 data-[state=active]:text-white"
+            >
+              Resolved ({filteredRequests.filter(r => r.status === 'resolved').length})
+            </TabsTrigger>
+          </TabsList>
 
-                  {request.assignedTo && (
-                    <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                      <p className="text-sm text-blue-800">
-                        <User className="w-4 h-4 inline mr-1" />
-                        Assigned to: {request.assignedTo}
-                      </p>
-                    </div>
-                  )}
-                  
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-0">
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
-                      <ClientWrapper>
-                        <Button
-                          size="sm"
-                          onClick={() => setSelectedRequest(request)}
-                          className="bg-blue-600 hover:bg-blue-700 h-9 text-sm"
-                        >
-                          <MessageSquare className="w-4 h-4 mr-2" />
-                          Respond
-                        </Button>
-                      </ClientWrapper>
+          {/* Pending Requests Tab */}
+          <TabsContent value="pending">
+            <div className="grid grid-cols-1 gap-4 sm:gap-6">
+              {filteredRequests.filter(r => r.status === 'pending').map((request, index) => (
+                <motion.div
+                  key={request.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Card className="bg-orange-50/70 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 border-l-4 border-l-orange-500">
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="flex flex-col sm:flex-row items-start justify-between mb-4 gap-3 sm:gap-0">
+                        <div className="flex items-center space-x-3 flex-1 min-w-0">
+                          <div className="p-2 bg-orange-100 rounded-lg flex-shrink-0">
+                            <Clock className="w-4 h-4 text-orange-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-semibold text-base sm:text-lg flex items-center space-x-2">
+                              <span className="truncate">{request.isAnonymous ? 'Anonymous Student' : request.studentName}</span>
+                              {request.isAnonymous && <Eye className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+                            </h3>
+                            <p className="text-xs sm:text-sm text-gray-600">Grade {request.grade} • {new Date(request.timestamp).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                        <div className="flex flex-row sm:flex-col items-start sm:items-end space-x-2 sm:space-x-0 sm:space-y-2 flex-shrink-0">
+                          <Badge variant="outline" className={`${getUrgencyColor(request.urgency)} text-xs`}>
+                            {request.urgency}
+                          </Badge>
+                          <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-200 text-xs">
+                            <Clock className="w-3 h-3 mr-1" />
+                            Pending
+                          </Badge>
+                        </div>
+                      </div>
                       
-                      {request.status === 'pending' && (
-                        <ClientWrapper>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleStatusUpdate(request.id, 'in_progress')}
-                            className="h-9 text-sm"
-                          >
-                            Start Review
-                          </Button>
-                        </ClientWrapper>
+                      <div className="mb-4">
+                        <h4 className="font-medium text-gray-900 mb-2">{request.subject}</h4>
+                        <p className="text-gray-700 text-sm line-clamp-3">{request.message}</p>
+                      </div>
+                      
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-0">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                          <ClientWrapper>
+                            <Button
+                              size="sm"
+                              onClick={() => setSelectedRequest(request)}
+                              className="bg-blue-600 hover:bg-blue-700 h-9 text-sm"
+                            >
+                              <MessageSquare className="w-4 h-4 mr-2" />
+                              Respond
+                            </Button>
+                          </ClientWrapper>
+                          
+                          <ClientWrapper>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleStatusUpdate(request.id, 'in_progress')}
+                              className="text-blue-600 border-blue-600 hover:bg-blue-50 h-9 text-sm"
+                            >
+                              Start Review
+                            </Button>
+                          </ClientWrapper>
+                        </div>
+                        
+                        <p className="text-xs text-gray-500 text-center sm:text-right">
+                          Submitted: {new Date(request.timestamp).toLocaleString()}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+              
+              {filteredRequests.filter(r => r.status === 'pending').length === 0 && (
+                <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
+                  <CardContent className="p-12 text-center">
+                    <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No Pending Requests</h3>
+                    <p className="text-gray-600">All help requests have been reviewed or no requests match your filters.</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* In Progress Requests Tab */}
+          <TabsContent value="active">
+            <div className="grid grid-cols-1 gap-4 sm:gap-6">
+              {filteredRequests.filter(r => r.status === 'in_progress').map((request, index) => (
+                <motion.div
+                  key={request.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300">
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="flex flex-col sm:flex-row items-start justify-between mb-4 gap-3 sm:gap-0">
+                        <div className="flex items-center space-x-3 flex-1 min-w-0">
+                          <div className="p-2 bg-gray-100 rounded-lg flex-shrink-0">
+                            {getCategoryIcon(request.category)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-semibold text-base sm:text-lg flex items-center space-x-2">
+                              <span className="truncate">{request.isAnonymous ? 'Anonymous Student' : request.studentName}</span>
+                              {request.isAnonymous && <Eye className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+                            </h3>
+                            <p className="text-xs sm:text-sm text-gray-600">Grade {request.grade} • {new Date(request.timestamp).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                        <div className="flex flex-row sm:flex-col items-start sm:items-end space-x-2 sm:space-x-0 sm:space-y-2 flex-shrink-0">
+                          <Badge variant="outline" className={`${getUrgencyColor(request.urgency)} text-xs`}>
+                            {request.urgency}
+                          </Badge>
+                          <Badge variant="outline" className={`${getStatusColor(request.status)} text-xs`}>
+                            {request.status.replace('_', ' ')}
+                          </Badge>
+                        </div>
+                      </div>
+                      
+                      <div className="mb-4">
+                        <h4 className="font-medium text-gray-900 mb-2">{request.subject}</h4>
+                        <p className="text-gray-700 text-sm line-clamp-3">{request.message}</p>
+                      </div>
+
+                      {request.assignedTo && (
+                        <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                          <p className="text-sm text-blue-800">
+                            <User className="w-4 h-4 inline mr-1" />
+                            Assigned to: {request.assignedTo}
+                          </p>
+                        </div>
                       )}
                       
-                      {request.status === 'in_progress' && (
-                        <ClientWrapper>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleStatusUpdate(request.id, 'resolved')}
-                            className="text-green-600 border-green-600 hover:bg-green-50 h-9 text-sm"
-                          >
-                            Mark Resolved
-                          </Button>
-                        </ClientWrapper>
-                      )}
-                    </div>
-                    
-                    <p className="text-xs text-gray-500 text-center sm:text-right">
-                      Updated: {new Date(request.lastUpdated).toLocaleString()}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-0">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                          <ClientWrapper>
+                            <Button
+                              size="sm"
+                              onClick={() => setSelectedRequest(request)}
+                              className="bg-blue-600 hover:bg-blue-700 h-9 text-sm"
+                            >
+                              <MessageSquare className="w-4 h-4 mr-2" />
+                              Respond
+                            </Button>
+                          </ClientWrapper>
+                          
+                          {request.status === 'pending' && (
+                            <ClientWrapper>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleStatusUpdate(request.id, 'in_progress')}
+                                className="h-9 text-sm"
+                              >
+                                Start Review
+                              </Button>
+                            </ClientWrapper>
+                          )}
+                          
+                          {request.status === 'in_progress' && (
+                            <ClientWrapper>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleStatusUpdate(request.id, 'resolved')}
+                                className="text-green-600 border-green-600 hover:bg-green-50 h-9 text-sm"
+                              >
+                                Mark Resolved
+                              </Button>
+                            </ClientWrapper>
+                          )}
+                        </div>
+                        
+                        <p className="text-xs text-gray-500 text-center sm:text-right">
+                          Updated: {new Date(request.lastUpdated).toLocaleString()}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+              
+              {filteredRequests.filter(r => r.status === 'in_progress').length === 0 && (
+                <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
+                  <CardContent className="p-12 text-center">
+                    <MessageCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No In Progress Requests</h3>
+                    <p className="text-gray-600">No requests are currently being reviewed or no requests match your filters.</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
 
-        {filteredRequests.length === 0 && (
-          <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
-            <CardContent className="p-12 text-center">
-              <MessageCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Help Requests Found</h3>
-              <p className="text-gray-600">No requests match your current filters.</p>
-            </CardContent>
-          </Card>
-        )}
+          {/* Resolved Requests Tab */}
+          <TabsContent value="resolved">
+            <div className="grid grid-cols-1 gap-4 sm:gap-6">
+              {filteredRequests.filter(r => r.status === 'resolved').map((request, index) => (
+                <motion.div
+                  key={request.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Card className="bg-green-50/70 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 border-l-4 border-l-green-500">
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="flex flex-col sm:flex-row items-start justify-between mb-4 gap-3 sm:gap-0">
+                        <div className="flex items-center space-x-3 flex-1 min-w-0">
+                          <div className="p-2 bg-green-100 rounded-lg flex-shrink-0">
+                            <CheckCircle className="w-4 h-4 text-green-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-semibold text-base sm:text-lg flex items-center space-x-2">
+                              <span className="truncate">{request.isAnonymous ? 'Anonymous Student' : request.studentName}</span>
+                              {request.isAnonymous && <Eye className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+                            </h3>
+                            <p className="text-xs sm:text-sm text-gray-600">Grade {request.grade} • Resolved on {new Date(request.timestamp).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                        <div className="flex flex-row sm:flex-col items-start sm:items-end space-x-2 sm:space-x-0 sm:space-y-2 flex-shrink-0">
+                          <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200 text-xs">
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Resolved
+                          </Badge>
+                        </div>
+                      </div>
+                      
+                      <div className="mb-4">
+                        <h4 className="font-medium text-gray-900 mb-2">{request.subject}</h4>
+                        <p className="text-gray-700 text-sm line-clamp-3">{request.message}</p>
+                      </div>
+
+                      {request.assignedTo && (
+                        <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                          <p className="text-sm text-green-800">
+                            <User className="w-4 h-4 inline mr-1" />
+                            Resolved by: {request.assignedTo}
+                          </p>
+                        </div>
+                      )}
+                      
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-0">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                          <ClientWrapper>
+                            <Button
+                              size="sm"
+                              onClick={() => setSelectedRequest(request)}
+                              variant="outline"
+                              className="bg-white hover:bg-gray-50 h-9 text-sm"
+                            >
+                              <Eye className="w-4 h-4 mr-2" />
+                              View Details
+                            </Button>
+                          </ClientWrapper>
+                          
+                          <ClientWrapper>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleStatusUpdate(request.id, 'pending')}
+                              className="text-orange-600 border-orange-600 hover:bg-orange-50 h-9 text-sm"
+                            >
+                              Reopen
+                            </Button>
+                          </ClientWrapper>
+                        </div>
+                        
+                        <p className="text-xs text-gray-500 text-center sm:text-right">
+                          Resolved: {new Date(request.lastUpdated).toLocaleString()}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+              
+              {filteredRequests.filter(r => r.status === 'resolved').length === 0 && (
+                <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
+                  <CardContent className="p-12 text-center">
+                    <CheckCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No Resolved Requests</h3>
+                    <p className="text-gray-600">No help requests have been resolved yet or none match your filters.</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Response Modal - Mobile Optimized */}
