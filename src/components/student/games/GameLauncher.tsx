@@ -186,98 +186,34 @@ export function GameLauncher({ hideBackButton = false, onBackToLauncher, onGameL
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-800 relative">
+    <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-slate-900 to-gray-800 overflow-hidden flex flex-col">
       {/* Subtle Background Elements */}
-      <div className="absolute inset-0 opacity-30">
+      <div className="absolute inset-0 opacity-30 pointer-events-none">
         <div className="absolute top-20 left-10 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl"></div>
         <div className="absolute top-40 right-10 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl"></div>
         <div className="absolute bottom-20 left-1/3 w-72 h-72 bg-indigo-500/5 rounded-full blur-3xl"></div>
       </div>
       
-      <div className="relative z-10 min-h-screen flex flex-col">
+      <div className="relative z-10 flex-1 flex flex-col overflow-hidden">
         {/* Compact Header */}
         <motion.header 
-          className="relative py-4 px-4 sm:px-6"
+          className="relative py-6 px-4 sm:px-6 bg-gradient-to-r from-purple-900/40 via-blue-900/40 to-indigo-900/40 backdrop-blur-sm border-b border-white/10"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
           <div className="max-w-7xl mx-auto">
-            <div className="text-center space-y-3">
-              {/* Compact Title - Mobile Responsive */}
-              <div className="flex justify-center items-center space-x-2 sm:space-x-3 px-12 sm:px-0">
-                <div className="p-1.5 sm:p-2 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-lg backdrop-blur-sm border border-purple-400/20">
-                  <Gamepad2 className="h-5 w-5 sm:h-6 sm:w-6 text-purple-300" />
-                </div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-white text-center">
-                  Premium Learning Games
-                </h1>
-              </div>
-              
-              <p className="text-sm sm:text-base text-gray-300 max-w-2xl mx-auto">
-                Master subjects through epic gaming adventures
-              </p>
-
-              {/* Compact Stats */}
-              <div className="flex flex-wrap justify-center gap-2 sm:gap-4 text-xs sm:text-sm">
-                <div className="flex items-center space-x-1 px-2 py-1 bg-white/10 rounded-full">
-                  <Trophy className="h-3 w-3 text-yellow-400" />
-                  <span className="text-white font-medium">7 Games</span>
-                </div>
-                <div className="flex items-center space-x-1 px-2 py-1 bg-white/10 rounded-full">
-                  <Star className="h-3 w-3 text-blue-400" />
-                  <span className="text-white font-medium">200+ Challenges</span>
-                </div>
-                <div className="flex items-center space-x-1 px-2 py-1 bg-white/10 rounded-full">
-                  <Zap className="h-3 w-3 text-green-400" />
-                  <span className="text-white font-medium">1000+ XP</span>
-                </div>
-              </div>
+            <div className="flex items-center justify-center">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-wider">
+                LEARNING GAMES
+              </h1>
             </div>
           </div>
         </motion.header>
 
         {/* Main Content */}
-        <main className="flex-1 px-4 sm:px-6 lg:px-8 pb-8">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-6 lg:px-8 pb-8" style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
           <div className="max-w-7xl mx-auto space-y-8">
-
-        {/* Compact Player Stats */}
-        <Card className="mb-6 bg-gray-800/50 border-gray-600/30 backdrop-blur-sm">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Trophy className="h-4 w-4 text-yellow-400" />
-                <span className="text-white font-medium text-sm">Your Stats</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-3 md:grid-cols-6 gap-3 text-center">
-              <div>
-                <div className="text-lg font-bold text-blue-400">{playerStats.totalXP}</div>
-                <div className="text-xs text-gray-300">XP</div>
-              </div>
-              <div>
-                <div className="text-lg font-bold text-yellow-400">{playerStats.totalGems}</div>
-                <div className="text-xs text-gray-300">Gems</div>
-              </div>
-              <div>
-                <div className="text-lg font-bold text-green-400">{playerStats.gamesPlayed}</div>
-                <div className="text-xs text-gray-300">Played</div>
-              </div>
-              <div>
-                <div className="text-lg font-bold text-purple-400">{playerStats.achievements}</div>
-                <div className="text-xs text-gray-300">Badges</div>
-              </div>
-              <div>
-                <div className="text-lg font-bold text-orange-400">{playerStats.totalPlayTime}</div>
-                <div className="text-xs text-gray-300">Time</div>
-              </div>
-              <div>
-                <div className="text-sm font-bold text-pink-400">Math</div>
-                <div className="text-xs text-gray-300">Favorite</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Compact Search and Filter */}
         <Card className="mb-6 bg-gray-800/50 border-gray-600/30 backdrop-blur-sm">
@@ -317,7 +253,7 @@ export function GameLauncher({ hideBackButton = false, onBackToLauncher, onGameL
         </Card>
 
         {/* Compact Games Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
           <AnimatePresence>
             {filteredGames.map((game, index) => (
               <motion.div
@@ -435,57 +371,57 @@ export function GameLauncher({ hideBackButton = false, onBackToLauncher, onGameL
           </motion.div>
         )}
 
-
-          </div>
-        </main>
-        
-        <motion.footer 
-          className="relative py-6 px-4 sm:px-6 mt-8"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8, duration: 0.6 }}
-        >
-          <div className="max-w-7xl mx-auto">
-            <div className="bg-gray-800/40 backdrop-blur-sm rounded-xl border border-gray-600/30 p-4">
-              <div className="text-center space-y-3">
+        {/* Footer - After all games */}
+        {filteredGames.length > 0 && (
+          <motion.div 
+            className="mt-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.6 }}
+          >
+            <div className="bg-gray-800/40 backdrop-blur-sm rounded-xl border border-gray-600/30 p-6">
+              <div className="text-center space-y-4">
                 <div className="flex justify-center items-center space-x-2">
-                  <Sparkles className="h-4 w-4 text-purple-400" />
-                  <h3 className="text-lg font-semibold text-white">Ready to Level Up?</h3>
-                  <Sparkles className="h-4 w-4 text-purple-400" />
+                  <Sparkles className="h-5 w-5 text-purple-400" />
+                  <h3 className="text-xl font-semibold text-white">Ready to Level Up?</h3>
+                  <Sparkles className="h-5 w-5 text-purple-400" />
                 </div>
                 
-                <p className="text-sm text-gray-300 max-w-xl mx-auto">
+                <p className="text-base text-gray-300 max-w-xl mx-auto">
                   Master subjects through gaming and become a learning legend!
                 </p>
                 
-                <div className="flex flex-wrap justify-center gap-4 text-xs text-gray-400">
-                  <div className="flex items-center space-x-1">
-                    <Shield className="h-3 w-3 text-green-400" />
+                <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-400">
+                  <div className="flex items-center space-x-2">
+                    <Shield className="h-4 w-4 text-green-400" />
                     <span>Safe & Secure</span>
                   </div>
-                  <div className="flex items-center space-x-1">
-                    <Trophy className="h-3 w-3 text-yellow-400" />
+                  <div className="flex items-center space-x-2">
+                    <Trophy className="h-4 w-4 text-yellow-400" />
                     <span>Achievements</span>
                   </div>
-                  <div className="flex items-center space-x-1">
-                    <Users2 className="h-3 w-3 text-blue-400" />
+                  <div className="flex items-center space-x-2">
+                    <Users2 className="h-4 w-4 text-blue-400" />
                     <span>Multiplayer</span>
                   </div>
-                  <div className="flex items-center space-x-1">
-                    <Brain className="h-3 w-3 text-purple-400" />
+                  <div className="flex items-center space-x-2">
+                    <Brain className="h-4 w-4 text-purple-400" />
                     <span>AI-Powered</span>
                   </div>
                 </div>
                 
-                <div className="pt-3 border-t border-gray-600/30">
-                  <p className="text-xs text-gray-500">
+                <div className="pt-4 border-t border-gray-600/30">
+                  <p className="text-sm text-gray-500">
                     © 2024 Catalyst Learning Platform
                   </p>
                 </div>
               </div>
             </div>
+          </motion.div>
+        )}
+
           </div>
-        </motion.footer>
+        </main>
       </div>
     </div>
   )

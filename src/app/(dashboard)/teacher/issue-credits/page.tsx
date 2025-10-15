@@ -726,117 +726,58 @@ function IssueCreditsContent() {
 
   if (initialLoad) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-blue-50 flex items-center justify-center relative overflow-hidden">
-        {/* Background Animation */}
-        <div className="absolute inset-0 overflow-hidden">
-          {[...Array(20)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-2 h-2 bg-purple-200/30 rounded-full"
-              initial={{ 
-                x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1920), 
-                y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 1080) 
-              }}
-              animate={{ 
-                x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1920),
-                y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 1080),
-              }}
-              transition={{
-                duration: Math.random() * 10 + 20,
-                repeat: Infinity,
-                ease: "linear"
-              }}
-            />
-          ))}
-        </div>
-        <div className="text-center relative z-10 max-w-md mx-auto px-6">
-          {/* Professional Logo Animation */}
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center">
+        <div className="text-center">
+          {/* Brand Logo */}
           <motion.div
-            className="relative w-24 h-24 mx-auto mb-8"
-            initial={{ opacity: 0, scale: 0.8 }}
+            initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.3 }}
+            className="mb-12"
           >
-            <motion.div
-              className="absolute inset-0 border-4 border-purple-200 rounded-full"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-            />
-            <motion.div
-              className="absolute inset-2 border-4 border-transparent border-t-purple-500 border-r-blue-500 rounded-full"
-              animate={{ rotate: -360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            />
-            <motion.div
-              className="absolute inset-0 flex items-center justify-center"
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              <Gem className="w-10 h-10 text-purple-600" />
-            </motion.div>
-          </motion.div>
-
-          {/* Professional Text */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.6 }}
-            className="space-y-4"
-          >
-            <h1 className="text-3xl font-bold text-gray-900">
-              Mind Gems System
-            </h1>
-            <p className="text-lg text-gray-600 font-medium">
-              Initializing your credit distribution platform
-            </p>
-            
-            {/* Loading Steps */}
-            <div className="space-y-3 mt-8">
-              {[
-                { step: 'Loading assigned classes', delay: 0 },
-                { step: 'Preparing student data', delay: 0.5 },
-                { step: 'Setting up gem system', delay: 1 }
-              ].map((item, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.6 + item.delay, duration: 0.4 }}
-                  className="flex items-center justify-center space-x-3 text-sm text-gray-600"
-                >
-                  <motion.div
-                    className="w-2 h-2 bg-purple-500 rounded-full"
-                    animate={{ scale: [1, 1.2, 1], opacity: [0.7, 1, 0.7] }}
-                    transition={{ 
-                      duration: 1.5, 
-                      repeat: Infinity, 
-                      delay: item.delay 
-                    }}
-                  />
-                  <span>{item.step}</span>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Progress Bar */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.5, duration: 0.6 }}
-              className="mt-8 w-full max-w-xs mx-auto"
-            >
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <motion.div
-                  className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: "100%" }}
-                  transition={{ duration: 3, ease: "easeInOut" }}
-                />
+            <div className="flex items-center justify-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-sm">
+                <Gem className="w-5 h-5 text-white" />
               </div>
-              <p className="text-xs text-gray-500 mt-2">Preparing your dashboard...</p>
-            </motion.div>
+              <h1 className="text-2xl font-normal text-gray-900">Mind Gems</h1>
+            </div>
           </motion.div>
+          
+          {/* Google-style spinner */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1, duration: 0.3 }}
+            className="relative w-6 h-6 mx-auto mb-8"
+          >
+            <div className="absolute inset-0 border-2 border-gray-100 rounded-full"></div>
+            <motion.div
+              className="absolute inset-0 border-2 border-transparent border-t-blue-500 rounded-full"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+            />
+          </motion.div>
+          
+          {/* Professional loading text */}
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.3 }}
+            className="text-sm text-gray-500 font-normal"
+          >
+            Setting up your workspace
+          </motion.p>
         </div>
+        
+        {/* Footer - Google style */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5, duration: 0.4 }}
+          className="absolute bottom-8 text-center"
+        >
+          <p className="text-xs text-gray-400">Catalyst Wellbeing Platform</p>
+        </motion.div>
       </div>
     )
   }

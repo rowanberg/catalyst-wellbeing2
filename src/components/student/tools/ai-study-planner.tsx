@@ -63,6 +63,10 @@ export function AIStudyPlanner({ onBack }: { onBack?: () => void }) {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [activeTimer, setActiveTimer] = useState<string | null>(null)
   const [timerSeconds, setTimerSeconds] = useState(0)
+  const [focusMode, setFocusMode] = useState(false)
+  const [studyStreak, setStudyStreak] = useState(7)
+  const [pomodoroMode, setPomodoroMode] = useState(false)
+  const [breakTime, setBreakTime] = useState(false)
 
   // Timer effect
   useEffect(() => {
@@ -246,57 +250,133 @@ export function AIStudyPlanner({ onBack }: { onBack?: () => void }) {
   }
 
   const renderDashboard = () => (
-    <div className="space-y-6">
-      {/* Header Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <motion.div
-          className="p-4 rounded-2xl bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-400/20 backdrop-blur-sm"
-          whileHover={{ scale: 1.02 }}
-        >
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-500/20 rounded-lg">
-              <Calendar className="h-5 w-5 text-blue-300" />
+    <div className="max-w-7xl mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+        {/* Left Column - Stats & Quick Actions */}
+        <div className="lg:col-span-1 space-y-4">
+          {/* Study Streak Card */}
+          <motion.div
+            className="p-4 lg:p-5 rounded-2xl bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-400/20 backdrop-blur-sm"
+            whileHover={{ scale: 1.01 }}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 bg-yellow-500/20 rounded-lg">
+                  <Award className="h-5 w-5 text-yellow-300" />
+                </div>
+                <h3 className="text-white/90 font-semibold">Study Streak</h3>
+              </div>
+              <Badge className="bg-yellow-500/20 text-yellow-300 border-yellow-400/30">
+                🔥 {studyStreak} days
+              </Badge>
             </div>
-            <div>
-              <p className="text-white/90 font-bold text-lg">{studySessions.filter(s => !s.completed).length}</p>
-              <p className="text-white/60 text-xs">Pending Sessions</p>
+            <div className="grid grid-cols-7 gap-1">
+              {[...Array(7)].map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-8 rounded ${i < studyStreak ? 'bg-yellow-400/30' : 'bg-white/5'}`}
+                />
+              ))}
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
 
-        <motion.div
-          className="p-4 rounded-2xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-400/20 backdrop-blur-sm"
-          whileHover={{ scale: 1.02 }}
-        >
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-green-500/20 rounded-lg">
-              <CheckCircle2 className="h-5 w-5 text-green-300" />
-            </div>
-            <div>
-              <p className="text-white/90 font-bold text-lg">{studySessions.filter(s => s.completed).length}</p>
-              <p className="text-white/60 text-xs">Completed Today</p>
-            </div>
-          </div>
-        </motion.div>
+          {/* Quick Stats */}
+          <div className="space-y-3">
+            <motion.div
+              className="p-3 lg:p-4 rounded-xl bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-400/20 backdrop-blur-sm"
+              whileHover={{ scale: 1.01 }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-blue-500/20 rounded-lg">
+                    <Calendar className="h-4 w-4 text-blue-300" />
+                  </div>
+                  <div>
+                    <p className="text-white/90 font-bold text-xl">{studySessions.filter(s => !s.completed).length}</p>
+                    <p className="text-white/60 text-xs">Pending Today</p>
+                  </div>
+                </div>
+                <TrendingUp className="h-4 w-4 text-blue-400" />
+              </div>
+            </motion.div>
 
-        <motion.div
-          className="p-4 rounded-2xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-400/20 backdrop-blur-sm"
-          whileHover={{ scale: 1.02 }}
-        >
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-purple-500/20 rounded-lg">
-              <Brain className="h-5 w-5 text-purple-300" />
-            </div>
-            <div>
-              <p className="text-white/90 font-bold text-lg">{studySessions.filter(s => s.aiSuggested).length}</p>
-              <p className="text-white/60 text-xs">AI Suggestions</p>
-            </div>
-          </div>
-        </motion.div>
-      </div>
+            <motion.div
+              className="p-3 lg:p-4 rounded-xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-400/20 backdrop-blur-sm"
+              whileHover={{ scale: 1.01 }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-green-500/20 rounded-lg">
+                    <CheckCircle2 className="h-4 w-4 text-green-300" />
+                  </div>
+                  <div>
+                    <p className="text-white/90 font-bold text-xl">{completionRate}%</p>
+                    <p className="text-white/60 text-xs">Completion Rate</p>
+                  </div>
+                </div>
+                <BarChart3 className="h-4 w-4 text-green-400" />
+              </div>
+            </motion.div>
 
-      {/* Today's Schedule */}
-      <Card className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl">
+            <motion.div
+              className="p-3 lg:p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-400/20 backdrop-blur-sm"
+              whileHover={{ scale: 1.01 }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-purple-500/20 rounded-lg">
+                    <Brain className="h-4 w-4 text-purple-300" />
+                  </div>
+                  <div>
+                    <p className="text-white/90 font-bold text-xl">{studySessions.filter(s => s.aiSuggested).length}</p>
+                    <p className="text-white/60 text-xs">AI Optimized</p>
+                  </div>
+                </div>
+                <Sparkles className="h-4 w-4 text-purple-400" />
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Pomodoro Timer */}
+          <Card className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-white/90 font-semibold">Focus Timer</h3>
+              <Button
+                size="sm"
+                variant={pomodoroMode ? "destructive" : "default"}
+                onClick={() => setPomodoroMode(!pomodoroMode)}
+                className="text-xs"
+              >
+                {pomodoroMode ? 'Stop' : 'Start'} Pomodoro
+              </Button>
+            </div>
+            <div className="text-center py-4">
+              <div className="text-3xl lg:text-4xl font-bold text-white/90 font-mono">
+                {formatTime(timerSeconds)}
+              </div>
+              {pomodoroMode && (
+                <p className="text-white/60 text-xs mt-2">
+                  {breakTime ? 'Break Time' : 'Focus Session'}
+                </p>
+              )}
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <Button size="sm" variant="ghost" className="text-white/70 hover:text-white">
+                <PlayCircle className="h-4 w-4" />
+              </Button>
+              <Button size="sm" variant="ghost" className="text-white/70 hover:text-white">
+                <PauseCircle className="h-4 w-4" />
+              </Button>
+              <Button size="sm" variant="ghost" className="text-white/70 hover:text-white">
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+            </div>
+          </Card>
+        </div>
+
+        {/* Middle Column - Today's Schedule */}
+        <div className="lg:col-span-1 space-y-4">
+          <Card className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <CardTitle className="text-white/90 text-lg font-bold flex items-center space-x-2">
@@ -383,101 +463,155 @@ export function AIStudyPlanner({ onBack }: { onBack?: () => void }) {
         </CardContent>
       </Card>
 
-      {/* Study Goals Progress */}
-      <Card className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-white/90 text-lg font-bold flex items-center space-x-2">
-            <Target className="h-5 w-5 text-green-400" />
-            <span>Study Goals Progress</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {studyGoals.map((goal) => (
-            <motion.div
-              key={goal.id}
-              className="p-4 rounded-xl bg-white/5 border border-white/20 backdrop-blur-sm"
-              whileHover={{ scale: 1.01 }}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <p className="text-white/90 font-medium text-sm">{goal.title}</p>
-                  <p className="text-white/60 text-xs">{goal.subject}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-white/90 font-bold text-sm">{goal.progress}%</p>
-                  <p className="text-white/60 text-xs">{goal.completedSessions}/{goal.sessions} sessions</p>
-                </div>
+        </div>
+
+        {/* Right Column - Goals & AI Insights */}
+        <div className="lg:col-span-1 space-y-4">
+          {/* AI Study Insights */}
+          <Card className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-xl border border-purple-400/20 rounded-2xl p-4">
+            <div className="flex items-center space-x-2 mb-3">
+              <Lightbulb className="h-5 w-5 text-purple-300" />
+              <h3 className="text-white/90 font-semibold">AI Insights</h3>
+            </div>
+            <div className="space-y-2">
+              <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                <p className="text-white/80 text-xs mb-1">📚 Best Study Time</p>
+                <p className="text-white/60 text-xs">Your peak performance is 2-4 PM</p>
               </div>
-              <div className="w-full bg-white/10 rounded-full h-2">
+              <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                <p className="text-white/80 text-xs mb-1">🎯 Focus Suggestion</p>
+                <p className="text-white/60 text-xs">Math needs 20% more attention this week</p>
+              </div>
+              <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                <p className="text-white/80 text-xs mb-1">⚡ Quick Win</p>
+                <p className="text-white/60 text-xs">Complete English essay for 15% progress boost</p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Study Goals Progress */}
+          <Card className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-white/90 text-base font-bold flex items-center space-x-2">
+                <Target className="h-4 w-4 text-green-400" />
+                <span>Goals Progress</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {studyGoals.map((goal) => (
                 <motion.div
-                  className="bg-gradient-to-r from-green-400 to-emerald-400 h-2 rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${goal.progress}%` }}
-                  transition={{ duration: 1, delay: 0.2 }}
-                />
-              </div>
-              <div className="flex items-center justify-between mt-2">
-                <p className="text-white/60 text-xs">Target: {new Date(goal.targetDate).toLocaleDateString()}</p>
-                <Badge className="bg-blue-500/20 text-blue-300 border-blue-400/30 text-xs">
-                  {Math.ceil((new Date(goal.targetDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days left
-                </Badge>
-              </div>
-            </motion.div>
-          ))}
-        </CardContent>
-      </Card>
+                  key={goal.id}
+                  className="p-3 rounded-lg bg-white/5 border border-white/10"
+                  whileHover={{ scale: 1.01 }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex-1">
+                      <p className="text-white/90 font-medium text-xs truncate">{goal.title}</p>
+                      <p className="text-white/60 text-xs">{goal.subject}</p>
+                    </div>
+                    <p className="text-white/90 font-bold text-sm ml-2">{goal.progress}%</p>
+                  </div>
+                  <div className="w-full bg-white/10 rounded-full h-1.5">
+                    <motion.div
+                      className="bg-gradient-to-r from-green-400 to-emerald-400 h-1.5 rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${goal.progress}%` }}
+                      transition={{ duration: 1, delay: 0.2 }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <p className="text-white/50 text-xs">{goal.completedSessions}/{goal.sessions}</p>
+                    <p className="text-white/50 text-xs">
+                      {Math.ceil((new Date(goal.targetDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}d
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
+              <Button className="w-full bg-white/5 hover:bg-white/10 border border-white/20 text-white/70 text-xs">
+                <Plus className="h-3 w-3 mr-1" /> Add Goal
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Quick Actions */}
+          <Card className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4">
+            <h3 className="text-white/90 font-semibold mb-3 text-sm">Quick Actions</h3>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                size="sm"
+                className="bg-gradient-to-r from-blue-500/20 to-indigo-500/20 hover:from-blue-500/30 hover:to-indigo-500/30 border border-blue-400/30 text-blue-300 text-xs"
+              >
+                <Calendar className="h-3 w-3 mr-1" />
+                Schedule
+              </Button>
+              <Button
+                size="sm"
+                className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 hover:from-green-500/30 hover:to-emerald-500/30 border border-green-400/30 text-green-300 text-xs"
+              >
+                <TrendingUp className="h-3 w-3 mr-1" />
+                Analytics
+              </Button>
+              <Button
+                size="sm"
+                className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 border border-purple-400/30 text-purple-300 text-xs"
+                onClick={generateAIPlan}
+              >
+                <Brain className="h-3 w-3 mr-1" />
+                AI Plan
+              </Button>
+              <Button
+                size="sm"
+                className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 hover:from-yellow-500/30 hover:to-orange-500/30 border border-yellow-400/30 text-yellow-300 text-xs"
+              >
+                <Award className="h-3 w-3 mr-1" />
+                Rewards
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 
   return (
-    <div className="h-full bg-gradient-to-br from-slate-900/50 via-purple-900/50 to-slate-900/50 relative overflow-hidden rounded-2xl">
+    <div className="h-full bg-gradient-to-br from-slate-900/50 via-purple-900/50 to-slate-900/50 relative overflow-hidden">
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-purple-500/5 to-fuchsia-500/5" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_2px_2px,rgba(147,51,234,0.1)_1px,transparent_0)] bg-[length:32px_32px]" />
       
-      <div className="relative z-10 p-3 sm:p-4 h-full overflow-y-auto">
-        <div className="max-w-5xl mx-auto space-y-4">
+      <div className="relative z-10 p-3 sm:p-4 lg:p-6 h-full overflow-y-auto">
+        {/* Compact Header for Mobile */}
+        <motion.div 
+          className="flex items-center justify-between mb-4 lg:hidden"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="flex items-center space-x-2">
+            <div className="p-1.5 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-lg border border-blue-400/30">
+              <Brain className="h-4 w-4 text-blue-300" />
+            </div>
+            <div>
+              <h1 className="text-sm font-bold text-white">Study Planner</h1>
+              <p className="text-white/60 text-xs">AI Optimized</p>
+            </div>
+          </div>
           
-          {/* Compact Header */}
-          <motion.div 
-            className="flex items-center justify-between mb-4"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-xl border border-blue-400/30">
-                <Brain className="h-5 w-5 text-blue-300" />
-              </div>
-              <div>
-                <h1 className="text-lg sm:text-xl font-bold text-white">AI Study Planner</h1>
-                <p className="text-white/60 text-xs sm:text-sm">Smart learning schedules</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Badge className="bg-green-500/20 text-green-300 border-green-400/30 text-xs">
-                {completionRate}% Complete
-              </Badge>
-              <Button
-                onClick={() => generateAIPlan()}
-                disabled={isGeneratingPlan}
-                className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white text-xs px-3 py-1.5 h-auto"
-              >
-                {isGeneratingPlan ? (
-                  <>
-                    <RotateCcw className="h-3 w-3 mr-1 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-3 w-3 mr-1" />
-                    AI Plan
-                  </>
-                )}
-              </Button>
-            </div>
-          </motion.div>
+          <div className="flex items-center space-x-1">
+            <Badge className="bg-green-500/20 text-green-300 border-green-400/30 text-xs px-2 py-0.5">
+              {completionRate}%
+            </Badge>
+            <Button
+              onClick={() => setPomodoroMode(!pomodoroMode)}
+              size="sm"
+              className={`${pomodoroMode ? 'bg-red-500/20 text-red-300' : 'bg-blue-500/20 text-blue-300'} border ${pomodoroMode ? 'border-red-400/30' : 'border-blue-400/30'} text-xs px-2 py-1`}
+            >
+              <Timer className="h-3 w-3" />
+            </Button>
+          </div>
+        </motion.div>
 
+        {/* Mobile/Tablet View - Compact Layout */}
+        <div className="lg:hidden">
           {/* Quick Stats */}
           <motion.div
             className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4"
@@ -703,6 +837,11 @@ export function AIStudyPlanner({ onBack }: { onBack?: () => void }) {
               </CardContent>
             </Card>
           </motion.div>
+        </div>
+
+        {/* Desktop View - Show full dashboard */}
+        <div className="hidden lg:block">
+          {renderDashboard()}
         </div>
       </div>
     </div>

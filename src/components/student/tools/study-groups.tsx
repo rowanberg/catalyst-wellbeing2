@@ -1,13 +1,16 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { useState, useCallback, useEffect, useMemo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAppSelector } from '@/lib/redux/hooks'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Progress } from '@/components/ui/progress'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
   Users2, 
   Plus, 
@@ -22,7 +25,21 @@ import {
   Video,
   UserPlus,
   Globe,
-  Lock
+  Lock,
+  TrendingUp,
+  Activity,
+  Award,
+  Filter,
+  Sparkles,
+  ChevronRight,
+  MapPin,
+  Zap,
+  Target,
+  Trophy,
+  Bell,
+  Settings,
+  Info,
+  Heart
 } from 'lucide-react'
 
 interface StudyGroup {
@@ -166,9 +183,21 @@ export function StudyGroups({ onBack }: { onBack?: () => void }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedSubject, setSelectedSubject] = useState<string>('All')
   const [loading, setLoading] = useState(true)
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [activeTab, setActiveTab] = useState<'explore' | 'my-groups' | 'schedule'>('explore')
+  const [selectedGroup, setSelectedGroup] = useState<StudyGroup | null>(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
   const profile = useAppSelector((state) => state.auth.user)
 
   const subjects = ['All', 'Mathematics', 'Science', 'English', 'History', 'Physics', 'Chemistry', 'Biology', 'Computer Science']
+  
+  // Stats
+  const [userStats, setUserStats] = useState({
+    joinedGroups: 5,
+    sessionsAttended: 23,
+    contributionScore: 85,
+    streak: 7
+  })
 
   // Fetch study groups from API
   const fetchStudyGroups = useCallback(async () => {
@@ -184,33 +213,30 @@ export function StudyGroups({ onBack }: { onBack?: () => void }) {
         params.append('subject', selectedSubject)
       }
       
+      if (searchQuery) {
+        params.append('search', searchQuery)
+      }
+
       const response = await fetch(`/api/study-groups?${params}`)
+      
       if (!response.ok) {
         throw new Error('Failed to fetch study groups')
       }
-      
+
       const data = await response.json()
       setStudyGroups(data.groups || [])
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching study groups:', error)
       toast.error('Failed to load study groups')
       setStudyGroups([])
     } finally {
       setLoading(false)
     }
-  }, [profile?.school_id, selectedSubject])
-  
+  }, [profile?.school_id, selectedSubject, searchQuery])
+
   useEffect(() => {
     fetchStudyGroups()
   }, [fetchStudyGroups])
-
-  // Filter groups based on search (subject filtering is now done server-side)
-  const filteredGroups = studyGroups.filter(group => {
-    if (!searchQuery) return true
-    return group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           group.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           group.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-  })
 
   const joinGroup = useCallback(async (groupId: string) => {
     if (!profile?.id) {
@@ -239,37 +265,22 @@ export function StudyGroups({ onBack }: { onBack?: () => void }) {
     }
   }, [profile?.id, fetchStudyGroups])
 
+  // Filter groups based on search and subject
+  const filteredGroups = useMemo(() => {
+    return studyGroups.filter(group => {
+      const matchesSearch = group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            group.description.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesSubject = selectedSubject === 'All' || group.subject === selectedSubject
+      return matchesSearch && matchesSubject
+    })
+  }, [studyGroups, searchQuery, selectedSubject])
+
   return (
-    <div className="h-full bg-gradient-to-br from-slate-900/50 via-blue-900/50 to-slate-900/50 relative overflow-hidden rounded-2xl">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-indigo-500/5 to-purple-500/5" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_2px_2px,rgba(59,130,246,0.1)_1px,transparent_0)] bg-[length:32px_32px]" />
+    <div className="h-full bg-gradient-to-br from-slate-900/50 via-purple-900/50 to-slate-900/50 relative overflow-hidden rounded-2xl">
+      <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-purple-500/5 to-fuchsia-500/5" />
       
-      <div className="relative z-10 p-3 sm:p-4 h-full flex flex-col">
-        {/* Header */}
-        <motion.div 
-          className="flex items-center justify-between mb-4"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-xl border border-blue-400/30">
-              <Users2 className="h-5 w-5 text-blue-300" />
-            </div>
-            <div>
-              <h1 className="text-lg sm:text-xl font-bold text-white">Study Groups</h1>
-              <p className="text-white/60 text-xs sm:text-sm">Collaborate and learn together</p>
-            </div>
-          </div>
-          
-          <Button
-            onClick={() => console.log('Create group')}
-            className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Group
-          </Button>
-        </motion.div>
+      <div className="relative z-10 p-3 sm:p-4 h-full overflow-y-auto">
+        <div className="max-w-5xl mx-auto space-y-4">
 
         {/* Search and Filters */}
         <motion.div
@@ -403,6 +414,7 @@ export function StudyGroups({ onBack }: { onBack?: () => void }) {
             </div>
           )}
         </motion.div>
+        </div>
       </div>
     </div>
   )

@@ -15,6 +15,8 @@ import BlackMarkSystem from '@/components/teacher/BlackMarkSystem'
 import ParentCommunicationSystem from '@/components/teacher/parent-communication-system'
 import InteractiveActivitiesSystem from '@/components/teacher/interactive-activities-system'
 import UpdateResultsSystem from '@/components/teacher/UpdateResultsSystem'
+import ComprehensiveAnalytics from '@/components/teacher/ComprehensiveAnalytics'
+import CreatePostComposer from '@/components/teacher/CreatePostComposer'
 import { 
   Users, 
   TrendingUp, 
@@ -140,10 +142,12 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
     },
     averageStreak: 0
   })
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [isDataFetching, setIsDataFetching] = useState(false) // Prevent concurrent API calls
   const fetchingRef = useRef(false) // More reliable concurrent call protection
-  const [activeTab, setActiveTab] = useState<'analytics' | 'overview' | 'roster' | 'incidents' | 'shoutouts' | 'interventions' | 'quests' | 'messaging' | 'blackmarks' | 'activities' | 'communication' | 'settings' | 'results'>('overview')
+  const [dataFetched, setDataFetched] = useState(false)
+  const [activeTab, setActiveTab] = useState<'analytics' | 'overview' | 'roster' | 'incidents' | 'shoutouts' | 'interventions' | 'quests' | 'messaging' | 'blackmarks' | 'activities' | 'communication' | 'settings' | 'results' | 'createpost'>('overview')
+  const [showCreatePost, setShowCreatePost] = useState(false)
   const [notifications, setNotifications] = useState<Array<{id: string, message: string, type: 'success' | 'error' | 'warning' | 'info'}>>([])
   const [realTimeData, setRealTimeData] = useState({
     newHelpRequests: 0,
@@ -194,21 +198,21 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
   }
 
   useEffect(() => {
-    console.log('🔄 Teacher dashboard useEffect triggered')
-    console.log('   - user exists:', !!user, 'user.id:', user?.id)
-    console.log('   - profile exists:', !!profile, 'profile.user_id:', profile?.user_id)
-    console.log('   - fetchingRef.current:', fetchingRef.current)
-    console.log('   - isDataFetching:', isDataFetching)
+    // Check if data is already cached in sessionStorage
+    const cachedAnalytics = sessionStorage.getItem('teacher_analytics')
+    const cachedStudents = sessionStorage.getItem('teacher_students')
     
-    if (user && profile && user.id && profile.user_id) {
-      console.log('✅ Conditions met, calling fetchClassData...')
-      fetchClassData()
-    } else {
-      // If no user or profile, stop loading
-      console.log('❌ Conditions not met, stopping loading')
-      setLoading(false)
+    if (cachedAnalytics && cachedStudents) {
+      // Use cached data
+      setAnalytics(JSON.parse(cachedAnalytics))
+      setStudents(JSON.parse(cachedStudents))
+      setDataFetched(true)
     }
-  }, [user?.id, profile?.user_id]) // Use stable IDs instead of full objects
+    // Only fetch if we don't have cached data
+    if (!dataFetched && user && profile && user.id && profile.user_id) {
+      fetchClassData()
+    }
+  }, [])
 
   // Add a timeout to prevent infinite loading
   useEffect(() => {
@@ -231,13 +235,11 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
 
     // Prevent concurrent API calls using ref for immediate check
     if (fetchingRef.current) {
-      console.log('Data fetch already in progress (ref check), skipping...')
       return
     }
 
     // Double check with state as well
     if (isDataFetching) {
-      console.log('Data fetch already in progress (state check), skipping...')
       return
     }
 
@@ -245,34 +247,36 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
       fetchingRef.current = true // Set ref guard immediately
       setIsDataFetching(true) // Set state guard
       setLoading(true)
-      console.log('Fetching teacher analytics for user:', user.id)
       
       // Use combined API for better performance (single request instead of two)
-      console.log('Fetching combined dashboard data for user ID:', user.id)
       const response = await fetch(`/api/teacher/dashboard-combined?teacher_id=${user.id}`)
       
-      console.log('Combined API response status:', response.status)
       
       if (response.ok) {
         const combinedData = await response.json()
-        console.log('Combined dashboard data received:', combinedData)
         
         // Set analytics data
-        setAnalytics(combinedData.analytics || {
+        const analyticsData = combinedData.analytics || {
           totalStudents: 0,
           averageXP: 0,
           activeToday: 0,
           helpRequests: 0,
           moodDistribution: { happy: 0, excited: 0, calm: 0, sad: 0, angry: 0, anxious: 0 },
           averageStreak: 0
-        })
+        }
+        setAnalytics(analyticsData)
         
         // Set students data
-        setStudents(combinedData.students || [])
+        const studentsData = combinedData.students || []
+        setStudents(studentsData)
+        
+        // Cache the data in sessionStorage
+        sessionStorage.setItem('teacher_analytics', JSON.stringify(analyticsData))
+        sessionStorage.setItem('teacher_students', JSON.stringify(studentsData))
+        
+        setDataFetched(true)
       } else {
         console.error('Failed to fetch teacher analytics:', response.status)
-        const errorText = await response.text()
-        console.error('Analytics API error response:', errorText)
         // Set default analytics if API fails
         setAnalytics({
           totalStudents: 0,
@@ -310,14 +314,13 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
         averageStreak: 0
       })
     } finally {
-      console.log('Setting loading to false')
       fetchingRef.current = false // Clear ref guard
       setIsDataFetching(false) // Clear state guard
       setLoading(false)
     }
   }
 
-  if (loading || !profile) {
+  if ((loading && !dataFetched) || !profile) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
         <div className="text-center">
@@ -435,6 +438,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
           {[
             { id: 'overview', label: 'Overview', icon: School, color: 'text-blue-600', bgColor: 'bg-blue-50' },
             { id: 'roster', label: 'Students', icon: Users, color: 'text-emerald-600', bgColor: 'bg-emerald-50', isLink: true, href: '/teacher/students' },
+            { id: 'createpost', label: 'Create Post', icon: Megaphone, color: 'text-indigo-600', bgColor: 'bg-indigo-50' },
             { id: 'analytics', label: 'Analytics', icon: Activity, color: 'text-violet-600', bgColor: 'bg-violet-50' },
             { id: 'credits', label: 'Issue Credits', icon: Gem, color: 'text-purple-600', bgColor: 'bg-purple-50', isLink: true, href: '/teacher/issue-credits' },
             { id: 'shoutouts', label: 'Shout-outs', icon: Star, color: 'text-amber-500', bgColor: 'bg-amber-50' },
@@ -454,11 +458,13 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                 onClick={() => {
                   if (item.isLink && item.href) {
                     window.location.href = item.href
+                  } else if (item.id === 'createpost') {
+                    setShowCreatePost(true)
+                    setSidebarOpen(false)
                   } else {
                     setActiveTab(item.id as any)
+                    setSidebarOpen(false)
                   }
-                  // Close sidebar on mobile after selection
-                  setSidebarOpen(false)
                 }}
                 whileHover={{ scale: 1.02, x: 4 }}
                 whileTap={{ scale: 0.98 }}
@@ -1173,122 +1179,11 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="space-y-4 sm:space-y-8"
               >
-              <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border-0 p-8">
-                <div className="mb-6">
-                  <h2 className="text-2xl font-bold text-slate-800 mb-2 flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-r from-red-500 to-red-600 rounded-xl text-white">
-                      <AlertTriangle className="h-6 w-6" />
-                    </div>
-                    Disciplinary Management
-                  </h2>
-                  <p className="text-slate-600">Track and manage student disciplinary actions with remedial support</p>
-                </div>
                 <BlackMarkSystem />
-              </div>
               </motion.div>
             )}
 
-            {activeTab === 'messaging' && (
-              <motion.div
-                key="messaging"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="space-y-4 sm:space-y-8"
-              >
-              <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border-0 p-8">
-                <div className="mb-8">
-                  <h2 className="text-2xl font-bold text-slate-800 mb-2 flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-xl text-white">
-                      <MessageCircle className="h-6 w-6" />
-                    </div>
-                    Parent Communication Hub
-                  </h2>
-                  <p className="text-slate-600">Secure messaging and communication tools for parent engagement</p>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-6">
-                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 bg-blue-500 rounded-lg text-white">
-                          <MessageSquare className="h-5 w-5" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-slate-800">Direct Messaging</h3>
-                      </div>
-                      <p className="text-slate-600 mb-4">Send secure messages directly to parents and guardians</p>
-                      <Button 
-                        variant="outline" 
-                        className="w-full hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 transition-all duration-200"
-                        onClick={() => setActiveTab('communication')}
-                      >
-                        <MessageSquare className="h-4 w-4 mr-2" />
-                        Open Messaging
-                      </Button>
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-100">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 bg-green-500 rounded-lg text-white">
-                          <Megaphone className="h-5 w-5" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-slate-800">Class Announcements</h3>
-                      </div>
-                      <p className="text-slate-600 mb-4">Broadcast important updates to all parents</p>
-                      <Button 
-                        variant="outline" 
-                        className="w-full hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 hover:border-green-300 transition-all duration-200"
-                        onClick={() => setActiveTab('communication')}
-                      >
-                        <Megaphone className="h-4 w-4 mr-2" />
-                        Open Announcements
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-6">
-                    <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-100">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 bg-purple-500 rounded-lg text-white">
-                          <Calendar className="h-5 w-5" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-slate-800">Meeting Scheduler</h3>
-                      </div>
-                      <p className="text-slate-600 mb-4">Schedule parent-teacher conferences and meetings</p>
-                      <Button 
-                        variant="outline" 
-                        className="w-full hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 hover:border-purple-300 transition-all duration-200"
-                        onClick={() => setActiveTab('communication')}
-                      >
-                        <Calendar className="h-4 w-4 mr-2" />
-                        Open Scheduler
-                      </Button>
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-6 border border-orange-100">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 bg-orange-500 rounded-lg text-white">
-                          <Bell className="h-5 w-5" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-slate-800">Automated Notifications</h3>
-                      </div>
-                      <p className="text-slate-600 mb-4">Set up automatic updates for attendance and progress</p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100"
-                      >
-                        <Bell className="h-4 w-4 mr-2" />
-                        Open Notifications
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              </motion.div>
-            )}
 
             {activeTab === 'incidents' && (
               <motion.div
@@ -1362,605 +1257,6 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
               </motion.div>
             )}
 
-            {activeTab === 'analytics' && (
-              <motion.div
-                key="analytics"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="space-y-4 sm:space-y-8"
-              >
-              <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border-0 p-8">
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-slate-800 mb-2 flex items-center gap-3">
-                <div className="p-2 bg-gradient-to-r from-gray-500 to-gray-600 rounded-xl text-white">
-                  <Shield className="h-6 w-6" />
-                </div>
-                Incident Logging System
-              </h2>
-              <p className="text-slate-600">Secure and private incident documentation for administrative purposes</p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              {[
-                { title: 'Behavioral Incidents', icon: AlertTriangle, color: 'from-red-500 to-red-600', count: '0' },
-                { title: 'Academic Concerns', icon: BookOpen, color: 'from-blue-500 to-blue-600', count: '0' },
-                { title: 'Positive Notes', icon: Star, color: 'from-green-500 to-green-600', count: '0' }
-              ].map((category, index) => {
-                const Icon = category.icon
-                return (
-                  <motion.div
-                    key={category.title}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                  >
-                    <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl text-white">
-                      <BarChart3 className="h-8 w-8" />
-                    </div>
-                    <h2 className="text-3xl font-bold text-slate-800">
-                      Class Analytics Dashboard
-                    </h2>
-                    <motion.p 
-                      className="text-lg text-slate-600 max-w-2xl mx-auto"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.4 }}
-                    >
-                      Comprehensive insights into your students' progress, engagement, and well-being patterns
-                    </motion.p>
-                  </motion.div>
-                )
-              })}
-
-                {/* Key Metrics Cards */}
-                <motion.div 
-                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-16"
-                  variants={{
-                    hidden: { opacity: 0 },
-                    show: {
-                      opacity: 1,
-                      transition: {
-                        staggerChildren: 0.1
-                      }
-                    }
-                  }}
-                  initial="hidden"
-                  animate="show"
-                >
-                <motion.div
-                  variants={{
-                    hidden: { opacity: 0, y: 20, scale: 0.9 },
-                    show: { opacity: 1, y: 0, scale: 1 }
-                  }}
-                  whileHover={{ 
-                    scale: 1.05, 
-                    rotateY: 5,
-                    transition: { type: "spring", stiffness: 300 }
-                  }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Card className="bg-gradient-to-br from-blue-500 via-blue-600 to-purple-600 text-white border-0 shadow-lg hover:shadow-2xl transition-all duration-500 relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <CardContent className="p-6 relative z-10">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <motion.p 
-                            className="text-blue-100 text-sm font-medium"
-                            initial={{ opacity: 0.7 }}
-                            animate={{ opacity: 1 }}
-                          >
-                            Total Students
-                          </motion.p>
-                          <motion.span 
-                            className="text-3xl font-bold"
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ type: "spring", delay: 0.5 }}
-                          >
-                            {analytics.totalStudents || 28}
-                          </motion.span>
-                          <div className="text-xs text-blue-200 mt-1">
-                            +2 this week
-                          </div>
-                        </div>
-                        <motion.div
-                          animate={{ 
-                            rotate: [0, 10, -10, 0],
-                            scale: [1, 1.1, 1]
-                          }}
-                          transition={{ 
-                            duration: 2,
-                            repeat: Infinity,
-                            repeatDelay: 3
-                          }}
-                        >
-                          <Users className="h-8 w-8 text-blue-200" />
-                        </motion.div>
-                      </div>
-                      <motion.div
-                        className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-white/30 to-white/10"
-                        initial={{ width: 0 }}
-                        animate={{ width: "100%" }}
-                        transition={{ duration: 1, delay: 0.5 }}
-                      />
-                    </CardContent>
-                  </Card>
-                </motion.div>
-
-                <motion.div
-                  variants={{
-                    hidden: { opacity: 0, y: 20, scale: 0.9 },
-                    show: { opacity: 1, y: 0, scale: 1 }
-                  }}
-                  whileHover={{ 
-                    scale: 1.05, 
-                    rotateY: 5,
-                    transition: { type: "spring", stiffness: 300 }
-                  }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Card className="bg-gradient-to-br from-green-500 via-green-600 to-emerald-600 text-white border-0 shadow-lg hover:shadow-2xl transition-all duration-500 relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <CardContent className="p-6 relative z-10">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <motion.p 
-                            className="text-green-100 text-sm font-medium"
-                            initial={{ opacity: 0.7 }}
-                            animate={{ opacity: 1 }}
-                          >
-                            Average XP
-                          </motion.p>
-                          <motion.span 
-                            className="text-3xl font-bold"
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ type: "spring", delay: 0.6 }}
-                          >
-                            {Math.round(analytics.averageXP) || 1247}
-                          </motion.span>
-                          <div className="text-xs text-green-200 mt-1">
-                            +15% this week
-                          </div>
-                        </div>
-                        <motion.div
-                          animate={{ 
-                            rotateZ: [0, 15, -15, 0],
-                            scale: [1, 1.2, 1]
-                          }}
-                          transition={{ 
-                            duration: 2.5,
-                            repeat: Infinity,
-                            repeatDelay: 2
-                          }}
-                        >
-                          <Trophy className="h-8 w-8 text-green-200" />
-                        </motion.div>
-                      </div>
-                      <motion.div
-                        className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-white/30 to-white/10"
-                        initial={{ width: 0 }}
-                        animate={{ width: "85%" }}
-                        transition={{ duration: 1.5, delay: 0.7 }}
-                      />
-                    </CardContent>
-                  </Card>
-                </motion.div>
-
-                <motion.div
-                  variants={{
-                    hidden: { opacity: 0, y: 20, scale: 0.9 },
-                    show: { opacity: 1, y: 0, scale: 1 }
-                  }}
-                  whileHover={{ 
-                    scale: 1.05, 
-                    rotateY: 5,
-                    transition: { type: "spring", stiffness: 300 }
-                  }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Card className="bg-gradient-to-br from-purple-500 via-purple-600 to-pink-600 text-white border-0 shadow-lg hover:shadow-2xl transition-all duration-500 relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <CardContent className="p-6 relative z-10">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <motion.p 
-                            className="text-purple-100 text-sm font-medium"
-                            initial={{ opacity: 0.7 }}
-                            animate={{ opacity: 1 }}
-                          >
-                            Engagement Rate
-                          </motion.p>
-                          <motion.span 
-                            className="text-3xl font-bold"
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ type: "spring", delay: 0.7 }}
-                          >
-                            92%
-                          </motion.span>
-                          <div className="text-xs text-purple-200 mt-1">
-                            +8% this week
-                          </div>
-                        </div>
-                        <motion.div
-                          animate={{ 
-                            rotate: [0, 360],
-                            scale: [1, 1.1, 1]
-                          }}
-                          transition={{ 
-                            duration: 3,
-                            repeat: Infinity,
-                            repeatDelay: 1
-                          }}
-                        >
-                          <Heart className="h-8 w-8 text-purple-200" />
-                        </motion.div>
-                      </div>
-                      <motion.div
-                        className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-white/30 to-white/10"
-                        initial={{ width: 0 }}
-                        animate={{ width: "92%" }}
-                        transition={{ duration: 1.5, delay: 0.8 }}
-                      />
-                    </CardContent>
-                  </Card>
-                </motion.div>
-
-                <motion.div
-                  variants={{
-                    hidden: { opacity: 0, y: 20, scale: 0.9 },
-                    show: { opacity: 1, y: 0, scale: 1 }
-                  }}
-                  whileHover={{ 
-                    scale: 1.05, 
-                    rotateY: 5,
-                    transition: { type: "spring", stiffness: 300 }
-                  }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Card className="bg-gradient-to-br from-orange-500 via-orange-600 to-red-600 text-white border-0 shadow-lg hover:shadow-2xl transition-all duration-500 relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <CardContent className="p-6 relative z-10">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <motion.p 
-                            className="text-orange-100 text-sm font-medium"
-                            initial={{ opacity: 0.7 }}
-                            animate={{ opacity: 1 }}
-                          >
-                            Quests Completed
-                          </motion.p>
-                          <motion.span 
-                            className="text-3xl font-bold"
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ type: "spring", delay: 0.8 }}
-                          >
-                            156
-                          </motion.span>
-                          <div className="text-xs text-orange-200 mt-1">
-                            +23 this week
-                          </div>
-                        </div>
-                        <motion.div
-                          animate={{ 
-                            y: [0, -5, 0],
-                            rotate: [0, 5, -5, 0]
-                          }}
-                          transition={{ 
-                            duration: 2,
-                            repeat: Infinity,
-                            repeatDelay: 1.5
-                          }}
-                        >
-                          <Target className="h-8 w-8 text-orange-200" />
-                        </motion.div>
-                      </div>
-                      <motion.div
-                        className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-white/30 to-white/10"
-                        initial={{ width: 0 }}
-                        animate={{ width: "78%" }}
-                        transition={{ duration: 1.5, delay: 0.9 }}
-                      />
-                    </CardContent>
-                  </Card>
-                </motion.div>
-                </motion.div>
-
-                {/* Advanced Analytics Charts */}
-                <div className="space-y-12">
-                  {/* First Row - Mood Trends Chart */}
-                  <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-500">
-                    <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-lg pb-6">
-                      <CardTitle className="text-2xl font-bold text-slate-800 flex items-center gap-4">
-                        <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl text-white">
-                          <TrendingUp className="h-7 w-7" />
-                        </div>
-                        Weekly Mood Trends
-                      </CardTitle>
-                    </CardHeader>
-                  <CardContent className="p-8">
-                    <div className="space-y-6">
-                      {[
-                        { day: 'Monday', mood: 'Happy', percentage: 85, color: 'bg-green-500' },
-                        { day: 'Tuesday', mood: 'Excited', percentage: 92, color: 'bg-yellow-500' },
-                        { day: 'Wednesday', mood: 'Focused', percentage: 78, color: 'bg-blue-500' },
-                        { day: 'Thursday', mood: 'Creative', percentage: 88, color: 'bg-purple-500' },
-                        { day: 'Friday', mood: 'Energetic', percentage: 95, color: 'bg-orange-500' }
-                      ].map((item, index) => (
-                        <motion.div
-                          key={item.day}
-                          initial={{ opacity: 0, x: -50 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.1 }}
-                          className="flex items-center space-x-6"
-                        >
-                          <div className="w-24 text-sm font-medium text-slate-700">{item.day}</div>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-sm text-slate-600">{item.mood}</span>
-                              <span className="text-sm font-semibold text-slate-800">{item.percentage}%</span>
-                            </div>
-                            <div className="h-4 bg-gray-200 rounded-full overflow-hidden mt-2">
-                              <motion.div
-                                className={`h-full ${item.color} rounded-full`}
-                                initial={{ width: 0 }}
-                                animate={{ width: `${item.percentage}%` }}
-                                transition={{ duration: 1, delay: index * 0.1 + 0.5 }}
-                              />
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </CardContent>
-                  </Card>
-
-                  {/* Second Row - Performance Distribution */}
-                  <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-500">
-                    <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-t-lg pb-6">
-                      <CardTitle className="text-2xl font-bold text-slate-800 flex items-center gap-4">
-                        <div className="p-3 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl text-white">
-                          <BarChart3 className="h-7 w-7" />
-                        </div>
-                        Performance Distribution
-                      </CardTitle>
-                    </CardHeader>
-                  <CardContent className="p-8">
-                    <div className="space-y-8">
-                      {[
-                        { level: 'Excellent (90-100%)', count: 8, color: 'bg-green-500', percentage: 29 },
-                        { level: 'Good (80-89%)', count: 12, color: 'bg-blue-500', percentage: 43 },
-                        { level: 'Average (70-79%)', count: 6, color: 'bg-yellow-500', percentage: 21 },
-                        { level: 'Needs Support (<70%)', count: 2, color: 'bg-red-500', percentage: 7 }
-                      ].map((item, index) => (
-                        <motion.div
-                          key={item.level}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.15 }}
-                          className="space-y-3"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-slate-700">{item.level}</span>
-                            <div className="flex items-center space-x-2">
-                              <span className="text-sm text-slate-600">{item.count} students</span>
-                              <span className="text-sm font-semibold text-slate-800">{item.percentage}%</span>
-                            </div>
-                          </div>
-                          <div className="h-5 bg-gray-200 rounded-full overflow-hidden mt-2">
-                            <motion.div
-                              className={`h-full ${item.color} rounded-full flex items-center justify-end pr-2`}
-                              initial={{ width: 0 }}
-                              animate={{ width: `${item.percentage}%` }}
-                              transition={{ duration: 1.2, delay: index * 0.15 + 0.3 }}
-                            >
-                              <span className="text-xs font-bold text-white">{item.count}</span>
-                            </motion.div>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </CardContent>
-                  </Card>
-                </div>
-              </div>
-              </div>
-            </motion.div>
-          )}
-
-          {activeTab === 'communication' && (
-            <motion.div
-              key="communication"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="space-y-6"
-            >
-              {/* Header Section */}
-              <div className="bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-600 rounded-2xl shadow-2xl p-8 text-white relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-50" />
-                <div className="relative z-10">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
-                      <MessageCircle className="h-8 w-8" />
-                    </div>
-                    <div>
-                      <h2 className="text-3xl font-bold">Parent Communication Hub</h2>
-                      <p className="text-white/90">Connect, engage, and collaborate with families</p>
-                    </div>
-                  </div>
-                  
-                  {/* Quick Stats */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-                    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                      <div className="text-2xl font-bold">24</div>
-                      <div className="text-sm text-white/80">Active Conversations</div>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                      <div className="text-2xl font-bold">89%</div>
-                      <div className="text-sm text-white/80">Response Rate</div>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                      <div className="text-2xl font-bold">12</div>
-                      <div className="text-sm text-white/80">Meetings Scheduled</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Main Communication Tools */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Primary Communication Features */}
-                <div className="space-y-6">
-                  {/* Direct Messaging */}
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all duration-300"
-                  >
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl text-white">
-                        <MessageSquare className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-semibold text-gray-800">Direct Messaging</h3>
-                        <p className="text-gray-600">Secure one-on-one conversations</p>
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">Unread messages</span>
-                        <span className="bg-red-100 text-red-600 px-2 py-1 rounded-full font-medium">3</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">Average response time</span>
-                        <span className="text-green-600 font-medium">2.4 hours</span>
-                      </div>
-                      <Button className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700">
-                        <MessageSquare className="h-4 w-4 mr-2" />
-                        Open Messages
-                      </Button>
-                    </div>
-                  </motion.div>
-
-                  {/* Class Announcements */}
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all duration-300"
-                  >
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="p-3 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl text-white">
-                        <Megaphone className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-semibold text-gray-800">Class Announcements</h3>
-                        <p className="text-gray-600">Broadcast to all families</p>
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <div className="text-sm font-medium text-gray-800">Last announcement</div>
-                        <div className="text-sm text-gray-600">Field trip permission forms due Friday</div>
-                        <div className="text-xs text-gray-500 mt-1">2 days ago</div>
-                      </div>
-                      <Button className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700">
-                        <Megaphone className="h-4 w-4 mr-2" />
-                        Create Announcement
-                      </Button>
-                    </div>
-                  </motion.div>
-                </div>
-
-                {/* Secondary Features */}
-                <div className="space-y-6">
-                  {/* Meeting Scheduler */}
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all duration-300"
-                  >
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="p-3 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl text-white">
-                        <Calendar className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-semibold text-gray-800">Meeting Scheduler</h3>
-                        <p className="text-gray-600">Parent-teacher conferences</p>
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">Upcoming meetings</span>
-                        <span className="bg-purple-100 text-purple-600 px-2 py-1 rounded-full font-medium">5</span>
-                      </div>
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <div className="text-sm font-medium text-gray-800">Next meeting</div>
-                        <div className="text-sm text-gray-600">Sarah Johnson - Tomorrow 3:30 PM</div>
-                      </div>
-                      <Button className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700">
-                        <Calendar className="h-4 w-4 mr-2" />
-                        Manage Schedule
-                      </Button>
-                    </div>
-                  </motion.div>
-
-                  {/* Progress Reports */}
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-all duration-300"
-                  >
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="p-3 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl text-white">
-                        <BarChart3 className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-semibold text-gray-800">Progress Reports</h3>
-                        <p className="text-gray-600">Share student achievements</p>
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">Reports sent this month</span>
-                        <span className="text-amber-600 font-medium">28</span>
-                      </div>
-                      <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">
-                        <BarChart3 className="h-4 w-4 mr-2" />
-                        Generate Reports
-                      </Button>
-                    </div>
-                  </motion.div>
-                </div>
-              </div>
-
-              {/* Additional Tools */}
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">Additional Communication Tools</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
-                    <Bell className="h-6 w-6 text-orange-500" />
-                    <span className="text-sm font-medium">Notifications</span>
-                  </Button>
-                  <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
-                    <FileText className="h-6 w-6 text-blue-500" />
-                    <span className="text-sm font-medium">Documents</span>
-                  </Button>
-                  <Button variant="outline" className="h-auto p-4 flex flex-col items-center gap-2">
-                    <Users className="h-6 w-6 text-green-500" />
-                    <span className="text-sm font-medium">Family Directory</span>
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="h-auto p-4 flex flex-col items-center gap-2"
-                    onClick={() => setActiveTab('incidents')}
-                  >
-                    <Shield className="h-6 w-6 text-gray-500" />
-                    <span className="text-sm font-medium">Incident Reports</span>
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-          )}
 
           {activeTab === 'analytics' && (
             <motion.div
@@ -1968,129 +1264,8 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="space-y-12"
             >
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-                {/* Enhanced Mood Distribution Chart */}
-                <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-500 relative overflow-hidden">
-                  <FloatingParticles count={8} className="opacity-30" />
-                  <CardHeader className="relative z-10">
-                    <CardTitle className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                      <motion.div
-                        animate={{ scale: [1, 1.2, 1] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                      >
-                        <Heart className="h-5 w-5 text-pink-600" />
-                      </motion.div>
-                      Class Mood Overview
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="relative z-10">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div className="h-64 bg-gradient-to-br from-pink-50 to-purple-50 rounded-lg flex items-center justify-center border border-gray-200">
-                        <div className="text-center">
-                          <Heart className="h-12 w-12 text-pink-400 mx-auto mb-4" />
-                          <h3 className="text-lg font-medium text-gray-900 mb-2">Mood Distribution</h3>
-                          <p className="text-gray-600">Chart visualization coming soon</p>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        {Object.entries(analytics.moodDistribution).map(([mood, count], index) => (
-                          <motion.div 
-                            key={mood} 
-                            className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors"
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            whileHover={{ scale: 1.02, x: 5 }}
-                          >
-                            <div className="flex items-center gap-3">
-                              <motion.div 
-                                className={`w-4 h-4 rounded-full ${
-                                  mood === 'happy' ? 'bg-yellow-400' :
-                                  mood === 'excited' ? 'bg-orange-400' :
-                                  mood === 'calm' ? 'bg-blue-400' :
-                                  mood === 'sad' ? 'bg-gray-400' :
-                                  mood === 'angry' ? 'bg-red-400' :
-                                  'bg-purple-400'
-                                }`}
-                                animate={{ 
-                                  boxShadow: [`0 0 0 0 ${
-                                    mood === 'happy' ? 'rgba(251, 191, 36, 0.4)' :
-                                    mood === 'excited' ? 'rgba(251, 146, 60, 0.4)' :
-                                    mood === 'calm' ? 'rgba(96, 165, 250, 0.4)' :
-                                    mood === 'sad' ? 'rgba(156, 163, 175, 0.4)' :
-                                    mood === 'angry' ? 'rgba(248, 113, 113, 0.4)' :
-                                    'rgba(167, 139, 250, 0.4)'
-                                  }`, `0 0 0 8px ${
-                                    mood === 'happy' ? 'rgba(251, 191, 36, 0)' :
-                                    mood === 'excited' ? 'rgba(251, 146, 60, 0)' :
-                                    mood === 'calm' ? 'rgba(96, 165, 250, 0)' :
-                                    mood === 'sad' ? 'rgba(156, 163, 175, 0)' :
-                                    mood === 'angry' ? 'rgba(248, 113, 113, 0)' :
-                                    'rgba(167, 139, 250, 0)'
-                                  }`]
-                                }}
-                                transition={{ duration: 1.5, repeat: Infinity }}
-                              />
-                              <span className="text-sm font-medium capitalize text-slate-700">{mood}</span>
-                            </div>
-                            <motion.span 
-                              className="text-sm font-bold text-slate-600 bg-gray-100 px-2 py-1 rounded-full"
-                              key={count}
-                              initial={{ scale: 1.2 }}
-                              animate={{ scale: 1 }}
-                              transition={{ type: "spring", stiffness: 300 }}
-                            >
-                              {count}
-                            </motion.span>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-purple-700">
-                      <Activity className="h-5 w-5 mr-2" />
-                      Class Engagement
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-600">Active Students Today</span>
-                        <span className="font-bold text-lg">{analytics.activeToday}/{analytics.totalStudents}</span>
-                      </div>
-                      <div className="w-full bg-slate-200 rounded-full h-3">
-                        <div 
-                          className="bg-gradient-to-r from-green-400 to-green-500 h-3 rounded-full transition-all duration-500"
-                          style={{ width: `${(analytics.activeToday / analytics.totalStudents) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-orange-700">
-                      <AlertTriangle className="h-5 w-5 mr-2" />
-                      Support Needed
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-orange-600 mb-2">
-                        {analytics.helpRequests}
-                      </div>
-                      <p className="text-slate-600">Pending Help Requests</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+              <ComprehensiveAnalytics />
             </motion.div>
           )}
 
@@ -2121,6 +1296,14 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
           </div>
         </div>
       </div>
+
+      {/* Create Post Composer Modal */}
+      {showCreatePost && (
+        <CreatePostComposer
+          onClose={() => setShowCreatePost(false)}
+          teacherId={user?.id || ''}
+        />
+      )}
     </div>
   )
 }

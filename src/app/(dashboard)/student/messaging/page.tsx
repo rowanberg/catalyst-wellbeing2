@@ -2,17 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAppSelector } from '@/lib/redux/hooks'
+import { useRouter } from 'next/navigation'
 import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
-import { AIStudyPlanner } from '@/components/student/tools/ai-study-planner'
-import { GradeAnalytics } from '@/components/student/tools/grade-analytics'
-import { AIHomeworkHelper } from '@/components/student/tools/ai-homework-helper'
-import { StudyGroups } from '@/components/student/tools/study-groups'
-import { PeerTutoring } from '@/components/student/tools/peer-tutoring'
-import { SchoolEventsHub } from '@/components/student/tools/school-events'
-import { AchievementCenter } from '@/components/student/tools/achievement-center'
-import { LearningGames } from '@/components/student/tools/learning-games'
-import { DigitalPortfolio } from '@/components/student/tools/digital-portfolio'
-import { ProjectShowcase } from '@/components/student/tools/project-showcase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -582,11 +573,13 @@ function QuickMessageButton({ message, conversationId, participantId, currentUse
   )
 }
 
-
 function StudentMessagingContent() {
+  const router = useRouter()
   const { profile, user } = useAppSelector((state) => state.auth)
   const [selectedTab, setSelectedTab] = useState<'teachers' | 'parents' | 'community'>('teachers')
-  const [selectedTool, setSelectedTool] = useState<string | null>(null)
+  const [selectedTeacher, setSelectedTeacher] = useState<any>(null)
+  const [messages, setMessages] = useState<any[]>([])
+  const [newMessage, setNewMessage] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [showEmergencyModal, setShowEmergencyModal] = useState(false)
   const [emergencyMessage, setEmergencyMessage] = useState('')
@@ -896,20 +889,19 @@ function StudentMessagingContent() {
                     }`}
                   >
                     <School className="h-3 w-3 sm:h-5 sm:w-5 mr-1 sm:mr-3" />
-                    <span className="hidden sm:inline">Advanced Tools</span>
+                    <span className="hidden sm:inline">Tools</span>
                     <span className="sm:hidden">Tools</span>
                   </Button>
                 </motion.div>
               </motion.div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
-              {/* Enhanced Contact List - Mobile: Hide sidebar when chat is open */}
-              <motion.div 
-                className={`lg:col-span-1 space-y-4 sm:space-y-6 ${selectedTool ? 'hidden lg:block' : 'block'}`}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.6 }}
-              >
+            {/* Enhanced Contact List - Full Width */}
+            <motion.div 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.6 }}
+              className="w-full"
+            >
                 <Card className="bg-white/10 backdrop-blur-xl shadow-2xl border border-white/20 rounded-3xl">
                   <CardHeader className="pb-4">
                     <CardTitle className="flex items-center space-x-4 text-xl sm:text-2xl">
@@ -941,7 +933,7 @@ function StudentMessagingContent() {
                           >
                             <School className="h-6 w-6 text-emerald-300" />
                           </motion.div>
-                          <span className="bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent font-black">Advanced Tools</span>
+                          <span className="bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent font-black">Tools & Features</span>
                         </>
                       )}
                     </CardTitle>
@@ -1215,25 +1207,15 @@ function StudentMessagingContent() {
                       )}
                       
                       {selectedTab === 'community' && (
-                        <>
                         <div className="space-y-4">
-
-                          {/* Advanced Tools Grid - Mobile Optimized */}
-                          <div className="space-y-3 sm:space-y-4 max-h-96 overflow-y-auto px-1 sm:px-0">
-                            {/* Academic Tools */}
-                            <div className="space-y-2 sm:space-y-3">
-                              <div className="flex items-center justify-between px-2 sm:px-3">
-                                <p className="text-white/70 text-xs sm:text-sm font-semibold uppercase tracking-wider">Academic Excellence</p>
-                                <Badge variant="secondary" className="bg-blue-500/20 text-blue-300 text-xs px-2 py-1 rounded-full border-blue-400/30">
-                                  3 Tools
-                                </Badge>
-                              </div>
+                          {/* Tools Grid - Full Width Optimized */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                               
                               <motion.div
                                 className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-400/20 backdrop-blur-sm cursor-pointer hover:bg-blue-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10"
                                 whileHover={{ scale: 1.02, x: 4 }}
                                 whileTap={{ scale: 0.98 }}
-                                onClick={() => setSelectedTool('study-planner')}
+                                onClick={() => router.push('/student/study-planner')}
                               >
                                 <div className="flex items-center space-x-3 sm:space-x-4">
                                   <div className="relative p-2 sm:p-3 bg-blue-500/20 rounded-lg sm:rounded-xl group-hover:bg-blue-500/30 transition-colors">
@@ -1267,7 +1249,7 @@ function StudentMessagingContent() {
                                 className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-400/20 backdrop-blur-sm cursor-pointer hover:bg-purple-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10"
                                 whileHover={{ scale: 1.02, x: 4 }}
                                 whileTap={{ scale: 0.98 }}
-                                onClick={() => setSelectedTool('grade-tracker')}
+                                onClick={() => router.push('/student/grade-analytics')}
                               >
                                 <div className="flex items-center space-x-3 sm:space-x-4">
                                   <div className="relative p-2 sm:p-3 bg-purple-500/20 rounded-lg sm:rounded-xl group-hover:bg-purple-500/30 transition-colors">
@@ -1301,7 +1283,7 @@ function StudentMessagingContent() {
                                 className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-400/20 backdrop-blur-sm cursor-pointer hover:bg-green-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/10"
                                 whileHover={{ scale: 1.02, x: 4 }}
                                 whileTap={{ scale: 0.98 }}
-                                onClick={() => setSelectedTool('homework-assistant')}
+                                onClick={() => router.push('/student/homework-helper')}
                               >
                                 <div className="flex items-center space-x-3 sm:space-x-4">
                                   <div className="relative p-2 sm:p-3 bg-green-500/20 rounded-lg sm:rounded-xl group-hover:bg-green-500/30 transition-colors">
@@ -1330,23 +1312,13 @@ function StudentMessagingContent() {
                                   </div>
                                 </div>
                               </motion.div>
-                            </div>
 
-                            {/* Social & Community */}
-                            <div className="space-y-3 sm:space-y-4 pt-4 sm:pt-6">
-                              <div className="flex items-center justify-between px-2 sm:px-3">
-                                <p className="text-white/70 text-xs sm:text-sm font-semibold uppercase tracking-wider">Social & Community</p>
-                                <Badge variant="secondary" className="bg-rose-500/20 text-rose-300 text-xs px-2 py-1 rounded-full border-rose-400/30">
-                                  3 Features
-                                </Badge>
-                              </div>
-                              
                               {/* Study Groups */}
                               <motion.div
                                 className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-rose-500/10 to-pink-500/10 border border-rose-400/20 backdrop-blur-sm cursor-pointer hover:bg-rose-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-rose-500/10"
                                 whileHover={{ scale: 1.02, x: 4 }}
                                 whileTap={{ scale: 0.98 }}
-                                onClick={() => setSelectedTool('study-groups')}
+                                onClick={() => router.push('/student/study-groups')}
                               >
                                 <div className="flex items-center space-x-3 sm:space-x-4">
                                   <div className="relative p-2 sm:p-3 bg-rose-500/20 rounded-lg sm:rounded-xl group-hover:bg-rose-500/30 transition-colors">
@@ -1381,7 +1353,7 @@ function StudentMessagingContent() {
                                 className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-400/20 backdrop-blur-sm cursor-pointer hover:bg-cyan-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/10"
                                 whileHover={{ scale: 1.02, x: 4 }}
                                 whileTap={{ scale: 0.98 }}
-                                onClick={() => setSelectedTool('peer-tutoring')}
+                                onClick={() => router.push('/student/peer-tutoring')}
                               >
                                 <div className="flex items-center space-x-3 sm:space-x-4">
                                   <div className="relative p-2 sm:p-3 bg-cyan-500/20 rounded-lg sm:rounded-xl group-hover:bg-cyan-500/30 transition-colors">
@@ -1416,7 +1388,7 @@ function StudentMessagingContent() {
                                 className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-400/20 backdrop-blur-sm cursor-pointer hover:bg-orange-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/10"
                                 whileHover={{ scale: 1.02, x: 4 }}
                                 whileTap={{ scale: 0.98 }}
-                                onClick={() => setSelectedTool('school-events')}
+                                onClick={() => router.push('/student/school-events')}
                               >
                                 <div className="flex items-center space-x-3 sm:space-x-4">
                                   <div className="relative p-2 sm:p-3 bg-orange-500/20 rounded-lg sm:rounded-xl group-hover:bg-orange-500/30 transition-colors">
@@ -1445,23 +1417,13 @@ function StudentMessagingContent() {
                                   </div>
                                 </div>
                               </motion.div>
-                            </div>
-
-                            {/* Gamification & Rewards */}
-                            <div className="space-y-3 sm:space-y-4 pt-4 sm:pt-6">
-                              <div className="flex items-center justify-between px-2 sm:px-3">
-                                <p className="text-white/70 text-xs sm:text-sm font-semibold uppercase tracking-wider">Gamification & Rewards</p>
-                                <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-300 text-xs px-2 py-1 rounded-full border-yellow-400/30">
-                                  2 Features
-                                </Badge>
-                              </div>
                               
                               {/* Achievement Center */}
                               <motion.div
                                 className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-400/20 backdrop-blur-sm cursor-pointer hover:bg-yellow-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/10"
                                 whileHover={{ scale: 1.02, x: 4 }}
                                 whileTap={{ scale: 0.98 }}
-                                onClick={() => setSelectedTool('achievement-center')}
+                                onClick={() => router.push('/student/achievement-center')}
                               >
                                 <div className="flex items-center space-x-3 sm:space-x-4">
                                   <div className="relative p-2 sm:p-3 bg-yellow-500/20 rounded-lg sm:rounded-xl group-hover:bg-yellow-500/30 transition-colors">
@@ -1500,7 +1462,7 @@ function StudentMessagingContent() {
                                 className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-400/20 backdrop-blur-sm cursor-pointer hover:bg-indigo-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/10"
                                 whileHover={{ scale: 1.02, x: 4 }}
                                 whileTap={{ scale: 0.98 }}
-                                onClick={() => setSelectedTool('learning-games')}
+                                onClick={() => router.push('/student/learning-games')}
                               >
                                 <div className="flex items-center space-x-3 sm:space-x-4">
                                   <div className="relative p-2 sm:p-3 bg-indigo-500/20 rounded-lg sm:rounded-xl group-hover:bg-indigo-500/30 transition-colors">
@@ -1529,23 +1491,13 @@ function StudentMessagingContent() {
                                   </div>
                                 </div>
                               </motion.div>
-                            </div>
-
-                            {/* Creative & Expression */}
-                            <div className="space-y-3 sm:space-y-4 pt-4 sm:pt-6">
-                              <div className="flex items-center justify-between px-2 sm:px-3">
-                                <p className="text-white/70 text-xs sm:text-sm font-semibold uppercase tracking-wider">Creative & Expression</p>
-                                <Badge variant="secondary" className="bg-pink-500/20 text-pink-300 text-xs px-2 py-1 rounded-full border-pink-400/30">
-                                  2 Features
-                                </Badge>
-                              </div>
                               
                               {/* Digital Portfolio */}
                               <motion.div
                                 className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-pink-500/10 to-rose-500/10 border border-pink-400/20 backdrop-blur-sm cursor-pointer hover:bg-pink-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-pink-500/10"
                                 whileHover={{ scale: 1.02, x: 4 }}
                                 whileTap={{ scale: 0.98 }}
-                                onClick={() => setSelectedTool('digital-portfolio')}
+                                onClick={() => router.push('/student/digital-portfolio')}
                               >
                                 <div className="flex items-center space-x-3 sm:space-x-4">
                                   <div className="relative p-2 sm:p-3 bg-pink-500/20 rounded-lg sm:rounded-xl group-hover:bg-pink-500/30 transition-colors">
@@ -1587,7 +1539,7 @@ function StudentMessagingContent() {
                                 className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-teal-500/10 to-green-500/10 border border-teal-400/20 backdrop-blur-sm cursor-pointer hover:bg-teal-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-teal-500/10"
                                 whileHover={{ scale: 1.02, x: 4 }}
                                 whileTap={{ scale: 0.98 }}
-                                onClick={() => setSelectedTool('project-showcase')}
+                                onClick={() => router.push('/student/project-showcase')}
                               >
                                 <div className="flex items-center space-x-3 sm:space-x-4">
                                   <div className="relative p-2 sm:p-3 bg-teal-500/20 rounded-lg sm:rounded-xl group-hover:bg-teal-500/30 transition-colors">
@@ -1618,204 +1570,16 @@ function StudentMessagingContent() {
                               </motion.div>
                             </div>
                           </div>
-
-                          {/* School Premium Features */}
-                          <div className="mt-6 sm:mt-8 px-2 sm:px-4">
-                            <motion.div
-                              className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-green-500/10 via-emerald-500/10 to-teal-500/10 border border-green-400/20 backdrop-blur-sm p-4 sm:p-6"
-                              initial={{ opacity: 0, y: 20 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: 0.5 }}
-                            >
-                              <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 via-emerald-500/5 to-teal-500/5"></div>
-                              <div className="relative text-center space-y-3 sm:space-y-4">
-                                <div className="flex items-center justify-center space-x-2">
-                                  <School className="h-5 w-5 sm:h-6 sm:w-6 text-green-400" />
-                                  <h3 className="text-white font-bold text-base sm:text-lg">Premium Features Unlocked</h3>
-                                  <School className="h-5 w-5 sm:h-6 sm:w-6 text-green-400" />
-                                </div>
-                                <p className="text-white/80 text-xs sm:text-sm max-w-sm mx-auto leading-relaxed">
-                                  Your school has unlocked all premium features for you! Enjoy unlimited access to advanced tools and exclusive content.
-                                </p>
-                                <div className="flex flex-col space-y-2 text-xs sm:text-sm">
-                                  <div className="flex items-center justify-center space-x-2 text-green-300">
-                                    <Check className="h-4 w-4 text-green-400" />
-                                    <span>All premium tools available</span>
-                                  </div>
-                                  <div className="flex items-center justify-center space-x-2 text-green-300">
-                                    <Check className="h-4 w-4 text-green-400" />
-                                    <span>Unlimited feature access</span>
-                                  </div>
-                                  <div className="flex items-center justify-center space-x-2 text-green-300">
-                                    <Check className="h-4 w-4 text-green-400" />
-                                    <span>Exclusive educational content</span>
-                                  </div>
-                                </div>
-                                <div className="text-xs text-white/60 mt-3">
-                                  Provided by your school administration
-                                </div>
-                              </div>
-                            </motion.div>
-                          </div>
-                        </div>
-                        </>
-                      )}
+                        )}
                     </div>
-                  </CardContent>
-                </Card>
-
-                {/* Premium Conversation Starters */}
-                <Card className="bg-white/10 backdrop-blur-xl shadow-2xl border border-white/20 rounded-2xl sm:rounded-3xl">
-                  <CardHeader className="pb-3 sm:pb-4 px-4 sm:px-6 pt-4 sm:pt-6">
-                    <CardTitle className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3 sm:space-x-4">
-                        <motion.div 
-                          className="p-2 sm:p-3 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-xl sm:rounded-2xl backdrop-blur-sm border border-white/20"
-                          whileHover={{ scale: 1.1, rotate: 5 }}
-                        >
-                          <Star className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-300" />
-                        </motion.div>
-                        <div>
-                          <span className="bg-gradient-to-r from-white to-yellow-200 bg-clip-text text-transparent font-black text-lg sm:text-2xl">Quick Starters</span>
-                          <p className="text-white/60 text-xs sm:text-sm mt-1">Start conversations easily</p>
-                        </div>
-                      </div>
-                      <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-300 text-xs px-2 py-1 rounded-full border-yellow-400/30 hidden sm:block">
-                        {conversationStarters.length} Options
-                      </Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2 sm:space-y-3 px-4 sm:px-6 pb-4 sm:pb-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                      {conversationStarters.map((starter, index) => {
-                        const Icon = starter.icon
-                        return (
-                          <motion.div
-                            key={starter.id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3, delay: index * 0.1 }}
-                            className="group"
-                          >
-                            <Button
-                              variant="outline"
-                              className="w-full justify-start text-left h-auto p-3 sm:p-4 rounded-xl sm:rounded-2xl border-white/20 bg-white/5 hover:bg-white/15 hover:border-white/30 backdrop-blur-sm transition-all duration-300 hover:shadow-lg hover:shadow-white/5"
-                            >
-                              <div className="flex items-start space-x-3 sm:space-x-4 w-full">
-                                <div className="p-2 sm:p-2.5 bg-white/10 group-hover:bg-white/20 rounded-lg sm:rounded-xl transition-all border border-white/20 flex-shrink-0">
-                                  <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-white/70 group-hover:text-white transition-colors" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <span className="text-xs sm:text-sm text-white/80 group-hover:text-white font-medium leading-relaxed line-clamp-2">
-                                    {starter.text}
-                                  </span>
-                                  <div className="flex items-center space-x-2 mt-2">
-                                    <div className="flex items-center space-x-1">
-                                      <ThumbsUp className="h-3 w-3 text-white/40" />
-                                      <span className="text-white/40 text-xs">Quick</span>
-                                    </div>
-                                    <span className="text-white/30 text-xs">•</span>
-                                    <span className="text-white/40 text-xs">Popular</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </Button>
-                          </motion.div>
-                        )
-                      })}
-                    </div>
-                    
-                    {/* Add Custom Starter */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: conversationStarters.length * 0.1 }}
-                      className="pt-2 sm:pt-3"
-                    >
-                      <Button
-                        variant="outline"
-                        className="w-full justify-center h-auto p-3 sm:p-4 rounded-xl sm:rounded-2xl border-dashed border-white/30 bg-white/5 hover:bg-white/10 hover:border-white/40 backdrop-blur-sm transition-all duration-300 group"
-                      >
-                        <div className="flex items-center space-x-2 sm:space-x-3">
-                          <Plus className="h-4 w-4 sm:h-5 sm:w-5 text-white/60 group-hover:text-white/80 transition-colors" />
-                          <span className="text-sm sm:text-base text-white/60 group-hover:text-white/80 font-medium">Create Custom Starter</span>
-                        </div>
-                      </Button>
-                    </motion.div>
                   </CardContent>
                 </Card>
               </motion.div>
 
-                            {/* Chat Area - Mobile Optimized */}
-                            <div className={`lg:col-span-2 ${selectedTool ? 'block' : 'hidden lg:block'}`}>
-                {selectedTool ? (
-                  <div className="min-h-[600px] bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 p-4 sm:p-6">
-                    {/* Tool Header */}
-                    <div className="flex items-center justify-between mb-4 sm:mb-6">
-                      <h2 className="text-lg sm:text-xl font-bold text-white">
-                        {selectedTool === 'study-planner' && 'AI Study Planner'}
-                        {selectedTool === 'grade-tracker' && 'Grade Analytics'}
-                        {selectedTool === 'homework-assistant' && 'AI Homework Helper'}
-                        {selectedTool === 'study-groups' && 'Study Groups'}
-                        {selectedTool === 'peer-tutoring' && 'Peer Tutoring'}
-                        {selectedTool === 'school-events' && 'School Events'}
-                        {selectedTool === 'achievement-center' && 'Achievement Center'}
-                        {selectedTool === 'learning-games' && 'Learning Games'}
-                        {selectedTool === 'digital-portfolio' && 'Digital Portfolio'}
-                        {selectedTool === 'project-showcase' && 'Project Showcase'}
-                      </h2>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setSelectedTool(null)}
-                        className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-                      >
-                        <ArrowLeft className="h-4 w-4 mr-2" />
-                        Back
-                      </Button>
-                    </div>
-
-                    {/* Tool Content */}
-                    <div className="h-full">
-                      {selectedTool === 'study-planner' && <AIStudyPlanner onBack={() => setSelectedTool(null)} />}
-                      {selectedTool === 'grade-tracker' && <GradeAnalytics onBack={() => setSelectedTool(null)} />}
-                      {selectedTool === 'homework-assistant' && <AIHomeworkHelper onBack={() => setSelectedTool(null)} />}
-                      {selectedTool === 'study-groups' && <StudyGroups onBack={() => setSelectedTool(null)} />}
-                      {selectedTool === 'peer-tutoring' && <PeerTutoring onBack={() => setSelectedTool(null)} />}
-                      {selectedTool === 'school-events' && <SchoolEventsHub onBack={() => setSelectedTool(null)} />}
-                      {selectedTool === 'achievement-center' && <AchievementCenter onBack={() => setSelectedTool(null)} />}
-                      {selectedTool === 'learning-games' && <LearningGames onBack={() => setSelectedTool(null)} />}
-                      {selectedTool === 'digital-portfolio' && <DigitalPortfolio onBack={() => setSelectedTool(null)} />}
-                      {selectedTool === 'project-showcase' && <ProjectShowcase onBack={() => setSelectedTool(null)} />}
-                    </div>
-                  </div>
-                ) : (
-                  // This is the default view when no tool is selected
-                  <Card className="h-full flex flex-col">
-                    <div className="text-center space-y-3 sm:space-y-4 px-4">
-                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full flex items-center justify-center mx-auto">
-                        <MessageCircle className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500" />
-                      </div>
-                      <div>
-                        <h3 className="text-base sm:text-lg font-semibold text-gray-900">
-                          {selectedTab === 'teachers' ? 'Select a Teacher' : 'Select a Parent'}
-                        </h3>
-                        <p className="text-sm sm:text-base text-gray-500">
-                          {selectedTab === 'teachers' 
-                            ? 'Choose a teacher from the list to start a conversation'
-                            : 'Choose a parent from the list to start a family conversation'
-                          }
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                )}
-              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
   )
 } 
 

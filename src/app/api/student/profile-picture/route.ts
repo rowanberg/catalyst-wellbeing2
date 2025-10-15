@@ -1,53 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { withRateLimit } from '@/lib/security/rateLimiter'
-import sharp from 'sharp' // For image optimization
+import { rateLimiters } from '@/lib/security/enhanced-rate-limiter'
+import { validateUploadedFile, generateSecureFilename } from '@/lib/security/file-validation'
+import { handleSecureError } from '@/lib/security/error-handler'
+import sharp from 'sharp'
 
 // Maximum file size in bytes (2MB for better performance)
-const MAX_FILE_SIZE = 2 * 1024 * 1024;
+const MAX_FILE_SIZE = 2 * 1024 * 1024
 
-// Allowed file types
-const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+// Allowed file types (validated by magic numbers)
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
 export async function POST(request: NextRequest) {
-  return withRateLimit(request, async () => {
-    let buffer: Buffer | null = null;
+  return rateLimiters.fileUpload(request, async () => {
+    const requestId = `upload-${Date.now()}-${Math.random().toString(36).substring(7)}`
+    let buffer: Buffer | null = null
     
     try {
       const supabase = await createClient()
 
-    // Check authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Get form data
-    const formData = await request.formData()
-    const file = formData.get('profilePicture') as File
-    
-    if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 })
-    }
-
-      // Validate file type
-      if (!ALLOWED_TYPES.includes(file.type)) {
+      // Check authentication
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
         return NextResponse.json({ 
-          error: 'Invalid file type. Allowed formats: JPEG, PNG, WebP, GIF' 
+          error: 'Authentication required',
+          code: 'UNAUTHORIZED' 
+        }, { status: 401 })
+      }
+
+      // Get form data
+      const formData = await request.formData()
+      const file = formData.get('profilePicture') as File
+      
+      if (!file) {
+        return NextResponse.json({ 
+          error: 'No file provided',
+          code: 'MISSING_FILE' 
         }, { status: 400 })
       }
 
-      // Validate file size (2MB max for better performance)
-      if (file.size > MAX_FILE_SIZE) {
+      // Comprehensive file validation with magic number checking
+      const validation = await validateUploadedFile(file, {
+        allowedTypes: ALLOWED_TYPES,
+        maxSize: MAX_FILE_SIZE
+      })
+      
+      if (!validation.valid) {
+        console.warn(`[${requestId}] File validation failed: ${validation.error}`)
         return NextResponse.json({ 
-          error: 'File too large. Maximum size is 2MB.' 
+          error: validation.error,
+          code: 'INVALID_FILE'
         }, { status: 400 })
       }
 
-    // Create unique filename
-    const fileExtension = file.name.split('.').pop() || 'jpg'
-    const fileName = `profile-${user.id}-${Date.now()}.${fileExtension}`
-    const filePath = `profile-pictures/${fileName}`
+      // Generate secure filename
+      const fileName = generateSecureFilename(validation.sanitizedFilename!, user.id)
+      const filePath = `profile-pictures/${fileName}`
 
       // Convert file to buffer and optimize image
       const bytes = await file.arrayBuffer()
@@ -63,27 +71,28 @@ export async function POST(request: NextRequest) {
           .jpeg({ quality: 85 })
           .toBuffer()
         
-        // Replace original buffer with optimized one
         buffer = optimizedBuffer
       } catch (imageError) {
-        console.error('Image optimization failed, using original:', imageError)
+        console.error(`[${requestId}] Image optimization failed:`, imageError)
+        throw new Error('Failed to process image')
       }
 
       // Upload to Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('profile-pictures')
         .upload(filePath, buffer, {
-          contentType: 'image/jpeg', // Always save as JPEG after optimization
-          upsert: true
+          contentType: 'image/jpeg',
+          upsert: true,
+          cacheControl: '3600' // Cache for 1 hour
         })
       
-      // Clear buffer reference immediately after upload
       buffer = null
 
       if (uploadError) {
-        console.error('Storage upload error')
+        console.error(`[${requestId}] Storage upload error:`, uploadError)
         return NextResponse.json({ 
-          error: 'Failed to upload image. Please try again.' 
+          error: 'Failed to upload image',
+          code: 'UPLOAD_FAILED'
         }, { status: 500 })
       }
 
@@ -95,23 +104,27 @@ export async function POST(request: NextRequest) {
       // Update user profile with new image URL
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ profile_picture_url: publicUrl })
-        .eq('id', user.id)
+        .update({ 
+          profile_picture_url: publicUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id) // Use user_id for proper authorization
 
       if (updateError) {
-        console.error('Profile update error')
+        console.error(`[${requestId}] Profile update error:`, updateError)
         
-        // Try to delete the uploaded image if profile update fails
+        // Try to delete the uploaded image if profile update fails (cleanup)
         try {
           await supabase.storage
             .from('profile-pictures')
             .remove([filePath])
         } catch (deleteError) {
-          console.error('Failed to cleanup uploaded image')
+          console.error(`[${requestId}] Failed to cleanup:`, deleteError)
         }
         
         return NextResponse.json({ 
-          error: 'Failed to update profile. Please try again.' 
+          error: 'Failed to update profile',
+          code: 'UPDATE_FAILED'
         }, { status: 500 })
       }
 
@@ -122,51 +135,48 @@ export async function POST(request: NextRequest) {
       })
 
     } catch (error: any) {
-      console.error('Profile picture upload error')
-      
       // Ensure buffer is cleared on error
       if (buffer) {
         buffer = null
       }
       
-      // Never expose internal error details to client
-      return NextResponse.json({ 
-        error: 'Failed to process image upload. Please try again.',
-        code: 'UPLOAD_ERROR'
-      }, { status: 500 })
+      return handleSecureError(error, 'ProfilePictureUpload', requestId)
     } finally {
       // Always clear buffer to prevent memory leaks
       if (buffer) {
         buffer = null
       }
-      
-      // Force garbage collection hint (Node.js will decide when to actually run GC)
-      if (global.gc) {
-        global.gc()
-      }
     }
-  }, 'upload');
+  })
 }
 
 export async function DELETE(request: NextRequest) {
+  const requestId = `delete-${Date.now()}-${Math.random().toString(36).substring(7)}`
+  
   try {
     const supabase = await createClient()
 
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ 
+        error: 'Authentication required',
+        code: 'UNAUTHORIZED' 
+      }, { status: 401 })
     }
 
     // Get current profile picture URL
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('profile_picture_url')
-      .eq('id', user.id)
+      .eq('user_id', user.id) // Use user_id for proper authorization
       .single()
 
     if (profileError || !profile?.profile_picture_url) {
-      return NextResponse.json({ error: 'No profile picture to delete' }, { status: 404 })
+      return NextResponse.json({ 
+        error: 'No profile picture to delete',
+        code: 'NOT_FOUND' 
+      }, { status: 404 })
     }
 
     // Extract file path from URL
@@ -179,18 +189,24 @@ export async function DELETE(request: NextRequest) {
       .remove([filePath])
 
     if (deleteError) {
-      console.error('Storage delete error:', deleteError)
+      console.error(`[${requestId}] Storage delete error:`, deleteError)
     }
 
     // Update profile to remove image URL
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ profile_picture_url: null })
-      .eq('id', user.id)
+      .update({ 
+        profile_picture_url: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', user.id) // Use user_id for proper authorization
 
     if (updateError) {
-      console.error('Profile update error:', updateError)
-      return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 })
+      console.error(`[${requestId}] Profile update error:`, updateError)
+      return NextResponse.json({ 
+        error: 'Failed to update profile',
+        code: 'UPDATE_FAILED' 
+      }, { status: 500 })
     }
 
     return NextResponse.json({ 
@@ -199,7 +215,6 @@ export async function DELETE(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Profile picture delete error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return handleSecureError(error, 'ProfilePictureDelete', requestId)
   }
 }

@@ -84,10 +84,11 @@ function AdminDashboardContent() {
     needsSupport: 0,
     atRisk: 0
   })
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false) // Changed to false by default
   const [error, setError] = useState<string | null>(null)
   const [featureLoading, setFeatureLoading] = useState<string | null>(null)
   const [showSetupBanner, setShowSetupBanner] = useState(false)
+  const [dataFetched, setDataFetched] = useState(false)
 
   // Logout handler
   const handleLogout = async () => {
@@ -100,6 +101,22 @@ function AdminDashboardContent() {
   }
 
   useEffect(() => {
+    // Check if data is already cached in sessionStorage
+    const cachedSchoolInfo = sessionStorage.getItem('admin_school_info')
+    const cachedSchoolStats = sessionStorage.getItem('admin_school_stats')
+    const cachedSchoolDetails = sessionStorage.getItem('admin_school_details')
+    
+    if (cachedSchoolInfo && cachedSchoolStats) {
+      // Use cached data
+      setSchoolInfo(JSON.parse(cachedSchoolInfo))
+      setSchoolStats(JSON.parse(cachedSchoolStats))
+      if (cachedSchoolDetails) {
+        setSchoolDetails(JSON.parse(cachedSchoolDetails))
+      }
+      setDataFetched(true)
+      return
+    }
+
     const fetchSchoolData = async () => {
       try {
         setIsLoading(true)
@@ -116,11 +133,9 @@ function AdminDashboardContent() {
           throw new Error(`Failed to fetch school information: ${errorData.message || schoolResponse.statusText}`)
         }
         const schoolData = await schoolResponse.json()
-        console.log('School API response:', schoolData)
         setSchoolInfo(schoolData.school)
         
         // Fetch school details to check setup completion
-        console.log('Fetching school details from API...')
         
         // Simple approach - let the API handle authentication via cookies
         const headers: HeadersInit = {
@@ -128,16 +143,9 @@ function AdminDashboardContent() {
         }
         
         const detailsResponse = await fetch('/api/admin/school-details', { headers })
-        console.log('School details response status:', detailsResponse.status)
         
         if (detailsResponse.ok) {
           const detailsData = await detailsResponse.json()
-          console.log('=== FULL SCHOOL DETAILS RESPONSE ===')
-          console.log('Raw API response:', JSON.stringify(detailsData, null, 2))
-          console.log('detailsData.details:', detailsData.details)
-          console.log('detailsData.status:', detailsData.status)
-          console.log('detailsData.setup_completed:', detailsData.setup_completed)
-          console.log('=====================================')
           
           setSchoolDetails(detailsData.details)
           
@@ -145,31 +153,20 @@ function AdminDashboardContent() {
           const setupStatus = detailsData.status || 'not_completed'
           const urlSetupCompleted = setupCompleted
           
-          console.log('=== BANNER LOGIC DEBUG ===')
-          console.log('Setup status from API:', setupStatus)
-          console.log('URL setup completed:', urlSetupCompleted)
-          console.log('Current showSetupBanner state:', showSetupBanner)
           
           // Show banner based on status
           if (setupStatus === 'completed') {
             // Setup is completed - hide banner
             setShowSetupBanner(false)
-            console.log('✅ DECISION: Setup completed - HIDING banner')
           } else if (urlSetupCompleted) {
             // Just completed setup (URL param) - hide banner temporarily
             setShowSetupBanner(false)
-            console.log('✅ DECISION: Just completed via URL - HIDING banner temporarily')
           } else {
             // Setup not completed or in progress - show banner
             setShowSetupBanner(true)
-            console.log('🚨 DECISION: Setup not completed - SHOWING banner')
           }
-          console.log('========================')
         } else {
           const errorText = await detailsResponse.text()
-          console.log('School details API failed with status:', detailsResponse.status)
-          console.log('Error response:', errorText)
-          console.log('URL setup completed:', setupCompleted)
           
           // If API fails, show banner unless URL says just completed
           const shouldShowBanner = !setupCompleted
@@ -185,6 +182,15 @@ function AdminDashboardContent() {
         const statsData = await statsResponse.json()
         setSchoolStats(statsData.stats)
         
+        // Cache the data in sessionStorage
+        sessionStorage.setItem('admin_school_info', JSON.stringify(schoolData.school))
+        sessionStorage.setItem('admin_school_stats', JSON.stringify(statsData.stats))
+        if (schoolDetails) {
+          sessionStorage.setItem('admin_school_details', JSON.stringify(schoolDetails))
+        }
+        
+        setDataFetched(true)
+        
       } catch (err: any) {
         console.error('Error fetching school data:', err)
         setError(err instanceof Error ? err.message : 'Failed to load school data')
@@ -193,10 +199,14 @@ function AdminDashboardContent() {
       }
     }
 
-    fetchSchoolData()
+    // Only fetch if we don't have cached data
+    if (!dataFetched) {
+      fetchSchoolData()
+    }
   }, [])
 
-  if (isLoading) {
+  // Only show loading if actively fetching and no cached data
+  if (isLoading && !dataFetched) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
         <div className="text-center">

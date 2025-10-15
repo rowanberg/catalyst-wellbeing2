@@ -1,13 +1,16 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { useState, useCallback, useEffect, useMemo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAppSelector } from '@/lib/redux/hooks'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Progress } from '@/components/ui/progress'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
   GraduationCap, 
   Search, 
@@ -22,7 +25,21 @@ import {
   Heart,
   CheckCircle2,
   Target,
-  Brain
+  Brain,
+  TrendingUp,
+  Sparkles,
+  Filter,
+  ChevronRight,
+  Globe,
+  Zap,
+  Trophy,
+  Settings,
+  Bell,
+  Info,
+  DollarSign,
+  Languages,
+  Timer,
+  Activity
 } from 'lucide-react'
 
 interface Tutor {
@@ -67,9 +84,20 @@ export function PeerTutoring({ onBack }: { onBack?: () => void }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedSubject, setSelectedSubject] = useState<string>('All')
   const [loading, setLoading] = useState(true)
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [activeTab, setActiveTab] = useState<'find-tutor' | 'my-sessions' | 'become-tutor'>('find-tutor')
+  const [selectedTutor, setSelectedTutor] = useState<Tutor | null>(null)
   const profile = useAppSelector((state) => state.auth.user)
 
   const subjects = ['All', 'Mathematics', 'Science', 'English', 'History', 'Physics', 'Chemistry', 'Biology', 'Computer Science']
+  
+  // User tutoring stats
+  const [userStats, setUserStats] = useState({
+    sessionsCompleted: 12,
+    averageRating: 4.7,
+    totalHours: 24,
+    savedMoney: 480
+  })
 
   // Fetch tutors from API
   const fetchTutors = useCallback(async () => {
@@ -143,37 +171,35 @@ export function PeerTutoring({ onBack }: { onBack?: () => void }) {
     }
   }, [profile?.id, selectedSubject])
 
-  return (
-    <div className="h-full bg-gradient-to-br from-slate-900/50 via-purple-900/50 to-slate-900/50 relative overflow-hidden rounded-2xl">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-indigo-500/5 to-pink-500/5" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_2px_2px,rgba(139,92,246,0.1)_1px,transparent_0)] bg-[length:32px_32px]" />
-      
-      <div className="relative z-10 p-3 sm:p-4 h-full flex flex-col">
-        {/* Header */}
-        <motion.div 
-          className="flex items-center justify-between mb-4"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-gradient-to-br from-purple-500/20 to-indigo-500/20 rounded-xl border border-purple-400/30">
-              <GraduationCap className="h-5 w-5 text-purple-300" />
-            </div>
-            <div>
-              <h1 className="text-lg sm:text-xl font-bold text-white">Peer Tutoring</h1>
-              <p className="text-white/60 text-xs sm:text-sm">Learn from fellow students</p>
-            </div>
-          </div>
-          
-          <Button
-            onClick={() => console.log('Become tutor')}
-            className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white"
+  const renderDesktopLayout = () => (
+    <div className="max-w-7xl mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
+        {/* Left Sidebar - Stats & Filters */}
+        <div className="lg:col-span-1 space-y-4">
+          {/* User Stats */}
+          <motion.div
+            className="p-4 lg:p-5 rounded-2xl bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-400/20 backdrop-blur-sm"
+            whileHover={{ scale: 1.01 }}
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
           >
-            <Target className="h-4 w-4 mr-2" />
-            Become Tutor
-          </Button>
-        </motion.div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-white/90 font-semibold flex items-center space-x-2">
+                <Trophy className="h-4 w-4 text-yellow-400" />
+                <span>Your Progress</span>
+              </h3>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-white/60 text-xs">Sessions</span>
+                <span className="text-white/90 font-bold text-lg">{userStats.sessionsCompleted}</span>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Middle Column - Search and Tutors */}
+        <div className="lg:col-span-3 space-y-4">
 
         {/* Search and Filters */}
         <motion.div
@@ -360,6 +386,59 @@ export function PeerTutoring({ onBack }: { onBack?: () => void }) {
             )}
           </div>
         </motion.div>
+        </div>
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="h-full bg-gradient-to-br from-slate-900/50 via-cyan-900/50 to-slate-900/50 relative overflow-hidden rounded-2xl">
+      <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-blue-500/5 to-indigo-500/5" />
+      
+      <div className="relative z-10 p-3 sm:p-4 h-full overflow-y-auto">
+        <div className="max-w-5xl mx-auto space-y-4">
+
+          {/* Search Bar */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/50" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search tutors..."
+                className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/50"
+              />
+            </div>
+          </motion.div>
+
+          {/* Tutors List */}
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            {loading ? (
+              Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="bg-white/5 border border-white/10 rounded-xl p-4 animate-pulse">
+                  <div className="h-4 bg-white/10 rounded mb-2" />
+                  <div className="h-3 bg-white/10 rounded w-3/4" />
+                </div>
+              ))
+            ) : (
+              filteredTutors.map((tutor) => (
+                <div key={tutor.id} className="bg-white/5 border border-white/10 rounded-xl p-4">
+                  <h3 className="text-white font-medium">{tutor.name}</h3>
+                  <p className="text-white/60 text-sm">{tutor.subjects.join(', ')}</p>
+                </div>
+              ))
+            )}
+          </motion.div>
+        </div>
       </div>
     </div>
   )

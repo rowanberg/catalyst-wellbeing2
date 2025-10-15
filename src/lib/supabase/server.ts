@@ -1,53 +1,30 @@
+import { createServerClient } from '@supabase/ssr'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export async function createClient() {
   const cookieStore = await cookies()
 
-  return createSupabaseClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-      detectSessionInUrl: false,
-      storage: {
-        getItem: (key: string) => {
-          const cookie = cookieStore.get(key)
-          return cookie?.value || null
-        },
-        setItem: (key: string, value: string) => {
-          try {
-            cookieStore.set(key, value, {
-              path: '/',
-              maxAge: 604800, // 7 days
-              sameSite: 'lax',
-              secure: process.env.NODE_ENV === 'production'
-            })
-          } catch (error: any) {
-            // Handle cookie setting errors in server context
-            console.warn('Could not set cookie in server context:', key)
-          }
-        },
-        removeItem: (key: string) => {
-          try {
-            cookieStore.set(key, '', {
-              path: '/',
-              expires: new Date(0)
-            })
-          } catch (error: any) {
-            // Handle cookie removal errors in server context
-            console.warn('Could not remove cookie in server context:', key)
-          }
+  return createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll()
+      },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options)
+          })
+        } catch {
+          // The `setAll` method was called from a Server Component.
+          // This can be ignored if you have middleware refreshing
+          // user sessions.
         }
-      }
+      },
     },
-    global: {
-      headers: {
-        'Cache-Control': 'no-cache'
-      }
-    }
   })
 }
 

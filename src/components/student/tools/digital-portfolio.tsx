@@ -1,9 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { motion } from 'framer-motion'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import { useAppSelector } from '@/lib/redux/hooks'
 import { 
@@ -22,7 +26,20 @@ import {
   Music,
   Loader2,
   AlertCircle,
-  Upload
+  Upload,
+  Folder,
+  TrendingUp,
+  Award,
+  Search,
+  Filter,
+  Grid3x3,
+  List,
+  Download,
+  Heart,
+  MessageCircle,
+  Activity,
+  Sparkles,
+  ChevronRight
 } from 'lucide-react'
 
 interface PortfolioItem {
@@ -47,15 +64,26 @@ export function DigitalPortfolio({ onBack }: { onBack: () => void }) {
   const [selectedCategory, setSelectedCategory] = useState<string>('All')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeTab, setActiveTab] = useState<'portfolio' | 'stats' | 'shared'>('portfolio')
 
   const categories = [
-    { id: 'All', label: 'All Work', icon: '📚' },
-    { id: 'Art', label: 'Art & Design', icon: '🎨' },
-    { id: 'Writing', label: 'Writing', icon: '✍️' },
-    { id: 'Science', label: 'Science', icon: '🔬' },
-    { id: 'Math', label: 'Mathematics', icon: '📐' },
-    { id: 'Projects', label: 'Projects', icon: '🚀' }
+    { id: 'All', label: 'All Work', icon: Folder },
+    { id: 'Art', label: 'Art & Design', icon: Palette },
+    { id: 'Writing', label: 'Writing', icon: FileText },
+    { id: 'Science', label: 'Science', icon: Award },
+    { id: 'Math', label: 'Mathematics', icon: Activity },
+    { id: 'Projects', label: 'Projects', icon: Sparkles }
   ]
+  
+  const [stats, setStats] = useState({
+    totalItems: 0,
+    totalViews: 0,
+    totalLikes: 0,
+    storageUsed: 0,
+    storageLimit: 100
+  })
 
   // Optimized fetch function with proper error handling
   const fetchItems = useCallback(async () => {
@@ -206,20 +234,23 @@ export function DigitalPortfolio({ onBack }: { onBack: () => void }) {
 
           {/* Optimized Category Filter */}
           <div className="flex space-x-3 overflow-x-auto pb-2">
-            {categories.map((category) => (
-              <Button
-                key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
-                className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm transition-all flex items-center space-x-2 ${
-                  selectedCategory === category.id
-                    ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white'
-                    : 'bg-white/10 text-white/70 hover:text-white hover:bg-white/20'
-                }`}
-              >
-                <span>{category.icon}</span>
-                <span>{category.label}</span>
-              </Button>
-            ))}
+            {categories.map((category) => {
+              const Icon = category.icon
+              return (
+                <Button
+                  key={category.id}
+                  onClick={() => setSelectedCategory(category.id)}
+                  className={`whitespace-nowrap px-4 py-2 rounded-xl text-sm transition-all flex items-center space-x-2 ${
+                    selectedCategory === category.id
+                      ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white'
+                      : 'bg-white/10 text-white/70 hover:text-white hover:bg-white/20'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{category.label}</span>
+                </Button>
+              )
+            })}
           </div>
 
           {/* Error State */}

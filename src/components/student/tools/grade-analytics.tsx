@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -27,7 +28,12 @@ import {
   Eye,
   Activity,
   Sparkles,
-  RefreshCw
+  RefreshCw,
+  ChevronUp,
+  ChevronDown,
+  Info,
+  Trophy,
+  Lightbulb
 } from 'lucide-react'
 
 interface Grade {
@@ -65,6 +71,9 @@ export function GradeAnalytics({ onBack }: { onBack?: () => void }) {
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null)
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'semester' | 'year'>('month')
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [showPredictions, setShowPredictions] = useState(false)
+  const [compareMode, setCompareMode] = useState(false)
 
   // Mock data for demonstration
   useEffect(() => {
@@ -236,55 +245,309 @@ export function GradeAnalytics({ onBack }: { onBack?: () => void }) {
     [subjectAnalytics]
   )
 
+  const renderDashboard = () => (
+    <div className="max-w-7xl mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+        {/* Left Column - Performance Overview */}
+        <div className="lg:col-span-1 space-y-4">
+          {/* GPA Card */}
+          <motion.div
+            className="p-4 lg:p-5 rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-400/20 backdrop-blur-sm"
+            whileHover={{ scale: 1.01 }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-white/90 font-semibold flex items-center space-x-2">
+                <Trophy className="h-4 w-4 text-yellow-400" />
+                <span>Overall Performance</span>
+              </h3>
+              <Badge className="bg-blue-500/20 text-blue-300 border-blue-400/30">
+                This {timeRange}
+              </Badge>
+            </div>
+            <div className="text-center py-4">
+              <div className="text-4xl lg:text-5xl font-bold text-white/90 mb-1">
+                {overallGPA}
+              </div>
+              <p className="text-white/60 text-sm">Current GPA</p>
+              <div className="flex items-center justify-center mt-3 space-x-1">
+                {parseFloat(overallGPA) >= 3.5 ? (
+                  <TrendingUp className="h-4 w-4 text-green-400" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-red-400" />
+                )}
+                <span className={`text-sm ${parseFloat(overallGPA) >= 3.5 ? 'text-green-400' : 'text-red-400'}`}>
+                  {parseFloat(overallGPA) >= 3.5 ? '+0.3' : '-0.2'} from last {timeRange}
+                </span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 mt-4">
+              <div className="p-2 bg-white/5 rounded-lg text-center">
+                <p className="text-white/90 font-bold text-lg">{getGradeLetter(parseFloat(overallGPA) * 25)}</p>
+                <p className="text-white/50 text-xs">Letter Grade</p>
+              </div>
+              <div className="p-2 bg-white/5 rounded-lg text-center">
+                <p className="text-white/90 font-bold text-lg">{grades.length}</p>
+                <p className="text-white/50 text-xs">Total Grades</p>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Subject Breakdown */}
+          <Card className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-white/90 text-sm font-bold flex items-center justify-between">
+                <span>Subject Performance</span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setCompareMode(!compareMode)}
+                  className="text-xs text-white/60 hover:text-white"
+                >
+                  {compareMode ? 'Hide' : 'Compare'}
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {subjectAnalytics.slice(0, 5).map((subject, index) => (
+                <motion.div
+                  key={subject.subject}
+                  className="p-2 rounded-lg bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  onClick={() => setSelectedSubject(subject.subject)}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-white/80 text-xs font-medium">{subject.subject}</span>
+                    <div className="flex items-center space-x-1">
+                      <span className={`text-sm font-bold ${getGradeColor(subject.currentGrade)}`}>
+                        {subject.currentGrade}%
+                      </span>
+                      {subject.trend === 'up' ? (
+                        <ChevronUp className="h-3 w-3 text-green-400" />
+                      ) : subject.trend === 'down' ? (
+                        <ChevronDown className="h-3 w-3 text-red-400" />
+                      ) : null}
+                    </div>
+                  </div>
+                  <Progress value={subject.currentGrade} className="h-1" />
+                </motion.div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* AI Insights */}
+          <Card className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-xl border border-purple-400/20 rounded-2xl p-4">
+            <div className="flex items-center space-x-2 mb-3">
+              <Lightbulb className="h-4 w-4 text-purple-300" />
+              <h3 className="text-white/90 font-semibold text-sm">AI Recommendations</h3>
+            </div>
+            <div className="space-y-2">
+              <div className="p-2 rounded-lg bg-white/5 border border-white/10">
+                <p className="text-white/80 text-xs mb-1">📈 Focus Area</p>
+                <p className="text-white/60 text-xs">Improve Math by practicing 30min daily</p>
+              </div>
+              <div className="p-2 rounded-lg bg-white/5 border border-white/10">
+                <p className="text-white/80 text-xs mb-1">⚠️ At Risk</p>
+                <p className="text-white/60 text-xs">English grade trending down - review essays</p>
+              </div>
+              <div className="p-2 rounded-lg bg-white/5 border border-white/10">
+                <p className="text-white/80 text-xs mb-1">🎯 Goal</p>
+                <p className="text-white/60 text-xs">Maintain 3.5+ GPA for honor roll</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Middle Column - Recent Grades & Timeline */}
+        <div className="lg:col-span-1 space-y-4">
+          <Card className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-white/90 text-sm font-bold flex items-center justify-between">
+                <span className="flex items-center space-x-2">
+                  <Clock className="h-4 w-4 text-blue-400" />
+                  <span>Recent Grades</span>
+                </span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+                  className="text-xs"
+                >
+                  {viewMode === 'grid' ? <BarChart3 className="h-3 w-3" /> : <Activity className="h-3 w-3" />}
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {recentGrades.map((grade, index) => (
+                <motion.div
+                  key={grade.id}
+                  className="p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <Badge className={`text-xs px-2 py-0 ${
+                          grade.type === 'test' ? 'bg-red-500/20 text-red-300 border-red-400/30' :
+                          grade.type === 'quiz' ? 'bg-orange-500/20 text-orange-300 border-orange-400/30' :
+                          grade.type === 'homework' ? 'bg-blue-500/20 text-blue-300 border-blue-400/30' :
+                          'bg-purple-500/20 text-purple-300 border-purple-400/30'
+                        }`}>
+                          {grade.type}
+                        </Badge>
+                        {grade.difficulty === 'hard' && (
+                          <Zap className="h-3 w-3 text-yellow-400" />
+                        )}
+                      </div>
+                      <p className="text-white/90 font-medium text-sm truncate">{grade.assignment}</p>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <p className="text-white/60 text-xs">{grade.subject}</p>
+                        <span className="text-white/40">•</span>
+                        <p className="text-white/60 text-xs">{new Date(grade.date).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    <div className="text-right ml-3">
+                      <p className={`font-bold text-lg ${getGradeColor(grade.percentage)}`}>
+                        {grade.percentage}%
+                      </p>
+                      <p className="text-white/50 text-xs">{grade.score}/{grade.maxScore}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column - Analytics & Predictions */}
+        <div className="lg:col-span-1 space-y-4">
+          {/* Grade Predictions */}
+          <Card className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-xl border border-green-400/20 rounded-2xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-white/90 font-semibold text-sm flex items-center space-x-2">
+                <Brain className="h-4 w-4 text-green-400" />
+                <span>Grade Predictions</span>
+              </h3>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowPredictions(!showPredictions)}
+                className="text-xs"
+              >
+                {showPredictions ? <Eye className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+              </Button>
+            </div>
+            {showPredictions && (
+              <div className="space-y-2">
+                <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-white/70 text-xs">End of Semester GPA</span>
+                    <span className="text-green-400 font-bold">3.8</span>
+                  </div>
+                  <Progress value={75} className="h-1" />
+                </div>
+                <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-white/70 text-xs">Math Final Grade</span>
+                    <span className="text-blue-400 font-bold">A-</span>
+                  </div>
+                  <Progress value={88} className="h-1" />
+                </div>
+                <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-white/70 text-xs">Honor Roll Probability</span>
+                    <span className="text-yellow-400 font-bold">92%</span>
+                  </div>
+                  <Progress value={92} className="h-1" />
+                </div>
+              </div>
+            )}
+          </Card>
+
+          {/* Time Range Filter */}
+          <Card className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4">
+            <h3 className="text-white/90 font-semibold text-sm mb-3">Time Range</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {(['week', 'month', 'semester', 'year'] as const).map((range) => (
+                <Button
+                  key={range}
+                  size="sm"
+                  variant={timeRange === range ? "default" : "outline"}
+                  onClick={() => setTimeRange(range)}
+                  className={`text-xs capitalize ${
+                    timeRange === range 
+                      ? 'bg-blue-500/20 text-blue-300 border-blue-400/30' 
+                      : 'bg-white/5 text-white/60 border-white/20 hover:bg-white/10'
+                  }`}
+                >
+                  {range}
+                </Button>
+              ))}
+            </div>
+          </Card>
+
+          {/* Quick Actions */}
+          <Card className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4">
+            <h3 className="text-white/90 font-semibold text-sm mb-3">Quick Actions</h3>
+            <div className="space-y-2">
+              <Button className="w-full justify-start bg-white/5 hover:bg-white/10 border border-white/20 text-white/70 text-xs">
+                <Download className="h-3 w-3 mr-2" />
+                Export Report
+              </Button>
+              <Button className="w-full justify-start bg-white/5 hover:bg-white/10 border border-white/20 text-white/70 text-xs">
+                <Calendar className="h-3 w-3 mr-2" />
+                Schedule Review
+              </Button>
+              <Button className="w-full justify-start bg-white/5 hover:bg-white/10 border border-white/20 text-white/70 text-xs">
+                <Settings className="h-3 w-3 mr-2" />
+                Grade Settings
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  )
+
   return (
-    <div className="h-full bg-gradient-to-br from-slate-900/50 via-purple-900/50 to-slate-900/50 relative overflow-hidden rounded-2xl">
+    <div className="h-full bg-gradient-to-br from-slate-900/50 via-purple-900/50 to-slate-900/50 relative overflow-hidden">
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-purple-500/5 to-fuchsia-500/5" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_2px_2px,rgba(147,51,234,0.1)_1px,transparent_0)] bg-[length:32px_32px]" />
       
-      <div className="relative z-10 p-3 sm:p-4 h-full overflow-y-auto">
-        <div className="max-w-5xl mx-auto space-y-4">
+      <div className="relative z-10 p-3 sm:p-4 lg:p-6 h-full overflow-y-auto">
+        {/* Mobile Header */}
+        <motion.div 
+          className="flex items-center justify-between mb-4 lg:hidden"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="flex items-center space-x-2">
+            <div className="p-1.5 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-lg border border-purple-400/30">
+              <BarChart3 className="h-4 w-4 text-purple-300" />
+            </div>
+            <div>
+              <h1 className="text-sm font-bold text-white">Analytics</h1>
+              <p className="text-white/60 text-xs">GPA: {overallGPA}</p>
+            </div>
+          </div>
           
-          {/* Compact Header */}
-          <motion.div 
-            className="flex items-center justify-between mb-4"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-xl border border-purple-400/30">
-                <BarChart3 className="h-5 w-5 text-purple-300" />
-              </div>
-              <div>
-                <h1 className="text-lg sm:text-xl font-bold text-white">Grade Analytics</h1>
-                <p className="text-white/60 text-xs sm:text-sm">Academic performance tracker</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Badge className="bg-blue-500/20 text-blue-300 border-blue-400/30 text-xs">
-                GPA: {overallGPA}
-              </Badge>
-              <Button
-                onClick={refreshData}
-                disabled={isRefreshing}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-xs px-3 py-1.5 h-auto"
-              >
-                {isRefreshing ? (
-                  <>
-                    <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-3 w-3 mr-1" />
-                    Refresh
-                  </>
-                )}
-              </Button>
-            </div>
-          </motion.div>
+          <div className="flex items-center space-x-1">
+            <Button
+              onClick={refreshData}
+              size="sm"
+              className="bg-purple-500/20 text-purple-300 border border-purple-400/30 text-xs px-2 py-1"
+            >
+              <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
+        </motion.div>
 
+        {/* Mobile/Tablet View */}
+        <div className="lg:hidden">
           {/* Quick Stats */}
           <motion.div
             className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4"
@@ -495,6 +758,11 @@ export function GradeAnalytics({ onBack }: { onBack?: () => void }) {
               </CardContent>
             </Card>
           </motion.div>
+        </div>
+
+        {/* Desktop View - Show full dashboard */}
+        <div className="hidden lg:block">
+          {renderDashboard()}
         </div>
       </div>
     </div>
