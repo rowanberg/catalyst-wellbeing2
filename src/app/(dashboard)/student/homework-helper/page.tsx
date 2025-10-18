@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
 import { AIHomeworkHelper } from '@/components/student/tools/ai-homework-helper'
 import { Button } from '@/components/ui/button'

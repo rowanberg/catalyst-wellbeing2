@@ -264,26 +264,33 @@ export default function HomeTab({ studentId }: HomeTabProps) {
     try {
       setLoading(true)
       setError(null)
+      console.log('HomeTab: Fetching dashboard for studentId:', studentId)
       const response = await fetch(`/api/v1/parents/dashboard?student_id=${studentId}`, {
         credentials: 'include'
       })
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
+        console.error('HomeTab: API error:', errorData)
         throw new Error(errorData.error || 'Failed to load dashboard')
       }
       
       const result = await response.json()
+      console.log('HomeTab: Dashboard API result:', result)
+      console.log('HomeTab: Student info:', result.data?.studentInfo)
       
       // Check if student has no class assigned
       if (!result.data?.studentInfo?.className && !result.data?.studentInfo?.classId) {
+        console.warn('HomeTab: No class assigned - className:', result.data?.studentInfo?.className, 'classId:', result.data?.studentInfo?.classId)
         setError('no_class')
         setData(null)
         return
       }
       
+      console.log('HomeTab: Setting dashboard data')
       setData(result.data)
     } catch (err: any) {
+      console.error('HomeTab: Error:', err)
       setError(err.message || 'Failed to load dashboard')
     } finally {
       setLoading(false)
@@ -328,37 +335,37 @@ export default function HomeTab({ studentId }: HomeTabProps) {
   // Error State - No Class Assigned
   if (error === 'no_class') {
     return (
-      <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-8 border-2 border-amber-200 shadow-sm">
+      <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-2xl p-8 border-2 border-amber-200 dark:border-amber-800 shadow-sm">
         <div className="text-center max-w-md mx-auto">
-          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/40 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
             </svg>
           </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">No Class Assigned</h3>
-          <p className="text-sm text-gray-700 mb-6 leading-relaxed">
+          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">No Class Assigned</h3>
+          <p className="text-sm text-gray-700 dark:text-gray-300 mb-6 leading-relaxed">
             This student hasn't been assigned to a class yet. Please contact the school administrator to assign them to a class to view their academic progress and assignments.
           </p>
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 lg:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
-            <p className="text-xs font-semibold text-amber-800 mb-2">What you can do:</p>
-            <ul className="text-xs text-gray-700 space-y-1 text-left">
+            <p className="text-xs font-semibold text-amber-800 dark:text-amber-400 mb-2">What you can do:</p>
+            <ul className="text-xs text-gray-700 dark:text-gray-300 space-y-1 text-left">
               <li className="flex items-start gap-2">
-                <span className="text-amber-600 mt-0.5">•</span>
+                <span className="text-amber-600 dark:text-amber-400 mt-0.5">•</span>
                 <span>Contact your school administrator or teacher</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-amber-600 mt-0.5">•</span>
+                <span className="text-amber-600 dark:text-amber-400 mt-0.5">•</span>
                 <span>Verify the student's enrollment status</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-amber-600 mt-0.5">•</span>
+                <span className="text-amber-600 dark:text-amber-400 mt-0.5">•</span>
                 <span>Check back after class assignment is complete</span>
               </li>
             </ul>
           </div>
           <button 
             onClick={fetchDashboardData}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all shadow-md hover:shadow-lg"
+            className="mt-4 inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 dark:from-amber-600 dark:to-orange-600 dark:hover:from-amber-700 dark:hover:to-orange-700 text-white text-sm font-semibold rounded-xl transition-all shadow-md hover:shadow-lg"
           >
             <RefreshCw className="h-4 w-4" />
             Check Again

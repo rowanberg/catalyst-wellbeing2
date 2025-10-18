@@ -187,7 +187,7 @@ export function StudyGroups({ onBack }: { onBack?: () => void }) {
   const [activeTab, setActiveTab] = useState<'explore' | 'my-groups' | 'schedule'>('explore')
   const [selectedGroup, setSelectedGroup] = useState<StudyGroup | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const profile = useAppSelector((state) => state.auth.user)
+  const profile = useAppSelector((state) => state.auth.profile)
 
   const subjects = ['All', 'Mathematics', 'Science', 'English', 'History', 'Physics', 'Chemistry', 'Biology', 'Computer Science']
   

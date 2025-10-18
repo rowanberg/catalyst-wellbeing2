@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
     const type = searchParams.get('type')
     const audience = searchParams.get('audience')
+    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : undefined
 
     let finalSchoolId = schoolId
 
@@ -39,7 +40,8 @@ export async function GET(request: NextRequest) {
       schoolId: finalSchoolId, 
       status, 
       type, 
-      audience 
+      audience,
+      limit 
     })
     const cachedData = apiCache.get(cacheKey)
     if (cachedData) {
@@ -62,6 +64,11 @@ export async function GET(request: NextRequest) {
 
     if (audience) {
       query = query.eq('target_audience', audience)
+    }
+
+    // Apply limit if provided
+    if (limit) {
+      query = query.limit(limit)
     }
 
     const { data: announcements, error } = await query.order('created_at', { ascending: false })

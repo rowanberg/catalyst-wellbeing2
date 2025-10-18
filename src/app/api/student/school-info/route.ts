@@ -51,42 +51,17 @@ export async function GET(request: NextRequest) {
     
     console.log('User school_id:', profile.school_id)
     
-    // Get school details from school_details table (comprehensive data)
+    // Get school details - only essential fields for dashboard
     const { data: schoolDetails } = await supabaseAdmin
       .from('school_details')
       .select(`
         school_name,
-        principal_name,
-        primary_email,
-        secondary_email,
-        primary_phone,
-        secondary_phone,
         street_address,
         city,
-        state_province,
-        postal_code,
-        country,
+        primary_phone,
+        primary_email,
         school_start_time,
-        school_end_time,
-        office_start_time,
-        office_end_time,
-        emergency_contact_name,
-        emergency_contact_phone,
-        police_contact,
-        fire_department_contact,
-        hospital_contact,
-        school_nurse_extension,
-        security_extension,
-        school_motto,
-        school_mission,
-        website_url,
-        operates_monday,
-        operates_tuesday,
-        operates_wednesday,
-        operates_thursday,
-        operates_friday,
-        operates_saturday,
-        operates_sunday
+        school_end_time
       `)
       .eq('school_id', profile.school_id)
       .eq('status', 'completed')
@@ -127,52 +102,21 @@ export async function GET(request: NextRequest) {
     }
     
     if (schoolDetails) {
-      // Format the comprehensive school data
+      // Format minimal school data for dashboard
       const formattedAddress = [
         schoolDetails.street_address,
-        schoolDetails.city,
-        schoolDetails.state_province,
-        schoolDetails.postal_code,
-        schoolDetails.country
+        schoolDetails.city
       ].filter(Boolean).join(', ')
-      
-      // Format operating days
-      const operatingDays: string[] = []
-      if (schoolDetails.operates_monday) operatingDays.push('Monday')
-      if (schoolDetails.operates_tuesday) operatingDays.push('Tuesday')
-      if (schoolDetails.operates_wednesday) operatingDays.push('Wednesday')
-      if (schoolDetails.operates_thursday) operatingDays.push('Thursday')
-      if (schoolDetails.operates_friday) operatingDays.push('Friday')
-      if (schoolDetails.operates_saturday) operatingDays.push('Saturday')
-      if (schoolDetails.operates_sunday) operatingDays.push('Sunday')
       
       return NextResponse.json({
         schoolInfo: {
           name: schoolDetails.school_name,
-          principal: schoolDetails.principal_name,
           address: formattedAddress,
-          email: schoolDetails.primary_email,
-          secondaryEmail: schoolDetails.secondary_email,
           phone: schoolDetails.primary_phone,
-          secondaryPhone: schoolDetails.secondary_phone,
-          website: schoolDetails.website_url,
-          motto: schoolDetails.school_motto,
-          mission: schoolDetails.school_mission,
+          email: schoolDetails.primary_email,
           schoolHours: {
             start: schoolDetails.school_start_time,
-            end: schoolDetails.school_end_time,
-            officeStart: schoolDetails.office_start_time,
-            officeEnd: schoolDetails.office_end_time,
-            operatingDays: operatingDays
-          },
-          emergency: {
-            general: schoolDetails.police_contact || '911',
-            fire: schoolDetails.fire_department_contact || '911',
-            hospital: schoolDetails.hospital_contact || '108',
-            nurse: `Ext. ${schoolDetails.school_nurse_extension || '123'}`,
-            security: `Ext. ${schoolDetails.security_extension || '456'}`,
-            contact: schoolDetails.emergency_contact_name,
-            contactPhone: schoolDetails.emergency_contact_phone
+            end: schoolDetails.school_end_time
           },
           isComplete: true
         }

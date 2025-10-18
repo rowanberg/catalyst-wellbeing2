@@ -16,7 +16,6 @@ import ParentCommunicationSystem from '@/components/teacher/parent-communication
 import InteractiveActivitiesSystem from '@/components/teacher/interactive-activities-system'
 import UpdateResultsSystem from '@/components/teacher/UpdateResultsSystem'
 import ComprehensiveAnalytics from '@/components/teacher/ComprehensiveAnalytics'
-import CreatePostComposer from '@/components/teacher/CreatePostComposer'
 import { 
   Users, 
   TrendingUp, 
@@ -146,8 +145,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
   const [isDataFetching, setIsDataFetching] = useState(false) // Prevent concurrent API calls
   const fetchingRef = useRef(false) // More reliable concurrent call protection
   const [dataFetched, setDataFetched] = useState(false)
-  const [activeTab, setActiveTab] = useState<'analytics' | 'overview' | 'roster' | 'incidents' | 'shoutouts' | 'interventions' | 'quests' | 'messaging' | 'blackmarks' | 'activities' | 'communication' | 'settings' | 'results' | 'createpost'>('overview')
-  const [showCreatePost, setShowCreatePost] = useState(false)
+  const [activeTab, setActiveTab] = useState<'analytics' | 'overview' | 'roster' | 'incidents' | 'shoutouts' | 'interventions' | 'quests' | 'messaging' | 'blackmarks' | 'activities' | 'communication' | 'settings' | 'results'>('overview')
   const [notifications, setNotifications] = useState<Array<{id: string, message: string, type: 'success' | 'error' | 'warning' | 'info'}>>([])
   const [realTimeData, setRealTimeData] = useState({
     newHelpRequests: 0,
@@ -438,7 +436,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
           {[
             { id: 'overview', label: 'Overview', icon: School, color: 'text-blue-600', bgColor: 'bg-blue-50' },
             { id: 'roster', label: 'Students', icon: Users, color: 'text-emerald-600', bgColor: 'bg-emerald-50', isLink: true, href: '/teacher/students' },
-            { id: 'createpost', label: 'Create Post', icon: Megaphone, color: 'text-indigo-600', bgColor: 'bg-indigo-50' },
+            { id: 'community', label: 'Community', icon: Megaphone, color: 'text-indigo-600', bgColor: 'bg-indigo-50', isLink: true, href: '/teacher/community' },
             { id: 'analytics', label: 'Analytics', icon: Activity, color: 'text-violet-600', bgColor: 'bg-violet-50' },
             { id: 'credits', label: 'Issue Credits', icon: Gem, color: 'text-purple-600', bgColor: 'bg-purple-50', isLink: true, href: '/teacher/issue-credits' },
             { id: 'shoutouts', label: 'Shout-outs', icon: Star, color: 'text-amber-500', bgColor: 'bg-amber-50' },
@@ -458,9 +456,6 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                 onClick={() => {
                   if (item.isLink && item.href) {
                     window.location.href = item.href
-                  } else if (item.id === 'createpost') {
-                    setShowCreatePost(true)
-                    setSidebarOpen(false)
                   } else {
                     setActiveTab(item.id as any)
                     setSidebarOpen(false)
@@ -1297,13 +1292,6 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
         </div>
       </div>
 
-      {/* Create Post Composer Modal */}
-      {showCreatePost && (
-        <CreatePostComposer
-          onClose={() => setShowCreatePost(false)}
-          teacherId={user?.id || ''}
-        />
-      )}
     </div>
   )
 }

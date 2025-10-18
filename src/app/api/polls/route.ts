@@ -6,6 +6,10 @@ import { apiCache, createCacheKey } from '@/lib/utils/apiCache'
 
 export async function GET(request: NextRequest) {
   try {
+    // Parse query parameters
+    const { searchParams } = new URL(request.url)
+    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : undefined
+    
     const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -43,7 +47,8 @@ export async function GET(request: NextRequest) {
     const cacheKey = createCacheKey('polls', { 
       schoolId: userProfile.school_id, 
       role: userProfile.role,
-      userId: user.id 
+      userId: user.id,
+      limit 
     })
     const cachedData = apiCache.get(cacheKey)
     if (cachedData) {
@@ -74,7 +79,7 @@ export async function GET(request: NextRequest) {
       targetAudienceFilters.push('parents')
     }
 
-    const { data: polls, error: pollsError } = await supabaseAdmin
+    let pollsQuery = supabaseAdmin
       .from('polls')
       .select(`
         *,
@@ -84,6 +89,13 @@ export async function GET(request: NextRequest) {
       .eq('status', 'active')
       .in('target_audience', targetAudienceFilters)
       .order('created_at', { ascending: false })
+    
+    // Apply limit if provided
+    if (limit) {
+      pollsQuery = pollsQuery.limit(limit)
+    }
+    
+    const { data: polls, error: pollsError } = await pollsQuery
       
     console.log('Student polls API - Found polls after target_audience filter:', polls?.length || 0)
     console.log('Student polls API - Filtered polls data:', polls)

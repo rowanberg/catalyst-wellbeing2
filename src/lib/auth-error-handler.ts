@@ -206,7 +206,7 @@ export const initAuthErrorMonitoring = (): void => {
   })
 }
 
-export default {
+const authErrorHandler = {
   isRefreshTokenError,
   handleRefreshTokenError,
   retryWithAuthCheck,
@@ -215,3 +215,5 @@ export default {
   refreshSession,
   initAuthErrorMonitoring,
 }
+
+export default authErrorHandler

@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback, memo } from 'react'
+import React, { useState, useEffect, useCallback, memo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import Image from 'next/image'
 import {
   Heart,
   ThumbsUp,
@@ -103,18 +105,26 @@ const PostCard = memo(({
             'aspect-square'
           }`}>
             {item.type === 'image' && (
-              <img 
+              <Image 
                 src={item.url} 
-                alt=""
-                className="w-full h-full object-cover"
+                alt="Post image"
+                fill
+                className="object-cover"
                 loading="lazy"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               />
             )}
             
             {item.type === 'video' && (
               <div className="w-full h-full bg-black flex items-center justify-center relative">
                 {item.thumbnail && (
-                  <img src={item.thumbnail} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                  <Image 
+                    src={item.thumbnail} 
+                    alt="Video thumbnail" 
+                    fill
+                    className="object-cover" 
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  />
                 )}
                 <div className="absolute inset-0 bg-black/20" />
                 <div className="relative z-10 w-14 h-14 rounded-full bg-white dark:bg-gray-200 flex items-center justify-center">
@@ -295,9 +305,13 @@ export default function CommunityTab({ studentId, parentId }: CommunityTabProps)
           <div>
             <h1 className="text-white font-bold text-lg lg:text-xl">Class Community</h1>
             <p className="text-white/80 text-xs lg:text-sm mt-0.5">
-              {classesInfo.length === 1 
-                ? classesInfo[0].name 
-                : `Mrs. Sharma's 5th Grade`}
+              {classesInfo.length === 1 && classesInfo[0].teacher
+                ? `${classesInfo[0].teacher.name}'s ${classesInfo[0].name}` 
+                : classesInfo.length > 0 && classesInfo[0]?.teacher
+                ? `${classesInfo[0].teacher.name}'s Class`
+                : classesInfo.length === 1
+                ? classesInfo[0].name
+                : 'Multiple Classes'}
             </p>
           </div>
           <button className="p-2 hover:bg-white/10 rounded-full transition-colors">
@@ -319,11 +333,14 @@ export default function CommunityTab({ studentId, parentId }: CommunityTabProps)
                   className="flex-shrink-0 flex flex-col items-center gap-1 group"
                 >
                   {classInfo.teacher.avatar ? (
-                    <img
-                      src={classInfo.teacher.avatar}
-                      alt={classInfo.teacher.name}
-                      className="w-16 h-16 rounded-full object-cover border-[3px] border-gray-200 dark:border-gray-600"
-                    />
+                    <div className="relative w-16 h-16">
+                      <Image
+                        src={classInfo.teacher.avatar}
+                        alt={classInfo.teacher.name}
+                        fill
+                        className="rounded-full object-cover border-[3px] border-gray-200 dark:border-gray-600"
+                      />
+                    </div>
                   ) : (
                     <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center border-[3px] border-gray-200 dark:border-gray-600">
                       <span className="text-base font-bold text-white">

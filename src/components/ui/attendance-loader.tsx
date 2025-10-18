@@ -228,45 +228,85 @@ export function AttendanceLoader({
   )
 }
 
-// Full page loader for initial page load
+// Full page loader with skeleton UI for professional appearance
 export function AttendancePageLoader() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div 
-          className="absolute top-20 left-10 w-32 h-32 bg-blue-300/10 rounded-full blur-xl"
-          animate={{ 
-            x: [0, 100, 0],
-            y: [0, -50, 0],
-            scale: [1, 1.2, 1]
-          }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <motion.div 
-          className="absolute bottom-20 right-10 w-24 h-24 bg-emerald-300/10 rounded-full blur-xl"
-          animate={{ 
-            x: [0, -80, 0],
-            y: [0, 60, 0],
-            scale: [1, 0.8, 1]
-          }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-        />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      {/* Header Skeleton */}
+      <div className="bg-white/95 backdrop-blur-xl shadow-lg border-b border-white/20 sticky top-0 z-10">
+        <div className="px-4 sm:px-6 py-4 sm:py-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-8 h-8 bg-gray-200 rounded-lg animate-pulse" />
+              <div className="space-y-2">
+                <div className="h-6 w-48 bg-gray-200 rounded animate-pulse" />
+                <div className="h-4 w-32 bg-gray-100 rounded animate-pulse" />
+              </div>
+            </div>
+            <div className="w-24 h-10 bg-gray-200 rounded-xl animate-pulse" />
+          </div>
+        </div>
       </div>
 
-      {/* Main Loader */}
-      <motion.div
-        className="relative z-10 bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/20"
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        <AttendanceLoader 
-          size="lg" 
-          text="Loading Teacher Attendance System" 
-          variant="detailed" 
-        />
-      </motion.div>
+      {/* Main Content Skeleton */}
+      <div className="px-4 sm:px-6 py-6 max-w-7xl mx-auto">
+        <div className="space-y-6">
+          {/* Card Skeleton */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
+            {/* Card Header */}
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-indigo-100 rounded-xl animate-pulse" />
+                  <div className="h-6 w-40 bg-gray-200 rounded animate-pulse" />
+                </div>
+                <div className="w-32 h-10 bg-gray-100 rounded-xl animate-pulse" />
+              </div>
+            </div>
+
+            {/* Card Content - Grid of class cards */}
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <motion.div
+                    key={i}
+                    className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-5 border-2 border-gray-200"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-gray-200 rounded-xl animate-pulse" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-5 w-3/4 bg-gray-200 rounded animate-pulse" />
+                          <div className="h-4 w-1/2 bg-gray-100 rounded animate-pulse" />
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="h-8 flex-1 bg-gray-200 rounded-lg animate-pulse" />
+                        <div className="h-8 flex-1 bg-gray-200 rounded-lg animate-pulse" />
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Loading indicator at bottom */}
+          <div className="flex items-center justify-center py-8">
+            <div className="flex items-center gap-3 bg-white/90 backdrop-blur-sm px-6 py-3 rounded-full shadow-lg border border-gray-200">
+              <motion.div
+                className="w-5 h-5 border-3 border-indigo-200 border-t-indigo-600 rounded-full"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              />
+              <span className="text-sm font-medium text-gray-700">Loading attendance system...</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

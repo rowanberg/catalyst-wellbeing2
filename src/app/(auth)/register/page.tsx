@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
@@ -22,7 +24,13 @@ const registerSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
   lastName: z.string().min(2, 'Last name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters').optional(),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character')
+    .optional(),
   role: z.enum(['student', 'parent', 'teacher', 'admin']),
   gradeLevel: z.string().optional(),
   className: z.string().optional(),
@@ -39,6 +47,7 @@ export default function RegisterPage() {
   const [isVerifyingSchool, setIsVerifyingSchool] = useState(false)
   const [schoolVerified, setSchoolVerified] = useState(false)
   const [schoolError, setSchoolError] = useState('')
+  const [passwordStrength, setPasswordStrength] = useState(0)
   
   // Google OAuth state
   const [isGoogleUser, setIsGoogleUser] = useState(false)
@@ -83,6 +92,33 @@ export default function RegisterPage() {
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema)
   })
+
+  const password = watch('password')
+
+  // Calculate password strength
+  useEffect(() => {
+    if (!password || isGoogleUser) {
+      setPasswordStrength(0)
+      return
+    }
+
+    let strength = 0
+    
+    // Length check
+    if (password.length >= 8) strength += 20
+    if (password.length >= 12) strength += 10
+    
+    // Character variety checks
+    if (/[a-z]/.test(password)) strength += 20
+    if (/[A-Z]/.test(password)) strength += 20
+    if (/[0-9]/.test(password)) strength += 20
+    if (/[^A-Za-z0-9]/.test(password)) strength += 20
+    
+    // Bonus for length
+    if (password.length >= 16) strength += 10
+    
+    setPasswordStrength(Math.min(strength, 100))
+  }, [password, isGoogleUser])
 
   // Load Google OAuth data on component mount
   useEffect(() => {
@@ -422,7 +458,7 @@ export default function RegisterPage() {
     }
   }
 
-  const canProceedToStep2 = schoolVerified && watch('firstName') && watch('lastName') && watch('email') && (isGoogleUser || watch('password')) && watch('role')
+  const canProceedToStep2 = schoolVerified && watch('firstName') && watch('lastName') && watch('email') && watch('role') && (isGoogleUser || (watch('password') && passwordStrength >= 60))
 
   const handleNextStep = () => {
     if (canProceedToStep2) {
@@ -690,7 +726,7 @@ export default function RegisterPage() {
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      School ID
+                      School ID <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <div className="absolute left-3 lg:left-4 top-1/2 transform -translate-y-1/2">
@@ -700,7 +736,7 @@ export default function RegisterPage() {
                         {...register('schoolId')}
                         type="text"
                         maxLength={12}
-                        className={`w-full pl-10 lg:pl-12 pr-10 lg:pr-12 py-3 lg:py-3.5 text-base lg:text-lg font-mono tracking-wider border-2 rounded-lg lg:rounded-xl transition-all focus:outline-none ${
+                        className={`w-full pl-10 lg:pl-12 pr-10 lg:pr-12 py-3 lg:py-3.5 text-base lg:text-lg font-mono tracking-wider border-2 rounded-lg lg:rounded-xl transition-all focus:outline-none text-gray-900 ${
                           schoolVerified 
                             ? 'border-green-400 bg-green-50 focus:border-green-500' 
                             : schoolError 
@@ -788,7 +824,7 @@ export default function RegisterPage() {
                   <h4 className="text-base lg:text-lg font-semibold text-gray-800 mb-3 lg:mb-4">Personal Information</h4>
                   <div className="grid grid-cols-2 gap-3 lg:gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">First Name <span className="text-red-500">*</span></label>
                       <div className="relative">
                         <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
                           <User className="h-4 w-4 text-gray-400" />
@@ -796,7 +832,7 @@ export default function RegisterPage() {
                         <input
                           {...register('firstName')}
                           type="text"
-                          className="w-full pl-9 pr-3 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-50 transition-all focus:outline-none text-sm"
+                          className="w-full pl-9 pr-3 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-50 transition-all focus:outline-none text-sm"
                           placeholder="First name"
                         />
                       </div>
@@ -809,7 +845,7 @@ export default function RegisterPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Last Name <span className="text-red-500">*</span></label>
                       <div className="relative">
                         <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
                           <User className="h-4 w-4 text-gray-400" />
@@ -817,7 +853,7 @@ export default function RegisterPage() {
                         <input
                           {...register('lastName')}
                           type="text"
-                          className="w-full pl-9 pr-3 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-50 transition-all focus:outline-none text-sm"
+                          className="w-full pl-9 pr-3 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-50 transition-all focus:outline-none text-sm"
                           placeholder="Last name"
                         />
                       </div>
@@ -838,7 +874,7 @@ export default function RegisterPage() {
                     {/* Email Field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Email Address
+                        Email Address <span className="text-red-500">*</span>
                         {isGoogleUser && (
                           <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
                             <svg className="w-3 h-3 mr-1" viewBox="0 0 24 24">
@@ -862,7 +898,7 @@ export default function RegisterPage() {
                           className={`w-full pl-9 pr-3 py-3 border-2 rounded-lg transition-all focus:outline-none text-sm ${
                             isGoogleUser 
                               ? 'border-blue-200 bg-blue-50 text-blue-900 cursor-not-allowed' 
-                              : 'border-gray-200 bg-gray-50 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-50'
+                              : 'border-gray-200 bg-gray-50 text-gray-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-50'
                           }`}
                           placeholder="your.email@school.edu"
                         />
@@ -878,7 +914,7 @@ export default function RegisterPage() {
                     {/* Password Field - Hidden for Google users */}
                     {!isGoogleUser && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Password <span className="text-red-500">*</span></label>
                         <div className="relative">
                           <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
                             <Lock className="h-4 w-4 text-gray-400" />
@@ -886,7 +922,7 @@ export default function RegisterPage() {
                           <input
                             {...register('password')}
                             type={showPassword ? 'text' : 'password'}
-                            className="w-full pl-9 pr-10 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-50 transition-all focus:outline-none text-sm"
+                            className="w-full pl-9 pr-10 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-50 transition-all focus:outline-none text-sm"
                             placeholder="Create a strong password"
                           />
                           <button
@@ -897,13 +933,100 @@ export default function RegisterPage() {
                             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                           </button>
                         </div>
+                        
+                        {/* Password Strength Indicator */}
+                        {password && password.length > 0 && (
+                          <div className="mt-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs font-medium text-gray-600">Password Strength</span>
+                              <span className={`text-xs font-semibold ${
+                                passwordStrength >= 80 ? 'text-green-600' :
+                                passwordStrength >= 60 ? 'text-yellow-600' :
+                                passwordStrength >= 40 ? 'text-orange-600' :
+                                'text-red-600'
+                              }`}>
+                                {passwordStrength >= 80 ? 'Strong' :
+                                 passwordStrength >= 60 ? 'Good' :
+                                 passwordStrength >= 40 ? 'Fair' :
+                                 'Weak'}
+                              </span>
+                            </div>
+                            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full transition-all duration-300 ${
+                                  passwordStrength >= 80 ? 'bg-gradient-to-r from-green-500 to-emerald-600' :
+                                  passwordStrength >= 60 ? 'bg-gradient-to-r from-yellow-500 to-amber-600' :
+                                  passwordStrength >= 40 ? 'bg-gradient-to-r from-orange-500 to-red-500' :
+                                  'bg-red-500'
+                                }`}
+                                style={{ width: `${passwordStrength}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Password Requirements Checklist */}
+                        <div className="mt-3 bg-gray-50 rounded-lg p-3 border border-gray-200">
+                          <p className="text-xs font-semibold text-gray-700 mb-2">Password Requirements:</p>
+                          <div className="space-y-1.5">
+                            <div className="flex items-center text-xs">
+                              {password && password.length >= 8 ? (
+                                <CheckCircle className="h-3.5 w-3.5 text-green-600 mr-2 flex-shrink-0" />
+                              ) : (
+                                <XCircle className="h-3.5 w-3.5 text-gray-400 mr-2 flex-shrink-0" />
+                              )}
+                              <span className={password && password.length >= 8 ? 'text-green-700 font-medium' : 'text-gray-600'}>
+                                At least 8 characters
+                              </span>
+                            </div>
+                            <div className="flex items-center text-xs">
+                              {password && /[A-Z]/.test(password) ? (
+                                <CheckCircle className="h-3.5 w-3.5 text-green-600 mr-2 flex-shrink-0" />
+                              ) : (
+                                <XCircle className="h-3.5 w-3.5 text-gray-400 mr-2 flex-shrink-0" />
+                              )}
+                              <span className={password && /[A-Z]/.test(password) ? 'text-green-700 font-medium' : 'text-gray-600'}>
+                                One uppercase letter (A-Z)
+                              </span>
+                            </div>
+                            <div className="flex items-center text-xs">
+                              {password && /[a-z]/.test(password) ? (
+                                <CheckCircle className="h-3.5 w-3.5 text-green-600 mr-2 flex-shrink-0" />
+                              ) : (
+                                <XCircle className="h-3.5 w-3.5 text-gray-400 mr-2 flex-shrink-0" />
+                              )}
+                              <span className={password && /[a-z]/.test(password) ? 'text-green-700 font-medium' : 'text-gray-600'}>
+                                One lowercase letter (a-z)
+                              </span>
+                            </div>
+                            <div className="flex items-center text-xs">
+                              {password && /[0-9]/.test(password) ? (
+                                <CheckCircle className="h-3.5 w-3.5 text-green-600 mr-2 flex-shrink-0" />
+                              ) : (
+                                <XCircle className="h-3.5 w-3.5 text-gray-400 mr-2 flex-shrink-0" />
+                              )}
+                              <span className={password && /[0-9]/.test(password) ? 'text-green-700 font-medium' : 'text-gray-600'}>
+                                One number (0-9)
+                              </span>
+                            </div>
+                            <div className="flex items-center text-xs">
+                              {password && /[^A-Za-z0-9]/.test(password) ? (
+                                <CheckCircle className="h-3.5 w-3.5 text-green-600 mr-2 flex-shrink-0" />
+                              ) : (
+                                <XCircle className="h-3.5 w-3.5 text-gray-400 mr-2 flex-shrink-0" />
+                              )}
+                              <span className={password && /[^A-Za-z0-9]/.test(password) ? 'text-green-700 font-medium' : 'text-gray-600'}>
+                                One special character (!@#$%^&*)
+                              </span>
+                            </div>
+                          </div>
+                        </div>
                         {errors.password && (
-                          <p className="mt-1 text-xs text-red-600 flex items-center">
+                          <p className="mt-2 text-xs text-red-600 flex items-center">
                             <AlertCircle className="h-3 w-3 mr-1" />
                             {errors.password.message}
                           </p>
                         )}
-                        <div className="mt-1 text-xs text-gray-500">Minimum 6 characters</div>
                       </div>
                     )}
 
@@ -924,7 +1047,7 @@ export default function RegisterPage() {
 
                 {/* Role Selection */}
                 <div className="bg-gray-50 rounded-xl p-4 lg:p-5 border border-gray-200">
-                  <h4 className="text-base lg:text-lg font-semibold text-gray-800 mb-3 lg:mb-4">Account Type</h4>
+                  <h4 className="text-base lg:text-lg font-semibold text-gray-800 mb-3 lg:mb-4">Account Type <span className="text-red-500">*</span></h4>
                   <Select onValueChange={(value: any) => setValue('role', value)}>
                     <SelectTrigger className="w-full py-3 text-sm lg:text-base border-2 rounded-lg">
                       <SelectValue placeholder="Select your role" />

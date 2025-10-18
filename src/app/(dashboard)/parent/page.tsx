@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect, useCallback } from 'react'
 import { useAppSelector, useAppDispatch } from '@/lib/redux/hooks'
 import { fetchProfile } from '@/lib/redux/slices/authSlice'
@@ -19,6 +21,7 @@ function ParentDashboardContent() {
   const { user, profile } = useAppSelector((state) => state.auth)
   const [activeTab, setActiveTab] = useState('home')
   const [selectedChild, setSelectedChild] = useState<string | null>(null)
+  const [selectedChildDetails, setSelectedChildDetails] = useState<any>(null)
   const [children, setChildren] = useState<any[]>([])
   const [loadingChildren, setLoadingChildren] = useState(true)
   const [hasNotifications, setHasNotifications] = useState(false)
@@ -55,6 +58,7 @@ function ParentDashboardContent() {
         if (result.data?.children && result.data.children.length > 0) {
           setChildren(result.data.children)
           setSelectedChild(result.data.children[0].id)
+          setSelectedChildDetails(result.data.children[0])
           console.log('Children set successfully:', result.data.children)
         } else {
           console.log('No children found in response')
@@ -99,12 +103,16 @@ function ParentDashboardContent() {
   // Listen for child selection from ProfileTab
   useEffect(() => {
     const handleChildSelected = (event: any) => {
-      const childId = event.detail?.childId
+      const { childId, childName, childGrade } = event.detail || {}
       if (childId) {
         setSelectedChild(childId)
+        setSelectedChildDetails({
+          id: childId,
+          name: childName,
+          grade: childGrade
+        })
         checkNotifications()
-        // Switch to Home tab to show updated data
-        setActiveTab('home')
+        // Don't auto-switch tabs - let user stay on current tab
       }
     }
 
@@ -218,7 +226,7 @@ function ParentDashboardContent() {
       
       {/* Main Content */}
       <div className="md:ml-64 min-h-screen pb-20 md:pb-0">
-        <div className="max-w-4xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+        <div className={`${activeTab === 'profile' ? 'w-full px-4 py-6 sm:px-6 lg:px-8' : 'max-w-4xl mx-auto px-4 py-6 sm:px-6 lg:px-8'}`}>
           {/* Tab Content */}
           <AnimatePresence mode="wait">
             <motion.div
@@ -266,7 +274,7 @@ function ParentDashboardContent() {
               
               {activeTab === 'analytics' && (
                 selectedChild ? (
-                  <AnalyticsTab studentId={selectedChild} />
+                  <AnalyticsTab studentId={selectedChild} studentName={selectedChildDetails?.name} />
                 ) : (
                   <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
                     <Users className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />

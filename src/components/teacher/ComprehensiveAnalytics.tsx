@@ -228,14 +228,12 @@ function ComprehensiveAnalytics() {
     setError(null)
 
     try {
-      // Get school_id from user
-      let schoolId = user?.school_id
-      if (!schoolId) {
-        const profileResponse = await fetch('/api/profile')
-        if (profileResponse.ok) {
-          const profile = await profileResponse.json()
-          schoolId = profile.school_id
-        }
+      // Get school_id from profile
+      let schoolId: string | undefined
+      const profileResponse = await fetch('/api/profile')
+      if (profileResponse.ok) {
+        const profile = await profileResponse.json()
+        schoolId = profile.school_id
       }
 
       if (!schoolId || !user?.id) {

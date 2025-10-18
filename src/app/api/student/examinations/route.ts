@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -15,10 +17,7 @@ export async function GET(request: NextRequest) {
     // Get student's examinations
     const { data: exams, error: examsError } = await supabase
       .from('examinations')
-      .select(`
-        *,
-        profiles!examinations_teacher_id_fkey(first_name, last_name)
-      `)
+      .select('*')
       .eq('is_published', true)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
@@ -26,6 +25,21 @@ export async function GET(request: NextRequest) {
     if (examsError) {
       console.error('Error fetching exams:', examsError)
       return NextResponse.json({ error: 'Failed to fetch examinations' }, { status: 500 })
+    }
+
+    // Get teacher info separately if needed
+    const teacherIds = Array.from(new Set(exams?.map(e => e.teacher_id).filter(Boolean) || []))
+    let teacherLookup: Record<string, any> = {}
+    
+    if (teacherIds.length > 0) {
+      const { data: teachers } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', teacherIds)
+      
+      teachers?.forEach(teacher => {
+        teacherLookup[teacher.id] = teacher
+      })
     }
 
     // Get student's exam statuses
@@ -50,10 +64,13 @@ export async function GET(request: NextRequest) {
     })
 
     // Add teacher names to exams
-    const formattedExams = exams?.map(exam => ({
-      ...exam,
-      teacher_name: exam.profiles ? `${exam.profiles.first_name} ${exam.profiles.last_name}` : 'Unknown Teacher'
-    })) || []
+    const formattedExams = exams?.map(exam => {
+      const teacher = exam.teacher_id ? teacherLookup[exam.teacher_id] : null
+      return {
+        ...exam,
+        teacher_name: teacher ? `${teacher.first_name} ${teacher.last_name}` : 'Unknown Teacher'
+      }
+    }) || []
 
     return NextResponse.json({
       exams: formattedExams,

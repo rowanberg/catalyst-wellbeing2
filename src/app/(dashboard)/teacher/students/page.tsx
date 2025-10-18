@@ -135,6 +135,7 @@ function StudentSetupComponent() {
   const [selectedGrade, setSelectedGrade] = useState<string>('')
   const [classes, setClasses] = useState<any[]>([])
   const [selectedClasses, setSelectedClasses] = useState<string[]>([])
+  const [primaryClass, setPrimaryClass] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [loadingClasses, setLoadingClasses] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -217,6 +218,11 @@ function StudentSetupComponent() {
       return
     }
 
+    if (!primaryClass && selectedClasses.length > 1) {
+      alert('Please select a primary class (the class shown on attendance page)')
+      return
+    }
+
     setSaving(true)
     try {
       const response = await fetch('/api/teacher/class-assignments', {
@@ -224,6 +230,7 @@ function StudentSetupComponent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           classIds: selectedClasses,
+          primaryClassId: primaryClass || selectedClasses[0],
           subject: 'General'
         })
       })
@@ -346,16 +353,19 @@ function StudentSetupComponent() {
             )}
             {classes.length > 0 ? (
               <div className="space-y-4">
+                <div className="space-y-2 mb-4">
+                  <p className="text-sm font-medium text-gray-700">Select classes and mark one as primary</p>
+                  <p className="text-xs text-gray-500">Primary class will be displayed on the attendance page</p>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {classes.map((cls) => (
                     <div
                       key={cls.id}
-                      className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      className={`p-4 rounded-lg border-2 transition-all ${
                         selectedClasses.includes(cls.id)
                           ? 'border-blue-500 bg-blue-50'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
-                      onClick={() => handleClassToggle(cls.id)}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
@@ -373,16 +383,44 @@ function StudentSetupComponent() {
                             {cls.room_number && <span>Room {cls.room_number}</span>}
                           </div>
                         </div>
-                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                          selectedClasses.includes(cls.id)
-                            ? 'border-blue-500 bg-blue-500'
-                            : 'border-gray-300'
-                        }`}>
+                        <div className="flex items-center gap-2">
+                          {/* Checkbox for selection */}
+                          <div 
+                            className={`w-6 h-6 rounded border-2 flex items-center justify-center cursor-pointer ${
+                              selectedClasses.includes(cls.id)
+                                ? 'border-blue-500 bg-blue-500'
+                                : 'border-gray-300'
+                            }`}
+                            onClick={() => handleClassToggle(cls.id)}
+                          >
+                            {selectedClasses.includes(cls.id) && (
+                              <CheckCircle2 className="w-4 h-4 text-white" />
+                            )}
+                          </div>
+                          {/* Radio for primary */}
                           {selectedClasses.includes(cls.id) && (
-                            <div className="w-2 h-2 bg-white rounded-full" />
+                            <div
+                              className={`w-6 h-6 rounded-full border-2 flex items-center justify-center cursor-pointer ${
+                                primaryClass === cls.id
+                                  ? 'border-green-500 bg-green-500'
+                                  : 'border-gray-400 hover:border-green-400'
+                              }`}
+                              onClick={() => setPrimaryClass(cls.id)}
+                              title="Set as primary class"
+                            >
+                              {primaryClass === cls.id && (
+                                <Star className="w-3 h-3 text-white fill-white" />
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
+                      {selectedClasses.includes(cls.id) && primaryClass === cls.id && (
+                        <div className="mt-2 text-xs text-green-600 font-medium flex items-center gap-1">
+                          <Star className="w-3 h-3 fill-green-600" />
+                          Primary Class - Shows on Attendance
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -591,7 +629,10 @@ export default function TeacherStudentsPage() {
     if (user?.id) {
       try {
         console.log('📚 Fetching classes for grade:', gradeId)
-        const schoolId = user.school_id || (await fetch('/api/profile').then(r => r.json())).school_id
+        // Fetch school_id from profile API since it's not on the User type
+        const profileResponse = await fetch('/api/profile')
+        const profileData = await profileResponse.json()
+        const schoolId = profileData.school_id
         const response = await fetch(`/api/teacher/classes?school_id=${schoolId}&grade_level_id=${gradeId}&teacher_id=${user.id}`)
         if (response.ok) {
           const data = await response.json()
@@ -1322,6 +1363,34 @@ export default function TeacherStudentsPage() {
                                       <Badge className={`text-xs font-medium ${cls.is_primary_teacher ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
                                         {cls.is_primary_teacher ? 'Primary' : 'Assigned'}
                                       </Badge>
+                                      {!cls.is_primary_teacher && (
+                                        <button
+                                          onClick={async (e) => {
+                                            e.stopPropagation()
+                                            try {
+                                              const response = await fetch('/api/teacher/set-primary-class', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ class_id: cls.id })
+                                              })
+                                              if (response.ok) {
+                                                await refreshData()
+                                              }
+                                            } catch (error) {
+                                              console.error('Error setting primary class:', error)
+                                            }
+                                          }}
+                                          className="p-1 hover:bg-green-100 rounded-full transition-colors group/star"
+                                          title="Set as primary class (shows on attendance page)"
+                                        >
+                                          <Star className="h-4 w-4 text-gray-400 group-hover/star:text-green-600 group-hover/star:fill-green-600 transition-colors" />
+                                        </button>
+                                      )}
+                                      {cls.is_primary_teacher && (
+                                        <span title="This is your primary class">
+                                          <Star className="h-4 w-4 text-green-600 fill-green-600" />
+                                        </span>
+                                      )}
                                     </div>
                                     <p className="text-sm text-gray-600">{cls.grade_name || `Grade ${cls.grade_level || 'Unknown'}`}</p>
                                     <p className="text-xs text-gray-500 mt-1">{cls.subject || 'General Education'}</p>
@@ -1411,18 +1480,46 @@ export default function TeacherStudentsPage() {
                                           </Button>
                                         </div>
                                       ) : (
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          onClick={(e) => {
-                                            e.stopPropagation()
-                                            setShowDeleteConfirm(cls.id)
-                                          }}
-                                          className="h-8 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                                        >
-                                          <Trash2 className="h-4 w-4 mr-1" />
-                                          Remove
-                                        </Button>
+                                        <>
+                                          {!cls.is_primary_teacher && (
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={async (e) => {
+                                                e.stopPropagation()
+                                                try {
+                                                  const response = await fetch('/api/teacher/set-primary-class', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ class_id: cls.id })
+                                                  })
+                                                  if (response.ok) {
+                                                    await refreshData()
+                                                  }
+                                                } catch (error) {
+                                                  console.error('Error setting primary class:', error)
+                                                }
+                                              }}
+                                              className="h-8 px-3 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
+                                              title="Set as primary class (shows on attendance page)"
+                                            >
+                                              <Star className="h-4 w-4 mr-1" />
+                                              Set Primary
+                                            </Button>
+                                          )}
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              setShowDeleteConfirm(cls.id)
+                                            }}
+                                            className="h-8 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                                          >
+                                            <Trash2 className="h-4 w-4 mr-1" />
+                                            Remove
+                                          </Button>
+                                        </>
                                       )}
                                     </div>
                                   )}

@@ -134,6 +134,7 @@ export default function UpdateResultsSystem() {
   const [pendingSync, setPendingSync] = useState<Grade[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingStudents, setLoadingStudents] = useState(false)
+  const [loadingAssessments, setLoadingAssessments] = useState(true)
   const [showAnalytics, setShowAnalytics] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showAssessmentDetails, setShowAssessmentDetails] = useState(false)
@@ -215,14 +216,19 @@ export default function UpdateResultsSystem() {
 
   const fetchAssessments = async () => {
     try {
+      setLoadingAssessments(true)
       const response = await fetch('/api/teacher/assessments')
       if (response.ok) {
         const data = await response.json()
         setAssessments(data.assessments || [])
+      } else {
+        toast.error('Failed to load assessments')
       }
     } catch (error) {
       console.error('Error fetching assessments:', error)
       toast.error('Failed to load assessments')
+    } finally {
+      setLoadingAssessments(false)
     }
   }
 
@@ -410,6 +416,23 @@ export default function UpdateResultsSystem() {
           <p className="text-slate-600 mt-1 sm:mt-2 text-sm sm:text-base">Choose an assessment to begin grading</p>
         </CardHeader>
         <CardContent className="p-3 sm:p-4 lg:p-6">
+          {loadingAssessments ? (
+            // Loading Skeleton
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-2.5 sm:gap-3 lg:gap-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="p-3 sm:p-4 lg:p-5 rounded-xl sm:rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200 min-h-[120px] sm:min-h-[140px] lg:min-h-[160px] animate-pulse">
+                  <div className="flex items-start justify-between mb-2 sm:mb-3 gap-2">
+                    <div className="h-4 sm:h-5 bg-slate-300 rounded w-3/4"></div>
+                    <div className="h-5 sm:h-6 bg-slate-300 rounded w-12 sm:w-16"></div>
+                  </div>
+                  <div className="space-y-1 sm:space-y-1.5">
+                    <div className="h-3 sm:h-4 bg-slate-300 rounded w-1/2"></div>
+                    <div className="h-3 sm:h-4 bg-slate-300 rounded w-2/3"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-2.5 sm:gap-3 lg:gap-4">
             {assessments.map(assessment => (
               <motion.button
@@ -459,6 +482,7 @@ export default function UpdateResultsSystem() {
               <span className="text-xs sm:text-sm text-slate-500 mt-0.5 sm:mt-1">Build your next evaluation</span>
             </motion.button>
           </div>
+          )}
         </CardContent>
       </Card>
       )}

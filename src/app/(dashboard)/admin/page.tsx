@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
@@ -14,7 +16,7 @@ import {
   Megaphone,
   TrendingUp,
   Brain,
-  Shield,
+  GraduationCap,
   Vote,
   Heart,
   Calendar,
@@ -810,18 +812,18 @@ function AdminDashboardContent() {
                 </Link>
               </motion.div>
 
-              {/* Student Safety */}
+              {/* Academic Upgrade */}
               <motion.div whileHover={{ scale: 1.02, y: -3 }} whileTap={{ scale: 0.98 }}>
-                <Link href="/admin/student-safety" className="block">
-                  <Card className="bg-gradient-to-br from-red-50 to-rose-50 border-0 shadow-md hover:shadow-lg transition-all duration-300 h-full">
+                <Link href="/admin/academic-upgrade" className="block">
+                  <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-0 shadow-md hover:shadow-lg transition-all duration-300 h-full">
                     <CardContent className="p-3 sm:p-4">
                       <div className="flex flex-col items-center text-center space-y-2 sm:space-y-3">
-                        <div className="p-2 sm:p-3 bg-red-500 rounded-xl shadow-md">
-                          <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                        <div className="p-2 sm:p-3 bg-indigo-500 rounded-xl shadow-md">
+                          <GraduationCap className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                         </div>
                         <div>
-                          <p className="font-semibold text-red-700 text-xs sm:text-sm">Student Safety</p>
-                          <p className="text-xs text-red-600 mt-1">Security tools</p>
+                          <p className="font-semibold text-indigo-700 text-xs sm:text-sm">Academic Upgrade</p>
+                          <p className="text-xs text-indigo-600 mt-1">Enhance learning</p>
                         </div>
                       </div>
                     </CardContent>

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Upload, X, ImageIcon, Crop, Sparkles, ZoomIn, ZoomOut, RotateCw, Camera, Palette, Scissors, Check } from 'lucide-react'
@@ -18,6 +18,8 @@ export const AdvancedProfilePictureUpload = ({
   onImageUpdate, 
   className = "" 
 }: AdvancedProfilePictureUploadProps) => {
+  console.log('🎨 [Component] AdvancedProfilePictureUpload mounted')
+
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadStage, setUploadStage] = useState<'idle' | 'processing' | 'uploading' | 'success' | 'error'>('idle')
@@ -28,10 +30,25 @@ export const AdvancedProfilePictureUpload = ({
   const [editMode, setEditMode] = useState<'crop' | 'filter' | null>(null)
   const [cropData, setCropData] = useState({ x: 0, y: 0, width: 100, height: 100, zoom: 1 })
   const [selectedFilter, setSelectedFilter] = useState('none')
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Debug: Log when modal visibility changes
+  useEffect(() => {
+    console.log('🚪 [Modal] showUploadModal changed to:', showUploadModal)
+    console.log('🚪 [Modal] previewImage exists:', !!previewImage)
+    console.log('🚪 [Modal] editMode:', editMode)
+  }, [showUploadModal, previewImage, editMode])
+
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     console.log(`${type.toUpperCase()}: ${message}`)
+    if (type === 'error') {
+      setErrorMessage(message)
+      // Clear error message after 5 seconds
+      setTimeout(() => setErrorMessage(null), 5000)
+    }
   }
 
   const filters = [
@@ -79,22 +96,31 @@ export const AdvancedProfilePictureUpload = ({
       return
     }
 
-    // Create preview URL
     const reader = new FileReader()
     reader.onload = (e) => {
       const result = e.target?.result as string
+      console.log(' [Process] File loaded, length:', result?.length)
       setPreviewImage(result)
       setShowUploadModal(true)
+      console.log(' [Process] Modal should now be visible')
       setSelectedFilter('none')
       setCropData({ x: 0, y: 0, width: 100, height: 100, zoom: 1 })
+    }
+    reader.onerror = (e) => {
+      console.error(' [Process] File read error:', e)
     }
     reader.readAsDataURL(file)
   }
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log(' [File] File input changed')
+    console.log('📁 [File] File input changed')
     const file = event.target.files?.[0]
+    console.log('📁 [File] Selected file:', file?.name, file?.size, file?.type)
     if (file) {
       processFile(file)
+    } else {
+      console.log('❌ [File] No file selected')
     }
   }
 
@@ -176,8 +202,15 @@ export const AdvancedProfilePictureUpload = ({
   }
 
   const handleUpload = async () => {
-    if (!previewImage) return
+    console.log('🚀 [Upload] Button clicked, starting upload...')
+    console.log('🖼️ [Upload] Preview image exists:', !!previewImage)
+    
+    if (!previewImage) {
+      console.error('❌ [Upload] No preview image, aborting')
+      return
+    }
 
+    console.log('✅ [Upload] Starting upload process')
     setIsUploading(true)
     setUploadStage('processing')
     setUploadProgress(0)
@@ -201,10 +234,12 @@ export const AdvancedProfilePictureUpload = ({
       formData.append('profilePicture', blob, 'profile-picture.jpg')
 
       // Upload to API
+      console.log('📤 [Upload] Sending to API...')
       const uploadResponse = await fetch('/api/student/profile-picture', {
         method: 'POST',
         body: formData
       })
+      console.log('📥 [Upload] Response status:', uploadResponse.status)
 
       if (uploadResponse.ok) {
         const data = await uploadResponse.json()
@@ -227,16 +262,37 @@ export const AdvancedProfilePictureUpload = ({
           }, 3000)
         }, 1000)
       } else {
-        throw new Error('Upload failed')
+        const errorData = await uploadResponse.json().catch(() => ({}))
+        let errorMessage = 'Failed to upload profile picture. '
+        
+        if (uploadResponse.status === 401) {
+          errorMessage += 'Please log in again and try.'
+        } else if (uploadResponse.status === 400) {
+          errorMessage += errorData.error || 'Invalid file format or size.'
+        } else if (uploadResponse.status === 500) {
+          errorMessage += 'Server error. Please contact support if this persists.'
+        } else if (errorData.code === 'UPLOAD_FAILED') {
+          errorMessage += 'Storage configuration issue. Please contact your administrator.'
+        } else {
+          errorMessage += 'Please try again or contact support.'
+        }
+        
+        throw new Error(errorMessage)
       }
-    } catch (error) {
-      console.error('Error uploading profile picture:', error)
+    } catch (error: any) {
+      console.error('❌ [Upload] Error uploading profile picture:', error)
+      console.error('❌ [Upload] Error details:', error.message)
       setUploadStage('error')
-      showToast('Error uploading image. Please try again.', 'error')
+      
+      // Show user-friendly error message
+      const errorMessage = error.message || 'Error uploading image. Please try again.'
+      showToast(errorMessage, 'error')
+      
+      // Keep error state visible longer for user to read
       setTimeout(() => {
         setUploadStage('idle')
         setUploadProgress(0)
-      }, 2000)
+      }, 4000)
     } finally {
       setIsUploading(false)
     }
@@ -323,7 +379,8 @@ export const AdvancedProfilePictureUpload = ({
                 </div>
               </div>
 
-              <div className="p-6 max-h-[calc(90vh-120px)] overflow-y-auto">
+              <div className="flex flex-col max-h-[calc(90vh-120px)]">
+                <div className="flex-1 overflow-y-auto p-6 pb-2">
                 {/* Drag and Drop Area */}
                 <div
                   onDragOver={handleDragOver}
@@ -492,6 +549,31 @@ export const AdvancedProfilePictureUpload = ({
                       </motion.div>
                     )}
 
+                    {/* Error Message */}
+                    {errorMessage && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-4"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 bg-red-100 rounded-lg">
+                            <X className="w-5 h-5 text-red-600" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="text-sm font-semibold text-red-800 mb-1">Upload Failed</h4>
+                            <p className="text-xs text-red-600 leading-relaxed">{errorMessage}</p>
+                          </div>
+                          <button
+                            onClick={() => setErrorMessage(null)}
+                            className="text-red-400 hover:text-red-600 transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+
                     {/* Upload Progress */}
                     {isUploading && (
                       <motion.div
@@ -501,23 +583,30 @@ export const AdvancedProfilePictureUpload = ({
                       >
                         <div className="text-center mb-4">
                           <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                            className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center"
+                            animate={uploadStage === 'error' ? {} : { rotate: 360 }}
+                            transition={{ duration: 2, repeat: uploadStage === 'error' ? 0 : Infinity, ease: "linear" }}
+                            className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
+                              uploadStage === 'error' 
+                                ? 'bg-gradient-to-r from-red-500 to-red-600' 
+                                : 'bg-gradient-to-r from-purple-500 to-pink-500'
+                            }`}
                           >
                             {uploadStage === 'processing' && <Scissors className="w-8 h-8 text-white" />}
                             {uploadStage === 'uploading' && <Upload className="w-8 h-8 text-white" />}
                             {uploadStage === 'success' && <Check className="w-8 h-8 text-white" />}
+                            {uploadStage === 'error' && <X className="w-8 h-8 text-white" />}
                           </motion.div>
                           <h4 className="text-lg font-semibold text-gray-800 mb-2">
                             {uploadStage === 'processing' && 'Processing your image...'}
                             {uploadStage === 'uploading' && 'Uploading to cloud...'}
                             {uploadStage === 'success' && 'Upload complete!'}
+                            {uploadStage === 'error' && 'Upload failed'}
                           </h4>
                           <p className="text-gray-600 text-sm">
                             {uploadStage === 'processing' && 'Applying filters and optimizing quality'}
                             {uploadStage === 'uploading' && 'Securely saving your profile picture'}
                             {uploadStage === 'success' && 'Your new profile picture looks amazing!'}
+                            {uploadStage === 'error' && 'Please check the error above and try again'}
                           </p>
                         </div>
                         
@@ -542,9 +631,14 @@ export const AdvancedProfilePictureUpload = ({
                         </div>
                       </motion.div>
                     )}
+                  </div>
+                )}
 
-                    {/* Action Buttons */}
-                    <div className="flex space-x-3 pt-4">
+                </div>
+                
+                {/* Action Buttons - Always visible at bottom */}
+                <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 shadow-lg">
+                  <div className="flex space-x-3">
                       <Button
                         variant="outline"
                         onClick={handleCancel}
@@ -554,7 +648,13 @@ export const AdvancedProfilePictureUpload = ({
                         Cancel
                       </Button>
                       <Button
-                        onClick={handleUpload}
+                        onClick={() => {
+                          console.log('🖱️ [Button] Upload button clicked!')
+                          console.log('🖱️ [Button] isUploading:', isUploading)
+                          console.log('🖱️ [Button] uploadStage:', uploadStage)
+                          console.log('🖱️ [Button] Button disabled?:', isUploading || uploadStage === 'success')
+                          handleUpload()
+                        }}
                         disabled={isUploading || uploadStage === 'success'}
                         className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl disabled:opacity-50"
                       >
@@ -584,7 +684,6 @@ export const AdvancedProfilePictureUpload = ({
                       </Button>
                     </div>
                   </div>
-                )}
 
                 {/* Hidden canvas for image processing */}
                 <canvas ref={canvasRef} className="hidden" />

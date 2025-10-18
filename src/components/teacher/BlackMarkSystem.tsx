@@ -188,7 +188,7 @@ export default function BlackMarkSystem() {
 
     setLoadingStudents(true)
     try {
-      const schoolId = user?.school_id || profile?.school_id
+      const schoolId = profile?.school_id
       const apiUrl = `/api/teacher/students?school_id=${schoolId}&class_id=${classId}`
       console.log('🔍 Fetching students from:', apiUrl)
       

@@ -80,6 +80,7 @@ export async function GET(request: NextRequest) {
     // Parallel fetch all required data
     const [
       studentProfile,
+      studentClass,
       recentGrades,
       upcomingAssignments,
       attendanceData,
@@ -91,6 +92,21 @@ export async function GET(request: NextRequest) {
         .select('id, user_id, first_name, last_name, school_id, xp, level, streak_days')
         .eq('id', student_id)
         .single(),
+
+      // Get student's class from attendance → teacher_classes (most recent)
+      supabase
+        .from('attendance')
+        .select(`
+          teacher_id,
+          teacher_classes!inner (
+            id,
+            class_name
+          )
+        `)
+        .eq('student_id', student_id)
+        .order('date', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
 
       // Recent grades (last 30 days)
       supabase
@@ -181,6 +197,10 @@ export async function GET(request: NextRequest) {
         id: studentProfile.data?.id,
         name: `${studentProfile.data?.first_name} ${studentProfile.data?.last_name}`,
         level: studentProfile.data?.level || 1
+      },
+      studentInfo: {
+        classId: (studentClass.data?.teacher_classes as any)?.id || null,
+        className: (studentClass.data?.teacher_classes as any)?.class_name || null
       }
     })
 

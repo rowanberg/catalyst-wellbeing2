@@ -87,7 +87,7 @@ export function PeerTutoring({ onBack }: { onBack?: () => void }) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [activeTab, setActiveTab] = useState<'find-tutor' | 'my-sessions' | 'become-tutor'>('find-tutor')
   const [selectedTutor, setSelectedTutor] = useState<Tutor | null>(null)
-  const profile = useAppSelector((state) => state.auth.user)
+  const profile = useAppSelector((state) => state.auth.profile)
 
   const subjects = ['All', 'Mathematics', 'Science', 'English', 'History', 'Physics', 'Chemistry', 'Biology', 'Computer Science']
   

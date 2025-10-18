@@ -434,7 +434,6 @@ I can analyze this data to provide insights, answer questions about school perfo
     setChatMessages(prev => [...prev, loadingMessage])
 
     try {
-      // Try Gemini API first with timeout and retry
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
       
@@ -466,20 +465,68 @@ I can analyze this data to provide insights, answer questions about school perfo
       clearTimeout(timeoutId)
 
       if (geminiResponse.ok) {
-        const data = await geminiResponse.json()
+        // Handle streaming response
+        const reader = geminiResponse.body?.getReader()
+        const decoder = new TextDecoder()
+        let fullResponse = ''
         
-        // Remove loading message and add AI response
-        setChatMessages(prev => {
-          const filtered = prev.filter(msg => !msg.isLoading)
-          return [...filtered, {
-            id: `assistant-${timestamp}-${Math.random().toString(36).substr(2, 9)}`,
-            type: 'assistant',
-            content: data.message || data.error,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          }]
-        })
+        if (!reader) {
+          throw new Error('No response body reader available')
+        }
 
-        setConversationHistory(prev => [...prev, { role: 'assistant' as const, content: data.message || data.error }])
+        // Remove loading message first
+        setChatMessages(prev => prev.filter(msg => !msg.isLoading))
+        
+        // Add empty assistant message that we'll update
+        const assistantMsgId = `assistant-${timestamp}-${Math.random().toString(36).substr(2, 9)}`
+        setChatMessages(prev => [...prev, {
+          id: assistantMsgId,
+          type: 'assistant',
+          content: '',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isTyping: true
+        }])
+
+        // Read streaming response
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          
+          const chunk = decoder.decode(value, { stream: true })
+          const lines = chunk.split('\n')
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6)
+              if (data === '[DONE]') continue
+              
+              try {
+                const parsed = JSON.parse(data)
+                if (parsed.text) {
+                  fullResponse += parsed.text
+                  
+                  // Update message content
+                  setChatMessages(prev => prev.map(msg => 
+                    msg.id === assistantMsgId
+                      ? { ...msg, content: fullResponse, isTyping: true }
+                      : msg
+                  ))
+                }
+              } catch (e) {
+                // Skip invalid JSON chunks
+              }
+            }
+          }
+        }
+        
+        // Mark as complete
+        setChatMessages(prev => prev.map(msg => 
+          msg.id === assistantMsgId
+            ? { ...msg, isTyping: false }
+            : msg
+        ))
+
+        setConversationHistory(prev => [...prev, { role: 'assistant' as const, content: fullResponse }])
       } else {
         // Handle API error response - Gemini only, no fallbacks
         const errorData = await geminiResponse.json().catch(() => ({ error: 'Unknown error' }))

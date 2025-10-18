@@ -100,6 +100,88 @@ export async function GET(request: NextRequest) {
   }
 }
 
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { classIds, primaryClassId, subject } = body
+
+    if (!classIds || !Array.isArray(classIds) || classIds.length === 0) {
+      return NextResponse.json(
+        { error: 'Class IDs are required' },
+        { status: 400 }
+      )
+    }
+
+    // Get teacher ID from session
+    const { createSupabaseServerClient } = await import('@/lib/supabase-server')
+    const supabase = await createSupabaseServerClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
+    const teacherId = user.id
+
+    // Get teacher's school_id
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('school_id')
+      .eq('user_id', teacherId)
+      .single()
+
+    if (!profile?.school_id) {
+      return NextResponse.json(
+        { error: 'Teacher school not found' },
+        { status: 400 }
+      )
+    }
+
+    // First, deactivate all existing assignments for this teacher
+    await supabaseAdmin
+      .from('teacher_class_assignments')
+      .update({ is_active: false })
+      .eq('teacher_id', teacherId)
+
+    // Insert new assignments
+    const assignments = classIds.map((classId: string) => ({
+      teacher_id: teacherId,
+      class_id: classId,
+      school_id: profile.school_id,
+      subject: subject || 'General',
+      is_primary_teacher: classId === (primaryClassId || classIds[0]),
+      is_active: true
+    }))
+
+    const { error: insertError } = await supabaseAdmin
+      .from('teacher_class_assignments')
+      .upsert(assignments, {
+        onConflict: 'teacher_id,class_id',
+        ignoreDuplicates: false
+      })
+
+    if (insertError) {
+      console.error('Error saving class assignments:', insertError)
+      return NextResponse.json(
+        { error: 'Failed to save class assignments' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Class assignments saved successfully'
+    })
+
+  } catch (error) {
+    console.error('Error in POST class-assignments API:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   try {
     const body = await request.json()

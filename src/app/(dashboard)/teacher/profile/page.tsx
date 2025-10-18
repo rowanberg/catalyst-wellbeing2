@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { useAppSelector } from '@/lib/redux/hooks'
 import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
 import { Button } from '@/components/ui/button'
@@ -248,9 +249,11 @@ const TeacherProfilePage = () => {
                         ) : (
                           <div className="relative inline-block">
                             {profile?.profile_picture_url ? (
-                              <img
+                              <Image
                                 src={profile.profile_picture_url}
                                 alt="Profile"
+                                width={96}
+                                height={96}
                                 className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-4 border-white/20 shadow-lg mx-auto"
                               />
                             ) : (

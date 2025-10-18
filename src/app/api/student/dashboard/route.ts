@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(cachedData)
     }
 
-    // Get user profile with school info and actual class name
+    // Get user profile - only essential fields for dashboard
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select(`
@@ -120,24 +120,16 @@ export async function GET(request: NextRequest) {
         role,
         school_id,
         school_code,
-        avatar_url,
         xp,
         gems,
         level,
-        phone,
-        date_of_birth,
-        address,
-        emergency_contact,
         class_name,
         grade_level,
-        last_login_at,
         streak_days,
         total_quests_completed,
         current_mood,
         pet_happiness,
-        pet_name,
-        created_at,
-        updated_at
+        pet_name
       `)
       .eq('user_id', user.id)
       .single()
@@ -248,82 +240,93 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Check quest completion status by looking at actual feature tables
-    
-    // Check gratitude quest - completed if there's an entry today
-    const { data: todayGratitude } = await supabase
-      .from('gratitude_entries')
-      .select('id')
-      .eq('user_id', user.id)
-      .gte('created_at', `${today}T00:00:00.000Z`)
-      .lt('created_at', `${today}T23:59:59.999Z`)
-      .limit(1)
-
-    // Check courage quest - completed if there's an entry today
-    const { data: todayCourage } = await supabase
-      .from('courage_log')
-      .select('id')
-      .eq('user_id', user.id)
-      .gte('created_at', `${today}T00:00:00.000Z`)
-      .lt('created_at', `${today}T23:59:59.999Z`)
-      .limit(1)
-
-    // Check kindness quest - completed if there's an entry today
-    const { data: todayKindness } = await supabase
-      .from('kindness_counter')
-      .select('last_updated')
-      .eq('user_id', user.id)
-      .gte('last_updated', `${today}T00:00:00.000Z`)
-      .lt('last_updated', `${today}T23:59:59.999Z`)
-      .limit(1)
-
-    // Check breathing quest - completed if there's a session today
-    const { data: todayBreathing } = await supabase
-      .from('breathing_sessions')
-      .select('id')
-      .eq('user_id', user.id)
-      .gte('created_at', `${today}T00:00:00.000Z`)
-      .lt('created_at', `${today}T23:59:59.999Z`)
-      .limit(1)
-
-    // Check habit tracker for today (water and sleep)
-    const { data: todayHabits } = await supabase
-      .from('habit_tracker')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('date', today)
-      .single()
-
-    // Get recent gratitude entries (last 3)
-    const { data: gratitudeEntries } = await supabase
-      .from('gratitude_entries')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(3)
-
-    // Get recent courage log entries (last 3)
-    const { data: courageEntries } = await supabase
-      .from('courage_log')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(3)
-
-    // Get kindness counter
-    const { data: kindnessData } = await supabase
-      .from('kindness_counter')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-
-    // Get recent help requests
-    const { data: helpRequests } = await supabase
-      .from('help_requests')
-      .select('*')
-      .eq('student_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(5)
+    // OPTIMIZED: Execute all quest queries in parallel instead of sequential
+    const [
+      { data: todayGratitude },
+      { data: todayCourage },
+      { data: todayKindness },
+      { data: todayBreathing },
+      { data: todayHabits },
+      { data: gratitudeEntries },
+      { data: courageEntries },
+      { data: kindnessData },
+      { data: helpRequests }
+    ] = await Promise.all([
+      // Check gratitude quest
+      supabase
+        .from('gratitude_entries')
+        .select('id')
+        .eq('user_id', user.id)
+        .gte('created_at', `${today}T00:00:00.000Z`)
+        .lt('created_at', `${today}T23:59:59.999Z`)
+        .limit(1),
+      
+      // Check courage quest
+      supabase
+        .from('courage_log')
+        .select('id')
+        .eq('user_id', user.id)
+        .gte('created_at', `${today}T00:00:00.000Z`)
+        .lt('created_at', `${today}T23:59:59.999Z`)
+        .limit(1),
+      
+      // Check kindness quest
+      supabase
+        .from('kindness_counter')
+        .select('last_updated')
+        .eq('user_id', user.id)
+        .gte('last_updated', `${today}T00:00:00.000Z`)
+        .lt('last_updated', `${today}T23:59:59.999Z`)
+        .limit(1),
+      
+      // Check breathing quest
+      supabase
+        .from('breathing_sessions')
+        .select('id')
+        .eq('user_id', user.id)
+        .gte('created_at', `${today}T00:00:00.000Z`)
+        .lt('created_at', `${today}T23:59:59.999Z`)
+        .limit(1),
+      
+      // Get habit tracker (water and sleep)
+      supabase
+        .from('habit_tracker')
+        .select('water_glasses, sleep_hours')
+        .eq('user_id', user.id)
+        .eq('date', today)
+        .single(),
+      
+      // Get recent gratitude entries
+      supabase
+        .from('gratitude_entries')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(3),
+      
+      // Get recent courage log entries
+      supabase
+        .from('courage_log')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(3),
+      
+      // Get kindness counter
+      supabase
+        .from('kindness_counter')
+        .select('*')
+        .eq('user_id', user.id)
+        .single(),
+      
+      // Get recent help requests
+      supabase
+        .from('help_requests')
+        .select('*')
+        .eq('student_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(5)
+    ])
 
     // Calculate quest completion stats based on actual data
     const questTypes = ['gratitude', 'kindness', 'courage', 'breathing', 'water', 'sleep']

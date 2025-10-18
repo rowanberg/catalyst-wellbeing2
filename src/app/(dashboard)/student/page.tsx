@@ -22,11 +22,10 @@ import {
 import { MessagingNavButton } from '@/components/ui/messaging-nav-button'
 import { ProfessionalLoader } from '@/components/ui/professional-loader'
 
-// Development-only logging helper
-const isDev = process.env.NODE_ENV === 'development'
-const devLog = (...args: any[]): void => {
-  if (isDev) console.log(...args)
-}
+// Development-only logging helper (tree-shakeable in production)
+const devLog = process.env.NODE_ENV === 'development'
+  ? (...args: any[]) => console.log(...args)
+  : () => {}
 
 // Enhanced Progress Component with animations
 const Progress = ({ value = 0, className = "", animated = true }: { 
@@ -492,19 +491,27 @@ const StudentDashboardContent = () => {
     }
   }, [])
 
-  // Optimized dashboard data fetch with parallel loading
+  // OPTIMIZED: Parallel loading - fetch all 4 APIs simultaneously
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true)
-      devLog('🚀 [DASHBOARD] Starting optimized data fetch...')
+      devLog('🚀 [DASHBOARD] Starting parallel data fetch...')
       
-      // Fetch dashboard data first
-      const dashboardResponse = await fetch('/api/student/dashboard')
-      if (dashboardResponse.ok) {
-        const data = await dashboardResponse.json()
-        devLog('✅ [DASHBOARD] Dashboard API response received')
+      // Fetch ALL 4 APIs at once for maximum speed (limit announcements & polls to 2 items)
+      const [dashboardRes, schoolRes, announcementsRes, pollsRes] = await Promise.allSettled([
+        fetch('/api/student/dashboard'),
+        fetch('/api/student/school-info'),
+        reduxProfile?.school_id 
+          ? fetch(`/api/admin/announcements/?school_id=${reduxProfile.school_id}&audience=students&limit=2`)
+          : Promise.resolve(null),
+        fetch('/api/polls?limit=2')
+      ])
+      
+      // Process dashboard data
+      if (dashboardRes.status === 'fulfilled' && dashboardRes.value.ok) {
+        const data = await dashboardRes.value.json()
+        devLog('✅ [DASHBOARD] Dashboard API loaded')
         
-        // Set profile and stats from API response immediately
         setProfile(data.profile)
         setStats({
           ...data.stats,
@@ -518,80 +525,51 @@ const StudentDashboardContent = () => {
           streakData: data.quests.streakData || { current: 0, best: 0, lastCompleted: "" }
         })
         setMood(data.mood)
-        // Only set locked date if there's actually a mood logged for today
+        
         if (data.mood?.current && data.mood.current !== '') {
-          devLog('🔒 Setting mood as locked for today:', data.mood.current)
           setMoodLockedDate(getTodayDate())
         } else {
-          // Clear locked date if no mood is set
-          devLog('🔓 Clearing mood lock - no mood logged today')
           setMoodLockedDate('')
         }
+        
         setAcademicData({
           recentTests: data.academic?.recentTests || [],
           upcomingExams: data.academic?.upcomingExams || [],
           subjectPerformance: data.academic?.subjectPerformance || [],
-          overallGPA: data.academic?.overallGPA || 0, // Fixed typo
+          overallGPA: data.academic?.overallGPA || 0,
           loading: false
         })
-        
-        // Set loading to false immediately after main data is loaded
-        setLoading(false)
-        devLog('✅ [DASHBOARD] Main dashboard loaded - UI ready!')
-        
-        // Fetch announcements and polls in parallel (non-blocking)
-        if (data.profile?.school_id) {
-          devLog('🔄 [DASHBOARD] Fetching announcements and polls in background...')
-          // Don't await these - let them load in background
-          Promise.all([
-            fetchAnnouncementsWithSchoolId(data.profile.school_id),
-            fetchPolls()
-          ]).then(() => {
-            devLog('✅ [DASHBOARD] Background data loaded')
-          }).catch(error => {
-            console.error('❌ [DASHBOARD] Background data error:', error)
-          })
-        }
       }
+      
+      // Process school info
+      if (schoolRes.status === 'fulfilled' && schoolRes.value.ok) {
+        const schoolData = await schoolRes.value.json()
+        setSchoolInfo(schoolData.schoolInfo)
+        devLog('✅ [SCHOOL-INFO] School info loaded')
+      }
+      
+      // Process announcements
+      if (announcementsRes.status === 'fulfilled' && announcementsRes.value && announcementsRes.value.ok) {
+        const announcementsData = await announcementsRes.value.json()
+        setAnnouncements(announcementsData.announcements || [])
+        devLog('✅ [ANNOUNCEMENTS] Announcements loaded')
+      }
+      
+      // Process polls
+      if (pollsRes.status === 'fulfilled' && pollsRes.value.ok) {
+        const pollsData = await pollsRes.value.json()
+        setPolls(pollsData.polls || [])
+        devLog('✅ [POLLS] Polls loaded')
+      }
+      
+      setLoading(false)
+      devLog('🏁 [DASHBOARD] All data loaded in parallel!')
+      
     } catch (error: any) {
-      // Fallback to Redux profile and mock data on error
+      console.error('❌ [DASHBOARD] Error:', error)
+      // Fallback to Redux profile
       setProfile(reduxProfile)
-      setStats({
-        level: 3,
-        xp: 250,
-        gems: 45,
-        streakDays: 7,
-        totalQuestsCompleted: 23,
-        petHappiness: 85,
-        petName: "Whiskers",
-        weeklyXP: 180,
-        monthlyXP: 750,
-        rank: 12,
-        nextLevelXP: 300
-      })
-      // Mock academic data
-      setAcademicData({
-        recentTests: [
-          { id: 1, subject: 'Mathematics', score: 92, maxScore: 100, date: '2024-09-05', grade: 'A' },
-          { id: 2, subject: 'Science', score: 88, maxScore: 100, date: '2024-09-03', grade: 'B+' },
-          { id: 3, subject: 'English', score: 95, maxScore: 100, date: '2024-09-01', grade: 'A+' }
-        ],
-        upcomingExams: [
-          { id: 1, subject: 'History', date: '2024-09-15', time: '10:00 AM', type: 'Mid-term' },
-          { id: 2, subject: 'Geography', date: '2024-09-18', time: '2:00 PM', type: 'Quiz' }
-        ],
-        subjectPerformance: [
-          { subject: 'Mathematics', average: 89, trend: 'up', color: 'blue' },
-          { subject: 'Science', average: 85, trend: 'up', color: 'green' },
-          { subject: 'English', average: 92, trend: 'stable', color: 'purple' },
-          { subject: 'History', average: 78, trend: 'down', color: 'orange' }
-        ],
-        overallGPA: 3.7,
-        loading: false
-      })
-    } finally {
-      // Loading is already set to false after main data loads
-      devLog('🏁 [DASHBOARD] Fetch complete')
+      setLoading(false)
     }
   }, [reduxProfile])
 
@@ -628,18 +606,13 @@ const StudentDashboardContent = () => {
           devLog('✅ [AUTH] Authentication verified')
         }
         
-        // Prevent duplicate calls by checking if already loading
-        if (!loading || !authChecked) return
+        // Prevent duplicate calls by checking auth status
+        if (!authChecked) return
         
         devLog('🎯 [DASHBOARD] Starting data fetch...')
         
-        // Start all data fetching in parallel for maximum speed
-        await Promise.all([
-          fetchDashboardData(),
-          fetchSchoolInfo().catch(error => {
-            console.error('❌ [DASHBOARD] School info error:', error)
-          })
-        ])
+        // Fetch all data (dashboard handles all 4 APIs in parallel now)
+        await fetchDashboardData()
         
         devLog('🏁 [DASHBOARD] All data loaded successfully')
         
@@ -651,7 +624,7 @@ const StudentDashboardContent = () => {
     }
 
     initializeDashboard()
-  }, [authChecked, authLoading, reduxUser, reduxProfile, loading, router]) // Dependencies for auth checking
+  }, [authChecked, authLoading, reduxUser, reduxProfile, router]) // Removed 'loading' to prevent re-fetch
 
   // Quest toggle handler
   const handleQuestToggle = async (questType: keyof QuestStatus) => {
@@ -2671,186 +2644,219 @@ const StudentDashboardContent = () => {
         </div>
       )}
 
-      {/* Professional Student Footer */}
-      <footer className="mt-12 bg-gradient-to-r from-indigo-900 via-purple-900 to-blue-900 text-white relative overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
+      {/* Professional Student Footer - Mobile Optimized */}
+      <footer className="mt-12 sm:mt-16 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white relative overflow-hidden border-t border-slate-700/50">
+        {/* Subtle Background Pattern */}
+        <div className="absolute inset-0 opacity-5">
           <div className="absolute inset-0" style={{
-            backgroundImage: `radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.3) 1px, transparent 0)`,
-            backgroundSize: '24px 24px'
+            backgroundImage: `linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px)`,
+            backgroundSize: '40px 40px'
           }}></div>
         </div>
         
-        <div className="relative z-10 container mx-auto px-4 py-8 sm:py-12">
-          {/* School Information Header */}
-          <div className="text-center mb-8">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              viewport={{ once: true }}
-            >
-              <div className="flex items-center justify-center mb-4">
-                <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-sm">
-                  <GraduationCap className="w-8 h-8 text-yellow-400" />
+        <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Main Footer Content */}
+          <div className="py-8 sm:py-12 lg:py-16">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12">
+              {/* Brand Section */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                viewport={{ once: true }}
+                className="sm:col-span-2 lg:col-span-4"
+              >
+                <div className="flex items-center space-x-3 mb-4 sm:mb-6">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <GraduationCap className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-bold text-white">
+                      {schoolInfo?.name || profile?.school?.name || 'Your School'}
+                    </h3>
+                    <p className="text-[10px] sm:text-xs text-slate-400">Excellence in Education</p>
+                  </div>
                 </div>
-              </div>
-              <h3 className="text-2xl sm:text-3xl font-bold mb-2">
-                Student of {schoolInfo?.name || profile?.school?.name || 'Your School'}
-              </h3>
-              <p className="text-white/80 text-sm sm:text-base">
-                Your educational journey continues here
-              </p>
-            </motion.div>
-          </div>
-
-          {/* School Information Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {/* School Address */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              viewport={{ once: true }}
-              className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20"
-            >
-              <div className="flex items-center mb-3">
-                <div className="p-2 bg-blue-500/20 rounded-lg mr-3">
-                  <MapPin className="w-5 h-5 text-blue-300" />
-                </div>
-                <h4 className="font-semibold text-white">School Address</h4>
-              </div>
-              <p className="text-white/80 text-sm leading-relaxed">
-                {schoolInfo?.address || profile?.school?.address || "Address not available"}
-              </p>
-            </motion.div>
-
-            {/* Contact Information */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              viewport={{ once: true }}
-              className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20"
-            >
-              <div className="flex items-center mb-3">
-                <div className="p-2 bg-green-500/20 rounded-lg mr-3">
-                  <Phone className="w-5 h-5 text-green-300" />
-                </div>
-                <h4 className="font-semibold text-white">Contact Info</h4>
-              </div>
-              <div className="space-y-2 text-sm text-white/80">
-                <p>📞 {schoolInfo?.phone || profile?.school?.phone || "Phone not available"}</p>
-                <p>📧 {schoolInfo?.email || profile?.school?.email || "Email not available"}</p>
-                {schoolInfo?.website && (
-                  <p>🌐 <a href={schoolInfo.website} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">{schoolInfo.website}</a></p>
-                )}
-              </div>
-            </motion.div>
-
-            {/* School Hours */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              viewport={{ once: true }}
-              className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20"
-            >
-              <div className="flex items-center mb-3">
-                <div className="p-2 bg-yellow-500/20 rounded-lg mr-3">
-                  <Clock className="w-5 h-5 text-yellow-300" />
-                </div>
-                <h4 className="font-semibold text-white">School Hours</h4>
-              </div>
-              <div className="space-y-1 text-sm text-white/80">
-                <p>{schoolInfo?.schoolHours?.operatingDays?.join(' - ') || 'Monday - Friday'}</p>
-                <p className="font-medium">
-                  {schoolInfo?.schoolHours?.start ? `${schoolInfo.schoolHours.start} - ${schoolInfo.schoolHours.end}` : '8:00 AM - 3:30 PM'}
+                <p className="text-xs sm:text-sm text-slate-400 leading-relaxed mb-4 sm:mb-6">
+                  {schoolInfo?.mission || 'Empowering students to achieve their full potential through innovative learning and holistic development.'}
                 </p>
-                <p className="text-xs text-white/60">
-                  Office: {schoolInfo?.schoolHours?.officeStart ? `${schoolInfo.schoolHours.officeStart} - ${schoolInfo.schoolHours.officeEnd}` : '7:30 AM - 4:00 PM'}
-                </p>
-              </div>
-            </motion.div>
-
-            {/* Emergency Contact */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              viewport={{ once: true }}
-              className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20"
-            >
-              <div className="flex items-center mb-3">
-                <div className="p-2 bg-red-500/20 rounded-lg mr-3">
-                  <AlertTriangle className="w-5 h-5 text-red-300" />
-                </div>
-                <h4 className="font-semibold text-white">Emergency</h4>
-              </div>
-              <div className="space-y-1 text-sm text-white/80">
-                <p>🚨 Emergency: {schoolInfo?.emergency?.general || '911'}</p>
-                <p>🏥 School Nurse: {schoolInfo?.emergency?.nurse || 'Ext. 123'}</p>
-                <p>👮 Security: {schoolInfo?.emergency?.security || 'Ext. 456'}</p>
-                {schoolInfo?.emergency?.contact && (
-                  <p>📞 {schoolInfo.emergency.contact}: {schoolInfo.emergency.contactPhone}</p>
+                {schoolInfo?.motto && (
+                  <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-3 sm:p-4">
+                    <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
+                      <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-400" />
+                      <span className="text-[10px] sm:text-xs font-semibold text-slate-300 uppercase tracking-wider">Our Motto</span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-white font-medium italic">"{schoolInfo.motto}"</p>
+                  </div>
                 )}
-              </div>
-            </motion.div>
-          </div>
+              </motion.div>
 
-          {/* School Mission/Motto Section */}
-          {schoolInfo?.motto && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.5 }}
-              viewport={{ once: true }}
-              className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 mb-8 text-center"
-            >
-              <div className="flex items-center justify-center mb-4">
-                <div className="p-3 bg-yellow-500/20 rounded-2xl backdrop-blur-sm">
-                  <Star className="w-6 h-6 text-yellow-400" />
+              {/* Quick Links */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                viewport={{ once: true }}
+                className="lg:col-span-2"
+              >
+                <h4 className="text-xs sm:text-sm font-semibold text-white uppercase tracking-wider mb-3 sm:mb-4">Quick Links</h4>
+                <ul className="space-y-2 sm:space-y-3">
+                  {[
+                    { icon: BookOpen, label: 'My Classes', href: '#' },
+                    { icon: Calendar, label: 'Schedule', href: '#' },
+                    { icon: Trophy, label: 'Achievements', href: '#' },
+                    { icon: BarChart3, label: 'Progress', href: '#' },
+                  ].map((link, idx) => (
+                    <li key={idx}>
+                      <button className="flex items-center gap-2 text-xs sm:text-sm text-slate-400 hover:text-white transition-colors group active:scale-95 py-1">
+                        <link.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:scale-110 transition-transform flex-shrink-0" />
+                        <span>{link.label}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+
+              {/* Resources */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                viewport={{ once: true }}
+                className="lg:col-span-2"
+              >
+                <h4 className="text-xs sm:text-sm font-semibold text-white uppercase tracking-wider mb-3 sm:mb-4">Resources</h4>
+                <ul className="space-y-2 sm:space-y-3">
+                  {[
+                    { icon: HelpCircle, label: 'Help Center' },
+                    { icon: MessageCircle, label: 'Contact Teacher' },
+                    { icon: Shield, label: 'Safety & Privacy' },
+                    { icon: Settings, label: 'Settings' },
+                  ].map((link, idx) => (
+                    <li key={idx}>
+                      <button className="flex items-center gap-2 text-xs sm:text-sm text-slate-400 hover:text-white transition-colors group active:scale-95 py-1">
+                        <link.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:scale-110 transition-transform flex-shrink-0" />
+                        <span>{link.label}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+
+              {/* Contact Information */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                viewport={{ once: true }}
+                className="sm:col-span-2 lg:col-span-4"
+              >
+                <h4 className="text-xs sm:text-sm font-semibold text-white uppercase tracking-wider mb-3 sm:mb-4">Contact & Hours</h4>
+                <div className="space-y-3 sm:space-y-4">
+                  {/* Contact */}
+                  <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-3 sm:p-4">
+                    <div className="flex items-start gap-2 sm:gap-3">
+                      <div className="p-1.5 sm:p-2 bg-blue-500/10 rounded-lg">
+                        <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] sm:text-xs text-slate-400 mb-0.5 sm:mb-1">Phone</p>
+                        <p className="text-xs sm:text-sm text-white font-medium truncate">
+                          {schoolInfo?.phone || profile?.school?.phone || '(555) 123-4567'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Location */}
+                  <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-3 sm:p-4">
+                    <div className="flex items-start gap-2 sm:gap-3">
+                      <div className="p-1.5 sm:p-2 bg-green-500/10 rounded-lg">
+                        <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] sm:text-xs text-slate-400 mb-0.5 sm:mb-1">Location</p>
+                        <p className="text-xs sm:text-sm text-white leading-relaxed">
+                          {schoolInfo?.address || profile?.school?.address || 'Address not available'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Hours */}
+                  <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-3 sm:p-4">
+                    <div className="flex items-start gap-2 sm:gap-3">
+                      <div className="p-1.5 sm:p-2 bg-yellow-500/10 rounded-lg">
+                        <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] sm:text-xs text-slate-400 mb-0.5 sm:mb-1">School Hours</p>
+                        <p className="text-xs sm:text-sm text-white font-medium">
+                          {schoolInfo?.schoolHours?.start ? `${schoolInfo.schoolHours.start} - ${schoolInfo.schoolHours.end}` : '8:00 AM - 3:30 PM'}
+                        </p>
+                        <p className="text-[10px] sm:text-xs text-slate-500 mt-0.5 sm:mt-1">
+                          {schoolInfo?.schoolHours?.operatingDays?.join(' - ') || 'Monday - Friday'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Emergency */}
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 sm:p-4">
+                    <div className="flex items-start gap-2 sm:gap-3">
+                      <div className="p-1.5 sm:p-2 bg-red-500/20 rounded-lg">
+                        <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] sm:text-xs text-red-300 font-semibold mb-0.5 sm:mb-1">Emergency Contact</p>
+                        <p className="text-xs sm:text-sm text-white">
+                          {schoolInfo?.emergency?.general || '911'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <h4 className="text-lg font-semibold text-white mb-3">School Motto</h4>
-              <p className="text-white/90 font-medium text-lg mb-2">"{schoolInfo.motto}"</p>
-              {schoolInfo.mission && (
-                <p className="text-white/70 text-sm leading-relaxed">{schoolInfo.mission}</p>
-              )}
-            </motion.div>
-          )}
+              </motion.div>
+            </div>
+          </div>
 
           {/* Footer Bottom */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.6 }}
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
             viewport={{ once: true }}
-            className="border-t border-white/20 pt-6 text-center"
+            className="border-t border-slate-700/50 py-4 sm:py-6"
           >
-            <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-lg flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-white" />
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+              {/* Copyright */}
+              <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" />
+                  </div>
+                  <span className="text-xs sm:text-sm font-semibold text-white">Catalyst Wellbeing</span>
                 </div>
-                <span className="text-white font-semibold">Catalyst Wellbeing</span>
+                <span className="hidden sm:inline text-slate-600">•</span>
+                <p className="text-[10px] sm:text-xs text-slate-500 text-center sm:text-left">
+                  © {new Date().getFullYear()} {schoolInfo?.name || profile?.school?.name || 'Your School'}
+                </p>
               </div>
-              
-              <div className="text-sm text-white/60">
-                <p>© 2024 {schoolInfo?.name || profile?.school?.name || 'Your School'}. All rights reserved.</p>
+
+              {/* Legal Links */}
+              <div className="flex items-center gap-2 sm:gap-4 text-[10px] sm:text-xs">
+                <button className="text-slate-400 hover:text-white transition-colors active:scale-95">Privacy</button>
+                <span className="text-slate-700">•</span>
+                <button className="text-slate-400 hover:text-white transition-colors active:scale-95">Terms</button>
+                <span className="text-slate-700">•</span>
+                <button className="text-slate-400 hover:text-white transition-colors active:scale-95">Accessibility</button>
               </div>
-              
-              <div className="flex items-center space-x-4 text-sm text-white/80">
-                <button className="hover:text-white transition-colors">Privacy Policy</button>
-                <span>•</span>
-                <button className="hover:text-white transition-colors">Terms of Use</button>
-                <span>•</span>
-                <button className="hover:text-white transition-colors">Support</button>
+
+              {/* Platform Badge */}
+              <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-slate-500">
+                <Shield className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                <span>Secure Platform</span>
               </div>
-            </div>
-            
-            <div className="mt-4 text-xs text-white/50">
-              <p>Need help? Contact your teacher or visit the Help Center for assistance.</p>
             </div>
           </motion.div>
         </div>

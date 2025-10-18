@@ -1,17 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
 import { useAppSelector } from '@/lib/redux/hooks'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { motion, AnimatePresence } from 'framer-motion'
+import { ClientWrapper } from '@/components/providers/ClientWrapper'
 import { Input } from '@/components/ui/input'
-// Note: Checkbox component may not exist, using a simple checkbox implementation
-// import { Checkbox } from '@/components/ui/checkbox'
 import { ProfessionalLoader } from '@/components/ui/professional-loader'
-import { AttendanceLoader, AttendancePageLoader } from '@/components/ui/attendance-loader'
+import { AttendanceLoader } from '@/components/ui/attendance-loader'
 import { 
   ArrowLeft,
   Users, 
@@ -35,7 +34,8 @@ import {
   Square,
   History,
   Eye,
-  CalendarDays
+  CalendarDays,
+  ChevronRight
 } from 'lucide-react'
 
 interface Grade {
@@ -99,24 +99,22 @@ interface AttendanceDetail {
 
 export default function TeacherAttendancePage() {
   const router = useRouter()
-  const [currentView, setCurrentView] = useState<'classes' | 'students' | 'history' | 'history-detail'>('classes')
+  const { user, profile } = useAppSelector((state) => state.auth)
+  const [currentView, setCurrentView] = useState('classes')
   const [loading, setLoading] = useState(true)
+  const [authChecked, setAuthChecked] = useState(false)
   const [loadingAssignedClasses, setLoadingAssignedClasses] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
-  const { user } = useAppSelector((state) => state.auth)
-  
-  // Data states
-  const [grades, setGrades] = useState<Grade[]>([])
-  const [classes, setClasses] = useState<Class[]>([])
-  const [students, setStudents] = useState<Student[]>([])
-  
-  // Selection states
-  const [selectedGrade, setSelectedGrade] = useState<Grade | null>(null)
-  const [selectedClass, setSelectedClass] = useState<Class | null>(null)
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0])
-  
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+  const [grades, setGrades] = useState<any[]>([])
+  const [classes, setClasses] = useState<any[]>([])
+  const [students, setStudents] = useState<any[]>([])
+  const [selectedGrade, setSelectedGrade] = useState<string>('')
+  const [selectedClass, setSelectedClass] = useState<any>(null)
+  const [attendanceSaved, setAttendanceSaved] = useState(false)
+  const [savedStudentCount, setSavedStudentCount] = useState(0)
+
   // Attendance states
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([])
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
@@ -128,25 +126,62 @@ export default function TeacherAttendancePage() {
   const [attendanceDetails, setAttendanceDetails] = useState<AttendanceDetail[]>([])
   const [selectedHistoryDate, setSelectedHistoryDate] = useState<string>('')
   const [loadingHistory, setLoadingHistory] = useState(false)
+  const [historyOffset, setHistoryOffset] = useState(0)
+  const [hasMoreHistory, setHasMoreHistory] = useState(false)
+  const [loadingMoreHistory, setLoadingMoreHistory] = useState(false)
+  const fallbackTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Load assigned classes when user is available
   useEffect(() => {
+    console.log('🔍 [Teacher Attendance] Auth state:', { user: user?.id, profile: profile?.id })
+    
     if (user?.id) {
+      console.log('📞 [Teacher Attendance] Calling loadAssignedClasses...')
+      setAuthChecked(true)
       loadAssignedClasses()
+      
+      // Fallback timeout in case API hangs
+      fallbackTimerRef.current = setTimeout(() => {
+        console.error('⏱️ [Teacher Attendance] API timeout - forcing loading to false')
+        setLoading(false)
+        setLoadingAssignedClasses(false)
+      }, 10000) // 10 second timeout
+      
+      return () => {
+        if (fallbackTimerRef.current) {
+          clearTimeout(fallbackTimerRef.current)
+        }
+      }
+    } else {
+      // Wait longer before declaring no user (auth takes time to load)
+      const timer = setTimeout(() => {
+        console.log('⚠️ [Teacher Attendance] Auth check complete, no user found')
+        setAuthChecked(true)
+        setLoading(false)
+      }, 3000) // Wait 3 seconds for auth to load
+      return () => clearTimeout(timer)
     }
   }, [user?.id])
 
   const loadAssignedClasses = async () => {
-    if (!user?.id) return
+    if (!user?.id) {
+      console.log('❌ [Teacher Attendance] No user ID, cannot load classes')
+      setLoading(false)
+      return
+    }
     
+    console.log('🚀 [Teacher Attendance] Starting loadAssignedClasses for user:', user.id)
     setLoadingAssignedClasses(true)
     setError(null)
     
     try {
+      console.log('📡 [Teacher Attendance] Fetching from API...')
       const response = await fetch(`/api/teacher/class-assignments?teacher_id=${user.id}`)
+      console.log('📊 [Teacher Attendance] API response status:', response.status)
       
       if (response.ok) {
         const data = await response.json()
+        console.log('📦 [Teacher Attendance] API data:', data)
         
         if (data.assignments && data.assignments.length > 0) {
           // Transform the assignments data to match our Class interface
@@ -166,19 +201,28 @@ export default function TeacherAttendancePage() {
           }))
           
           setClasses(transformedClasses)
-          console.log(`✅ Loaded ${transformedClasses.length} assigned classes`)
+          console.log(`✅ [Teacher Attendance] Loaded ${transformedClasses.length} assigned classes`)
+          
+          // Clear the timeout since API completed successfully
+          if (fallbackTimerRef.current) {
+            clearTimeout(fallbackTimerRef.current)
+            fallbackTimerRef.current = null
+          }
         } else {
           setClasses([])
-          console.log('No assigned classes found')
+          console.log('⚠️ [Teacher Attendance] No assigned classes found')
         }
       } else {
+        const errorText = await response.text()
+        console.error('❌ [Teacher Attendance] API error:', response.status, errorText)
         throw new Error(`Failed to fetch assigned classes: ${response.status}`)
       }
     } catch (error: any) {
-      // console.error('Error loading assigned classes:', error)
+      console.error('💥 [Teacher Attendance] Error loading assigned classes:', error)
       setError('Failed to load assigned classes. Please try again.')
       setClasses([])
     } finally {
+      console.log('🏁 [Teacher Attendance] loadAssignedClasses complete, setting loading to false')
       setLoadingAssignedClasses(false)
       setLoading(false)
     }
@@ -210,7 +254,7 @@ export default function TeacherAttendancePage() {
   // Removed fetchClasses since we fetch all classes at once in fetchAllClasses
 
   const fetchStudents = async (classId: string) => {
-    if (!user?.school_id) {
+    if (!profile?.school_id) {
       // console.error('No school ID available for fetching students')
       return
     }
@@ -218,8 +262,8 @@ export default function TeacherAttendancePage() {
     setLoading(true)
     try {
       // First, get the students in the class
-      console.log('🔍 Fetching students for class:', classId, 'school:', user.school_id)
-      const studentsResponse = await fetch(`/api/teacher/students?school_id=${user.school_id}&class_id=${classId}`)
+      console.log('🔍 Fetching students for class:', classId, 'school:', profile.school_id)
+      const studentsResponse = await fetch(`/api/teacher/students?school_id=${profile.school_id}&class_id=${classId}`)
       
       console.log('📡 Students API response status:', studentsResponse.status)
       
@@ -403,10 +447,14 @@ export default function TeacherAttendancePage() {
       if (response.ok) {
         const result = await response.json()
         console.log('Attendance saved successfully:', result)
-        alert(`✅ Attendance saved successfully for ${attendanceData.length} students!`)
+        setAttendanceSaved(true)
+        setSavedStudentCount(attendanceData.length)
+        // Auto-hide success message after 5 seconds
+        setTimeout(() => {
+          setAttendanceSaved(false)
+        }, 5000)
       } else {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-        // console.error('Failed to save attendance:', response.status, errorData)
         
         if (errorData.error && errorData.error.includes('not created yet')) {
           alert('⚠️ Attendance system not initialized. Please contact your administrator to set up the attendance tables.')
@@ -434,58 +482,59 @@ export default function TeacherAttendancePage() {
     excused: students.filter(s => s.attendance_status === 'excused').length
   }
 
-  // Load attendance history for selected class
-  const loadAttendanceHistory = async () => {
+  // Load attendance history for selected class (initial load or refresh)
+  const loadAttendanceHistory = async (reset = true) => {
     if (!selectedClass?.id) return
     
-    setLoadingHistory(true)
+    if (reset) {
+      setLoadingHistory(true)
+      setHistoryOffset(0)
+    } else {
+      setLoadingMoreHistory(true)
+    }
     setError(null)
     
     try {
-      // Mock data for demonstration - replace with actual API call
-      const mockHistory: AttendanceHistory[] = [
-        {
-          id: '1',
-          class_id: selectedClass.id,
-          class_name: selectedClass.class_name,
-          attendance_date: '2024-01-15',
-          total_students: 25,
-          present_count: 22,
-          absent_count: 2,
-          late_count: 1,
-          excused_count: 0
-        },
-        {
-          id: '2',
-          class_id: selectedClass.id,
-          class_name: selectedClass.class_name,
-          attendance_date: '2024-01-14',
-          total_students: 25,
-          present_count: 24,
-          absent_count: 1,
-          late_count: 0,
-          excused_count: 0
-        },
-        {
-          id: '3',
-          class_id: selectedClass.id,
-          class_name: selectedClass.class_name,
-          attendance_date: '2024-01-13',
-          total_students: 25,
-          present_count: 20,
-          absent_count: 3,
-          late_count: 2,
-          excused_count: 0
-        }
-      ]
+      const offset = reset ? 0 : historyOffset
+      const response = await fetch(`/api/teacher/attendance-history?limit=7&offset=${offset}`)
       
-      setAttendanceHistory(mockHistory)
+      if (!response.ok) {
+        throw new Error('Failed to fetch attendance history')
+      }
+      
+      const result = await response.json()
+      
+      if (result.success && result.history) {
+        if (reset) {
+          setAttendanceHistory(result.history)
+        } else {
+          // Append to existing history
+          setAttendanceHistory(prev => [...prev, ...result.history])
+        }
+        setHasMoreHistory(result.hasMore || false)
+        setHistoryOffset(result.nextOffset || offset + 7)
+      } else {
+        if (reset) {
+          setAttendanceHistory([])
+        }
+        setHasMoreHistory(false)
+      }
     } catch (error) {
-      // console.error('Error loading attendance history:', error)
+      console.error('Error loading attendance history:', error)
       setError('Failed to load attendance history')
+      if (reset) {
+        setAttendanceHistory([])
+      }
+      setHasMoreHistory(false)
     } finally {
       setLoadingHistory(false)
+      setLoadingMoreHistory(false)
     }
+  }
+
+  // Load more attendance history
+  const loadMoreHistory = () => {
+    loadAttendanceHistory(false)
   }
 
   // Load attendance details for a specific date
@@ -496,90 +545,88 @@ export default function TeacherAttendancePage() {
     setError(null)
     
     try {
-      // Mock data for demonstration - replace with actual API call
-      const mockDetails: AttendanceDetail[] = [
-        {
-          id: '1',
-          student_id: '1',
-          student_name: 'John Smith',
-          student_email: 'john.smith@school.edu',
-          attendance_status: 'present',
-          attendance_date: date
-        },
-        {
-          id: '2',
-          student_id: '2',
-          student_name: 'Emma Johnson',
-          student_email: 'emma.johnson@school.edu',
-          attendance_status: 'present',
-          attendance_date: date
-        },
-        {
-          id: '3',
-          student_id: '3',
-          student_name: 'Michael Brown',
-          student_email: 'michael.brown@school.edu',
-          attendance_status: 'late',
-          attendance_date: date
-        },
-        {
-          id: '4',
-          student_id: '4',
-          student_name: 'Sarah Davis',
-          student_email: 'sarah.davis@school.edu',
-          attendance_status: 'absent',
-          attendance_date: date
-        },
-        {
-          id: '5',
-          student_id: '5',
-          student_name: 'David Wilson',
-          student_email: 'david.wilson@school.edu',
-          attendance_status: 'present',
-          attendance_date: date
-        }
-      ]
+      const response = await fetch(`/api/teacher/attendance-details?date=${date}&class_id=${selectedClass.id}`)
       
-      setAttendanceDetails(mockDetails)
-      setSelectedHistoryDate(date)
-      setCurrentView('history-detail')
+      if (!response.ok) {
+        throw new Error('Failed to fetch attendance details')
+      }
+      
+      const result = await response.json()
+      
+      if (result.success && result.details) {
+        setAttendanceDetails(result.details)
+        setSelectedHistoryDate(date)
+        setCurrentView('history-detail')
+      } else {
+        setAttendanceDetails([])
+        setError('No attendance details found for this date')
+      }
     } catch (error) {
-      // console.error('Error loading attendance details:', error)
+      console.error('Error loading attendance details:', error)
       setError('Failed to load attendance details')
+      setAttendanceDetails([])
     } finally {
       setLoadingHistory(false)
     }
   }
 
-  if (loading) {
-    return <AttendancePageLoader />
+  console.log('🎨 [Teacher Attendance] Rendering with:', { loading, authChecked, currentView, hasUser: !!user, hasProfile: !!profile })
+
+  // Show loader while checking auth or loading data
+  if (loading || !authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+        <div className="text-center">
+          <AttendanceLoader />
+          <p className="mt-4 text-sm text-gray-600">
+            {!authChecked ? 'Checking authentication...' : 'Loading attendance data...'}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // Only show auth required after we've confirmed no user
+  if (authChecked && !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+        <Card className="max-w-md p-8">
+          <CardContent className="text-center">
+            <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Authentication Required</h2>
+            <p className="text-gray-600 mb-4">Please log in to access the attendance page.</p>
+            <Button onClick={() => router.push('/login')}>Go to Login</Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-      {/* Header */}
-      <div className="bg-white/95 backdrop-blur-xl shadow-lg border-b border-white/20 sticky top-0 z-10">
-        <div className="px-4 sm:px-6 py-4 sm:py-5">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                onClick={() => router.back()}
-                variant="ghost"
-                size="sm"
-                className="p-2 shrink-0 hover:bg-gray-100"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div className="min-w-0 flex-1">
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">Class Attendance</h1>
-                <p className="text-sm sm:text-base text-gray-600 truncate mt-1">
-                  {currentView === 'classes' && 'Select a class to mark attendance'}
-                  {currentView === 'students' && `${selectedClass?.class_name} - ${selectedDate}`}
-                  {currentView === 'history' && `${selectedClass?.class_name} - Attendance History`}
-                  {currentView === 'history-detail' && `${selectedClass?.class_name} - ${new Date(selectedHistoryDate).toLocaleDateString()}`}
-                </p>
+    <ClientWrapper>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 pb-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Success Banner */}
+          {attendanceSaved && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg shadow-sm"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-green-900">Attendance Saved Successfully!</h3>
+                  <p className="text-sm text-green-700 mt-0.5">
+                    Marked attendance for {savedStudentCount} students in {selectedClass?.class_name} on {new Date(selectedDate).toLocaleDateString()}
+                  </p>
+                </div>
               </div>
-            </div>
+            </motion.div>
+          )}
             
             {currentView === 'students' && (
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 w-full sm:w-auto">
@@ -617,12 +664,10 @@ export default function TeacherAttendancePage() {
                 </Button>
               </div>
             )}
-          </div>
-        </div>
-      </div>
 
-      <div className="p-4 sm:p-6 lg:p-8">
-        <AnimatePresence mode="wait">
+          {/* Main Content */}
+          <div className="mt-6">
+            <AnimatePresence mode="wait">
           <motion.div
             key={currentView}
             initial={{ opacity: 0, y: 20 }}
@@ -985,153 +1030,200 @@ export default function TeacherAttendancePage() {
                       )}
                     </div>
 
-                  {/* Student List */}
+                  {/* Student List - Optimized Professional Layout */}
                   {filteredStudents.length > 0 ? (
-                    <div className="space-y-2">
+                    <div className="space-y-0 border border-gray-200 rounded-lg overflow-hidden">
+                      {/* Desktop Table Header - Hidden on Mobile */}
+                      <div className="hidden lg:grid lg:grid-cols-12 gap-4 bg-gray-50 px-4 py-3 border-b border-gray-200">
+                        <div className="col-span-1 flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedStudents.length === filteredStudents.length && filteredStudents.length > 0}
+                            onChange={handleSelectAll}
+                            className="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div className="col-span-5 text-xs font-semibold text-gray-700 uppercase tracking-wide">Student</div>
+                        <div className="col-span-6 text-xs font-semibold text-gray-700 uppercase tracking-wide text-center">Attendance Status</div>
+                      </div>
+                      
+                      {/* Student Rows */}
                       {filteredStudents.map((student, index) => (
-                        <motion.div
+                        <div
                           key={student.id || `student-${index}`}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.05 }}
-                          className={`p-4 sm:p-6 rounded-xl border-2 transition-all duration-300 hover:shadow-lg ${
+                          className={`transition-colors duration-150 ${
                             student.id && selectedStudents.includes(student.id)
-                              ? 'border-blue-400 bg-blue-50 shadow-md'
-                              : 'border-gray-200 bg-white hover:border-gray-300'
-                          }`}
+                              ? 'bg-blue-50'
+                              : index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
+                          } hover:bg-gray-100 border-b border-gray-200 last:border-b-0`}
                         >
-                          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                            {/* Student Info */}
-                            <div className="flex items-center gap-4 flex-1 min-w-0">
+                          {/* Desktop Row */}
+                          <div className="hidden lg:grid lg:grid-cols-12 gap-4 px-4 py-3 items-center">
+                            {/* Checkbox */}
+                            <div className="col-span-1">
                               <input
                                 type="checkbox"
                                 checked={student.id ? selectedStudents.includes(student.id) : false}
                                 onChange={(e) => {
-                                  if (!student.id) return // Skip if no ID
+                                  if (!student.id) return
                                   if (e.target.checked) {
                                     setSelectedStudents(prev => [...prev, student.id])
                                   } else {
                                     setSelectedStudents(prev => prev.filter(id => id !== student.id))
                                   }
                                 }}
-                                className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 shrink-0"
+                                className="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                               />
-                              
-                              <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-white font-bold text-lg shrink-0 relative shadow-lg ${
-                                student.attendance_status === 'present' ? 'bg-gradient-to-br from-green-500 to-green-600' :
-                                student.attendance_status === 'absent' ? 'bg-gradient-to-br from-red-500 to-red-600' :
-                                student.attendance_status === 'late' ? 'bg-gradient-to-br from-yellow-500 to-yellow-600' :
-                                student.attendance_status === 'excused' ? 'bg-gradient-to-br from-purple-500 to-purple-600' :
-                                'bg-gradient-to-br from-blue-500 to-purple-600'
+                            </div>
+                            
+                            {/* Student Info */}
+                            <div className="col-span-5 flex items-center gap-3 min-w-0">
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0 ${
+                                student.attendance_status === 'present' ? 'bg-green-500' :
+                                student.attendance_status === 'absent' ? 'bg-red-500' :
+                                student.attendance_status === 'late' ? 'bg-yellow-500' :
+                                student.attendance_status === 'excused' ? 'bg-purple-500' :
+                                'bg-gray-400'
                               }`}>
                                 {(student.first_name || student.last_name || 'U').charAt(0).toUpperCase()}
-                                {/* Status indicator dot */}
-                                <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white shadow-sm ${
-                                  student.attendance_status === 'present' ? 'bg-green-500' :
-                                  student.attendance_status === 'absent' ? 'bg-red-500' :
-                                  student.attendance_status === 'late' ? 'bg-yellow-500' :
-                                  student.attendance_status === 'excused' ? 'bg-purple-500' :
-                                  'bg-gray-400'
-                                }`}></div>
                               </div>
-                              
                               <div className="min-w-0 flex-1">
-                                <h3 className="font-semibold text-gray-900 text-base sm:text-lg truncate">
+                                <div className="font-medium text-gray-900 truncate text-sm">
                                   {`${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unknown Student'}
-                                </h3>
-                                <p className="text-sm text-gray-600 truncate">{student.email}</p>
-                                {student.attendance_status && (
-                                  <div className="mt-2">
-                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                                      student.attendance_status === 'present' ? 'bg-green-100 text-green-800' :
-                                      student.attendance_status === 'absent' ? 'bg-red-100 text-red-800' :
-                                      student.attendance_status === 'late' ? 'bg-yellow-100 text-yellow-800' :
-                                      student.attendance_status === 'excused' ? 'bg-purple-100 text-purple-800' :
-                                      'bg-gray-100 text-gray-800'
-                                    }`}>
-                                      {student.attendance_status.charAt(0).toUpperCase() + student.attendance_status.slice(1)}
-                                    </span>
-                                  </div>
-                                )}
+                                </div>
+                                <div className="text-xs text-gray-500 truncate">{student.email}</div>
                               </div>
                             </div>
-
-                            {/* Attendance Status Buttons - Professional Layout */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 lg:flex lg:flex-row gap-2 lg:gap-2 w-full lg:w-auto lg:shrink-0">
-                              <Button
-                                onClick={() => {
-                                  console.log('Marking student present:', student.id, student.first_name, student.last_name)
-                                  handleStudentAttendanceChange(student.id, 'present')
-                                }}
-                                size="sm"
-                                variant={student.attendance_status === 'present' ? 'default' : 'outline'}
-                                className={`px-3 py-2 lg:px-4 lg:py-2 font-medium transition-all duration-200 ${
-                                  student.attendance_status === 'present' 
-                                    ? 'bg-green-600 hover:bg-green-700 text-white border-green-600 shadow-md' 
-                                    : 'border-green-300 text-green-700 hover:bg-green-50 hover:border-green-400'
+                            
+                            {/* Status Buttons */}
+                            <div className="col-span-6 flex items-center justify-center gap-2">
+                              <button
+                                onClick={() => handleStudentAttendanceChange(student.id, 'present')}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                                  student.attendance_status === 'present'
+                                    ? 'bg-green-600 text-white shadow-sm'
+                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-green-50 hover:border-green-300'
                                 }`}
                               >
-                                <UserCheck className="h-4 w-4 lg:mr-2" />
-                                <span className="hidden lg:inline">Present</span>
-                                <span className="lg:hidden ml-1">P</span>
-                              </Button>
-                              
-                              <Button
-                                onClick={() => {
-                                  console.log('Marking student absent:', student.id, student.first_name, student.last_name)
-                                  handleStudentAttendanceChange(student.id, 'absent')
-                                }}
-                                size="sm"
-                                variant={student.attendance_status === 'absent' ? 'destructive' : 'outline'}
-                                className={`px-3 py-2 lg:px-4 lg:py-2 font-medium transition-all duration-200 ${
-                                  student.attendance_status === 'absent' 
-                                    ? 'bg-red-600 hover:bg-red-700 text-white border-red-600 shadow-md' 
-                                    : 'border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400'
+                                <UserCheck className="h-3.5 w-3.5" />
+                                Present
+                              </button>
+                              <button
+                                onClick={() => handleStudentAttendanceChange(student.id, 'absent')}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                                  student.attendance_status === 'absent'
+                                    ? 'bg-red-600 text-white shadow-sm'
+                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300'
                                 }`}
                               >
-                                <UserX className="h-4 w-4 lg:mr-2" />
-                                <span className="hidden lg:inline">Absent</span>
-                                <span className="lg:hidden ml-1">A</span>
-                              </Button>
-                              
-                              <Button
-                                onClick={() => {
-                                  console.log('Marking student late:', student.id, student.first_name, student.last_name)
-                                  handleStudentAttendanceChange(student.id, 'late')
-                                }}
-                                size="sm"
-                                variant={student.attendance_status === 'late' ? 'default' : 'outline'}
-                                className={`px-3 py-2 lg:px-4 lg:py-2 font-medium transition-all duration-200 ${
-                                  student.attendance_status === 'late' 
-                                    ? 'bg-yellow-600 hover:bg-yellow-700 text-white border-yellow-600 shadow-md' 
-                                    : 'border-yellow-300 text-yellow-700 hover:bg-yellow-50 hover:border-yellow-400'
+                                <UserX className="h-3.5 w-3.5" />
+                                Absent
+                              </button>
+                              <button
+                                onClick={() => handleStudentAttendanceChange(student.id, 'late')}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                                  student.attendance_status === 'late'
+                                    ? 'bg-yellow-600 text-white shadow-sm'
+                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-yellow-50 hover:border-yellow-300'
                                 }`}
                               >
-                                <Clock className="h-4 w-4 lg:mr-2" />
-                                <span className="hidden lg:inline">Late</span>
-                                <span className="lg:hidden ml-1">L</span>
-                              </Button>
-                              
-                              <Button
-                                onClick={() => {
-                                  console.log('Marking student excused:', student.id, student.first_name, student.last_name)
-                                  handleStudentAttendanceChange(student.id, 'excused')
-                                }}
-                                size="sm"
-                                variant={student.attendance_status === 'excused' ? 'default' : 'outline'}
-                                className={`px-3 py-2 lg:px-4 lg:py-2 font-medium transition-all duration-200 ${
-                                  student.attendance_status === 'excused' 
-                                    ? 'bg-purple-600 hover:bg-purple-700 text-white border-purple-600 shadow-md' 
-                                    : 'border-purple-300 text-purple-700 hover:bg-purple-50 hover:border-purple-400'
+                                <Clock className="h-3.5 w-3.5" />
+                                Late
+                              </button>
+                              <button
+                                onClick={() => handleStudentAttendanceChange(student.id, 'excused')}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                                  student.attendance_status === 'excused'
+                                    ? 'bg-purple-600 text-white shadow-sm'
+                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-purple-50 hover:border-purple-300'
                                 }`}
                               >
-                                <CheckCircle className="h-4 w-4 lg:mr-2" />
-                                <span className="hidden lg:inline">Excused</span>
-                                <span className="lg:hidden ml-1">E</span>
-                              </Button>
+                                <CheckCircle className="h-3.5 w-3.5" />
+                                Excused
+                              </button>
                             </div>
                           </div>
-                        </motion.div>
+                          
+                          {/* Mobile Card */}
+                          <div className="lg:hidden p-4">
+                            <div className="flex items-center gap-3 mb-3">
+                              <input
+                                type="checkbox"
+                                checked={student.id ? selectedStudents.includes(student.id) : false}
+                                onChange={(e) => {
+                                  if (!student.id) return
+                                  if (e.target.checked) {
+                                    setSelectedStudents(prev => [...prev, student.id])
+                                  } else {
+                                    setSelectedStudents(prev => prev.filter(id => id !== student.id))
+                                  }
+                                }}
+                                className="w-5 h-5 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500"
+                              />
+                              <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold shrink-0 ${
+                                student.attendance_status === 'present' ? 'bg-green-500' :
+                                student.attendance_status === 'absent' ? 'bg-red-500' :
+                                student.attendance_status === 'late' ? 'bg-yellow-500' :
+                                student.attendance_status === 'excused' ? 'bg-purple-500' :
+                                'bg-gray-400'
+                              }`}>
+                                {(student.first_name || student.last_name || 'U').charAt(0).toUpperCase()}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="font-semibold text-gray-900 truncate">
+                                  {`${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unknown Student'}
+                                </div>
+                                <div className="text-sm text-gray-600 truncate">{student.email}</div>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                onClick={() => handleStudentAttendanceChange(student.id, 'present')}
+                                className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                                  student.attendance_status === 'present'
+                                    ? 'bg-green-600 text-white shadow-sm'
+                                    : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-green-300'
+                                }`}
+                              >
+                                <UserCheck className="h-4 w-4" />
+                                Present
+                              </button>
+                              <button
+                                onClick={() => handleStudentAttendanceChange(student.id, 'absent')}
+                                className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                                  student.attendance_status === 'absent'
+                                    ? 'bg-red-600 text-white shadow-sm'
+                                    : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-red-300'
+                                }`}
+                              >
+                                <UserX className="h-4 w-4" />
+                                Absent
+                              </button>
+                              <button
+                                onClick={() => handleStudentAttendanceChange(student.id, 'late')}
+                                className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                                  student.attendance_status === 'late'
+                                    ? 'bg-yellow-600 text-white shadow-sm'
+                                    : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-yellow-300'
+                                }`}
+                              >
+                                <Clock className="h-4 w-4" />
+                                Late
+                              </button>
+                              <button
+                                onClick={() => handleStudentAttendanceChange(student.id, 'excused')}
+                                className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                                  student.attendance_status === 'excused'
+                                    ? 'bg-purple-600 text-white shadow-sm'
+                                    : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-purple-300'
+                                }`}
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                                Excused
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   ) : (
@@ -1151,13 +1243,13 @@ export default function TeacherAttendancePage() {
                           <p className="text-sm text-blue-800 mb-3">
                             <strong>Debug Info:</strong><br/>
                             Class ID: {selectedClass?.id}<br/>
-                            School ID: {user?.school_id}<br/>
+                            School ID: {profile?.school_id}<br/>
                             Check the browser console for more details.
                           </p>
                           <Button
                             onClick={async () => {
                               try {
-                                const response = await fetch(`/api/debug/students?school_id=${user?.school_id}&class_id=${selectedClass?.id}`)
+                                const response = await fetch(`/api/debug/students?school_id=${profile?.school_id}&class_id=${selectedClass?.id}`)
                                 const debugData = await response.json()
                                 console.log('🔍 Debug API Results:', debugData)
                                 alert('Debug results logged to console. Check browser dev tools.')
@@ -1182,19 +1274,19 @@ export default function TeacherAttendancePage() {
 
             {/* Attendance History List */}
             {currentView === 'history' && (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
-                  <CardHeader className="pb-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                        <History className="h-5 w-5 text-indigo-600" />
+                  <CardHeader className="pb-3 sm:pb-4">
+                    <div className="flex flex-col gap-2 sm:gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <CardTitle className="flex items-center gap-2 text-base sm:text-lg lg:text-xl">
+                        <History className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
                         <span className="truncate">Attendance History</span>
                       </CardTitle>
                       <Button
                         onClick={() => setCurrentView('students')}
                         variant="outline"
                         size="sm"
-                        className="w-full sm:w-auto"
+                        className="w-full sm:w-auto text-sm"
                       >
                         <ArrowLeft className="h-4 w-4 mr-2" />
                         <span className="hidden sm:inline">Back to Current</span>
@@ -1202,89 +1294,153 @@ export default function TeacherAttendancePage() {
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="px-3 sm:px-6">
                     {loadingHistory ? (
                       <div className="flex items-center justify-center py-12">
                         <AttendanceLoader size="md" text="Loading attendance history..." variant="default" />
                       </div>
                     ) : attendanceHistory.length > 0 ? (
-                      <div className="space-y-3">
+                      <div className="space-y-0 border border-gray-200 rounded-lg overflow-hidden">
+                        {/* Desktop Table Header */}
+                        <div className="hidden lg:grid lg:grid-cols-12 gap-4 bg-gray-50 px-4 py-3 border-b border-gray-200">
+                          <div className="col-span-3 text-xs font-semibold text-gray-700 uppercase tracking-wide">Date</div>
+                          <div className="col-span-2 text-xs font-semibold text-gray-700 uppercase tracking-wide">Class</div>
+                          <div className="col-span-6 text-xs font-semibold text-gray-700 uppercase tracking-wide text-center">Attendance Summary</div>
+                          <div className="col-span-1 text-xs font-semibold text-gray-700 uppercase tracking-wide text-center">Action</div>
+                        </div>
+                        
+                        {/* History Rows */}
                         {attendanceHistory.map((record, index) => (
-                          <motion.div
+                          <div
                             key={record.id}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            className="p-4 sm:p-6 rounded-xl border-2 border-gray-200 bg-white hover:border-indigo-300 hover:shadow-lg transition-all duration-300 cursor-pointer"
+                            className={`transition-colors duration-150 ${
+                              index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
+                            } hover:bg-gray-100 border-b border-gray-200 last:border-b-0 cursor-pointer`}
                             onClick={() => loadAttendanceDetails(record.attendance_date)}
                           >
-                            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                              {/* Date and Class Info */}
-                              <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center shadow-lg">
-                                  <CalendarDays className="h-6 w-6 sm:h-8 sm:w-8" />
-                                </div>
-                                <div>
-                                  <h3 className="font-semibold text-gray-900 text-base sm:text-lg">
-                                    {new Date(record.attendance_date).toLocaleDateString('en-US', {
-                                      weekday: 'long',
-                                      year: 'numeric',
-                                      month: 'long',
-                                      day: 'numeric'
-                                    })}
-                                  </h3>
-                                  <p className="text-sm text-gray-600">{record.class_name}</p>
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    Total Students: {record.total_students}
-                                  </p>
+                            {/* Desktop Row */}
+                            <div className="hidden lg:grid lg:grid-cols-12 gap-4 px-4 py-3 items-center">
+                              {/* Date */}
+                              <div className="col-span-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-lg bg-indigo-500 text-white flex flex-col items-center justify-center shrink-0">
+                                    <span className="text-sm font-bold">{new Date(record.attendance_date).getDate()}</span>
+                                    <span className="text-[9px] uppercase">{new Date(record.attendance_date).toLocaleDateString('en-US', { month: 'short' })}</span>
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="text-sm font-medium text-gray-900">
+                                      {new Date(record.attendance_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      {new Date(record.attendance_date).getFullYear()}
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
-
-                              {/* Attendance Stats */}
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 lg:gap-4">
-                                <div className="text-center">
-                                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-green-100 text-green-700 flex items-center justify-center mx-auto mb-1">
-                                    <UserCheck className="h-4 w-4 sm:h-5 sm:w-5" />
+                              
+                              {/* Class Name */}
+                              <div className="col-span-2">
+                                <div className="text-sm font-medium text-gray-900 truncate">{record.class_name}</div>
+                                <div className="text-xs text-gray-500">{record.total_students} students</div>
+                              </div>
+                              
+                              {/* Stats */}
+                              <div className="col-span-6 flex items-center justify-center gap-3">
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-8 h-8 rounded-md bg-green-500 text-white flex items-center justify-center text-xs font-bold">
+                                    {record.present_count}
                                   </div>
-                                  <div className="text-sm font-bold text-green-700">{record.present_count}</div>
-                                  <div className="text-xs text-gray-600">Present</div>
+                                  <span className="text-xs text-gray-600">Present</span>
                                 </div>
-                                <div className="text-center">
-                                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-red-100 text-red-700 flex items-center justify-center mx-auto mb-1">
-                                    <UserX className="h-4 w-4 sm:h-5 sm:w-5" />
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-8 h-8 rounded-md bg-red-500 text-white flex items-center justify-center text-xs font-bold">
+                                    {record.absent_count}
                                   </div>
-                                  <div className="text-sm font-bold text-red-700">{record.absent_count}</div>
-                                  <div className="text-xs text-gray-600">Absent</div>
+                                  <span className="text-xs text-gray-600">Absent</span>
                                 </div>
-                                <div className="text-center">
-                                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-yellow-100 text-yellow-700 flex items-center justify-center mx-auto mb-1">
-                                    <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-8 h-8 rounded-md bg-amber-500 text-white flex items-center justify-center text-xs font-bold">
+                                    {record.late_count}
                                   </div>
-                                  <div className="text-sm font-bold text-yellow-700">{record.late_count}</div>
-                                  <div className="text-xs text-gray-600">Late</div>
+                                  <span className="text-xs text-gray-600">Late</span>
                                 </div>
-                                <div className="text-center">
-                                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center mx-auto mb-1">
-                                    <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-8 h-8 rounded-md bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
+                                    {record.excused_count}
                                   </div>
-                                  <div className="text-sm font-bold text-purple-700">{record.excused_count}</div>
-                                  <div className="text-xs text-gray-600">Excused</div>
+                                  <span className="text-xs text-gray-600">Excused</span>
                                 </div>
                               </div>
-
-                              {/* View Details Button */}
-                              <div className="flex items-center justify-center lg:justify-end">
-                                <Button
-                                  size="sm"
-                                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2"
-                                >
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View Details
-                                </Button>
+                              
+                              {/* View Button */}
+                              <div className="col-span-1 flex justify-center">
+                                <button className="p-2 rounded-lg bg-indigo-100 hover:bg-indigo-200 text-indigo-600 transition-colors">
+                                  <Eye className="h-4 w-4" />
+                                </button>
                               </div>
                             </div>
-                          </motion.div>
+                            
+                            {/* Mobile Card */}
+                            <div className="lg:hidden p-4">
+                              <div className="flex items-center gap-3 mb-3">
+                                <div className="w-12 h-12 rounded-lg bg-indigo-500 text-white flex flex-col items-center justify-center shrink-0">
+                                  <span className="text-base font-bold">{new Date(record.attendance_date).getDate()}</span>
+                                  <span className="text-[10px] uppercase">{new Date(record.attendance_date).toLocaleDateString('en-US', { month: 'short' })}</span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-semibold text-gray-900 text-sm truncate">
+                                    {new Date(record.attendance_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                                  </div>
+                                  <div className="text-xs text-gray-600 truncate">{record.class_name}</div>
+                                  <div className="text-xs text-gray-500">{record.total_students} students</div>
+                                </div>
+                                <ChevronRight className="h-5 w-5 text-gray-400 shrink-0" />
+                              </div>
+                              <div className="grid grid-cols-4 gap-2">
+                                <div className="text-center bg-green-50 rounded-lg p-2">
+                                  <div className="text-lg font-bold text-green-700">{record.present_count}</div>
+                                  <div className="text-[10px] text-gray-600">Present</div>
+                                </div>
+                                <div className="text-center bg-red-50 rounded-lg p-2">
+                                  <div className="text-lg font-bold text-red-700">{record.absent_count}</div>
+                                  <div className="text-[10px] text-gray-600">Absent</div>
+                                </div>
+                                <div className="text-center bg-amber-50 rounded-lg p-2">
+                                  <div className="text-lg font-bold text-amber-700">{record.late_count}</div>
+                                  <div className="text-[10px] text-gray-600">Late</div>
+                                </div>
+                                <div className="text-center bg-blue-50 rounded-lg p-2">
+                                  <div className="text-lg font-bold text-blue-700">{record.excused_count}</div>
+                                  <div className="text-[10px] text-gray-600">Excused</div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         ))}
+
+                        {/* Load More Button */}
+                        {hasMoreHistory && (
+                          <div className="flex justify-center mt-6 pt-4 border-t border-gray-200">
+                            <Button
+                              onClick={loadMoreHistory}
+                              disabled={loadingMoreHistory}
+                              variant="outline"
+                              className="px-6 py-3 text-sm font-medium"
+                            >
+                              {loadingMoreHistory ? (
+                                <>
+                                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                  Loading...
+                                </>
+                              ) : (
+                                <>
+                                  <RefreshCw className="h-4 w-4 mr-2" />
+                                  Load More
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="text-center py-12">
@@ -1404,5 +1560,7 @@ export default function TeacherAttendancePage() {
         </AnimatePresence>
       </div>
     </div>
+  </div>
+    </ClientWrapper>
   )
 }

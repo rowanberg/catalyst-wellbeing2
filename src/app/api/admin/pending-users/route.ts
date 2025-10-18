@@ -96,15 +96,23 @@ export async function POST(request: NextRequest) {
         }, { status: 500 })
       }
 
-      // Confirm user email
-      await supabaseAdmin.auth.admin.updateUserById(
+      // Confirm user email by setting email_confirmed_at timestamp
+      const { error: confirmError } = await supabaseAdmin.auth.admin.updateUserById(
         userId,
         { email_confirm: true }
       )
+      
+      if (confirmError) {
+        console.error('⚠️ Failed to confirm email for user:', userId, confirmError)
+        // Continue anyway - profile is created, user can still log in
+      } else {
+        console.log('✅ Email confirmed for user:', userId)
+      }
 
       return NextResponse.json({
-        message: 'User approved successfully',
-        profile: profile
+        message: 'User approved successfully and email confirmed',
+        profile: profile,
+        email_confirmed: !confirmError
       })
     } else if (action === 'reject') {
       // Delete user from auth

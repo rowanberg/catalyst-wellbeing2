@@ -1,6 +1,100 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
 import { supabase } from '@/lib/supabaseClient'
-import { AuthState, User, Profile } from '@/types'
+import type { User } from '@supabase/supabase-js'
+
+// Profile type definition
+interface Profile {
+  id: string
+  user_id: string
+  first_name: string
+  last_name: string
+  email?: string
+  role: string
+  school_id?: string
+  school_code?: string
+  xp?: number
+  gems?: number
+  level?: number
+  [key: string]: any
+}
+
+// Auth state interface
+interface AuthState {
+  user: User | null
+  profile: Profile | null
+  isLoading: boolean
+  error: string | null
+}
+
+// Profile cache with sessionStorage persistence
+const CACHE_TTL = 5000 // 5 seconds
+const CACHE_KEY_PREFIX = 'profile_cache_'
+
+// In-flight requests cache (in-memory only for true concurrent calls)
+const inFlightRequests = new Map<string, Promise<Profile>>()
+
+// Helper function to fetch profile with deduplication
+const fetchProfileWithCache = async (userId: string): Promise<Profile> => {
+  const now = Date.now()
+  const cacheKey = `${CACHE_KEY_PREFIX}${userId}`
+  
+  // Check sessionStorage for recent cached data
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = sessionStorage.getItem(cacheKey)
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached)
+        if (now - timestamp < CACHE_TTL) {
+          console.log('🔄 [AUTH] Using cached profile from sessionStorage')
+          return data as Profile
+        } else {
+          sessionStorage.removeItem(cacheKey)
+        }
+      }
+    } catch (e) {
+      // Ignore cache errors
+    }
+  }
+  
+  // Check for in-flight request (concurrent calls)
+  if (inFlightRequests.has(userId)) {
+    console.log('🔄 [AUTH] Reusing in-flight profile request')
+    return inFlightRequests.get(userId)!
+  }
+
+  // Create new request
+  const requestPromise = fetch('/api/get-profile', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId }),
+  }).then(async response => {
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.message || 'Failed to fetch profile')
+    }
+    const data = await response.json()
+    
+    // Cache in sessionStorage
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify({ data, timestamp: now }))
+      } catch (e) {
+        // Ignore storage errors
+      }
+    }
+    
+    return data
+  })
+
+  inFlightRequests.set(userId, requestPromise)
+
+  // Clean up in-flight cache
+  requestPromise.finally(() => {
+    inFlightRequests.delete(userId)
+  })
+
+  return requestPromise
+}
 
 const initialState: AuthState = {
   user: null,
@@ -33,19 +127,8 @@ export const signIn = createAsyncThunk(
     // Small delay to ensure cookies are propagated
     await new Promise(resolve => setTimeout(resolve, 100))
     
-    // Fetch user profile via API route (bypasses RLS)
-    const response = await fetch('/api/get-profile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: data.user.id }),
-    })
-    
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.message || 'Profile not found. Please contact your school administrator.')
-    }
-    
-    const profile = await response.json()
+    // Fetch user profile with deduplication
+    const profile = await fetchProfileWithCache(data.user.id)
     console.log('✅ SignIn - Session established, profile fetched:', profile)
     return { user: data.user, profile, session: data.session }
   }
@@ -60,18 +143,8 @@ export const checkAuth = createAsyncThunk(
     if (error) throw error
     if (!session?.user) return null
     
-    // Fetch user profile
-    const response = await fetch('/api/get-profile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: session.user.id }),
-    })
-    
-    if (!response.ok) {
-      throw new Error('Profile not found')
-    }
-    
-    const profile = await response.json()
+    // Fetch user profile with deduplication
+    const profile = await fetchProfileWithCache(session.user.id)
     console.log('CheckAuth - Session restored:', { user: session.user, profile })
     return { user: session.user, profile }
   }
@@ -132,19 +205,8 @@ export const signOut = createAsyncThunk('auth/signOut', async () => {
 export const fetchProfile = createAsyncThunk(
   'auth/fetchProfile',
   async (userId: string) => {
-    // Use API route to fetch profile (bypasses RLS)
-    const response = await fetch('/api/get-profile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId }),
-    })
-    
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.message || 'Failed to fetch profile')
-    }
-    
-    return await response.json()
+    // Use cached profile fetch to prevent duplicates
+    return await fetchProfileWithCache(userId)
   }
 )
 
@@ -162,13 +224,13 @@ const authSlice = createSlice({
       state.error = null
     },
     updateXP: (state, action: PayloadAction<number>) => {
-      if (state.profile) {
+      if (state.profile && state.profile.xp !== undefined) {
         state.profile.xp += action.payload
         state.profile.level = Math.floor(state.profile.xp / 100) + 1
       }
     },
     updateGems: (state, action: PayloadAction<number>) => {
-      if (state.profile) {
+      if (state.profile && state.profile.gems !== undefined) {
         state.profile.gems += action.payload
       }
     },
@@ -191,7 +253,7 @@ const authSlice = createSlice({
             school_id: action.payload.profile.school_id,
             created_at: action.payload.user.created_at || '',
             updated_at: action.payload.user.updated_at || ''
-          } as User
+          } as unknown as User
         }
         state.profile = action.payload.profile
         state.error = null
@@ -216,7 +278,7 @@ const authSlice = createSlice({
               school_id: action.payload.profile.school_id,
               created_at: action.payload.user.created_at || '',
               updated_at: action.payload.user.updated_at || ''
-            } as User
+            } as unknown as User
           }
           state.profile = action.payload.profile
         }
@@ -244,7 +306,7 @@ const authSlice = createSlice({
             school_id: action.payload.profile.school_id,
             created_at: action.payload.user.created_at || '',
             updated_at: action.payload.user.updated_at || ''
-          } as User
+          } as unknown as User
         }
         state.profile = action.payload.profile
       })

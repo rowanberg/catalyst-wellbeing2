@@ -4,12 +4,13 @@ import { useState, useEffect, useMemo } from 'react'
 import { 
   TrendingUp, TrendingDown, BookOpen, Clock, Calendar,
   CheckCircle2, XCircle, Target, RefreshCw, ChevronDown,
-  Award, BarChart3, User
+  Award, BarChart3, User, ChevronLeft, ChevronRight
 } from 'lucide-react'
 import { useDarkMode } from '@/contexts/DarkModeContext'
 
 interface AnalyticsTabProps {
   studentId: string
+  studentName?: string
 }
 
 // Professional Stats Card with Dark Mode
@@ -21,22 +22,24 @@ const StatCard = ({ icon: Icon, label, value, change, trend, color }: {
   trend?: 'up' | 'down' | 'stable'
   color: string
 }) => (
-  <div className="bg-white dark:bg-gray-800 rounded-xl md:rounded-2xl p-3 md:p-5 border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-xl overflow-hidden">
-    <div className="flex items-start justify-between mb-2 md:mb-4 gap-2">
-      <div className={`w-8 h-8 md:w-12 md:h-12 rounded-lg md:rounded-xl ${color} flex items-center justify-center shadow-sm flex-shrink-0`}>
-        <Icon className="h-4 w-4 md:h-6 md:w-6 text-white" strokeWidth={2} />
+  <div className="bg-white dark:bg-gray-800 rounded-lg p-3 lg:p-4 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+    <div className="flex items-start justify-between mb-2 lg:mb-3">
+      <div className={`w-9 h-9 lg:w-12 lg:h-12 rounded-lg ${color} flex items-center justify-center flex-shrink-0`}>
+        <Icon className="h-4 w-4 lg:h-6 lg:w-6 text-white" strokeWidth={2} />
       </div>
       {change && trend && (
-        <div className={`flex items-center gap-0.5 md:gap-1 text-[10px] md:text-xs font-semibold px-1.5 md:px-2 py-0.5 md:py-1 rounded-md md:rounded-lg bg-gray-100 dark:bg-gray-700 flex-shrink-0 ${
-          trend === 'up' ? 'text-green-600 dark:text-green-400' : trend === 'down' ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'
+        <div className={`flex items-center gap-0.5 lg:gap-1 text-[10px] lg:text-xs font-semibold px-1.5 lg:px-2 py-0.5 lg:py-1 rounded-md ${
+          trend === 'up' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' : 
+          trend === 'down' ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' : 
+          'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
         }`}>
-          {trend === 'up' ? <TrendingUp className="h-2.5 md:h-3.5 w-2.5 md:w-3.5" /> : trend === 'down' ? <TrendingDown className="h-2.5 md:h-3.5 w-2.5 md:w-3.5" /> : null}
-          <span className="hidden sm:inline whitespace-nowrap">{change}</span>
+          {trend === 'up' ? <TrendingUp className="h-2.5 lg:h-3.5 w-2.5 lg:w-3.5" /> : trend === 'down' ? <TrendingDown className="h-2.5 lg:h-3.5 w-2.5 lg:w-3.5" /> : null}
+          <span className="whitespace-nowrap">{change}</span>
         </div>
       )}
     </div>
-    <h3 className="text-base md:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-0.5 md:mb-1 truncate">{value}</h3>
-    <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 font-medium truncate">{label}</p>
+    <h3 className="text-lg lg:text-2xl xl:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-0.5 lg:mb-1 truncate">{value}</h3>
+    <p className="text-[10px] lg:text-xs text-gray-600 dark:text-gray-400 font-medium truncate">{label}</p>
   </div>
 )
 
@@ -54,13 +57,13 @@ const GPATrendChart = ({ data, timeRange, onTimeRangeChange }: {
   }).join(' ')
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 md:p-6 border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-xl">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">GPA Trend</h3>
+    <div className="bg-white dark:bg-gray-800 rounded-lg p-3 lg:p-4 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+        <h3 className="text-sm lg:text-base font-bold text-gray-900 dark:text-gray-100">GPA Trend</h3>
         <select
           value={timeRange}
           onChange={(e) => onTimeRangeChange(e.target.value)}
-          className="px-4 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none text-gray-700 dark:text-gray-200 font-medium"
+          className="px-2 lg:px-3 py-1.5 text-[10px] lg:text-xs bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 dark:text-gray-200 font-medium"
         >
           <option value="1week">Last Week</option>
           <option value="1month">Last Month</option>
@@ -120,24 +123,24 @@ const GPATrendChart = ({ data, timeRange, onTimeRangeChange }: {
 
 // Subject Performance with Dark Mode
 const SubjectPerformance = ({ subjects }: { subjects: any[] }) => (
-  <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 md:p-6 border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-xl">
-    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-6">Subject Performance</h3>
-    <div className="space-y-4">
+  <div className="bg-white dark:bg-gray-800 rounded-lg p-3 lg:p-4 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+    <h3 className="text-sm lg:text-base font-bold text-gray-900 dark:text-gray-100 mb-3 lg:mb-4">Subject Performance</h3>
+    <div className="space-y-3 lg:space-y-4">
       {subjects.map((subject, index) => (
         <div key={subject.name}>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{subject.name}</span>
-            <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{subject.score}%</span>
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs lg:text-sm font-medium text-gray-700 dark:text-gray-300 truncate pr-2">{subject.name}</span>
+            <span className="text-xs lg:text-sm font-bold text-gray-900 dark:text-gray-100 flex-shrink-0">{subject.score}%</span>
           </div>
-          <div className="relative h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div className="relative h-2 lg:h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
             <div
               className={`absolute top-0 left-0 h-full rounded-full transition-all duration-500 ${subject.color}`}
               style={{ width: `${subject.score}%` }}
             />
           </div>
-          <div className="flex items-center justify-between mt-1.5">
-            <span className="text-xs text-gray-500 dark:text-gray-400">{subject.assignments} assignments</span>
-            <span className={`text-xs font-medium ${
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-[10px] lg:text-xs text-gray-500 dark:text-gray-400 truncate pr-2">{subject.assignments} assignments</span>
+            <span className={`text-[10px] lg:text-xs font-medium flex-shrink-0 ${
               subject.trend === 'up' ? 'text-green-600 dark:text-green-400' : subject.trend === 'down' ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'
             }`}>
               {subject.trend === 'up' ? '↑' : subject.trend === 'down' ? '↓' : '—'} {subject.change}
@@ -176,30 +179,20 @@ const MonthlyAttendance = ({ attendanceData, currentMonth }: {
   }
   
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 md:p-6 border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-xl">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Monthly Attendance</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}</p>
-        </div>
-        <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-green-500 flex items-center justify-center shadow-sm">
-          <Calendar className="h-5 w-5 md:h-6 md:w-6 text-white" strokeWidth={2} />
-        </div>
-      </div>
-      
+    <>
       {/* Calendar Grid */}
-      <div className="mb-6">
+      <div className="mb-3 lg:mb-4">
         {/* Day Names */}
-        <div className="grid grid-cols-7 gap-1 md:gap-2 mb-2">
+        <div className="grid grid-cols-7 gap-1 lg:gap-1.5 mb-1.5">
           {dayNames.map(day => (
-            <div key={day} className="text-center text-xs font-semibold text-gray-600 dark:text-gray-400 py-1">
+            <div key={day} className="text-center text-[10px] lg:text-xs font-semibold text-gray-600 dark:text-gray-400 py-0.5">
               {day.slice(0, 1)}<span className="hidden sm:inline">{day.slice(1)}</span>
             </div>
           ))}
         </div>
         
         {/* Calendar Days */}
-        <div className="grid grid-cols-7 gap-1 md:gap-2">
+        <div className="grid grid-cols-7 gap-1 lg:gap-1.5">
           {emptyDays.map(i => (
             <div key={`empty-${i}`} className="aspect-square" />
           ))}
@@ -208,7 +201,7 @@ const MonthlyAttendance = ({ attendanceData, currentMonth }: {
             return (
               <div
                 key={day}
-                className={`aspect-square flex items-center justify-center text-xs md:text-sm font-medium rounded-lg transition-all ${
+                className={`aspect-square flex items-center justify-center text-[10px] lg:text-xs font-medium rounded-md lg:rounded-lg transition-all ${
                   status === 'present' 
                     ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-2 border-green-500' 
                     : status === 'absent'
@@ -228,37 +221,37 @@ const MonthlyAttendance = ({ attendanceData, currentMonth }: {
       </div>
       
       {/* Stats Legend */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/30 rounded-lg">
-          <div className="w-3 h-3 rounded-full bg-green-500 flex-shrink-0" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5 lg:gap-2">
+        <div className="flex items-center gap-1.5 p-1.5 lg:p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/30 rounded-lg">
+          <div className="w-2 h-2 lg:w-2.5 lg:h-2.5 rounded-full bg-green-500 flex-shrink-0" />
           <div className="min-w-0">
-            <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Present</p>
-            <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{stats.present}</p>
+            <p className="text-[9px] lg:text-[10px] text-gray-600 dark:text-gray-400 truncate">Present</p>
+            <p className="text-xs lg:text-sm font-bold text-gray-900 dark:text-gray-100">{stats.present}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 rounded-lg">
-          <div className="w-3 h-3 rounded-full bg-red-500 flex-shrink-0" />
+        <div className="flex items-center gap-1.5 p-1.5 lg:p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 rounded-lg">
+          <div className="w-2 h-2 lg:w-2.5 lg:h-2.5 rounded-full bg-red-500 flex-shrink-0" />
           <div className="min-w-0">
-            <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Absent</p>
-            <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{stats.absent}</p>
+            <p className="text-[9px] lg:text-[10px] text-gray-600 dark:text-gray-400 truncate">Absent</p>
+            <p className="text-xs lg:text-sm font-bold text-gray-900 dark:text-gray-100">{stats.absent}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/30 rounded-lg">
-          <div className="w-3 h-3 rounded-full bg-amber-500 flex-shrink-0" />
+        <div className="flex items-center gap-1.5 p-1.5 lg:p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/30 rounded-lg">
+          <div className="w-2 h-2 lg:w-2.5 lg:h-2.5 rounded-full bg-amber-500 flex-shrink-0" />
           <div className="min-w-0">
-            <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Late</p>
-            <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{stats.late}</p>
+            <p className="text-[9px] lg:text-[10px] text-gray-600 dark:text-gray-400 truncate">Late</p>
+            <p className="text-xs lg:text-sm font-bold text-gray-900 dark:text-gray-100">{stats.late}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/30 rounded-lg">
-          <div className="w-3 h-3 rounded-full bg-blue-500 flex-shrink-0" />
+        <div className="flex items-center gap-1.5 p-1.5 lg:p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/30 rounded-lg">
+          <div className="w-2 h-2 lg:w-2.5 lg:h-2.5 rounded-full bg-blue-500 flex-shrink-0" />
           <div className="min-w-0">
-            <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Excused</p>
-            <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{stats.excused}</p>
+            <p className="text-[9px] lg:text-[10px] text-gray-600 dark:text-gray-400 truncate">Excused</p>
+            <p className="text-xs lg:text-sm font-bold text-gray-900 dark:text-gray-100">{stats.excused}</p>
           </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -278,11 +271,11 @@ const AssignmentCompletionChart = ({ completed, pending, overdue, total }: {
   const overdueAngle = (overduePercent / 100) * 360
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 md:p-6 border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-xl">
-      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-6">Assignment Status</h3>
+    <div className="bg-white dark:bg-gray-800 rounded-lg p-3 lg:p-4 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+      <h3 className="text-sm lg:text-base font-bold text-gray-900 dark:text-gray-100 mb-3 lg:mb-4">Assignment Status</h3>
       
-      <div className="flex flex-col md:flex-row items-center gap-6">
-        <div className="relative w-44 h-44 flex-shrink-0">
+      <div className="flex flex-col lg:flex-row items-center gap-4 lg:gap-6">
+        <div className="relative w-36 h-36 lg:w-40 lg:h-40 flex-shrink-0">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
             <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" className="text-gray-100 dark:text-gray-700" strokeWidth="12" />
             
@@ -306,34 +299,34 @@ const AssignmentCompletionChart = ({ completed, pending, overdue, total }: {
           </svg>
           
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <p className="text-3xl font-semibold text-gray-900 dark:text-gray-100">{total}</p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Total</p>
+            <p className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-gray-100">{total}</p>
+            <p className="text-xs lg:text-sm text-gray-600 dark:text-gray-400 font-medium">Total</p>
           </div>
         </div>
         
-        <div className="flex-1 w-full space-y-2.5">
-          <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-900/30 rounded-xl">
-            <div className="flex items-center gap-2.5">
-              <div className="w-3 h-3 rounded-full bg-green-500" />
-              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Completed</span>
+        <div className="flex-1 w-full space-y-2 lg:space-y-2.5">
+          <div className="flex items-center justify-between p-2.5 lg:p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/30 rounded-lg">
+            <div className="flex items-center gap-2 lg:gap-2.5 min-w-0">
+              <div className="w-2.5 h-2.5 lg:w-3 lg:h-3 rounded-full bg-green-500 flex-shrink-0" />
+              <span className="text-xs lg:text-sm font-semibold text-gray-700 dark:text-gray-300 truncate">Completed</span>
             </div>
-            <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{completed}</span>
+            <span className="text-sm lg:text-lg font-bold text-gray-900 dark:text-gray-100 flex-shrink-0 ml-2">{completed}</span>
           </div>
           
-          <div className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30 rounded-xl">
-            <div className="flex items-center gap-2.5">
-              <div className="w-3 h-3 rounded-full bg-amber-500" />
-              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Pending</span>
+          <div className="flex items-center justify-between p-2.5 lg:p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/30 rounded-lg">
+            <div className="flex items-center gap-2 lg:gap-2.5 min-w-0">
+              <div className="w-2.5 h-2.5 lg:w-3 lg:h-3 rounded-full bg-amber-500 flex-shrink-0" />
+              <span className="text-xs lg:text-sm font-semibold text-gray-700 dark:text-gray-300 truncate">Pending</span>
             </div>
-            <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{pending}</span>
+            <span className="text-sm lg:text-lg font-bold text-gray-900 dark:text-gray-100 flex-shrink-0 ml-2">{pending}</span>
           </div>
           
-          <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-xl">
-            <div className="flex items-center gap-2.5">
-              <div className="w-3 h-3 rounded-full bg-red-500" />
-              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Overdue</span>
+          <div className="flex items-center justify-between p-2.5 lg:p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 rounded-lg">
+            <div className="flex items-center gap-2 lg:gap-2.5 min-w-0">
+              <div className="w-2.5 h-2.5 lg:w-3 lg:h-3 rounded-full bg-red-500 flex-shrink-0" />
+              <span className="text-xs lg:text-sm font-semibold text-gray-700 dark:text-gray-300 truncate">Overdue</span>
             </div>
-            <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{overdue}</span>
+            <span className="text-sm lg:text-lg font-bold text-gray-900 dark:text-gray-100 flex-shrink-0 ml-2">{overdue}</span>
           </div>
         </div>
       </div>
@@ -342,20 +335,133 @@ const AssignmentCompletionChart = ({ completed, pending, overdue, total }: {
 }
 
 // Main Analytics Tab Component
-export default function AnalyticsTab({ studentId }: AnalyticsTabProps) {
+export default function AnalyticsTab({ studentId, studentName }: AnalyticsTabProps) {
   const { isDarkMode } = useDarkMode()
   const [loading, setLoading] = useState(true)
   const [timeRange, setTimeRange] = useState('1month')
   const [mockData, setMockData] = useState<any>(null)
+  const [attendanceData, setAttendanceData] = useState<any>(null)
+  const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [attendanceCache, setAttendanceCache] = useState<Map<string, any>>(new Map())
+  const [isFetchingAttendance, setIsFetchingAttendance] = useState(false)
 
+  // Generate cache key for a month
+  const getCacheKey = (year: number, month: number) => `${year}-${month}`
+
+  // Fetch attendance data from API with caching
+  const fetchAttendanceData = async (year: number, month: number, force = false) => {
+    if (!studentId) return null
+
+    const cacheKey = getCacheKey(year, month)
+    
+    // Return cached data if available
+    if (!force && attendanceCache.has(cacheKey)) {
+      const cached = attendanceCache.get(cacheKey)
+      setAttendanceData(cached)
+      return cached
+    }
+
+    try {
+      const response = await fetch(
+        `/api/v1/students/${studentId}/attendance?year=${year}&month=${month}`
+      )
+      
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success && result.data) {
+          // Cache the data
+          setAttendanceCache(prev => new Map(prev).set(cacheKey, result.data))
+          setAttendanceData(result.data)
+          
+          // Update attendance percentage for current month only
+          if (year === new Date().getFullYear() && month === new Date().getMonth() + 1) {
+            if (mockData) {
+              setMockData((prev: any) => ({
+                ...prev,
+                overview: {
+                  ...prev?.overview,
+                  attendance: `${result.data.stats.percentage}%`
+                }
+              }))
+            }
+          }
+          return result.data
+        }
+      } else {
+        console.error('Attendance API error:', await response.json())
+      }
+    } catch (error) {
+      console.error('Error fetching attendance:', error)
+    }
+    return null
+  }
+
+  // Fetch multiple months at once (current + 2 previous)
+  const fetchInitialAttendance = async () => {
+    if (!studentId || isFetchingAttendance) return
+    
+    setIsFetchingAttendance(true)
+    const now = new Date()
+    const currentYear = now.getFullYear()
+    const currentMonthNum = now.getMonth() + 1
+    
+    // Calculate 3 months: current, -1, -2
+    const monthsToFetch: { year: number; month: number }[] = []
+    for (let i = 0; i < 3; i++) {
+      const d = new Date(currentYear, currentMonthNum - 1 - i, 1)
+      monthsToFetch.push({ year: d.getFullYear(), month: d.getMonth() + 1 })
+    }
+    
+    // Fetch all 3 months in parallel and get results
+    const results = await Promise.all(
+      monthsToFetch.map(({ year, month }) => fetchAttendanceData(year, month))
+    )
+    
+    // Set current month data (first result is current month)
+    if (results[0]) {
+      setAttendanceData(results[0])
+    }
+    
+    setIsFetchingAttendance(false)
+  }
+
+  // Navigate to previous/next month
+  const changeMonth = async (direction: 'prev' | 'next') => {
+    const newDate = new Date(currentMonth)
+    if (direction === 'prev') {
+      newDate.setMonth(newDate.getMonth() - 1)
+    } else {
+      newDate.setMonth(newDate.getMonth() + 1)
+    }
+    
+    const year = newDate.getFullYear()
+    const month = newDate.getMonth() + 1
+    const cacheKey = getCacheKey(year, month)
+    
+    setCurrentMonth(newDate)
+    
+    // Check if data is cached
+    if (attendanceCache.has(cacheKey)) {
+      // Use cached data
+      setAttendanceData(attendanceCache.get(cacheKey))
+    } else {
+      // Fetch new month data
+      await fetchAttendanceData(year, month)
+    }
+  }
+
+  // Load initial data
   useEffect(() => {
-    setTimeout(() => {
+    const loadData = async () => {
+      setLoading(true)
+      
+      // Load mock data for other sections
       setMockData({
         overview: {
           gpa: '3.85',
           gpaChange: '+0.12',
           gpaTrend: 'up',
-          attendance: '94%',
+          attendance: '0%',
           attendanceChange: '+2%',
           attendanceTrend: 'up',
           assignments: '89%',
@@ -382,68 +488,52 @@ export default function AnalyticsTab({ studentId }: AnalyticsTabProps) {
           pending: 8,
           overdue: 2,
           total: 55
-        },
-        attendance: [
-          { day: 1, status: 'present' },
-          { day: 2, status: 'present' },
-          { day: 3, status: 'present' },
-          { day: 4, status: 'late' },
-          { day: 5, status: 'present' },
-          { day: 8, status: 'present' },
-          { day: 9, status: 'absent' },
-          { day: 10, status: 'present' },
-          { day: 11, status: 'present' },
-          { day: 12, status: 'excused' },
-          { day: 15, status: 'present' },
-          { day: 16, status: 'present' },
-          { day: 17, status: 'late' },
-          { day: 18, status: 'present' },
-          { day: 19, status: 'present' },
-          { day: 22, status: 'present' },
-          { day: 23, status: 'present' },
-          { day: 24, status: 'present' },
-          { day: 25, status: 'present' },
-          { day: 26, status: 'present' }
-        ]
+        }
       })
+      
+      // Fetch initial 3 months of attendance data
+      await fetchInitialAttendance()
+      
       setLoading(false)
-    }, 500)
+    }
+    
+    loadData()
   }, [studentId])
 
   if (loading) {
     return (
-      <div className="space-y-6 p-3 md:p-6 max-w-7xl mx-auto bg-gray-50 dark:bg-gray-900 min-h-screen">
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-5 border border-gray-200 dark:border-gray-700 h-20 animate-pulse" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
+      <div className="space-y-3 lg:space-y-4 p-3 lg:p-4 w-full bg-gray-50 dark:bg-gray-900 min-h-screen">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-3 lg:p-4 border border-gray-200 dark:border-gray-700 h-16 animate-pulse" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-3">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 h-24 animate-pulse" />
+            <div key={i} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 h-20 lg:h-24 animate-pulse" />
           ))}
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 h-96 animate-pulse" />
-          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 h-96 animate-pulse" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 h-64 lg:h-80 animate-pulse" />
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 h-64 lg:h-80 animate-pulse" />
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-4 md:space-y-6 p-3 md:p-6 max-w-7xl mx-auto bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <div className="space-y-3 lg:space-y-4 p-3 lg:p-4 w-full bg-gray-50 dark:bg-gray-900 min-h-screen">
       {/* Child Info Header */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl md:rounded-2xl p-4 md:p-5 border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-xl">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-blue-500 flex items-center justify-center shadow-sm">
-            <User className="h-5 w-5 md:h-6 md:w-6 text-white" strokeWidth={2} />
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-3 lg:p-4 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+        <div className="flex items-center gap-2.5 lg:gap-3">
+          <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+            <User className="h-5 w-5 lg:h-6 lg:w-6 text-white" strokeWidth={2} />
           </div>
-          <div>
-            <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 font-medium">Viewing Analytics For</p>
-            <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-gray-100">Student Name</h2>
+          <div className="min-w-0">
+            <p className="text-[10px] lg:text-xs text-gray-600 dark:text-gray-400 font-medium">Viewing Analytics For</p>
+            <h2 className="text-base lg:text-lg font-bold text-gray-900 dark:text-gray-100 truncate">{studentName || 'Student'}</h2>
           </div>
         </div>
       </div>
 
       {/* Overview Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-3">
         <StatCard
           icon={Target}
           label="Current GPA"
@@ -479,7 +569,7 @@ export default function AnalyticsTab({ studentId }: AnalyticsTabProps) {
       </div>
 
       {/* GPA Trend & Subject Performance */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4">
         <GPATrendChart
           data={mockData?.gpaTrend || []}
           timeRange={timeRange}
@@ -496,11 +586,41 @@ export default function AnalyticsTab({ studentId }: AnalyticsTabProps) {
         total={mockData?.assignments?.total || 0}
       />
 
-      {/* Monthly Attendance Calendar */}
-      <MonthlyAttendance
-        attendanceData={mockData?.attendance || []}
-        currentMonth={new Date()}
-      />
+      {/* Monthly Attendance Calendar with Navigation */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-3 lg:p-4 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+        <div className="flex items-center justify-between mb-3 lg:mb-4">
+          <div className="min-w-0">
+            <h3 className="text-sm lg:text-base font-bold text-gray-900 dark:text-gray-100">Monthly Attendance</h3>
+            <p className="text-[10px] lg:text-xs text-gray-600 dark:text-gray-400 mt-0.5 truncate">
+              Viewing: {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 lg:gap-2 flex-shrink-0">
+            <button
+              onClick={() => changeMonth('prev')}
+              className="w-7 h-7 lg:w-8 lg:h-8 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center transition-colors"
+              aria-label="Previous month"
+            >
+              <ChevronLeft className="h-3.5 w-3.5 lg:h-4 lg:w-4 text-gray-600 dark:text-gray-300" />
+            </button>
+            <div className="w-9 h-9 lg:w-11 lg:h-11 rounded-lg bg-green-500 flex items-center justify-center">
+              <Calendar className="h-4 w-4 lg:h-5 lg:w-5 text-white" strokeWidth={2} />
+            </div>
+            <button
+              onClick={() => changeMonth('next')}
+              className="w-7 h-7 lg:w-8 lg:h-8 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center transition-colors"
+              aria-label="Next month"
+            >
+              <ChevronRight className="h-3.5 w-3.5 lg:h-4 lg:w-4 text-gray-600 dark:text-gray-300" />
+            </button>
+          </div>
+        </div>
+        
+        <MonthlyAttendance
+          attendanceData={attendanceData?.attendance || []}
+          currentMonth={currentMonth}
+        />
+      </div>
     </div>
   )
 }

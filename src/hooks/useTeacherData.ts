@@ -116,19 +116,32 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
         setLoading(true)
       }
 
-      // Get school_id from user or profile
-      let schoolId = user.school_id
-      if (!schoolId) {
-        // Fetch school_id from profile if not available in user object
-        const profileResponse = await fetch('/api/profile')
-        if (profileResponse.ok) {
-          const profile = await profileResponse.json()
-          schoolId = profile.school_id
-        }
+      // Get school_id from profile
+      let schoolId: string | undefined
+      const profileResponse = await fetch('/api/profile')
+      if (profileResponse.ok) {
+        const profile = await profileResponse.json()
+        schoolId = profile.school_id
+        
+        logger.debug('Profile fetched', { 
+          userId: user.id, 
+          profileId: profile.id,
+          role: profile.role,
+          hasSchoolId: !!schoolId 
+        })
+      } else {
+        logger.error('Failed to fetch profile', { 
+          status: profileResponse.status,
+          statusText: profileResponse.statusText 
+        })
       }
       
       if (!schoolId) {
-        throw new Error('School ID not found')
+        logger.error('School ID not found in profile', { 
+          userId: user.id,
+          profileFetched: profileResponse.ok
+        })
+        throw new Error('School ID not found in profile. Please contact your administrator to assign you to a school.')
       }
 
       const cacheKey = getCacheKey(user.id, schoolId, currentClassId, includeStudents)
@@ -198,7 +211,7 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
     } finally {
       setLoading(false)
     }
-  }, [user?.id, user?.school_id, currentClassId, includeStudents, getCacheKey, getCachedData, setCachedData, retryCount])
+  }, [user?.id, currentClassId, includeStudents, getCacheKey, getCachedData, setCachedData, retryCount])
 
   // Refresh data function
   const refreshData = useCallback(async () => {
@@ -230,26 +243,31 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
     try {
       logger.debug('Fast loading students for class', { classId })
       
-      // Get school_id from teacher profile first
-      let schoolId = user.school_id
-      logger.debug('Initial school_id from user', { schoolId })
-      
-      if (!schoolId) {
-        logger.debug('Fetching school_id from profile')
-        // Fetch school_id from profile if not available in user object
-        const profileResponse = await fetch('/api/profile')
-        if (profileResponse.ok) {
-          const profile = await profileResponse.json()
-          schoolId = profile.school_id
-          logger.debug('Got school_id from profile', { schoolId })
-        } else {
-          logger.debug('Failed to fetch profile', { status: profileResponse.status })
-        }
+      // Get school_id from teacher profile
+      logger.debug('Fetching school_id from profile')
+      let schoolId: string | undefined
+      const profileResponse = await fetch('/api/profile')
+      if (profileResponse.ok) {
+        const profile = await profileResponse.json()
+        schoolId = profile.school_id
+        logger.debug('Got school_id from profile', { 
+          schoolId, 
+          profileId: profile.id,
+          role: profile.role 
+        })
+      } else {
+        logger.error('Failed to fetch profile', { 
+          status: profileResponse.status,
+          statusText: profileResponse.statusText 
+        })
       }
       
       if (!schoolId) {
-        logger.debug('No school_id found anywhere')
-        throw new Error('School ID not found')
+        logger.error('School ID not found in profile for loadStudentsForClass', { 
+          userId: user.id,
+          classId
+        })
+        throw new Error('School ID not found in profile. Please contact your administrator.')
       }
       
       logger.debug('📡 Making API call with:', { schoolId, classId })
@@ -286,7 +304,7 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
     } finally {
       setStudentsLoading(false)
     }
-  }, [user?.id, user?.school_id, getCacheKey, getCachedData, setCachedData])
+  }, [user?.id, getCacheKey, getCachedData, setCachedData])
 
   // Clear cache function
   const clearCache = useCallback(() => {

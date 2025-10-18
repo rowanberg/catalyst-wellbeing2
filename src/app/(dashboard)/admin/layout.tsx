@@ -6,6 +6,7 @@ import { useAppSelector, useAppDispatch } from '@/lib/redux/hooks'
 import { fetchProfile } from '@/lib/redux/slices/authSlice'
 import { PageLoader } from '@/components/ui/loading-spinner'
 import { useToast } from '@/components/ui/toast'
+import { supabase } from '@/lib/supabaseClient'
 
 export default function AdminLayout({
   children,
@@ -18,59 +19,66 @@ export default function AdminLayout({
   const { user, profile, isLoading } = useAppSelector((state) => state.auth)
   const { addToast } = useToast()
   
-  // Track if we've already performed initial auth check
   const [hasInitialized, setHasInitialized] = useState(false)
   const [isAuthorized, setIsAuthorized] = useState(false)
+  const [isCheckingSession, setIsCheckingSession] = useState(true)
   const redirectAttempted = useRef(false)
+
+  // Check Supabase session directly on mount (prevents redirect on refresh)
+  useEffect(() => {
+    let mounted = true
+    
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (!mounted) return
+        
+        if (session?.user) {
+          console.log('✅ [ADMIN LAYOUT] Active Supabase session found')
+          // Session exists, fetch profile if we don't have it
+          if (!profile && !isLoading) {
+            dispatch(fetchProfile(session.user.id))
+          }
+        } else {
+          console.log('❌ [ADMIN LAYOUT] No Supabase session found')
+          if (!redirectAttempted.current) {
+            redirectAttempted.current = true
+            router.replace('/login')
+          }
+        }
+      } catch (error) {
+        console.error('Error checking session:', error)
+      } finally {
+        if (mounted) {
+          setIsCheckingSession(false)
+        }
+      }
+    }
+    
+    checkSession()
+    
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   // Only fetch profile once if user exists but profile doesn't
   useEffect(() => {
-    if (user && !profile && !isLoading) {
+    if (user && !profile && !isLoading && !isCheckingSession) {
       dispatch(fetchProfile(user.id))
     }
-  }, [user, profile, dispatch, isLoading])
+  }, [user, profile, dispatch, isLoading, isCheckingSession])
 
-  // Handle authorization check - only run once per session
+  // Handle authorization once we have profile
   useEffect(() => {
-    // Skip if already initialized
-    if (hasInitialized) return
-
-    // Force initialization after a short delay to prevent infinite loading
-    const initTimer = setTimeout(() => {
-      if (!hasInitialized) {
-        setHasInitialized(true)
-        
-        // If we have user and profile, check admin role
-        if (user && profile) {
-          if (profile.role === 'admin') {
-            setIsAuthorized(true)
-          } else if (!redirectAttempted.current) {
-            redirectAttempted.current = true
-            addToast({
-              type: 'error',
-              title: 'Access Denied',
-              description: 'You do not have permission to access the admin area.'
-            })
-            
-            const redirectPath = profile.role === 'student' ? '/student' :
-                               profile.role === 'teacher' ? '/teacher' :
-                               profile.role === 'parent' ? '/parent' : '/'
-            
-            router.replace(redirectPath)
-          }
-        } else if (!user && !redirectAttempted.current) {
-          redirectAttempted.current = true
-          router.replace('/login')
-        }
-      }
-    }, 1000) // 1 second timeout
-
-    // Immediate check for existing auth
+    if (hasInitialized || isCheckingSession) return
+    
     if (user && profile) {
-      clearTimeout(initTimer)
+      setHasInitialized(true)
+      
       if (profile.role === 'admin') {
         setIsAuthorized(true)
-        setHasInitialized(true)
       } else if (!redirectAttempted.current) {
         redirectAttempted.current = true
         addToast({
@@ -85,18 +93,11 @@ export default function AdminLayout({
         
         router.replace(redirectPath)
       }
-    } else if (!user && !isLoading && !redirectAttempted.current) {
-      clearTimeout(initTimer)
-      redirectAttempted.current = true
-      setHasInitialized(true)
-      router.replace('/login')
     }
+  }, [user, profile, isCheckingSession, router, addToast, hasInitialized])
 
-    return () => clearTimeout(initTimer)
-  }, [user, profile, isLoading, router, addToast, hasInitialized])
-
-  // Show loading only if we haven't initialized yet
-  if (!hasInitialized) {
+  // Show loading while checking session or waiting for profile
+  if (isCheckingSession || !hasInitialized) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
         <div className="text-center">

@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { X, Image, Video, Mic, FileText, Upload, Loader, Check } from 'lucide-react'
+import React, { useState, useRef, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import Image from 'next/image'
+import { X, Image as ImageIcon, Video, Mic, FileText, Upload, Loader, Check } from 'lucide-react'
 
 interface CreatePostComposerProps {
   onClose: () => void
@@ -260,7 +262,9 @@ export default function CreatePostComposer({ onClose, teacherId }: CreatePostCom
                   <div key={att.id} className="relative group">
                     <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
                       {att.type === 'photo' && att.url && (
-                        <img src={att.url} alt="" className="w-full h-32 object-cover rounded" />
+                        <div className="relative w-full h-32">
+                          <Image src={att.url} alt="Attachment" fill className="object-cover rounded" sizes="(max-width: 768px) 50vw, 33vw" />
+                        </div>
                       )}
                       {att.type === 'video' && (
                         <div className="flex items-center gap-2">
@@ -326,7 +330,7 @@ export default function CreatePostComposer({ onClose, teacherId }: CreatePostCom
               onClick={() => photoInputRef.current?.click()}
               className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-sm font-medium text-gray-700"
             >
-              <Image className="h-4 w-4" />
+              <ImageIcon className="h-4 w-4" />
               <span className="hidden sm:inline">Photo</span>
             </button>
 

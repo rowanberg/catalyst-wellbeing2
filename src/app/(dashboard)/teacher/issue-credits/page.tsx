@@ -494,7 +494,7 @@ function IssueCreditsContent() {
     
     try {
       // Get students from API
-      const apiUrl = `/api/teacher/students?school_id=${user?.school_id || profile?.school_id}&class_id=${classId}`
+      const apiUrl = `/api/teacher/students?school_id=${profile?.school_id}&class_id=${classId}`
       console.log('📡 API URL:', apiUrl)
       
       const response = await fetch(apiUrl)
@@ -535,7 +535,7 @@ function IssueCreditsContent() {
     } finally {
       setLoading(false)
     }
-  }, [user?.school_id, profile?.school_id])
+  }, [profile?.school_id])
 
   // Filter students based on search
   useEffect(() => {
@@ -710,8 +710,8 @@ function IssueCreditsContent() {
 
       } else {
         // API failed - animation will show error state
-        const error = await response.json()
-        console.error('❌ Payment failed:', error.message)
+        const errorData = await response.json()
+        console.error('❌ Payment failed:', errorData.error || errorData.message || 'Unknown error')
         setPaymentSuccess(false)
         // Animation will handle showing the error and auto-closing
       }

@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import Image from 'next/image'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -440,11 +441,15 @@ export default function OMRScanningInterface({ assessment, onGradesScanned }: OM
                 {/* Scanned Image */}
                 <div>
                   <h4 className="font-semibold mb-2">Scanned Answer Sheet</h4>
-                  <img 
-                    src={selectedSheet.image_data} 
-                    alt="Scanned answer sheet"
-                    className="w-full border rounded-lg"
-                  />
+                  <div className="relative w-full" style={{ minHeight: '400px' }}>
+                    <Image 
+                      src={selectedSheet.image_data} 
+                      alt="Scanned answer sheet"
+                      fill
+                      className="border rounded-lg object-contain"
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                    />
+                  </div>
                 </div>
                 
                 {/* Detected Answers */}

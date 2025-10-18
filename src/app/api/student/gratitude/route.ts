@@ -4,6 +4,8 @@ import { cookies } from 'next/headers'
 import { apiCache, createCacheKey } from '@/lib/utils/apiCache'
 import { createCachedResponse, CacheStrategies } from '@/lib/api/cache-headers'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies()

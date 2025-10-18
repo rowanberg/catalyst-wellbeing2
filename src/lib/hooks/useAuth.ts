@@ -4,7 +4,8 @@ import { useAppSelector, useAppDispatch } from '@/lib/redux/hooks'
 import { setUser, setProfile, fetchProfile } from '@/lib/redux/slices/authSlice'
 import { supabase } from '@/lib/supabaseClient'
 import { clearInvalidSession } from '@/lib/utils/authUtils'
-import { User, Profile } from '@/types'
+import type { User } from '@supabase/supabase-js'
+import { Profile } from '@/types'
 
 interface UseAuthOptions {
   requiredRole?: 'student' | 'parent' | 'teacher' | 'admin'
@@ -161,16 +162,8 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
               const profileData = await response.json()
               
               // Set user data from profile
-              const userData: User = {
-                id: user.id,
-                email: user.email || '',
-                role: profileData.role || 'student',
-                school_id: profileData.school_id,
-                created_at: user.created_at || '',
-                updated_at: user.updated_at || ''
-              }
-
-              dispatch(setUser(userData))
+              // Pass the full Supabase user object to match expected type
+              dispatch(setUser(user))
               dispatch(setProfile(profileData))
 
               // Check role requirements
@@ -226,16 +219,8 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
                   updated_at: new Date().toISOString()
                 }
                 
-                const userData: User = {
-                  id: user.id,
-                  email: user.email || '',
-                  role: mockRole,
-                  school_id: '6123d635-43a0-4c21-8c0e-66b9f231ee5e',
-                  created_at: user.created_at || '',
-                  updated_at: user.updated_at || ''
-                }
-
-                dispatch(setUser(userData))
+                // Pass the Supabase user object directly
+                dispatch(setUser(user))
                 dispatch(setProfile(mockProfileData))
                 setInitializing(false)
               } else {
@@ -263,16 +248,8 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
               updated_at: new Date().toISOString()
             }
             
-            const userData: User = {
-              id: user.id,
-              email: user.email || '',
-              role: mockRole,
-              school_id: '6123d635-43a0-4c21-8c0e-66b9f231ee5e',
-              created_at: user.created_at || '',
-              updated_at: user.updated_at || ''
-            }
-
-            dispatch(setUser(userData))
+            // Pass the Supabase user object directly
+            dispatch(setUser(user))
             dispatch(setProfile(mockProfileData))
             setInitializing(false)
           }
@@ -295,8 +272,8 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
   }, [dispatch, router, redirectTo, currentUser, currentProfile, currentIsLoading])
 
   return {
-    user: currentUser,
-    profile: currentProfile,
+    user: currentUser as User | null,
+    profile: currentProfile as Profile | null,
     isLoading: currentIsLoading || initializing,
     isAuthenticated: !!currentUser && (!requireProfile || !!currentProfile),
     error: authError

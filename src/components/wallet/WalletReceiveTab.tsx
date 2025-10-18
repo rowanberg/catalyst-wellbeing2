@@ -1,7 +1,8 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import Image from 'next/image';
 import { ArrowDownLeft, Copy, Check, QrCode, Share2, Gem, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import QRCodeLib from 'qrcode';
@@ -159,7 +160,9 @@ export function WalletReceiveTab({ wallet, currentStudent }: WalletReceiveTabPro
           <h3 className="text-white/70 text-xs sm:text-sm mb-2 sm:mb-3">Wallet QR Code</h3>
           {qrCodeUrl && (
             <div className="bg-white p-3 sm:p-4 rounded-2xl mb-3 sm:mb-4">
-              <img src={qrCodeUrl} alt="Wallet QR Code" className="w-32 h-32 sm:w-48 sm:h-48" />
+              <div className="relative w-32 h-32 sm:w-48 sm:h-48">
+                <Image src={qrCodeUrl} alt="Wallet QR Code" fill className="object-contain" sizes="(max-width: 640px) 128px, 192px" />
+              </div>
             </div>
           )}
         </div>

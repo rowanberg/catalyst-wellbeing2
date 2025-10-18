@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import Image from 'next/image'
 import { 
   Clock, 
   ChevronLeft, 
@@ -523,11 +524,16 @@ export function ExamInterface({
                   {/* Question image */}
                   {currentQuestion.image_url && (
                     <div className="rounded-lg overflow-hidden">
-                      <img 
-                        src={currentQuestion.image_url} 
-                        alt="Question image"
-                        className="w-full max-w-md mx-auto"
-                      />
+                      <div className="relative w-full max-w-md mx-auto">
+                        <Image 
+                          src={currentQuestion.image_url} 
+                          alt="Question image"
+                          width={800}
+                          height={600}
+                          className="w-full h-auto"
+                          style={{ width: '100%', height: 'auto' }}
+                        />
+                      </div>
                     </div>
                   )}
 

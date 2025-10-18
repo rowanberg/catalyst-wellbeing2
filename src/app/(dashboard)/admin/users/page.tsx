@@ -135,6 +135,16 @@ function UserManagementContent() {
   const [messageRecipient, setMessageRecipient] = useState<User | null>(null)
   const [messageContent, setMessageContent] = useState('')
   const [messageSubject, setMessageSubject] = useState('')
+  
+  // Deletion state
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [userToDelete, setUserToDelete] = useState<User | null>(null)
+  const [isDeletingUser, setIsDeletingUser] = useState(false)
+  const [deletionProgress, setDeletionProgress] = useState<{
+    stage: string
+    progress: number
+    details: string
+  }>({ stage: '', progress: 0, details: '' })
 
   // Statistics with enhanced metrics
   const [stats, setStats] = useState({
@@ -446,16 +456,93 @@ function UserManagementContent() {
   }
 
   const handleDeleteUser = async (user: User) => {
-    if (!confirm(`Are you sure you want to delete ${user.first_name} ${user.last_name}?`)) {
-      return
-    }
-
+    setUserToDelete(user)
+    setShowDeleteModal(true)
+  }
+  
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return
+    
+    setIsDeletingUser(true)
+    setDeletionProgress({ stage: 'Initializing', progress: 0, details: 'Starting deletion process...' })
+    
     try {
-      // TODO: Implement actual delete API
-      console.log('Deleting user:', user.id)
-      addToast(`User ${user.first_name} ${user.last_name} has been deleted`, 'success')
+      const userId = userToDelete.user_id || userToDelete.id
+      
+      // Simulate progress stages
+      const stages = [
+        { stage: 'Verifying', progress: 10, details: 'Verifying user permissions...' },
+        { stage: 'Student Data', progress: 20, details: 'Deleting student wallet records...' },
+        { stage: 'Achievements', progress: 30, details: 'Removing achievements and XP...' },
+        { stage: 'Assessments', progress: 40, details: 'Clearing assessment scores...' },
+        { stage: 'Assignments', progress: 50, details: 'Removing class assignments...' },
+        { stage: 'Relationships', progress: 60, details: 'Deleting parent-child relationships...' },
+        { stage: 'Wellbeing', progress: 70, details: 'Clearing wellbeing data...' },
+        { stage: 'Attendance', progress: 80, details: 'Removing attendance records...' },
+        { stage: 'Communications', progress: 90, details: 'Deleting messages and notifications...' },
+        { stage: 'Finalizing', progress: 95, details: 'Removing user profile...' },
+      ]
+      
+      // Animate through stages
+      for (const stage of stages) {
+        setDeletionProgress(stage)
+        await new Promise(resolve => setTimeout(resolve, 300))
+      }
+      
+      // Make actual API call
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || data.details || 'Failed to delete user')
+      }
+      
+      setDeletionProgress({ stage: 'Complete', progress: 100, details: 'User deleted successfully!' })
+      
+      // Wait a moment to show completion
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // Remove user from local state
+      setUsers(prev => prev.filter(u => u.id !== userToDelete.id))
+      setFilteredUsers(prev => prev.filter(u => u.id !== userToDelete.id))
+      
+      addToast(
+        `${userToDelete.first_name} ${userToDelete.last_name} and all associated data has been permanently deleted`,
+        'success'
+      )
+      
+      // Show deletion summary if available
+      if (data.deletionProgress) {
+        const summary = Object.entries(data.deletionProgress)
+          .filter(([key, value]) => value && value !== 0)
+          .map(([key, value]) => `${key}: ${value}`)
+          .join(', ')
+        console.log('Deletion summary:', summary)
+      }
+      
+      // Close modal
+      setShowDeleteModal(false)
+      setUserToDelete(null)
+      
     } catch (error: any) {
-      addToast('Failed to delete user', 'error')
+      console.error('Delete error:', error)
+      setDeletionProgress({ 
+        stage: 'Error', 
+        progress: 0, 
+        details: error.message || 'Failed to delete user'
+      })
+      addToast(error.message || 'Failed to delete user', 'error')
+      
+      // Keep modal open on error so user can see what happened
+      await new Promise(resolve => setTimeout(resolve, 2000))
+    } finally {
+      setIsDeletingUser(false)
     }
   }
 
@@ -1843,6 +1930,208 @@ function UserManagementContent() {
                 )}
               </Button>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete User Confirmation Modal - Professional Design */}
+        <Dialog open={showDeleteModal} onOpenChange={(open) => {
+          if (!isDeletingUser) {
+            setShowDeleteModal(open)
+            if (!open) {
+              setUserToDelete(null)
+              setDeletionProgress({ stage: '', progress: 0, details: '' })
+            }
+          }
+        }}>
+          <DialogContent className="w-[95vw] max-w-md mx-auto">
+            <DialogHeader>
+              <DialogTitle className="text-lg flex items-center gap-2">
+                {isDeletingUser ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+                    <span>Deleting User...</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="w-5 h-5 text-red-600" />
+                    <span>Confirm Deletion</span>
+                  </>
+                )}
+              </DialogTitle>
+              <DialogDescription className="text-sm">
+                {!isDeletingUser ? (
+                  'This action cannot be undone. All user data will be permanently deleted.'
+                ) : (
+                  'Please wait while we remove all user data from the system...'
+                )}
+              </DialogDescription>
+            </DialogHeader>
+
+            {userToDelete && (
+              <div className="space-y-4">
+                {/* User Info Card */}
+                <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-xl p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-orange-600 rounded-full flex items-center justify-center flex-shrink-0">
+                      {getRoleIcon(userToDelete.role)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 truncate">
+                        {userToDelete.first_name} {userToDelete.last_name}
+                      </h3>
+                      <p className="text-sm text-gray-600 truncate">{userToDelete.email}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge className={getRoleBadgeColor(userToDelete.role) + ' text-xs'}>
+                          {userToDelete.role.charAt(0).toUpperCase() + userToDelete.role.slice(1)}
+                        </Badge>
+                        {userToDelete.grade_level && (
+                          <Badge variant="outline" className="text-xs">
+                            {userToDelete.grade_level}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Deletion Progress */}
+                {isDeletingUser && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-3"
+                  >
+                    {/* Progress Bar */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium text-gray-700">{deletionProgress.stage}</span>
+                        <span className="text-gray-500">{deletionProgress.progress}%</span>
+                      </div>
+                      <div className="h-2.5 bg-gray-200 rounded-full overflow-hidden">
+                        <motion.div
+                          className="h-full bg-gradient-to-r from-red-500 via-orange-500 to-red-600"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${deletionProgress.progress}%` }}
+                          transition={{ duration: 0.3, ease: 'easeOut' }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Progress Details */}
+                    <div className="bg-white border border-gray-200 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        {deletionProgress.stage === 'Complete' ? (
+                          <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                        ) : deletionProgress.stage === 'Error' ? (
+                          <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <div className="w-5 h-5 flex-shrink-0 mt-0.5">
+                            <div className="w-full h-full border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-700 font-medium">
+                            {deletionProgress.details}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Deletion Stages Checklist */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-1.5 max-h-48 overflow-y-auto">
+                      <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Deletion Process</p>
+                      {[
+                        'Student wallet & transactions',
+                        'Achievements & XP records',
+                        'Assessment scores & grades',
+                        'Class assignments',
+                        'Parent-child relationships',
+                        'Wellbeing & mood data',
+                        'Attendance records',
+                        'Notifications & messages',
+                        'Community posts',
+                        'User profile & account'
+                      ].map((item, index) => {
+                        const currentProgress = deletionProgress.progress
+                        const itemProgress = (index + 1) * 10
+                        const isComplete = currentProgress >= itemProgress
+                        const isCurrent = currentProgress >= itemProgress - 10 && currentProgress < itemProgress
+                        
+                        return (
+                          <motion.div
+                            key={item}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.05 }}
+                            className={`flex items-center gap-2 text-xs py-1 px-2 rounded ${
+                              isComplete ? 'text-green-700 bg-green-50' :
+                              isCurrent ? 'text-blue-700 bg-blue-50' :
+                              'text-gray-500'
+                            }`}
+                          >
+                            {isComplete ? (
+                              <CheckCircle className="w-3.5 h-3.5 text-green-600" />
+                            ) : isCurrent ? (
+                              <div className="w-3.5 h-3.5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                              <div className="w-3.5 h-3.5 rounded-full border-2 border-gray-300"></div>
+                            )}
+                            <span className={isComplete || isCurrent ? 'font-medium' : ''}>{item}</span>
+                          </motion.div>
+                        )
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Warning Message (shown only when not deleting) */}
+                {!isDeletingUser && (
+                  <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
+                    <div className="flex gap-3">
+                      <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 space-y-2">
+                        <p className="text-sm font-semibold text-red-900">The following data will be permanently deleted:</p>
+                        <ul className="text-xs text-red-800 space-y-1 ml-4 list-disc">
+                          <li>Student wallet & gem transactions</li>
+                          <li>All achievements, XP, and level progress</li>
+                          <li>Assessment scores and grades</li>
+                          <li>Class assignments and submissions</li>
+                          <li>Parent-child account relationships</li>
+                          <li>Wellbeing data (mood, gratitude, habits)</li>
+                          <li>Attendance records</li>
+                          <li>Messages and notifications</li>
+                          <li>Community posts and reactions</li>
+                          <li>User profile and authentication account</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                {!isDeletingUser && (
+                  <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setShowDeleteModal(false)
+                        setUserToDelete(null)
+                      }} 
+                      className="text-sm"
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={confirmDeleteUser}
+                      className="text-sm bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Yes, Delete Permanently
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </DialogContent>
         </Dialog>
 

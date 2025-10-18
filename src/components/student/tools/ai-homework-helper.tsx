@@ -1,13 +1,16 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { useAppSelector } from '@/lib/redux/hooks'
+import { Textarea } from '@/components/ui/textarea'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { 
   Brain, 
   Send, 
@@ -61,9 +64,196 @@ interface StudyTip {
   effectiveness: number
 }
 
+// Component to render formatted message content with subject-specific colors
+function MessageContent({ content, subject }: { content: string; subject?: string }) {
+  // Get subject color
+  const subjects = [
+    { name: 'Mathematics', textColor: 'text-blue-400', borderColor: 'border-blue-500' },
+    { name: 'Science', textColor: 'text-green-400', borderColor: 'border-green-500' },
+    { name: 'English', textColor: 'text-purple-400', borderColor: 'border-purple-500' },
+    { name: 'History', textColor: 'text-orange-400', borderColor: 'border-orange-500' },
+    { name: 'Computer Science', textColor: 'text-cyan-400', borderColor: 'border-cyan-500' },
+    { name: 'Geography', textColor: 'text-emerald-400', borderColor: 'border-emerald-500' }
+  ]
+  const subjectInfo = subjects.find(s => s.name === subject) || subjects[0]
+  const formatContent = (text: string) => {
+    // Split by code blocks first
+    const parts = text.split(/(```[\s\S]*?```)/g)
+    
+    return parts.map((part, partIndex) => {
+      // Handle code blocks
+      if (part.startsWith('```') && part.endsWith('```')) {
+        const code = part.slice(3, -3).trim()
+        return (
+          <pre key={partIndex} className="bg-black/40 p-3 sm:p-4 rounded-lg my-3 overflow-x-auto border border-green-500/20">
+            <code className="text-green-300 text-xs sm:text-sm font-mono leading-relaxed">{code}</code>
+          </pre>
+        )
+      }
+      
+      // Process regular text line by line
+      const lines = part.split('\n')
+      const elements: JSX.Element[] = []
+      
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i]
+        const key = `${partIndex}-${i}`
+        
+        // Skip empty lines but add spacing
+        if (!line.trim()) {
+          elements.push(<div key={key} className="h-2" />)
+          continue
+        }
+        
+        // Main headers ##
+        if (line.startsWith('## ')) {
+          elements.push(
+            <h2 key={key} className={`text-lg sm:text-xl font-bold mt-4 mb-2 ${subjectInfo.textColor}`}>
+              {line.slice(3).trim()}
+            </h2>
+          )
+          continue
+        }
+        
+        // Sub headers ###
+        if (line.startsWith('### ')) {
+          elements.push(
+            <h3 key={key} className={`text-base sm:text-lg font-semibold mt-3 mb-1.5 ${subjectInfo.textColor}`}>
+              {line.slice(4).trim()}
+            </h3>
+          )
+          continue
+        }
+        
+        // Numbered lists
+        if (line.match(/^\d+\.\s/)) {
+          const content = line.replace(/^\d+\.\s/, '')
+          elements.push(
+            <div key={key} className="flex gap-2 my-1.5 ml-2">
+              <span className={`${subjectInfo.textColor} font-semibold min-w-[1.5rem]`}>
+                {line.match(/^\d+/)?.[0]}.
+              </span>
+              <span className="flex-1">{formatInlineText(content)}</span>
+            </div>
+          )
+          continue
+        }
+        
+        // Bullet lists
+        if (line.match(/^[-*]\s/)) {
+          const content = line.slice(2)
+          elements.push(
+            <div key={key} className="flex gap-2 my-1.5 ml-2">
+              <span className={`${subjectInfo.textColor} font-semibold min-w-[1rem]`}>•</span>
+              <span className="flex-1">{formatInlineText(content)}</span>
+            </div>
+          )
+          continue
+        }
+        
+        // Blockquotes
+        if (line.startsWith('> ')) {
+          elements.push(
+            <div key={key} className={`border-l-4 ${subjectInfo.borderColor} ${subjectInfo.textColor}/5 pl-4 py-2 my-2 italic`}>
+              {formatInlineText(line.slice(2))}
+            </div>
+          )
+          continue
+        }
+        
+        // Regular paragraphs
+        elements.push(
+          <p key={key} className="my-1.5 leading-relaxed">
+            {formatInlineText(line)}
+          </p>
+        )
+      }
+      
+      return <React.Fragment key={partIndex}>{elements}</React.Fragment>
+    })
+  }
+  
+  // Format inline text (bold, italic, code, links)
+  const formatInlineText = (text: string): React.ReactNode => {
+    const parts: React.ReactNode[] = []
+    let remaining = text
+    let keyCounter = 0
+    
+    while (remaining.length > 0) {
+      // Bold **text**
+      const boldMatch = remaining.match(/^\*\*([^*]+?)\*\*/)
+      if (boldMatch) {
+        parts.push(
+          <strong key={keyCounter++} className="text-white font-bold">
+            {boldMatch[1]}
+          </strong>
+        )
+        remaining = remaining.slice(boldMatch[0].length)
+        continue
+      }
+      
+      // Inline code `code`
+      const codeMatch = remaining.match(/^`([^`]+)`/)
+      if (codeMatch) {
+        parts.push(
+          <code key={keyCounter++} className="bg-black/40 px-1.5 py-0.5 rounded text-green-400 font-mono text-sm mx-0.5">
+            {codeMatch[1]}
+          </code>
+        )
+        remaining = remaining.slice(codeMatch[0].length)
+        continue
+      }
+      
+      // Links [text](url)
+      const linkMatch = remaining.match(/^\[([^\]]+)\]\(([^)]+)\)/)
+      if (linkMatch) {
+        parts.push(
+          <a key={keyCounter++} href={linkMatch[2]} className="text-green-400 hover:text-green-300 underline">
+            {linkMatch[1]}
+          </a>
+        )
+        remaining = remaining.slice(linkMatch[0].length)
+        continue
+      }
+      
+      // Italic *text* (single asterisk, but not part of **)
+      const italicMatch = remaining.match(/^\*([^*]+?)\*/)
+      if (italicMatch && !remaining.startsWith('**')) {
+        parts.push(
+          <em key={keyCounter++}>
+            {italicMatch[1]}
+          </em>
+        )
+        remaining = remaining.slice(italicMatch[0].length)
+        continue
+      }
+      
+      // Regular text (find next special character)
+      const nextSpecial = remaining.search(/[*`\[]/);
+      if (nextSpecial === -1) {
+        parts.push(remaining)
+        break
+      } else if (nextSpecial > 0) {
+        parts.push(remaining.slice(0, nextSpecial))
+        remaining = remaining.slice(nextSpecial)
+      } else {
+        // If we can't match anything, just take the first character to avoid infinite loop
+        parts.push(remaining[0])
+        remaining = remaining.slice(1)
+      }
+    }
+    
+    return <>{parts}</>
+  }
+  
+  return <div className="space-y-1">{formatContent(content)}</div>
+}
+
 export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputMessage, setInputMessage] = useState('')
+  const [wordCount, setWordCount] = useState(0)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [isTyping, setIsTyping] = useState(false)
   const [selectedSubject, setSelectedSubject] = useState('Mathematics')
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
@@ -77,7 +267,23 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const profile = useAppSelector((state) => state.auth.user)
+  const profile = useAppSelector((state) => state.auth.profile)
+
+  // Define subjects before using in useMemo
+  const subjects = [
+    { name: 'Mathematics', icon: Calculator, color: 'blue', gradientFrom: 'from-blue-500', gradientTo: 'to-cyan-600', textColor: 'text-blue-400', borderColor: 'border-blue-500/20', bgColor: 'bg-blue-500/20' },
+    { name: 'Science', icon: Beaker, color: 'green', gradientFrom: 'from-green-500', gradientTo: 'to-emerald-600', textColor: 'text-green-400', borderColor: 'border-green-500/20', bgColor: 'bg-green-500/20' },
+    { name: 'English', icon: PenTool, color: 'purple', gradientFrom: 'from-purple-500', gradientTo: 'to-pink-600', textColor: 'text-purple-400', borderColor: 'border-purple-500/20', bgColor: 'bg-purple-500/20' },
+    { name: 'History', icon: BookOpen, color: 'orange', gradientFrom: 'from-orange-500', gradientTo: 'to-amber-600', textColor: 'text-orange-400', borderColor: 'border-orange-500/20', bgColor: 'bg-orange-500/20' },
+    { name: 'Computer Science', icon: Code, color: 'cyan', gradientFrom: 'from-cyan-500', gradientTo: 'to-blue-600', textColor: 'text-cyan-400', borderColor: 'border-cyan-500/20', bgColor: 'bg-cyan-500/20' },
+    { name: 'Geography', icon: Globe, color: 'emerald', gradientFrom: 'from-emerald-500', gradientTo: 'to-teal-600', textColor: 'text-emerald-400', borderColor: 'border-emerald-500/20', bgColor: 'bg-emerald-500/20' }
+  ]
+  
+  // Get current subject colors
+  const currentSubject = useMemo(() => 
+    subjects.find(s => s.name === selectedSubject) || subjects[0],
+    [selectedSubject, subjects]
+  )
 
   const getStorageKey = useCallback(() => {
     return `ai_homework_chat_${profile?.id || 'guest'}`
@@ -107,7 +313,7 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
         {
           id: '1',
           type: 'ai',
-          content: `Hi! I'm your AI Homework Helper. I'm here to guide you through your ${selectedSubject} assignments and help you understand concepts better. What would you like to work on today?`,
+          content: `Hi ${profile?.first_name || 'there'}! I'm your AI Homework Helper. 🎓\n\nI'm here to guide you through your **${selectedSubject}** assignments and help you understand concepts better.\n\n**I can help you with:**\n- Step-by-step problem solving\n- Explaining difficult concepts\n- Checking your answers\n- Practice problems\n- Study strategies\n\nWhat would you like to work on today?`,
           timestamp: new Date().toISOString(),
           subject: selectedSubject
         }
@@ -164,15 +370,6 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
     })
   }, [profile?.id, getStorageKey])
 
-  const subjects = [
-    { name: 'Mathematics', icon: Calculator, color: 'blue' },
-    { name: 'Science', icon: Beaker, color: 'green' },
-    { name: 'English', icon: PenTool, color: 'purple' },
-    { name: 'History', icon: BookOpen, color: 'orange' },
-    { name: 'Computer Science', icon: Code, color: 'cyan' },
-    { name: 'Geography', icon: Globe, color: 'emerald' }
-  ]
-
   const quickPrompts: QuickPrompt[] = [
     { id: '1', text: "Explain this concept", icon: Lightbulb, category: 'explain' },
     { id: '2', text: "Show me examples", icon: BookOpen, category: 'example' },
@@ -194,10 +391,13 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
   const sendMessage = useCallback(async () => {
     if (!inputMessage.trim() && !selectedImage) return
 
+    // Prepare message content
+    const messageContent = inputMessage.trim() || (selectedImage ? '[Image uploaded - please help me with this problem]' : '')
+
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       type: 'user',
-      content: inputMessage,
+      content: messageContent,
       timestamp: new Date().toISOString(),
       subject: selectedSubject,
       imageData: selectedImage || undefined
@@ -207,20 +407,165 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
     setInputMessage('')
     setSelectedImage(null)
     setIsTyping(true)
+    setHelpCount(prev => prev + 1)
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      // Call the Gemini API with streaming
+      const response = await fetch('/api/chat/gemini', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: messageContent,
+          imageData: selectedImage || undefined,
+          conversationHistory: messages.slice(-10).map(msg => ({
+            role: msg.type === 'user' ? 'user' : 'assistant',
+            content: msg.content
+          })),
+          schoolContext: {
+            subject: selectedSubject,
+            studentName: profile?.first_name || 'Student',
+            schoolName: profile?.schools?.name || profile?.school_name || 'your school',
+            imageAttached: !!selectedImage
+          }
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to get response')
+      }
+
+      // Create placeholder message for streaming content
+      const aiMessageId = (Date.now() + 1).toString()
       const aiResponse: ChatMessage = {
-        id: (Date.now() + 1).toString(),
+        id: aiMessageId,
         type: 'ai',
-        content: `I understand you're working on ${selectedSubject}. Let me help you break this down step by step. ${selectedImage ? 'I can see the image you shared - ' : ''}Here's how we can approach this problem...`,
+        content: '',
         timestamp: new Date().toISOString(),
         subject: selectedSubject
       }
+      
       setMessages(prev => [...prev, aiResponse])
+      setIsTyping(false) // Stop typing indicator, start showing content
+
+      // Read streaming response with smooth word-by-word animation
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      let fullText = ''
+      let displayedText = ''
+      let animationQueue: string[] = []
+      
+      // Start animation loop
+      let animationRunning = true
+      const animateText = () => {
+        if (animationQueue.length > 0 && animationRunning) {
+          const word = animationQueue.shift()!
+          displayedText += word
+          
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === aiMessageId 
+                ? { ...msg, content: displayedText }
+                : msg
+            )
+          )
+          
+          // Continue animation with smooth delay (20-40ms per word)
+          setTimeout(animateText, 20)
+        } else if (displayedText !== fullText && !animationRunning) {
+          // If streaming is done but animation hasn't caught up, show remaining text
+          displayedText = fullText
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === aiMessageId 
+                ? { ...msg, content: displayedText }
+                : msg
+            )
+          )
+        }
+      }
+      
+      // Start the animation
+      animateText()
+
+      if (reader) {
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) {
+              animationRunning = false
+              break
+            }
+
+            const chunk = decoder.decode(value)
+            const lines = chunk.split('\n')
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const data = line.slice(6)
+                if (data === '[DONE]') {
+                  animationRunning = false
+                  break
+                }
+                
+                try {
+                  const parsed = JSON.parse(data)
+                  if (parsed.text) {
+                    // Add new text to the full text buffer
+                    const newText = parsed.text
+                    fullText += newText
+                    
+                    // Split into words and add to animation queue
+                    // Split by spaces but keep the spaces
+                    const words = newText.split(/(?<=\s)|(?=\s)/)
+                    animationQueue.push(...words)
+                  }
+                } catch (e) {
+                  // Ignore JSON parse errors for incomplete chunks
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Streaming read error:', error)
+        }
+        
+        // Ensure all text is displayed when streaming completes
+        animationRunning = false
+        if (displayedText !== fullText) {
+          displayedText = fullText
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === aiMessageId 
+                ? { ...msg, content: fullText }
+                : msg
+            )
+          )
+        }
+      }
+      
+      // Update accuracy based on successful responses
+      setAccuracy(prev => Math.min(100, prev + 0.5))
+      
+    } catch (error) {
+      console.error('Error calling Gemini API:', error)
+      
+      // Show error message to user
+      const errorResponse: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'ai',
+        content: `I apologize, but I'm having trouble processing your request right now.\n\n${error instanceof Error ? error.message : 'Please try again in a moment.'}\n\nIf the problem persists, please contact your teacher or administrator.`,
+        timestamp: new Date().toISOString(),
+        subject: selectedSubject
+      }
+      
+      setMessages(prev => [...prev, errorResponse])
+    } finally {
       setIsTyping(false)
-    }, 2000)
-  }, [inputMessage, selectedImage, selectedSubject])
+    }
+  }, [inputMessage, selectedImage, selectedSubject, messages, profile?.first_name])
 
   const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -239,6 +584,33 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
       fileInputRef.current.value = ''
     }
   }, [])
+
+  // Handle input change with word count
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value
+    const words = text.trim().split(/\s+/).filter(word => word.length > 0)
+    const count = words.length
+    
+    // Limit to 400 words
+    if (count <= 400 || text.length < inputMessage.length) {
+      setInputMessage(text)
+      setWordCount(count)
+      
+      // Auto-resize textarea up to max 4 lines (~100px)
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto'
+        const newHeight = Math.min(textareaRef.current.scrollHeight, 100)
+        textareaRef.current.style.height = newHeight + 'px'
+      }
+    }
+  }, [inputMessage.length])
+
+  // Reset textarea height when message is sent
+  useEffect(() => {
+    if (inputMessage === '' && textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+    }
+  }, [inputMessage])
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -271,12 +643,12 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
       >
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center shadow-lg shadow-green-500/20 flex-shrink-0">
+            <div className={`w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br ${currentSubject.gradientFrom} ${currentSubject.gradientTo} rounded-full flex items-center justify-center shadow-lg shadow-${currentSubject.color}-500/20 flex-shrink-0`}>
               <Brain className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
             </div>
             <div className="min-w-0">
               <h1 className="text-sm sm:text-base font-semibold text-white truncate">AI Homework Helper</h1>
-              <p className="text-xs text-green-400 truncate">{selectedSubject}</p>
+              <p className={`text-xs ${currentSubject.textColor} truncate`}>{selectedSubject}</p>
             </div>
           </div>
           
@@ -292,7 +664,7 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
                   variant="ghost"
                   className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs transition-all ${
                     selectedSubject === subject.name
-                      ? 'bg-green-500/20 text-green-300 hover:bg-green-500/30'
+                      ? `${subject.bgColor} ${subject.textColor} hover:bg-${subject.color}-500/30`
                       : 'text-white/50 hover:text-white/80 hover:bg-white/5'
                   }`}
                 >
@@ -376,15 +748,20 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
                 </div>
                 
                 {message.imageData && (
-                  <img 
-                    src={message.imageData} 
-                    alt="Uploaded" 
-                    className="max-w-full sm:max-w-md rounded-lg sm:rounded-xl border border-green-500/20 shadow-lg"
-                  />
+                  <div className="relative max-w-full sm:max-w-md">
+                    <Image 
+                      src={message.imageData} 
+                      alt="Uploaded" 
+                      width={400}
+                      height={300}
+                      className="rounded-lg sm:rounded-xl border border-green-500/20 shadow-lg"
+                      style={{ width: '100%', height: 'auto' }}
+                    />
+                  </div>
                 )}
                 
                 <div className="text-white/90 text-sm sm:text-base leading-relaxed break-words">
-                  {message.content}
+                  <MessageContent content={message.content} subject={message.subject} />
                 </div>
               </div>
             </motion.div>
@@ -420,7 +797,9 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
         <div className="max-w-5xl mx-auto">
           {selectedImage && (
             <div className="mb-3 sm:mb-4 relative inline-block">
-              <img src={selectedImage} alt="Preview" className="h-16 sm:h-24 w-auto rounded-lg sm:rounded-xl border border-green-500/20 shadow-lg" />
+              <div className="relative h-16 sm:h-24 w-auto">
+                <Image src={selectedImage} alt="Preview" width={150} height={96} className="h-16 sm:h-24 w-auto rounded-lg sm:rounded-xl border border-green-500/20 shadow-lg" style={{ width: 'auto', height: '100%' }} />
+              </div>
               <Button
                 onClick={() => setSelectedImage(null)}
                 size="sm"
@@ -433,24 +812,51 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
           
           <div className="flex items-end gap-2 sm:gap-3">
             <div className="flex-1 relative">
-              <Input
+              <textarea
+                ref={textareaRef}
                 value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                onChange={handleInputChange}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    sendMessage()
+                  }
+                }}
                 onFocus={(e) => {
                   // Scroll input into view when keyboard appears on mobile
                   setTimeout(() => {
                     e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
                   }, 300)
                 }}
-                placeholder="Message AI Homework Helper..."
-                className="w-full bg-white/5 border-green-500/20 text-white placeholder:text-white/40 pr-20 sm:pr-24 py-3 sm:py-4 rounded-xl sm:rounded-2xl text-sm sm:text-base focus:border-green-500/40 focus:ring-2 focus:ring-green-500/20 transition-all"
+                placeholder="Message AI Homework Helper... (Press Shift+Enter for new line)"
+                rows={1}
+                className="w-full bg-white/5 border border-green-500/20 text-white placeholder:text-white/40 pr-20 sm:pr-24 py-3 sm:py-4 rounded-xl sm:rounded-2xl text-sm sm:text-base focus:border-green-500/40 focus:ring-2 focus:ring-green-500/20 transition-all resize-none overflow-y-auto min-h-[44px] max-h-[100px]"
+                style={{ 
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'rgba(34, 197, 94, 0.3) transparent'
+                }}
               />
-              <div className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 flex items-center space-x-1 sm:space-x-2">
+              {/* Word counter */}
+              {inputMessage && (
+                <div className={`absolute bottom-2 left-2 text-[10px] sm:text-xs ${
+                  wordCount > 380 ? 'text-red-400' : wordCount > 300 ? 'text-yellow-400' : 'text-white/40'
+                }`}>
+                  {wordCount}/400 words
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+              <div className="absolute right-2 sm:right-3 bottom-2 sm:bottom-3 flex items-center space-x-1 sm:space-x-2">
                 <Button
                   onClick={() => fileInputRef.current?.click()}
                   size="sm"
                   variant="ghost"
+                  type="button"
                   className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-white/50 hover:text-white hover:bg-white/10 rounded-lg sm:rounded-xl transition-all"
                 >
                   <Paperclip className="h-3.5 w-3.5 sm:h-4 sm:w-4" />

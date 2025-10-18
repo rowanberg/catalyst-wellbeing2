@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { NextRequest, NextResponse } from 'next/server'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,9 +30,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Analytics data required' }, { status: 400 })
     }
 
-    // Generate intelligent insights from analytics data
-    console.log('💡 Generating data-driven insights from analytics...')
-    const insights = generateIntelligentInsights(analytics)
+    // Get school name for context
+    const { data: schoolData } = await supabase
+      .from('schools')
+      .select('name')
+      .eq('id', adminProfile.school_id)
+      .single()
+
+    const schoolName = schoolData?.name || 'your school'
+
+    // Generate AI-powered insights using Gemini
+    console.log('🤖 Generating AI-powered insights with Gemini...')
+    const insights = await generateAIInsights(analytics, schoolName)
     
     return NextResponse.json({ 
       success: true, 
@@ -56,8 +66,99 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Generate personalized, data-driven insights
-function generateIntelligentInsights(analytics: any) {
+// Generate AI-powered insights using Gemini
+async function generateAIInsights(analytics: any, schoolName: string) {
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY
+  
+  if (!GEMINI_API_KEY) {
+    console.error('❌ GEMINI_API_KEY not configured')
+    return generateFallbackInsights(analytics)
+  }
+
+  try {
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY)
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' })
+
+    // Prepare analytics summary for AI
+    const analyticsSummary = {
+      schoolName,
+      totalStudents: analytics?.totalStudents || 0,
+      wellbeingScore: analytics?.averageWellbeingScore || 0,
+      engagement: analytics?.engagementRate || 0,
+      distribution: analytics?.wellbeingDistribution || {},
+      trends: analytics?.trends || {},
+      highRiskCount: analytics?.studentInsights?.filter((s: any) => s.riskLevel === 'high').length || 0,
+      mediumRiskCount: analytics?.studentInsights?.filter((s: any) => s.riskLevel === 'medium').length || 0,
+      classes: analytics?.classAnalytics?.length || 0,
+      topActivity: analytics?.activityBreakdown?.[0]?.subject || 'N/A',
+      timeRange: analytics?.timeRange || '7 days'
+    }
+
+    const prompt = `You are an expert school wellbeing analyst providing insights for ${schoolName}'s administrative team.
+
+## Analytics Data Summary:
+- Total Students: ${analyticsSummary.totalStudents}
+- Average Wellbeing Score: ${analyticsSummary.wellbeingScore}/10
+- Engagement Rate: ${analyticsSummary.engagement}%
+- Distribution: ${analyticsSummary.distribution.thriving || 0}% thriving, ${analyticsSummary.distribution.moderate || 0}% moderate, ${analyticsSummary.distribution.atRisk || 0}% at-risk
+- Trends: Wellbeing ${analyticsSummary.trends.wellbeingChange || 0}%, Engagement ${analyticsSummary.trends.engagementChange || 0}%
+- Risk Levels: ${analyticsSummary.highRiskCount} high-risk, ${analyticsSummary.mediumRiskCount} medium-risk
+- Classes: ${analyticsSummary.classes}
+- Time Range: ${analyticsSummary.timeRange}
+
+## Your Task:
+Analyze this wellbeing data and provide actionable insights for school administrators.
+
+## Response Format (JSON):
+Provide EXACTLY in this JSON structure:
+{
+  "summary": "2-3 sentence executive summary with key numbers and trends",
+  "keyStrengths": ["3 specific data-backed strengths with numbers"],
+  "areasOfConcern": ["3 specific concerns with numbers and urgency levels"],
+  "recommendations": ["3 concrete, actionable steps with timelines"],
+  "positiveHighlight": "1 sentence celebrating a positive metric or achievement"
+}
+
+## Guidelines:
+- Be specific with numbers from the data
+- Use professional, supportive tone
+- Focus on actionable insights
+- Prioritize student safety and wellbeing
+- Keep under 500 words total
+- If high-risk students exist, mark as URGENT
+- Include realistic timelines (24-48 hours, 1 week, etc.)
+- Celebrate wins while addressing concerns
+
+Provide ONLY the JSON response, no other text.`
+
+    const result = await model.generateContent(prompt)
+    const response = await result.response
+    const text = response.text()
+
+    // Parse JSON response
+    try {
+      // Extract JSON from response (in case there's extra text)
+      const jsonMatch = text.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        const insights = JSON.parse(jsonMatch[0])
+        console.log('✅ AI insights generated successfully')
+        return insights
+      }
+    } catch (parseError) {
+      console.error('❌ Failed to parse AI response:', parseError)
+    }
+
+    // If parsing fails, fall back
+    return generateFallbackInsights(analytics)
+
+  } catch (error) {
+    console.error('❌ Gemini API error:', error)
+    return generateFallbackInsights(analytics)
+  }
+}
+
+// Fallback insights using rule-based analysis
+function generateFallbackInsights(analytics: any) {
   const totalStudents = analytics?.totalStudents || 0
   const wellbeingScore = analytics?.averageWellbeingScore || 0
   const engagement = analytics?.engagementRate || 0
@@ -195,3 +296,4 @@ function generateIntelligentInsights(analytics: any) {
     positiveHighlight
   }
 }
+
