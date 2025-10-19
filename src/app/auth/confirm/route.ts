@@ -8,6 +8,16 @@ export async function GET(request: NextRequest) {
   const next = searchParams.get('next') ?? '/login'
 
   if (token_hash && type) {
+    // Handle password reset (recovery) - redirect to reset password page with token
+    if (type === 'recovery') {
+      // Don't verify the token here - let the reset-password-confirm page handle it
+      // Just redirect with the token_hash preserved
+      return NextResponse.redirect(
+        new URL(`/auth/reset-password-confirm?token_hash=${token_hash}&type=${type}`, request.url)
+      )
+    }
+
+    // Handle email confirmation and other types
     const { error } = await supabase.auth.verifyOtp({
       type: type as any,
       token_hash,

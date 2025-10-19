@@ -59,7 +59,43 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('Password reset email sent successfully to:', email)
+    // Send password reset email via SendGrid
+    console.log('📨 Preparing to send password reset email via SendGrid...')
+    try {
+      const resetUrl = data.properties?.action_link || ''
+      const firstName = user.user_metadata?.first_name || user.email?.split('@')[0] || 'User'
+      
+      console.log('📧 Email details:', { email, firstName, hasResetUrl: !!resetUrl })
+      console.log('🔗 Reset URL:', resetUrl)
+      
+      const emailResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/send-password-reset-email`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            email: email,
+            firstName: firstName,
+            resetUrl: resetUrl
+          })
+        }
+      )
+      
+      console.log('📬 SendGrid API response status:', emailResponse.status)
+      const responseData = await emailResponse.json()
+      console.log('📬 SendGrid API response:', responseData)
+      
+      if (emailResponse.ok) {
+        console.log('✅ Password reset email sent via SendGrid to:', email)
+      } else {
+        console.error('❌ Failed to send password reset email via SendGrid:', email)
+        console.error('❌ Error details:', responseData)
+        // Don't fail the request if SendGrid fails - the link was still generated
+      }
+    } catch (emailError) {
+      console.error('❌ Error sending password reset email via SendGrid:', emailError)
+      // Don't fail the request if email sending fails
+    }
     
     // Log the reset link for development (remove in production)
     if (process.env.NODE_ENV === 'development') {

@@ -143,12 +143,12 @@ export default function ResetPasswordConfirmPage() {
 
   if (isValidating) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
-        <Card className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl max-w-md w-full mx-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <Card className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-white/30 dark:border-slate-700/30 shadow-2xl max-w-md w-full mx-4">
           <CardContent className="p-8 text-center">
-            <RefreshCw className="w-12 h-12 text-white animate-spin mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-white mb-2">Validating Reset Link</h2>
-            <p className="text-white/70">Please wait while we verify your password reset link...</p>
+            <RefreshCw className="w-12 h-12 text-blue-600 dark:text-blue-400 animate-spin mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Validating Reset Link</h2>
+            <p className="text-gray-600 dark:text-gray-400">Please wait while we verify your password reset link...</p>
           </CardContent>
         </Card>
       </div>
@@ -157,31 +157,31 @@ export default function ResetPasswordConfirmPage() {
 
   if (!isValidToken) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
-        <Card className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl max-w-md w-full mx-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <Card className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-white/30 dark:border-slate-700/30 shadow-2xl max-w-md w-full mx-4">
           <CardHeader className="text-center">
-            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Shield className="w-8 h-8 text-red-400" />
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Shield className="w-8 h-8 text-red-600 dark:text-red-400" />
             </div>
-            <CardTitle className="text-2xl font-bold text-white">Invalid Reset Link</CardTitle>
-            <CardDescription className="text-white/70">
+            <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">Invalid Reset Link</CardTitle>
+            <CardDescription className="text-gray-600 dark:text-gray-400">
               This password reset link is invalid or has expired
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-red-500/20 border border-red-400/30 rounded-xl p-4">
-              <p className="text-red-300 text-sm">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 rounded-xl p-4">
+              <p className="text-red-700 dark:text-red-300 text-sm">
                 The reset link may have expired or already been used. Please request a new one.
               </p>
             </div>
             <div className="space-y-3">
-              <Link href="/reset-password">
-                <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 rounded-xl">
+              <Link href="/login">
+                <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-3 rounded-xl">
                   Request New Reset Link
                 </Button>
               </Link>
               <Link href="/login">
-                <Button className="w-full bg-white/10 border border-white/20 text-white hover:bg-white/20 py-3 rounded-xl">
+                <Button className="w-full bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 py-3 rounded-xl">
                   Back to Login
                 </Button>
               </Link>
@@ -193,26 +193,17 @@ export default function ResetPasswordConfirmPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-      {/* Enhanced Animated Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
-        {/* Animated Grid Pattern */}
-        <div className="absolute inset-0 opacity-10" style={{ 
-          backgroundImage: `radial-gradient(circle at 25% 25%, #00f5ff 2px, transparent 2px),
-                           radial-gradient(circle at 75% 75%, #ff6b6b 2px, transparent 2px)`,
-          backgroundSize: '60px 60px',
-          animation: 'float 25s ease-in-out infinite'
-        }}></div>
-
-        {/* Floating Elements */}
-        <div className="absolute top-20 left-20 w-32 h-32 bg-gradient-to-r from-green-400/20 to-emerald-400/20 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
-        <div className="absolute top-40 right-32 w-24 h-24 bg-gradient-to-r from-blue-400/20 to-cyan-400/20 rounded-full mix-blend-multiply filter blur-xl animate-bounce"></div>
-        <div className="absolute bottom-32 left-1/3 w-40 h-40 bg-gradient-to-r from-purple-400/20 to-pink-400/20 rounded-full mix-blend-multiply filter blur-xl animate-ping"></div>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors duration-300">
+      {/* Optimized geometric background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-32 w-80 h-80 bg-gradient-to-br from-blue-400/15 to-indigo-600/15 dark:from-blue-600/20 dark:to-indigo-800/20 rounded-full blur-2xl"></div>
+        <div className="absolute top-20 -left-32 w-64 h-64 bg-gradient-to-br from-violet-400/15 to-purple-600/15 dark:from-violet-600/20 dark:to-purple-800/20 rounded-full blur-2xl"></div>
+        <div className="absolute bottom-20 left-1/3 w-48 h-48 bg-gradient-to-br from-cyan-400/15 to-blue-500/15 dark:from-cyan-600/20 dark:to-blue-800/20 rounded-full blur-xl"></div>
       </div>
 
       {/* Main Content */}
       <div className="relative z-10 max-w-md w-full mx-4">
-        <Card className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
+        <Card className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-white/30 dark:border-slate-700/30 shadow-2xl">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
               <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center relative">
@@ -226,10 +217,10 @@ export default function ResetPasswordConfirmPage() {
                 </div>
               </div>
             </div>
-            <CardTitle className="text-2xl font-bold text-white">
+            <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
               {passwordUpdated ? 'Password Updated!' : 'Create New Password'}
             </CardTitle>
-            <CardDescription className="text-white/70 text-base">
+            <CardDescription className="text-gray-600 dark:text-gray-400 text-base">
               {passwordUpdated 
                 ? 'Your password has been successfully changed'
                 : 'Choose a strong password for your account'
@@ -240,22 +231,22 @@ export default function ResetPasswordConfirmPage() {
           <CardContent>
             {passwordUpdated ? (
               <div className="text-center space-y-6">
-                <div className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-400/30 rounded-xl p-6">
-                  <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-3" />
-                  <h3 className="text-white font-semibold mb-2">Success!</h3>
-                  <p className="text-white/80 text-sm">
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/30 rounded-xl p-6">
+                  <CheckCircle className="w-12 h-12 text-green-600 dark:text-green-400 mx-auto mb-3" />
+                  <h3 className="text-gray-900 dark:text-white font-semibold mb-2">Success!</h3>
+                  <p className="text-gray-700 dark:text-gray-300 text-sm">
                     Your password has been updated successfully. You can now sign in with your new password.
                   </p>
                 </div>
                 
-                <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-400/30 rounded-xl p-4">
-                  <p className="text-white/70 text-sm">
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/30 rounded-xl p-4">
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">
                     Redirecting to login page in a few seconds...
                   </p>
                 </div>
 
                 <Link href="/login">
-                  <Button className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white py-3 rounded-xl font-medium">
+                  <Button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all">
                     <ArrowRight className="w-4 h-4 mr-2" />
                     Continue to Login
                   </Button>
@@ -264,12 +255,12 @@ export default function ResetPasswordConfirmPage() {
             ) : (
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 {/* Security Notice */}
-                <div className="bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-400/30 rounded-xl p-4">
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/30 rounded-xl p-4">
                   <div className="flex items-start space-x-3">
-                    <Shield className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                    <Shield className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
                     <div>
-                      <h4 className="text-white font-medium text-sm mb-1">Secure Password Tips</h4>
-                      <p className="text-white/80 text-xs">
+                      <h4 className="text-gray-900 dark:text-white font-medium text-sm mb-1">Secure Password Tips</h4>
+                      <p className="text-gray-700 dark:text-gray-300 text-xs">
                         Use a mix of letters, numbers, and symbols for better security
                       </p>
                     </div>
@@ -278,21 +269,21 @@ export default function ResetPasswordConfirmPage() {
 
                 {/* New Password Field */}
                 <div className="space-y-2">
-                  <Label className="text-white font-medium">New Password</Label>
+                  <Label className="text-gray-700 dark:text-gray-300 font-medium">New Password</Label>
                   <div className="relative">
                     <Input
                       {...register('password')}
                       type={showPassword ? 'text' : 'password'}
-                      className="w-full pl-12 pr-12 py-4 bg-white/5 border-2 border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 backdrop-blur-sm transition-all duration-300"
+                      className="w-full pl-12 pr-12 py-3 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                       placeholder="Enter new password"
                     />
-                    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/40" />
+                    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white/80"
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
                     >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                   
@@ -306,44 +297,44 @@ export default function ResetPasswordConfirmPage() {
                             style={{ width: `${(passwordStrength.strength / 5) * 100}%` }}
                           ></div>
                         </div>
-                        <span className="text-xs text-white/70">{passwordStrength.label}</span>
+                        <span className="text-xs text-gray-600 dark:text-gray-400">{passwordStrength.label}</span>
                       </div>
                     </div>
                   )}
                   
                   {errors.password && (
-                    <p className="text-red-300 text-sm">{errors.password.message}</p>
+                    <p className="text-red-600 dark:text-red-400 text-sm">{errors.password.message}</p>
                   )}
                 </div>
 
                 {/* Confirm Password Field */}
                 <div className="space-y-2">
-                  <Label className="text-white font-medium">Confirm New Password</Label>
+                  <Label className="text-gray-700 dark:text-gray-300 font-medium">Confirm New Password</Label>
                   <div className="relative">
                     <Input
                       {...register('confirmPassword')}
                       type={showConfirmPassword ? 'text' : 'password'}
-                      className="w-full pl-12 pr-12 py-4 bg-white/5 border-2 border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 backdrop-blur-sm transition-all duration-300"
+                      className="w-full pl-12 pr-12 py-3 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                       placeholder="Confirm new password"
                     />
-                    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/40" />
+                    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white/80"
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
                     >
-                      {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                   {errors.confirmPassword && (
-                    <p className="text-red-300 text-sm">{errors.confirmPassword.message}</p>
+                    <p className="text-red-600 dark:text-red-400 text-sm">{errors.confirmPassword.message}</p>
                   )}
                 </div>
 
                 {/* Error Message */}
                 {submitError && (
-                  <div className="bg-red-500/20 border border-red-400/30 rounded-xl p-3">
-                    <p className="text-red-300 text-sm">{submitError}</p>
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 rounded-xl p-3">
+                    <p className="text-red-600 dark:text-red-400 text-sm">{submitError}</p>
                   </div>
                 )}
 
@@ -351,7 +342,7 @@ export default function ResetPasswordConfirmPage() {
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-700 text-white py-4 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 disabled:scale-100"
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 text-white py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
                 >
                   {isLoading ? (
                     <>
@@ -371,14 +362,6 @@ export default function ResetPasswordConfirmPage() {
         </Card>
       </div>
 
-      {/* Custom CSS for animations */}
-      <style jsx>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          33% { transform: translateY(-20px) rotate(1deg); }
-          66% { transform: translateY(-10px) rotate(-1deg); }
-        }
-      `}</style>
     </div>
   )
 }

@@ -792,26 +792,41 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
         </div>
       </div>
 
-      {/* Input Area - Responsive - Safe Area for Mobile Keyboards */}
-      <div className="flex-shrink-0 px-3 sm:px-6 py-3 sm:py-5 border-t border-green-500/10 bg-[#0a0f0a] z-10 safe-bottom">
+      {/* Input Area - Professional & Optimized */}
+      <div className="flex-shrink-0 px-3 sm:px-6 py-3 sm:py-4 border-t border-green-500/10 bg-[#0a0f0a]/95 backdrop-blur-xl z-10">
         <div className="max-w-5xl mx-auto">
+          {/* Image Preview */}
           {selectedImage && (
-            <div className="mb-3 sm:mb-4 relative inline-block">
-              <div className="relative h-16 sm:h-24 w-auto">
-                <Image src={selectedImage} alt="Preview" width={150} height={96} className="h-16 sm:h-24 w-auto rounded-lg sm:rounded-xl border border-green-500/20 shadow-lg" style={{ width: 'auto', height: '100%' }} />
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="mb-3 relative inline-block"
+            >
+              <div className="relative h-20 sm:h-28 rounded-xl overflow-hidden border border-green-500/20 shadow-lg">
+                <Image 
+                  src={selectedImage} 
+                  alt="Preview" 
+                  width={150} 
+                  height={112} 
+                  className="h-full w-auto object-cover" 
+                  style={{ width: 'auto', height: '100%' }} 
+                />
               </div>
               <Button
-                onClick={() => setSelectedImage(null)}
+                onClick={removeImage}
                 size="sm"
-                className="absolute -top-2 -right-2 h-6 w-6 sm:h-7 sm:w-7 p-0 rounded-full bg-red-500 hover:bg-red-600 shadow-lg"
+                className="absolute -top-2 -right-2 h-7 w-7 p-0 rounded-full bg-red-500 hover:bg-red-600 shadow-lg border-2 border-[#0a0f0a]"
               >
-                <X className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                <X className="h-3.5 w-3.5" />
               </Button>
-            </div>
+            </motion.div>
           )}
           
+          {/* Input Container */}
           <div className="flex items-end gap-2 sm:gap-3">
-            <div className="flex-1 relative">
+            {/* Textarea Container */}
+            <div className="flex-1 relative bg-white/5 border border-green-500/20 rounded-xl sm:rounded-2xl overflow-hidden hover:border-green-500/30 focus-within:border-green-500/40 focus-within:ring-2 focus-within:ring-green-500/20 transition-all">
               <textarea
                 ref={textareaRef}
                 value={inputMessage}
@@ -823,72 +838,81 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
                   }
                 }}
                 onFocus={(e) => {
-                  // Scroll input into view when keyboard appears on mobile
                   setTimeout(() => {
                     e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })
                   }, 300)
                 }}
-                placeholder="Message AI Homework Helper... (Press Shift+Enter for new line)"
+                placeholder="Type your question... (Shift+Enter for new line)"
                 rows={1}
-                className="w-full bg-white/5 border border-green-500/20 text-white placeholder:text-white/40 pr-20 sm:pr-24 py-3 sm:py-4 rounded-xl sm:rounded-2xl text-sm sm:text-base focus:border-green-500/40 focus:ring-2 focus:ring-green-500/20 transition-all resize-none overflow-y-auto min-h-[44px] max-h-[100px]"
+                className="w-full bg-transparent text-white placeholder:text-white/40 px-3 sm:px-4 py-3 sm:py-3.5 pr-24 sm:pr-28 text-sm sm:text-base focus:outline-none resize-none overflow-y-auto min-h-[52px] sm:min-h-[56px] max-h-[120px]"
                 style={{ 
                   scrollbarWidth: 'thin',
                   scrollbarColor: 'rgba(34, 197, 94, 0.3) transparent'
                 }}
               />
-              {/* Word counter */}
+              
+              {/* Word Counter */}
               {inputMessage && (
-                <div className={`absolute bottom-2 left-2 text-[10px] sm:text-xs ${
+                <div className={`absolute bottom-2 left-3 sm:left-4 text-[10px] sm:text-xs font-medium transition-colors ${
                   wordCount > 380 ? 'text-red-400' : wordCount > 300 ? 'text-yellow-400' : 'text-white/40'
                 }`}>
-                  {wordCount}/400 words
+                  {wordCount}/400
                 </div>
               )}
+              
+              {/* Action Buttons */}
+              <div className="absolute right-2 sm:right-2.5 bottom-2 sm:bottom-2.5 flex items-center gap-1">
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  size="sm"
+                  variant="ghost"
+                  type="button"
+                  title="Attach image"
+                  className="h-9 w-9 p-0 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+                <Button
+                  onClick={() => setVoiceMode(!voiceMode)}
+                  size="sm"
+                  variant="ghost"
+                  title={voiceMode ? 'Stop voice input' : 'Start voice input'}
+                  className={`h-9 w-9 p-0 rounded-lg transition-all ${
+                    voiceMode 
+                      ? 'text-red-400 bg-red-500/20 hover:bg-red-500/30' 
+                      : 'text-white/60 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <Mic className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              {/* Hidden File Input */}
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
                 onChange={handleImageUpload}
                 className="hidden"
+                aria-label="Upload image"
               />
-              <div className="absolute right-2 sm:right-3 bottom-2 sm:bottom-3 flex items-center space-x-1 sm:space-x-2">
-                <Button
-                  onClick={() => fileInputRef.current?.click()}
-                  size="sm"
-                  variant="ghost"
-                  type="button"
-                  className="h-8 w-8 sm:h-9 sm:w-9 p-0 text-white/50 hover:text-white hover:bg-white/10 rounded-lg sm:rounded-xl transition-all"
-                >
-                  <Paperclip className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                </Button>
-                <Button
-                  onClick={() => setVoiceMode(!voiceMode)}
-                  size="sm"
-                  variant="ghost"
-                  className={`h-8 w-8 sm:h-9 sm:w-9 p-0 rounded-lg sm:rounded-xl transition-all ${
-                    voiceMode 
-                      ? 'text-red-400 bg-red-500/20 hover:bg-red-500/30' 
-                      : 'text-white/50 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  <Mic className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                </Button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </div>
             </div>
+            
+            {/* Send Button */}
             <Button
               onClick={sendMessage}
               disabled={!inputMessage.trim() && !selectedImage}
-              className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 sm:px-5 py-3 sm:py-4 rounded-xl sm:rounded-2xl shadow-lg shadow-green-500/20 hover:shadow-xl hover:shadow-green-500/30 transition-all"
+              title="Send message"
+              className="h-[52px] sm:h-[56px] px-5 sm:px-6 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl sm:rounded-2xl shadow-lg shadow-green-500/20 hover:shadow-xl hover:shadow-green-500/30 transition-all transform hover:scale-105 active:scale-95"
             >
-              <Send className="h-4 w-4 sm:h-5 sm:w-5" />
+              <Send className="h-5 w-5" />
             </Button>
+          </div>
+          
+          {/* Helper Text */}
+          <div className="mt-2 px-1 flex items-center justify-between text-[10px] sm:text-xs text-white/30">
+            <span>💡 Tip: Upload images for better help</span>
+            <span className="hidden sm:inline">Press Enter to send</span>
           </div>
         </div>
       </div>

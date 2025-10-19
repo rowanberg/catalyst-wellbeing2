@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import Link from 'next/link'
+import SchoolRevealPro from '@/components/registration/SchoolRevealPro'
 import { 
   Building2, 
   MapPin, 
@@ -286,66 +287,13 @@ export default function SchoolRegistrationWizard() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-900 via-green-900 to-teal-900">
-          <div className="absolute inset-0 opacity-20" style={{backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")"}}></div>
-          
-          <div className="absolute top-20 left-20 w-32 h-32 bg-gradient-to-r from-emerald-400 to-green-400 rounded-full mix-blend-multiply filter blur-xl opacity-40 animate-pulse"></div>
-          <div className="absolute bottom-20 right-20 w-24 h-24 bg-gradient-to-r from-teal-400 to-cyan-400 rounded-full mix-blend-multiply filter blur-xl opacity-40 animate-pulse animation-delay-2000"></div>
-        </div>
-
-        <div className="relative z-10 max-w-md w-full mx-4">
-          <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-8 shadow-2xl text-center">
-            <div className="flex justify-center mb-6">
-              <div className="p-4 bg-gradient-to-r from-emerald-500 to-green-600 rounded-full shadow-lg">
-                <CheckCircle className="w-12 h-12 text-white" />
-              </div>
-            </div>
-            
-            <h2 className="text-3xl font-bold text-white mb-4">🎉 School Registered!</h2>
-            <p className="text-white/80 mb-6">Welcome to the Catalyst platform</p>
-            
-            <div className="bg-white/10 border border-white/20 rounded-2xl p-6 backdrop-blur-sm mb-6">
-              <p className="text-white/80 text-sm mb-2">Your unique school code:</p>
-              <div className="flex items-center justify-center space-x-2">
-                <p className="text-3xl font-mono font-bold text-white tracking-wider">{schoolCode}</p>
-                <button
-                  onClick={copySchoolCode}
-                  className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
-                  title="Copy school code"
-                >
-                  {codeCopied ? (
-                    <CheckCircle className="w-5 h-5 text-emerald-400" />
-                  ) : (
-                    <Copy className="w-5 h-5 text-white/80" />
-                  )}
-                </button>
-              </div>
-              <p className="text-white/60 text-xs mt-3">Share this code with staff and students</p>
-            </div>
-
-            <div className="space-y-3">
-              <button
-                onClick={() => router.push('/login')}
-                className="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-semibold rounded-xl shadow-lg transform transition-all duration-200 hover:scale-105"
-              >
-                <div className="flex items-center justify-center space-x-2">
-                  <ExternalLink className="w-4 h-4" />
-                  <span>Access Admin Dashboard</span>
-                </div>
-              </button>
-              
-              <Link
-                href="/register"
-                className="flex items-center justify-center space-x-2 py-3 px-4 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-white font-medium transition-all duration-200 hover:scale-105 backdrop-blur-sm group w-full"
-              >
-                <Users className="w-4 h-4" />
-                <span>Invite Users</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
+      <SchoolRevealPro
+        schoolName={watchedFields.schoolName || 'Your School'}
+        schoolId={schoolCode}
+        location={watchedFields.address || 'Global'}
+        onDashboard={() => router.push('/login')}
+        onInviteTeachers={() => router.push('/register')}
+      />
     )
   }
 

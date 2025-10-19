@@ -1,10 +1,28 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
-export async function GET() {
-  try {
-    const supabase = await createSupabaseServerClient()
+// Session cache to prevent redundant auth checks (30 second TTL)
+const sessionCache = new Map<string, { user: any; timestamp: number }>()
+const SESSION_CACHE_TTL = 30 * 1000 // 30 seconds
 
+export async function GET(request: Request) {
+  try {
+    // Extract stable session token for cache key
+    const cookies = request.headers.get('cookie') || ''
+    const accessToken = cookies.match(/sb-[^-]+-auth-token=([^;]+)/)?.[1] || ''
+    const refreshToken = cookies.match(/sb-[^-]+-auth-token-code-verifier=([^;]+)/)?.[1] || ''
+    const cacheKey = `session-${accessToken.slice(0, 20)}-${refreshToken.slice(0, 20)}`
+    
+    // Check cache first
+    const cached = sessionCache.get(cacheKey)
+    if (cached && Date.now() - cached.timestamp < SESSION_CACHE_TTL) {
+      const response = NextResponse.json({ user: cached.user })
+      response.headers.set('X-Cache', 'HIT')
+      response.headers.set('Cache-Control', 'private, max-age=30')
+      return response
+    }
+
+    const supabase = await createSupabaseServerClient()
     const { data: { user }, error } = await supabase.auth.getUser()
     
     if (error) {
@@ -29,12 +47,22 @@ export async function GET() {
       return NextResponse.json({ error: 'Auth session missing!' }, { status: 401 })
     }
 
+    // Store in cache
+    sessionCache.set(cacheKey, { user, timestamp: Date.now() })
+    
+    // Clean old cache entries (keep last 100)
+    if (sessionCache.size > 100) {
+      const entries = Array.from(sessionCache.entries())
+      entries.sort((a, b) => b[1].timestamp - a[1].timestamp)
+      sessionCache.clear()
+      entries.slice(0, 100).forEach(([key, value]) => sessionCache.set(key, value))
+    }
+
     console.log('✅ [SessionAPI] Valid session found for user:', user.email)
-    return NextResponse.json({ user }, {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
+    const response = NextResponse.json({ user })
+    response.headers.set('X-Cache', 'MISS')
+    response.headers.set('Cache-Control', 'private, max-age=30')
+    return response
   } catch (error) {
     console.error('Session check error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -12,7 +12,7 @@ import { signIn } from '@/lib/redux/slices/authSlice'
 import { useToast } from '@/components/ui/toast'
 import { handleError } from '@/lib/utils/errorHandling'
 import Link from 'next/link'
-import { Eye, EyeOff, AlertCircle, GraduationCap, Mail, Lock, Moon, Sun, AlertTriangle } from 'lucide-react'
+import { Eye, EyeOff, AlertCircle, GraduationCap, Mail, Lock, Moon, Sun, AlertTriangle, ArrowLeft } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 
 const loginSchema = z.object({
@@ -20,7 +20,12 @@ const loginSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
 })
 
+const resetPasswordSchema = z.object({
+  email: z.string().email('Invalid email address'),
+})
+
 type LoginForm = z.infer<typeof loginSchema>
+type ResetPasswordForm = z.infer<typeof resetPasswordSchema>
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -32,6 +37,9 @@ export default function LoginPage() {
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [emailSuggestions, setEmailSuggestions] = useState<string[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [showResetForm, setShowResetForm] = useState(false)
+  const [resetEmailSent, setResetEmailSent] = useState(false)
+  const [isResetLoading, setIsResetLoading] = useState(false)
   const router = useRouter()
   const dispatch = useAppDispatch()
   const { error: authError} = useAppSelector((state) => state.auth)
@@ -42,8 +50,18 @@ export default function LoginPage() {
     handleSubmit,
     watch,
     setValue,
+    formState: { errors },
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
+  })
+
+  const {
+    register: registerReset,
+    handleSubmit: handleSubmitReset,
+    watch: watchReset,
+    formState: { errors: resetErrors },
+  } = useForm<ResetPasswordForm>({
+    resolver: zodResolver(resetPasswordSchema),
   })
 
   const emailValue = watch('email')
@@ -189,6 +207,61 @@ export default function LoginPage() {
     }
   }
 
+  // Password reset handler
+  const onResetSubmit = async (data: ResetPasswordForm) => {
+    setIsResetLoading(true)
+    setSubmitError(null)
+    
+    try {
+      const response = await fetch('/api/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: data.email })
+      })
+
+      if (response.ok) {
+        setResetEmailSent(true)
+        addToast({
+          type: 'success',
+          title: 'Reset Email Sent! 📧',
+          description: 'Check your inbox for password reset instructions'
+        })
+      } else {
+        const errorData = await response.json()
+        setSubmitError(errorData.message || 'Failed to send reset email')
+        addToast({
+          type: 'error',
+          title: 'Failed to Send Email',
+          description: errorData.message || 'Please try again later'
+        })
+      }
+    } catch (error) {
+      console.error('Reset password error:', error)
+      setSubmitError('Network error. Please check your connection.')
+      addToast({
+        type: 'error',
+        title: 'Network Error',
+        description: 'Unable to send reset email. Please check your connection.'
+      })
+    } finally {
+      setIsResetLoading(false)
+    }
+  }
+
+  // Toggle to reset form
+  const handleShowResetForm = () => {
+    setShowResetForm(true)
+    setResetEmailSent(false)
+    setSubmitError(null)
+  }
+
+  // Back to login
+  const handleBackToLogin = () => {
+    setShowResetForm(false)
+    setResetEmailSent(false)
+    setSubmitError(null)
+  }
+
   // Google Sign-In handler
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true)
@@ -260,13 +333,22 @@ export default function LoginPage() {
             <div className="mx-auto w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
               <GraduationCap className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Welcome to Catalyst</h1>
-            <p className="text-gray-600 dark:text-gray-400">Your school's well-being platform</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              {showResetForm ? 'Reset Password' : 'Welcome to Catalyst'}
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              {showResetForm 
+                ? 'Enter your email to receive reset instructions'
+                : "Your school's well-being platform"
+              }
+            </p>
           </div>
 
-          {/* Optimized Login Form */}
+          {/* Optimized Login/Reset Form */}
           <div className="bg-white/95 dark:bg-slate-800/95 rounded-2xl p-4 sm:p-6 shadow-xl border border-white/30 dark:border-slate-700/30 backdrop-blur-sm">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-5">
+            {!showResetForm ? (
+              /* Login Form */
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-5">
               {/* Email Field */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
@@ -346,9 +428,13 @@ export default function LoginPage() {
                   />
                   <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">Remember me</span>
                 </label>
-                <Link href="/reset-password" className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors">
+                <button
+                  type="button"
+                  onClick={handleShowResetForm}
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 transition-colors"
+                >
                   Forgot password?
-                </Link>
+                </button>
               </div>
 
               {/* Error Messages */}
@@ -394,6 +480,88 @@ export default function LoginPage() {
                 Continue with Google
               </button>
             </form>
+            ) : (
+              /* Password Reset Form */
+              <div className="space-y-4 sm:space-y-5">
+                {!resetEmailSent ? (
+                  <form onSubmit={handleSubmitReset(onResetSubmit)} className="space-y-4 sm:space-y-5">
+                    {/* Email Field */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                        <input
+                          {...registerReset('email')}
+                          type="email"
+                          autoComplete="email"
+                          className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                          placeholder="Enter your email"
+                        />
+                      </div>
+                      {resetErrors.email && (
+                        <p className="mt-1 text-sm text-red-600 dark:text-red-400">{resetErrors.email.message}</p>
+                      )}
+                    </div>
+
+                    {/* Error Messages */}
+                    {submitError && (
+                      <div className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded-xl border border-red-100 dark:border-red-900/30">
+                        <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                        <span className="leading-tight">{submitError}</span>
+                      </div>
+                    )}
+
+                    {/* Send Reset Link Button */}
+                    <button
+                      type="submit"
+                      disabled={isResetLoading}
+                      className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 dark:from-blue-500 dark:to-indigo-500 dark:hover:from-blue-600 dark:hover:to-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
+                    >
+                      {isResetLoading ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <span>Sending...</span>
+                        </div>
+                      ) : (
+                        'Send Reset Link'
+                      )}
+                    </button>
+
+                    {/* Back to Login */}
+                    <button
+                      type="button"
+                      onClick={handleBackToLogin}
+                      className="w-full py-3 px-4 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 font-medium rounded-xl hover:bg-gray-50 dark:hover:bg-slate-600 transition-all duration-200 flex items-center justify-center gap-2"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      Back to Sign In
+                    </button>
+                  </form>
+                ) : (
+                  /* Success Message */
+                  <div className="space-y-4 text-center py-4">
+                    <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                      <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Check Your Email</h3>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm">
+                      We've sent password reset instructions to your email address. Please check your inbox and spam folder.
+                    </p>
+                    <button
+                      onClick={handleBackToLogin}
+                      className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      Back to Sign In
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Links */}
             <div className="mt-4 sm:mt-6 space-y-3">

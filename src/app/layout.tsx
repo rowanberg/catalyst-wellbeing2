@@ -13,6 +13,17 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'Catalyst - School Well-being Platform',
   description: 'A holistic well-being platform for school ecosystems',
+  icons: {
+    icon: [
+      { url: '/logo.png', type: 'image/png' },
+      { url: '/icon-192x192.png', type: 'image/png', sizes: '192x192' },
+      { url: '/icon-512x512.png', type: 'image/png', sizes: '512x512' }
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }
+    ],
+    shortcut: '/logo.png'
+  }
 }
 
 export const viewport: Viewport = {

@@ -6,6 +6,10 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// In-memory cache for teacher dashboard data (5 minutes TTL)
+const dashboardCache = new Map<string, { data: any; timestamp: number }>()
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -16,6 +20,16 @@ export async function GET(request: NextRequest) {
         { message: 'Teacher ID is required' },
         { status: 400 }
       )
+    }
+
+    // Check cache first
+    const cacheKey = `teacher-dashboard-${teacherId}`
+    const cached = dashboardCache.get(cacheKey)
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      const response = NextResponse.json(cached.data)
+      response.headers.set('X-Cache', 'HIT')
+      response.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120')
+      return response
     }
 
     // Start all queries in parallel for better performance
@@ -95,16 +109,19 @@ export async function GET(request: NextRequest) {
       studentIds = Array.from(new Set(studentAssignmentsResult.value.data.map((sa: any) => sa.student_id)))
     }
 
-    // Fetch student profiles if we have student IDs
+    // Fetch student profiles if we have student IDs (limit to 100 for performance)
     let studentProfiles: any[] = []
     if (studentIds.length > 0) {
+      const limitedStudentIds = studentIds.slice(0, 100) // Prevent massive queries
       const { data: profiles } = await supabaseAdmin
         .from('profiles')
         .select(`
-          id, user_id, first_name, last_name, xp, level, gems, 
+          user_id, first_name, last_name, xp, level, gems, 
           streak_days, current_mood, updated_at, grade_level
         `)
-        .in('user_id', studentIds)
+        .in('user_id', limitedStudentIds)
+        .order('updated_at', { ascending: false })
+        .limit(100)
       
       studentProfiles = profiles || []
     }
@@ -149,18 +166,23 @@ export async function GET(request: NextRequest) {
       ? classInfoResult.value.data 
       : []
 
-    // Create student overview with class information
+    // Create lookup maps for O(1) access instead of O(n) searches
+    const assignmentMap = new Map(
+      studentAssignmentsResult.status === 'fulfilled' && studentAssignmentsResult.value.data
+        ? studentAssignmentsResult.value.data.map((sa: any) => [sa.student_id, sa])
+        : []
+    )
+    const classMap = new Map(
+      classInfo.map((c: any) => [c.id, c])
+    )
+
+    // Create student overview with class information (optimized)
     const students = studentProfiles.map((profile: any) => {
-      const assignment = studentAssignmentsResult.status === 'fulfilled' && studentAssignmentsResult.value.data
-        ? studentAssignmentsResult.value.data.find((sa: any) => sa.student_id === profile.user_id)
-        : null
-      
-      const studentClass = assignment 
-        ? classInfo.find((c: any) => c.id === assignment.class_id)
-        : null
+      const assignment = assignmentMap.get(profile.user_id)
+      const studentClass = assignment ? classMap.get(assignment.class_id) : null
 
       return {
-        id: profile.id,
+        id: profile.user_id,
         first_name: profile.first_name,
         last_name: profile.last_name,
         xp: profile.xp || 0,
@@ -169,15 +191,14 @@ export async function GET(request: NextRequest) {
         streak_days: profile.streak_days || 0,
         current_mood: profile.current_mood || 'neutral',
         grade_level: profile.grade_level,
-        class_name: studentClass?.class_name || 'Unknown Class',
+        class_name: studentClass?.class_name || 'Unknown',
         class_subject: studentClass?.subject || 'General',
-        class_room: studentClass?.room_number || 'TBD',
-        updated_at: profile.updated_at
+        class_room: studentClass?.room_number || 'TBD'
       }
     })
 
-    // Set cache headers for better performance
-    const response = NextResponse.json({
+    // Prepare response data
+    const responseData = {
       analytics: {
         totalStudents,
         averageXP,
@@ -194,10 +215,22 @@ export async function GET(request: NextRequest) {
         schoolId: teacherSchoolId
       },
       classes: classInfo
-    })
+    }
 
-    // Cache for 30 seconds with stale-while-revalidate
-    response.headers.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60')
+    // Store in cache
+    dashboardCache.set(cacheKey, { data: responseData, timestamp: Date.now() })
+    
+    // Clean old cache entries (keep last 50)
+    if (dashboardCache.size > 50) {
+      const entries = Array.from(dashboardCache.entries())
+      entries.sort((a, b) => b[1].timestamp - a[1].timestamp)
+      dashboardCache.clear()
+      entries.slice(0, 50).forEach(([key, value]) => dashboardCache.set(key, value))
+    }
+
+    const response = NextResponse.json(responseData)
+    response.headers.set('X-Cache', 'MISS')
+    response.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120')
     
     return response
 

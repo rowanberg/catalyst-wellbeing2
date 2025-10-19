@@ -18,6 +18,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import StudentWelcomeScreen from '@/components/registration/StudentWelcomeScreenEnterprise'
+import ParentWelcomeScreen from '@/components/registration/ParentWelcomeScreen'
+import TeacherWelcomeScreen from '@/components/registration/TeacherWelcomeScreen'
 
 const registerSchema = z.object({
   schoolId: z.string().length(12, 'School ID must be exactly 12 characters'),
@@ -49,6 +52,26 @@ export default function RegisterPage() {
   const [schoolError, setSchoolError] = useState('')
   const [passwordStrength, setPasswordStrength] = useState(0)
   
+  // Student welcome screen state
+  const [showStudentWelcome, setShowStudentWelcome] = useState(false)
+  const [studentWelcomeData, setStudentWelcomeData] = useState<{
+    name: string
+    schoolName: string
+    grade: string
+    className: string
+  } | null>(null)
+  const [showParentWelcome, setShowParentWelcome] = useState(false)
+  const [parentWelcomeData, setParentWelcomeData] = useState<{
+    name: string
+    schoolName: string
+    childrenCount: number
+  } | null>(null)
+  const [showTeacherWelcome, setShowTeacherWelcome] = useState(false)
+  const [teacherWelcomeData, setTeacherWelcomeData] = useState<{
+    name: string
+    schoolName: string
+  } | null>(null)
+  
   // Google OAuth state
   const [isGoogleUser, setIsGoogleUser] = useState(false)
   const [googleUserData, setGoogleUserData] = useState<any>(null)
@@ -77,6 +100,7 @@ export default function RegisterPage() {
   }>>([])
   const [isLoadingClasses, setIsLoadingClasses] = useState(false)
   const [selectedGradeLevel, setSelectedGradeLevel] = useState<string>('')
+  const [selectedClassName, setSelectedClassName] = useState<string>('')
   
   // Teacher-specific state
   const [selectedGrades, setSelectedGrades] = useState<string[]>([])
@@ -379,33 +403,41 @@ export default function RegisterPage() {
   }
 
   const onSubmit = async (data: RegisterForm) => {
+    console.log('🚀 [REGISTRATION] Form submitted:', { role: data.role, gradeLevel: data.gradeLevel, className: data.className })
+    
     if (!schoolVerified) {
       setSubmitError('Please verify your school ID first')
+      console.error('❌ [REGISTRATION] School not verified')
       return
     }
 
     // Validate password for non-Google users
     if (!isGoogleUser && !data.password) {
       setSubmitError('Password is required')
+      console.error('❌ [REGISTRATION] Password missing')
       return
     }
 
     // Validate mandatory fields based on role
     if (data.role === 'student' && !data.gradeLevel) {
       setSubmitError('Grade level is required for students')
+      console.error('❌ [REGISTRATION] Grade level missing for student')
       return
     }
 
     if (data.role === 'parent' && children.length === 0) {
       setSubmitError('Please add at least one child to your account')
+      console.error('❌ [REGISTRATION] No children added for parent')
       return
     }
 
     if (data.role === 'teacher' && selectedGrades.length === 0) {
       setSubmitError('Please select at least one grade level to teach')
+      console.error('❌ [REGISTRATION] No grades selected for teacher')
       return
     }
 
+    console.log('✅ [REGISTRATION] All validations passed')
     setIsLoading(true)
     setSubmitError(null)
     
@@ -427,17 +459,49 @@ export default function RegisterPage() {
         registrationData.password = data.password
       }
 
+      console.log('📤 [REGISTRATION] Dispatching signUp action:', registrationData)
       const result = await dispatch(signUp(registrationData))
+      console.log('📥 [REGISTRATION] SignUp result:', result)
       
       if (signUp.fulfilled.match(result)) {
-        addToast({
-          type: 'success',
-          title: 'Registration Successful',
-          description: 'Please check your email to verify your account'
-        })
-        router.push('/login')
+        console.log('✅ [REGISTRATION] Sign up successful!')
+        // If student role, show welcome screen
+        if (data.role === 'student') {
+          console.log('🎓 [REGISTRATION] Student registration - showing welcome screen')
+          setStudentWelcomeData({
+            name: `${data.firstName} ${data.lastName}`,
+            schoolName: schoolName,
+            grade: data.gradeLevel || '10',
+            className: selectedClassName || 'A'
+          })
+          setShowStudentWelcome(true)
+        } else if (data.role === 'parent') {
+          console.log('👨‍👩‍👧‍👦 [REGISTRATION] Parent registration - showing welcome screen')
+          setParentWelcomeData({
+            name: `${data.firstName} ${data.lastName}`,
+            schoolName: schoolName,
+            childrenCount: children.length
+          })
+          setShowParentWelcome(true)
+        } else if (data.role === 'teacher') {
+          console.log('👩‍🏫 [REGISTRATION] Teacher registration - showing welcome screen')
+          setTeacherWelcomeData({
+            name: `${data.firstName} ${data.lastName}`,
+            schoolName: schoolName
+          })
+          setShowTeacherWelcome(true)
+        } else {
+          console.log('👤 [REGISTRATION] Non-student/parent registration - redirecting to login')
+          addToast({
+            type: 'success',
+            title: 'Registration Successful',
+            description: 'Please check your email to verify your account'
+          })
+          router.push('/login')
+        }
       } else if (signUp.rejected.match(result)) {
-        const errorMessage = result.payload as string || 'Registration failed'
+        const errorMessage = result.payload as string || result.error?.message || 'Registration failed'
+        console.error('❌ [REGISTRATION] Sign up failed:', errorMessage)
         setSubmitError(errorMessage)
         addToast({
           type: 'error',
@@ -446,6 +510,7 @@ export default function RegisterPage() {
         })
       }
     } catch (error) {
+      console.error('❌ [REGISTRATION] Exception caught:', error)
       const appError = handleError(error, 'register')
       setSubmitError(appError.message)
       addToast({
@@ -454,11 +519,12 @@ export default function RegisterPage() {
         description: appError.message
       })
     } finally {
+      console.log('🏁 [REGISTRATION] Registration flow completed, isLoading set to false')
       setIsLoading(false)
     }
   }
 
-  const canProceedToStep2 = schoolVerified && watch('firstName') && watch('lastName') && watch('email') && watch('role') && (isGoogleUser || (watch('password') && passwordStrength >= 60))
+  const canProceedToStep2 = schoolVerified && watch('firstName') && watch('lastName') && watch('email') && watch('role') && (isGoogleUser || (watch('password') && passwordStrength >= 100))
 
   const handleNextStep = () => {
     if (canProceedToStep2) {
@@ -468,6 +534,43 @@ export default function RegisterPage() {
 
   const handlePreviousStep = () => {
     setCurrentStep(1)
+  }
+
+  // Show student welcome screen if registration completed
+  if (showStudentWelcome && studentWelcomeData) {
+    return (
+      <StudentWelcomeScreen
+        studentName={studentWelcomeData.name}
+        schoolName={studentWelcomeData.schoolName}
+        grade={studentWelcomeData.grade}
+        className={studentWelcomeData.className}
+        onDashboard={() => router.push('/student/')}
+        onExploreClassrooms={() => router.push('/classrooms')}
+      />
+    )
+  }
+
+  // Show parent welcome screen if registration completed
+  if (showParentWelcome && parentWelcomeData) {
+    return (
+      <ParentWelcomeScreen
+        parentName={parentWelcomeData.name}
+        schoolName={parentWelcomeData.schoolName}
+        childrenCount={parentWelcomeData.childrenCount}
+        onDashboard={() => router.push('/parent/')}
+      />
+    )
+  }
+
+  // Show teacher welcome screen if registration completed
+  if (showTeacherWelcome && teacherWelcomeData) {
+    return (
+      <TeacherWelcomeScreen
+        teacherName={teacherWelcomeData.name}
+        schoolName={teacherWelcomeData.schoolName}
+        onComplete={() => router.push('/teacher/')}
+      />
+    )
   }
 
   return (
@@ -1161,7 +1264,11 @@ export default function RegisterPage() {
                               <LoadingSpinner size="sm" text="Loading..." />
                             </div>
                           ) : availableClasses.length > 0 ? (
-                            <Select onValueChange={(value) => setValue('className', value)}>
+                            <Select onValueChange={(value) => {
+                              setValue('className', value)
+                              const selectedClass = availableClasses.find(cls => cls.id === value)
+                              setSelectedClassName(selectedClass?.class_name || 'A')
+                            }}>
                               <SelectTrigger className="h-11 lg:h-12 text-sm lg:text-base border-2 rounded-lg lg:rounded-xl focus:ring-2 focus:ring-indigo-50">
                                 <SelectValue placeholder="Select class" />
                               </SelectTrigger>

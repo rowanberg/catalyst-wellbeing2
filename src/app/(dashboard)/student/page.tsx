@@ -2845,11 +2845,26 @@ const StudentDashboardContent = () => {
 
               {/* Legal Links */}
               <div className="flex items-center gap-2 sm:gap-4 text-[10px] sm:text-xs">
-                <button className="text-slate-400 hover:text-white transition-colors active:scale-95">Privacy</button>
+                <button 
+                  onClick={() => router.push('/privacy')}
+                  className="text-slate-400 hover:text-white transition-colors active:scale-95"
+                >
+                  Privacy
+                </button>
                 <span className="text-slate-700">•</span>
-                <button className="text-slate-400 hover:text-white transition-colors active:scale-95">Terms</button>
+                <button 
+                  onClick={() => router.push('/terms')}
+                  className="text-slate-400 hover:text-white transition-colors active:scale-95"
+                >
+                  Terms
+                </button>
                 <span className="text-slate-700">•</span>
-                <button className="text-slate-400 hover:text-white transition-colors active:scale-95">Accessibility</button>
+                <button 
+                  onClick={() => router.push('/accessibility')}
+                  className="text-slate-400 hover:text-white transition-colors active:scale-95"
+                >
+                  Accessibility
+                </button>
               </div>
 
               {/* Platform Badge */}

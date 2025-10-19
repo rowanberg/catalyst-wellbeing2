@@ -10,11 +10,20 @@ export async function POST(request: NextRequest) {
 
     // Check if we need to create the user (for regular signups)
     if (email && password) {
-      // Create user with admin client - send confirmation email
+      // Create user with admin client - Supabase automatically sends confirmation email
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email,
         password,
-        email_confirm: false, // Send confirmation email instead of auto-confirming
+        email_confirm: false, // Supabase sends verification email when false
+        user_metadata: {
+          first_name: firstName,
+          last_name: lastName,
+          role: role
+        },
+        app_metadata: {
+          provider: 'email',
+          providers: ['email']
+        }
       })
 
       if (authError) {
@@ -28,23 +37,8 @@ export async function POST(request: NextRequest) {
       user = authData.user
       shouldCreateUser = true
 
-      // Send confirmation email after user creation
-      try {
-        const confirmationResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/send-confirmation`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email })
-        })
-        
-        if (confirmationResponse.ok) {
-          console.log('✅ Confirmation email sent to:', email)
-        } else {
-          console.error('❌ Failed to send confirmation email to:', email)
-        }
-      } catch (emailError) {
-        console.error('Error sending confirmation email:', emailError)
-        // Don't fail registration if email sending fails
-      }
+      console.log('✅ User created successfully. Email:', email)
+      console.log('📧 Supabase will send verification email automatically (check Supabase Dashboard → Auth → Logs)')
     } else {
       // Use provided userId (for admin-created users)
       user = { id: userId }
@@ -90,7 +84,23 @@ export async function POST(request: NextRequest) {
       profileData.grade_level = gradeLevel
     }
     if (className) {
-      profileData.class_name = className
+      // If className looks like a UUID, fetch the actual class name
+      if (className.length > 10 && className.includes('-')) {
+        try {
+          const { data: classData } = await supabaseAdmin
+            .from('classes')
+            .select('class_name')
+            .eq('id', className)
+            .single()
+          
+          profileData.class_name = classData?.class_name || className
+        } catch (error) {
+          console.warn('Could not fetch class name, using provided value:', error)
+          profileData.class_name = className
+        }
+      } else {
+        profileData.class_name = className
+      }
     }
 
     const { data: profile, error: profileError } = await supabaseAdmin

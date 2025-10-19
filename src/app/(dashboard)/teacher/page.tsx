@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, Suspense } from 'react'
+import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -8,14 +9,32 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AnimatedProgressBar } from '@/components/ui/animated-progress-bar'
 import { FloatingParticles } from '@/components/ui/floating-particles'
-import GradeBasedStudentRoster from '@/components/teacher/GradeBasedStudentRoster'
-import ShoutOutsSystem from '@/components/teacher/shout-outs-system'
-import QuestBadgeCreator from '@/components/teacher/quest-badge-creator'
-import BlackMarkSystem from '@/components/teacher/BlackMarkSystem'
-import ParentCommunicationSystem from '@/components/teacher/parent-communication-system'
-import InteractiveActivitiesSystem from '@/components/teacher/interactive-activities-system'
-import UpdateResultsSystem from '@/components/teacher/UpdateResultsSystem'
-import ComprehensiveAnalytics from '@/components/teacher/ComprehensiveAnalytics'
+
+// Dynamic imports for heavy components (lazy load on demand)
+const GradeBasedStudentRoster = dynamic(() => import('@/components/teacher/GradeBasedStudentRoster'), {
+  loading: () => <div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
+})
+const ShoutOutsSystem = dynamic(() => import('@/components/teacher/shout-outs-system'), {
+  loading: () => <div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-600"></div></div>
+})
+const QuestBadgeCreator = dynamic(() => import('@/components/teacher/quest-badge-creator'), {
+  loading: () => <div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div></div>
+})
+const BlackMarkSystem = dynamic(() => import('@/components/teacher/BlackMarkSystem'), {
+  loading: () => <div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div></div>
+})
+const ParentCommunicationSystem = dynamic(() => import('@/components/teacher/parent-communication-system'), {
+  loading: () => <div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div></div>
+})
+const InteractiveActivitiesSystem = dynamic(() => import('@/components/teacher/interactive-activities-system'), {
+  loading: () => <div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div>
+})
+const UpdateResultsSystem = dynamic(() => import('@/components/teacher/UpdateResultsSystem'), {
+  loading: () => <div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-600"></div></div>
+})
+const ComprehensiveAnalytics = dynamic(() => import('@/components/teacher/ComprehensiveAnalytics'), {
+  loading: () => <div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600"></div></div>
+})
 import { 
   Users, 
   TrendingUp, 

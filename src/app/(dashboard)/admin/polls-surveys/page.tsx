@@ -375,38 +375,40 @@ export default function PollsSurveysPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Header */}
-      <div className="sticky top-0 z-40 backdrop-blur-xl bg-white/80 border-b border-white/20 shadow-lg">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
+      <div className="sticky top-0 z-40 backdrop-blur-xl bg-white/90 border-b border-gray-200 shadow-sm">
+        <div className="px-3 md:px-6 py-3 md:py-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <motion.div 
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="flex items-center space-x-4"
+              className="flex items-center space-x-3 md:space-x-4"
             >
-              <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
-                <BarChart3 className="w-8 h-8 text-white" />
+              <div className="p-2 md:p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg md:rounded-xl shadow-lg">
+                <BarChart3 className="w-6 h-6 md:w-8 md:h-8 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                <h1 className="text-xl md:text-3xl font-bold text-gray-900">
                   Polls & Surveys
                 </h1>
-                <p className="text-gray-600 mt-1">Create and manage community feedback collection</p>
+                <p className="text-gray-600 text-xs md:text-sm mt-0.5 md:mt-1 hidden sm:block">Create and manage community feedback</p>
               </div>
             </motion.div>
             
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 md:space-x-3">
               <ClientWrapper>
                 <Button 
                   onClick={() => setShowCreateModal(true)}
-                  className="bg-indigo-600 hover:bg-indigo-700"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-xs md:text-sm h-8 md:h-10 px-3 md:px-4 flex-1 md:flex-none"
                 >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Poll/Survey
+                  <Plus className="w-3 h-3 md:w-4 md:h-4 md:mr-2" />
+                  <span className="hidden md:inline">Create Poll/Survey</span>
+                  <span className="md:hidden ml-1">Create</span>
                 </Button>
               </ClientWrapper>
               <Link href="/admin">
-                <Button variant="outline" className="bg-white/50 backdrop-blur-sm hover:bg-white/80">
-                  Back to Dashboard
+                <Button variant="outline" className="bg-white/50 backdrop-blur-sm hover:bg-white/80 text-xs md:text-sm h-8 md:h-10 px-3 md:px-4">
+                  <span className="hidden md:inline">Back</span>
+                  <span className="md:hidden">←</span>
                 </Button>
               </Link>
             </div>
@@ -414,60 +416,60 @@ export default function PollsSurveysPage() {
         </div>
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="p-3 md:p-6 space-y-4 md:space-y-6">
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-            <Card className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white border-0 shadow-xl">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
+            <Card className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardContent className="p-3 md:p-6">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
                   <div>
-                    <p className="text-indigo-100 text-sm font-medium">Total Polls</p>
-                    <p className="text-3xl font-bold">{stats.total}</p>
+                    <p className="text-indigo-100 text-[10px] md:text-sm font-medium">Total Polls</p>
+                    <p className="text-2xl md:text-3xl font-bold">{stats.total}</p>
                   </div>
-                  <BarChart3 className="w-8 h-8 text-indigo-200" />
+                  <BarChart3 className="w-5 h-5 md:w-8 md:h-8 text-indigo-200" />
                 </div>
               </CardContent>
             </Card>
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <Card className="bg-gradient-to-br from-green-500 to-emerald-600 text-white border-0 shadow-xl">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
+            <Card className="bg-gradient-to-br from-green-500 to-emerald-600 text-white border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardContent className="p-3 md:p-6">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
                   <div>
-                    <p className="text-green-100 text-sm font-medium">Active</p>
-                    <p className="text-3xl font-bold">{stats.active}</p>
+                    <p className="text-green-100 text-[10px] md:text-sm font-medium">Active</p>
+                    <p className="text-2xl md:text-3xl font-bold">{stats.active}</p>
                   </div>
-                  <Clock className="w-8 h-8 text-green-200" />
+                  <Clock className="w-5 h-5 md:w-8 md:h-8 text-green-200" />
                 </div>
               </CardContent>
             </Card>
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-            <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-xl">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
+            <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardContent className="p-3 md:p-6">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
                   <div>
-                    <p className="text-blue-100 text-sm font-medium">Completed</p>
-                    <p className="text-3xl font-bold">{stats.completed}</p>
+                    <p className="text-blue-100 text-[10px] md:text-sm font-medium">Completed</p>
+                    <p className="text-2xl md:text-3xl font-bold">{stats.completed}</p>
                   </div>
-                  <CheckCircle className="w-8 h-8 text-blue-200" />
+                  <CheckCircle className="w-5 h-5 md:w-8 md:h-8 text-blue-200" />
                 </div>
               </CardContent>
             </Card>
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-            <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0 shadow-xl">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
+            <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardContent className="p-3 md:p-6">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
                   <div>
-                    <p className="text-purple-100 text-sm font-medium">Total Responses</p>
-                    <p className="text-3xl font-bold">{stats.totalResponses}</p>
+                    <p className="text-purple-100 text-[10px] md:text-sm font-medium">Responses</p>
+                    <p className="text-2xl md:text-3xl font-bold">{stats.totalResponses}</p>
                   </div>
-                  <TrendingUp className="w-8 h-8 text-purple-200" />
+                  <TrendingUp className="w-5 h-5 md:w-8 md:h-8 text-purple-200" />
                 </div>
               </CardContent>
             </Card>
@@ -476,14 +478,32 @@ export default function PollsSurveysPage() {
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-white/50 backdrop-blur-sm shadow-lg rounded-xl p-1">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="active">Active Polls</TabsTrigger>
-            <TabsTrigger value="results">Results</TabsTrigger>
+          <TabsList className="sticky top-[52px] md:top-[68px] z-30 grid w-full grid-cols-3 bg-gray-50 backdrop-blur-sm border border-gray-200 rounded-lg p-0.5 mb-4">
+            <TabsTrigger 
+              value="overview" 
+              className="data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm rounded-md py-1.5 md:py-2 text-xs md:text-sm transition-all"
+            >
+              <span className="md:hidden text-base">📊</span>
+              <span className="hidden md:inline">Overview</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="active" 
+              className="data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm rounded-md py-1.5 md:py-2 text-xs md:text-sm transition-all"
+            >
+              <span className="md:hidden text-base">🔴</span>
+              <span className="hidden md:inline">Active Polls</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="results" 
+              className="data-[state=active]:bg-white data-[state=active]:text-indigo-600 data-[state=active]:shadow-sm rounded-md py-1.5 md:py-2 text-xs md:text-sm transition-all"
+            >
+              <span className="md:hidden text-base">📈</span>
+              <span className="hidden md:inline">Results</span>
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          <TabsContent value="overview" className="space-y-3 md:space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-6">
               {polls.map((poll, index) => (
                 <motion.div
                   key={poll.id}
@@ -491,67 +511,67 @@ export default function PollsSurveysPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
                 >
-                  <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="p-2 bg-indigo-100 rounded-lg">
+                  <Card className="bg-white/90 backdrop-blur-sm border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300">
+                    <CardContent className="p-3 md:p-6">
+                      <div className="flex items-start justify-between mb-3 md:mb-4">
+                        <div className="flex items-center space-x-2 md:space-x-3 flex-1">
+                          <div className="p-1.5 md:p-2 bg-indigo-100 rounded-lg">
                             {getTypeIcon(poll.type)}
                           </div>
-                          <div>
-                            <h3 className="font-semibold text-lg">{poll.title}</h3>
-                            <p className="text-sm text-gray-600 capitalize">{poll.type}</p>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-semibold text-sm md:text-lg truncate">{poll.title}</h3>
+                            <p className="text-xs md:text-sm text-gray-600 capitalize">{poll.type}</p>
                           </div>
                         </div>
-                        <Badge variant="outline" className={getStatusColor(poll.status)}>
+                        <Badge variant="outline" className={`${getStatusColor(poll.status)} text-[10px] md:text-xs ml-2 whitespace-nowrap`}>
                           {poll.status}
                         </Badge>
                       </div>
                       
-                      <p className="text-gray-700 text-sm mb-4 line-clamp-2">{poll.description}</p>
+                      <p className="text-gray-700 text-xs md:text-sm mb-3 md:mb-4 line-clamp-2">{poll.description}</p>
                       
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Target Audience:</span>
+                      <div className="space-y-2 md:space-y-3">
+                        <div className="flex items-center justify-between text-xs md:text-sm">
+                          <span className="text-gray-600">Target:</span>
                           <div className="flex items-center space-x-1">
                             {getAudienceIcon(poll.targetAudience)}
                             <span className="capitalize">{poll.targetAudience}</span>
                           </div>
                         </div>
                         
-                        <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center justify-between text-xs md:text-sm">
                           <span className="text-gray-600">Responses:</span>
                           <span className="font-medium">{poll.responses}/{poll.totalTargets}</span>
                         </div>
                         
-                        <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="w-full bg-gray-200 rounded-full h-1.5 md:h-2">
                           <div 
-                            className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
+                            className="bg-indigo-600 h-1.5 md:h-2 rounded-full transition-all duration-300"
                             style={{ width: `${(poll.responses / poll.totalTargets) * 100}%` }}
                           ></div>
                         </div>
                         
-                        <div className="flex items-center justify-between text-sm text-gray-600">
-                          <span>Created: {new Date(poll.createdDate).toLocaleDateString()}</span>
-                          <span>Ends: {new Date(poll.endDate).toLocaleDateString()}</span>
+                        <div className="flex items-center justify-between text-[10px] md:text-sm text-gray-600">
+                          <span className="truncate">Created: {new Date(poll.createdDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                          <span className="truncate">Ends: {new Date(poll.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                         </div>
                       </div>
                       
-                      <div className="flex items-center space-x-2 mt-4">
+                      <div className="flex flex-wrap items-center gap-1.5 md:gap-2 mt-3 md:mt-4">
                         <ClientWrapper>
-                          <Button size="sm" variant="outline" onClick={() => handleViewPoll(poll)}>
-                            <Eye className="w-4 h-4 mr-2" />
-                            View
+                          <Button size="sm" variant="outline" onClick={() => handleViewPoll(poll)} className="text-xs h-7 md:h-8 px-2 md:px-3">
+                            <Eye className="w-3 h-3 md:w-4 md:h-4 md:mr-1" />
+                            <span className="hidden md:inline">View</span>
                           </Button>
                           {poll.status === 'draft' && (
                             <Button 
                               size="sm" 
                               variant="outline"
                               onClick={() => handleUpdatePollStatus(poll.id, 'active')}
-                              className="text-green-600 hover:text-green-700"
+                              className="text-green-600 hover:text-green-700 text-xs h-7 md:h-8 px-2 md:px-3"
                             >
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              Activate
+                              <CheckCircle className="w-3 h-3 md:w-4 md:h-4 md:mr-1" />
+                              <span className="hidden md:inline">Activate</span>
                             </Button>
                           )}
                           {poll.status === 'active' && (
@@ -559,25 +579,25 @@ export default function PollsSurveysPage() {
                               size="sm" 
                               variant="outline"
                               onClick={() => handleUpdatePollStatus(poll.id, 'completed')}
-                              className="text-blue-600 hover:text-blue-700"
+                              className="text-blue-600 hover:text-blue-700 text-xs h-7 md:h-8 px-2 md:px-3"
                             >
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              Complete
+                              <CheckCircle className="w-3 h-3 md:w-4 md:h-4 md:mr-1" />
+                              <span className="hidden md:inline">Complete</span>
                             </Button>
                           )}
                           <Button 
                             size="sm" 
                             variant="outline"
                             onClick={() => handleDeletePoll(poll.id)}
-                            className="text-red-600 hover:text-red-700"
+                            className="text-red-600 hover:text-red-700 text-xs h-7 md:h-8 px-2 md:px-3"
                           >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
+                            <Trash2 className="w-3 h-3 md:w-4 md:h-4 md:mr-1" />
+                            <span className="hidden md:inline">Delete</span>
                           </Button>
                           {poll.status === 'completed' && (
-                            <Button size="sm" variant="outline">
-                              <Download className="w-4 h-4 mr-2" />
-                              Export
+                            <Button size="sm" variant="outline" className="text-xs h-7 md:h-8 px-2 md:px-3">
+                              <Download className="w-3 h-3 md:w-4 md:h-4 md:mr-1" />
+                              <span className="hidden md:inline">Export</span>
                             </Button>
                           )}
                         </ClientWrapper>
@@ -589,24 +609,24 @@ export default function PollsSurveysPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="active" className="space-y-6">
+          <TabsContent value="active" className="space-y-3 md:space-y-6">
             {polls.filter(poll => poll.status === 'active').length === 0 ? (
-              <div className="text-center py-12">
-                <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                  <Vote className="w-12 h-12 text-gray-400" />
+              <div className="text-center py-8 md:py-12 px-4">
+                <div className="mx-auto w-16 h-16 md:w-24 md:h-24 bg-gray-100 rounded-full flex items-center justify-center mb-3 md:mb-4">
+                  <Vote className="w-8 h-8 md:w-12 md:h-12 text-gray-400" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No Active Polls</h3>
-                <p className="text-gray-500 mb-4">There are currently no active polls. Create a poll and activate it to see it here.</p>
+                <h3 className="text-base md:text-lg font-medium text-gray-900 mb-2">No Active Polls</h3>
+                <p className="text-sm md:text-base text-gray-500 mb-4">Create a poll and activate it to see it here.</p>
                 <Button 
                   onClick={() => setShowCreateModal(true)}
-                  className="bg-indigo-600 hover:bg-indigo-700"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-sm h-9"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Create Your First Poll
                 </Button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
                 {polls.filter(poll => poll.status === 'active').map((poll, index) => (
                 <motion.div
                   key={poll.id}
@@ -614,42 +634,42 @@ export default function PollsSurveysPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
                 >
-                  <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
-                    <CardHeader>
-                      <CardTitle className="flex items-center space-x-2">
+                  <Card className="bg-white/90 backdrop-blur-sm border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                    <CardHeader className="p-3 md:p-6 pb-2 md:pb-3">
+                      <CardTitle className="flex items-center space-x-2 text-sm md:text-base">
                         {getTypeIcon(poll.type)}
-                        <span>{poll.title}</span>
-                        <Badge className="bg-green-100 text-green-800">Active</Badge>
+                        <span className="truncate flex-1">{poll.title}</span>
+                        <Badge className="bg-green-100 text-green-800 text-[10px] md:text-xs">Active</Badge>
                       </CardTitle>
-                      <CardDescription>{poll.description}</CardDescription>
+                      <CardDescription className="text-xs md:text-sm line-clamp-2">{poll.description}</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
+                    <CardContent className="p-3 md:p-6 pt-2">
+                      <div className="space-y-3 md:space-y-4">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Progress</span>
-                          <span className="text-sm font-medium">{poll.responses}/{poll.totalTargets} responses</span>
+                          <span className="text-xs md:text-sm text-gray-600">Progress</span>
+                          <span className="text-xs md:text-sm font-medium">{poll.responses}/{poll.totalTargets} responses</span>
                         </div>
                         
-                        <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div className="w-full bg-gray-200 rounded-full h-2 md:h-3">
                           <div 
-                            className="bg-green-500 h-3 rounded-full transition-all duration-300"
+                            className="bg-green-500 h-2 md:h-3 rounded-full transition-all duration-300"
                             style={{ width: `${(poll.responses / poll.totalTargets) * 100}%` }}
                           ></div>
                         </div>
                         
-                        <div className="flex items-center justify-between text-sm text-gray-600">
-                          <span>Ends: {new Date(poll.endDate).toLocaleDateString()}</span>
+                        <div className="flex items-center justify-between text-xs md:text-sm text-gray-600">
+                          <span>Ends: {new Date(poll.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                           <span>{Math.ceil((new Date(poll.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days left</span>
                         </div>
                         
-                        <div className="flex items-center space-x-2">
-                          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700">
-                            <Share className="w-4 h-4 mr-2" />
-                            Share Link
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 flex-1 md:flex-none text-xs h-8">
+                            <Share className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+                            Share
                           </Button>
-                          <Button size="sm" variant="outline">
-                            <Eye className="w-4 h-4 mr-2" />
-                            View Results
+                          <Button size="sm" variant="outline" className="flex-1 md:flex-none text-xs h-8">
+                            <Eye className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+                            Results
                           </Button>
                         </div>
                       </div>
@@ -661,18 +681,18 @@ export default function PollsSurveysPage() {
             )}
           </TabsContent>
 
-          <TabsContent value="results" className="space-y-6">
-            <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
-              <CardHeader>
-                <CardTitle>Poll & Survey Results</CardTitle>
-                <CardDescription>Detailed analytics and insights from completed polls and surveys</CardDescription>
+          <TabsContent value="results" className="space-y-3 md:space-y-6">
+            <Card className="bg-white/90 backdrop-blur-sm border border-gray-200 shadow-sm">
+              <CardHeader className="p-4 md:p-6">
+                <CardTitle className="text-base md:text-lg">Poll & Survey Results</CardTitle>
+                <CardDescription className="text-xs md:text-sm">Detailed analytics and insights from completed polls</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="text-center py-12">
-                  <PieChart className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Results Dashboard</h3>
-                  <p className="text-gray-600 mb-6">Advanced analytics and visualization tools for poll results.</p>
-                  <Button className="bg-indigo-600 hover:bg-indigo-700">
+              <CardContent className="p-4 md:p-6">
+                <div className="text-center py-8 md:py-12">
+                  <PieChart className="w-12 h-12 md:w-16 md:h-16 text-gray-400 mx-auto mb-3 md:mb-4" />
+                  <h3 className="text-base md:text-xl font-semibold text-gray-900 mb-2">Results Dashboard</h3>
+                  <p className="text-sm md:text-base text-gray-600 mb-4 md:mb-6">Advanced analytics and visualization tools for poll results.</p>
+                  <Button className="bg-indigo-600 hover:bg-indigo-700 text-sm h-9">
                     <BarChart3 className="w-4 h-4 mr-2" />
                     View Analytics
                   </Button>
@@ -685,16 +705,16 @@ export default function PollsSurveysPage() {
 
       {/* Poll Detail Modal */}
       {selectedPoll && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 md:p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-lg md:rounded-xl shadow-2xl max-w-4xl w-full max-h-[95vh] md:max-h-[90vh] overflow-y-auto"
           >
-            <div className="p-6 border-b flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold">{selectedPoll.title}</h2>
-                <p className="text-gray-600">{selectedPoll.description}</p>
+            <div className="p-3 md:p-6 border-b flex items-center justify-between sticky top-0 bg-white z-10">
+              <div className="flex-1 min-w-0 mr-2">
+                <h2 className="text-base md:text-xl font-semibold truncate">{selectedPoll.title}</h2>
+                <p className="text-xs md:text-sm text-gray-600 line-clamp-1">{selectedPoll.description}</p>
               </div>
               <Button
                 variant="outline"
@@ -703,70 +723,71 @@ export default function PollsSurveysPage() {
                   setSelectedPoll(null)
                   setPollAnalytics(null)
                 }}
+                className="h-8 w-8 p-0 flex-shrink-0"
               >
                 ✕
               </Button>
             </div>
             
-            <div className="p-6">
+            <div className="p-3 md:p-6">
               {analyticsLoading ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
                   <p className="text-gray-600 mt-2">Loading analytics...</p>
                 </div>
               ) : pollAnalytics ? (
-                <div className="space-y-6">
+                <div className="space-y-4 md:space-y-6">
                   {/* Analytics Overview */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
                     <Card>
-                      <CardContent className="p-4 text-center">
-                        <p className="text-2xl font-bold text-indigo-600">{pollAnalytics.totalResponses}</p>
-                        <p className="text-sm text-gray-600">Total Responses</p>
+                      <CardContent className="p-2 md:p-4 text-center">
+                        <p className="text-lg md:text-2xl font-bold text-indigo-600">{pollAnalytics.totalResponses}</p>
+                        <p className="text-[10px] md:text-sm text-gray-600">Total Responses</p>
                       </CardContent>
                     </Card>
                     <Card>
-                      <CardContent className="p-4 text-center">
-                        <p className="text-2xl font-bold text-green-600">{pollAnalytics.responseRate}%</p>
-                        <p className="text-sm text-gray-600">Response Rate</p>
+                      <CardContent className="p-2 md:p-4 text-center">
+                        <p className="text-lg md:text-2xl font-bold text-green-600">{pollAnalytics.responseRate}%</p>
+                        <p className="text-[10px] md:text-sm text-gray-600">Response Rate</p>
                       </CardContent>
                     </Card>
                     <Card>
-                      <CardContent className="p-4 text-center">
-                        <p className="text-2xl font-bold text-blue-600">{pollAnalytics.totalTargets}</p>
-                        <p className="text-sm text-gray-600">Target Audience</p>
+                      <CardContent className="p-2 md:p-4 text-center">
+                        <p className="text-lg md:text-2xl font-bold text-blue-600">{pollAnalytics.totalTargets}</p>
+                        <p className="text-[10px] md:text-sm text-gray-600">Target Audience</p>
                       </CardContent>
                     </Card>
                     <Card>
-                      <CardContent className="p-4 text-center">
-                        <Badge variant="outline" className={getStatusColor(pollAnalytics.poll?.status || 'draft')}>
+                      <CardContent className="p-2 md:p-4 text-center">
+                        <Badge variant="outline" className={`${getStatusColor(pollAnalytics.poll?.status || 'draft')} text-[10px] md:text-xs`}>
                           {pollAnalytics.poll?.status || 'Draft'}
                         </Badge>
-                        <p className="text-sm text-gray-600 mt-1">Status</p>
+                        <p className="text-[10px] md:text-sm text-gray-600 mt-1">Status</p>
                       </CardContent>
                     </Card>
                   </div>
 
                   {/* Demographics */}
                   {(Object.keys(pollAnalytics.demographics?.byGrade || {}).length > 0 || Object.keys(pollAnalytics.demographics?.byRole || {}).length > 0) && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
                       {Object.keys(pollAnalytics.demographics?.byGrade || {}).length > 0 && (
                         <Card>
-                          <CardHeader>
-                            <CardTitle className="text-lg">Responses by Grade</CardTitle>
+                          <CardHeader className="p-3 md:p-6 pb-2 md:pb-3">
+                            <CardTitle className="text-sm md:text-lg">Responses by Grade</CardTitle>
                           </CardHeader>
-                          <CardContent>
-                            <div className="space-y-3">
+                          <CardContent className="p-3 md:p-6 pt-0">
+                            <div className="space-y-2 md:space-y-3">
                               {Object.entries(pollAnalytics.demographics.byGrade).map(([grade, count]: [string, any]) => (
                                 <div key={grade} className="flex items-center justify-between">
-                                  <span className="text-sm font-medium">{grade}</span>
-                                  <div className="flex items-center space-x-2">
-                                    <div className="w-24 bg-gray-200 rounded-full h-2">
+                                  <span className="text-xs md:text-sm font-medium">{grade}</span>
+                                  <div className="flex items-center space-x-1 md:space-x-2">
+                                    <div className="w-16 md:w-24 bg-gray-200 rounded-full h-1.5 md:h-2">
                                       <div 
-                                        className="bg-blue-600 h-2 rounded-full"
+                                        className="bg-blue-600 h-1.5 md:h-2 rounded-full"
                                         style={{ width: `${((count as number) / pollAnalytics.totalResponses) * 100}%` }}
                                       ></div>
                                     </div>
-                                    <span className="text-sm text-gray-600 w-8 text-right">{count as number}</span>
+                                    <span className="text-xs md:text-sm text-gray-600 w-6 md:w-8 text-right">{count as number}</span>
                                   </div>
                                 </div>
                               ))}
@@ -777,22 +798,22 @@ export default function PollsSurveysPage() {
 
                       {Object.keys(pollAnalytics.demographics?.byRole || {}).length > 0 && (
                         <Card>
-                          <CardHeader>
-                            <CardTitle className="text-lg">Responses by Role</CardTitle>
+                          <CardHeader className="p-3 md:p-6 pb-2 md:pb-3">
+                            <CardTitle className="text-sm md:text-lg">Responses by Role</CardTitle>
                           </CardHeader>
-                          <CardContent>
-                            <div className="space-y-3">
+                          <CardContent className="p-3 md:p-6 pt-0">
+                            <div className="space-y-2 md:space-y-3">
                               {Object.entries(pollAnalytics.demographics.byRole).map(([role, count]: [string, any]) => (
                                 <div key={role} className="flex items-center justify-between">
-                                  <span className="text-sm font-medium capitalize">{role}</span>
-                                  <div className="flex items-center space-x-2">
-                                    <div className="w-24 bg-gray-200 rounded-full h-2">
+                                  <span className="text-xs md:text-sm font-medium capitalize">{role}</span>
+                                  <div className="flex items-center space-x-1 md:space-x-2">
+                                    <div className="w-16 md:w-24 bg-gray-200 rounded-full h-1.5 md:h-2">
                                       <div 
-                                        className="bg-purple-600 h-2 rounded-full"
+                                        className="bg-purple-600 h-1.5 md:h-2 rounded-full"
                                         style={{ width: `${((count as number) / pollAnalytics.totalResponses) * 100}%` }}
                                       ></div>
                                     </div>
-                                    <span className="text-sm text-gray-600 w-8 text-right">{count as number}</span>
+                                    <span className="text-xs md:text-sm text-gray-600 w-6 md:w-8 text-right">{count as number}</span>
                                   </div>
                                 </div>
                               ))}
@@ -804,30 +825,30 @@ export default function PollsSurveysPage() {
                   )}
 
                   {/* Question Analytics */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">Question Results</h3>
+                  <div className="space-y-3 md:space-y-4">
+                    <h3 className="text-base md:text-lg font-semibold">Question Results</h3>
                     {pollAnalytics.questionAnalytics?.map((qa: any, index: number) => (
-                      <Card key={qa.questionId} className="border-l-4 border-l-indigo-500">
-                        <CardContent className="p-4">
-                          <h4 className="font-medium mb-3">{qa.questionText}</h4>
-                          <p className="text-sm text-gray-600 mb-3">
+                      <Card key={qa.questionId} className="border-l-2 md:border-l-4 border-l-indigo-500">
+                        <CardContent className="p-3 md:p-4">
+                          <h4 className="font-medium mb-2 md:mb-3 text-sm md:text-base">{qa.questionText}</h4>
+                          <p className="text-xs md:text-sm text-gray-600 mb-2 md:mb-3">
                             {qa.totalResponses} responses • {qa.questionType}
                           </p>
 
                           {/* Multiple Choice / Single Choice Options */}
                           {(qa.questionType === 'multiple_choice' || qa.questionType === 'single_choice') && qa.optionDistribution && (
-                            <div className="space-y-2">
+                            <div className="space-y-1.5 md:space-y-2">
                               {Object.entries(qa.optionDistribution).map(([option, count]: [string, any]) => (
-                                <div key={option} className="flex items-center justify-between">
-                                  <span className="text-sm">{option}</span>
-                                  <div className="flex items-center space-x-2">
-                                    <div className="w-32 bg-gray-200 rounded-full h-2">
+                                <div key={option} className="flex items-center justify-between gap-2">
+                                  <span className="text-xs md:text-sm truncate flex-1">{option}</span>
+                                  <div className="flex items-center space-x-1 md:space-x-2 flex-shrink-0">
+                                    <div className="w-20 md:w-32 bg-gray-200 rounded-full h-1.5 md:h-2">
                                       <div 
-                                        className="bg-indigo-600 h-2 rounded-full"
+                                        className="bg-indigo-600 h-1.5 md:h-2 rounded-full"
                                         style={{ width: `${qa.totalResponses > 0 ? ((count as number) / qa.totalResponses) * 100 : 0}%` }}
                                       ></div>
                                     </div>
-                                    <span className="text-sm text-gray-600 w-8 text-right">{count as number}</span>
+                                    <span className="text-xs md:text-sm text-gray-600 w-6 md:w-8 text-right">{count as number}</span>
                                   </div>
                                 </div>
                               ))}
@@ -836,44 +857,44 @@ export default function PollsSurveysPage() {
 
                           {/* Rating Analytics */}
                           {qa.questionType === 'rating' && qa.ratingStats && (
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-2 md:gap-4">
                               <div className="text-center">
-                                <p className="text-2xl font-bold text-green-600">{qa.ratingStats.average?.toFixed(1) || 'N/A'}</p>
-                                <p className="text-sm text-gray-600">Average Rating</p>
+                                <p className="text-xl md:text-2xl font-bold text-green-600">{qa.ratingStats.average?.toFixed(1) || 'N/A'}</p>
+                                <p className="text-xs md:text-sm text-gray-600">Average Rating</p>
                               </div>
                               <div className="text-center">
-                                <p className="text-2xl font-bold text-blue-600">{qa.ratingStats.mode || 'N/A'}</p>
-                                <p className="text-sm text-gray-600">Most Common</p>
+                                <p className="text-xl md:text-2xl font-bold text-blue-600">{qa.ratingStats.mode || 'N/A'}</p>
+                                <p className="text-xs md:text-sm text-gray-600">Most Common</p>
                               </div>
                             </div>
                           )}
 
                           {/* Yes/No Analytics */}
                           {qa.questionType === 'yes_no' && qa.yesNoDistribution && (
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-2 md:gap-4">
                               <div className="text-center">
-                                <p className="text-2xl font-bold text-green-600">{qa.yesNoDistribution.yes || 0}</p>
-                                <p className="text-sm text-gray-600">Yes</p>
+                                <p className="text-xl md:text-2xl font-bold text-green-600">{qa.yesNoDistribution.yes || 0}</p>
+                                <p className="text-xs md:text-sm text-gray-600">Yes</p>
                               </div>
                               <div className="text-center">
-                                <p className="text-2xl font-bold text-red-600">{qa.yesNoDistribution.no || 0}</p>
-                                <p className="text-sm text-gray-600">No</p>
+                                <p className="text-xl md:text-2xl font-bold text-red-600">{qa.yesNoDistribution.no || 0}</p>
+                                <p className="text-xs md:text-sm text-gray-600">No</p>
                               </div>
                             </div>
                           )}
 
                           {/* Text Responses */}
                           {qa.questionType === 'text' && qa.textResponses && qa.textResponses.length > 0 && (
-                            <div className="space-y-2">
-                              <h5 className="font-medium text-sm">Recent Responses:</h5>
+                            <div className="space-y-1.5 md:space-y-2">
+                              <h5 className="font-medium text-xs md:text-sm">Recent Responses:</h5>
                               <div className="max-h-32 overflow-y-auto space-y-1">
                                 {qa.textResponses.slice(0, 5).map((response: string, idx: number) => (
-                                  <div key={idx} className="text-sm bg-gray-50 p-2 rounded">
+                                  <div key={idx} className="text-xs md:text-sm bg-gray-50 p-2 rounded">
                                     "{response}"
                                   </div>
                                 ))}
                                 {qa.textResponses.length > 5 && (
-                                  <p className="text-xs text-gray-500">
+                                  <p className="text-[10px] md:text-xs text-gray-500">
                                     +{qa.textResponses.length - 5} more responses
                                   </p>
                                 )}
@@ -897,22 +918,22 @@ export default function PollsSurveysPage() {
 
       {/* Create Poll Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 md:p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-lg md:rounded-xl shadow-2xl max-w-2xl w-full max-h-[95vh] md:max-h-[90vh] overflow-y-auto"
           >
-            <div className="p-6 border-b">
-              <h2 className="text-xl font-semibold">Create New Poll/Survey</h2>
-              <p className="text-gray-600">Set up a new poll or survey for your community</p>
+            <div className="p-3 md:p-6 border-b sticky top-0 bg-white z-10">
+              <h2 className="text-base md:text-xl font-semibold">Create New Poll/Survey</h2>
+              <p className="text-xs md:text-sm text-gray-600">Set up a new poll or survey for your community</p>
             </div>
             
-            <div className="p-6 space-y-6">
+            <div className="p-3 md:p-6 space-y-4 md:space-y-6">
               {/* Basic Poll Information */}
-              <div className="space-y-4">
+              <div className="space-y-3 md:space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
+                  <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">Title</label>
                   <Input
                     placeholder="Enter poll/survey title"
                     value={newPoll.title}
@@ -921,18 +942,19 @@ export default function PollsSurveysPage() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                  <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">Description</label>
                   <Textarea
                     placeholder="Describe the purpose of this poll/survey"
                     value={newPoll.description}
                     onChange={(e) => setNewPoll(prev => ({ ...prev, description: e.target.value }))}
                     rows={3}
+                    className="text-sm"
                   />
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-2 md:gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                    <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">Type</label>
                     <Select 
                       value={newPoll.type} 
                       onValueChange={(value) => setNewPoll(prev => ({ ...prev, type: value as 'poll' | 'survey' }))}
@@ -948,7 +970,7 @@ export default function PollsSurveysPage() {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Target Audience</label>
+                    <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">Target Audience</label>
                     <Select 
                       value={newPoll.targetAudience} 
                       onValueChange={(value) => setNewPoll(prev => ({ ...prev, targetAudience: value as any }))}
@@ -968,58 +990,59 @@ export default function PollsSurveysPage() {
               </div>
 
               {/* Questions Section */}
-              <div className="border-t pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">Questions</h3>
-                  <Badge variant="outline">{newPoll.questions?.length || 0} questions</Badge>
+              <div className="border-t pt-3 md:pt-6">
+                <div className="flex items-center justify-between mb-3 md:mb-4">
+                  <h3 className="text-sm md:text-lg font-medium text-gray-900">Questions</h3>
+                  <Badge variant="outline" className="text-xs">{newPoll.questions?.length || 0} questions</Badge>
                 </div>
 
                 {/* Existing Questions */}
                 {newPoll.questions && newPoll.questions.length > 0 && (
-                  <div className="space-y-3 mb-4">
+                  <div className="space-y-2 md:space-y-3 mb-3 md:mb-4">
                     {newPoll.questions.map((question, index) => (
-                      <Card key={index} className="border-l-4 border-l-indigo-500">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <h4 className="font-medium text-gray-900 mb-2">{question.text}</h4>
-                              <div className="flex items-center space-x-4 text-sm text-gray-600">
-                                <Badge variant="outline" className="capitalize">{question.type.replace('_', ' ')}</Badge>
-                                <span>{question.required ? 'Required' : 'Optional'}</span>
+                      <Card key={index} className="border-l-2 md:border-l-4 border-l-indigo-500">
+                        <CardContent className="p-3 md:p-4">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-gray-900 mb-1.5 md:mb-2 text-sm md:text-base">{question.text}</h4>
+                              <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm text-gray-600">
+                                <Badge variant="outline" className="capitalize text-[10px] md:text-xs">{question.type.replace('_', ' ')}</Badge>
+                                <span className="text-[10px] md:text-xs">{question.required ? 'Required' : 'Optional'}</span>
                                 {question.options.length > 0 && (
-                                  <span>{question.options.length} options</span>
+                                  <span className="text-[10px] md:text-xs">{question.options.length} options</span>
                                 )}
                               </div>
                               {question.options.length > 0 && (
-                                <div className="mt-2 flex flex-wrap gap-1">
+                                <div className="mt-1.5 md:mt-2 flex flex-wrap gap-1">
                                   {question.options.slice(0, 3).map((option, optIndex) => (
-                                    <Badge key={optIndex} variant="secondary" className="text-xs">
+                                    <Badge key={optIndex} variant="secondary" className="text-[10px] md:text-xs">
                                       {option}
                                     </Badge>
                                   ))}
                                   {question.options.length > 3 && (
-                                    <Badge variant="secondary" className="text-xs">
+                                    <Badge variant="secondary" className="text-[10px] md:text-xs">
                                       +{question.options.length - 3} more
                                     </Badge>
                                   )}
                                 </div>
                               )}
                             </div>
-                            <div className="flex items-center space-x-2 ml-4">
+                            <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleEditQuestion(index)}
+                                className="h-7 w-7 md:h-8 md:w-8 p-0"
                               >
-                                <Edit className="w-4 h-4" />
+                                <Edit className="w-3 h-3 md:w-4 md:h-4" />
                               </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleDeleteQuestion(index)}
-                                className="text-red-600 hover:text-red-700"
+                                className="text-red-600 hover:text-red-700 h-7 w-7 md:h-8 md:w-8 p-0"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
                               </Button>
                             </div>
                           </div>
@@ -1031,14 +1054,14 @@ export default function PollsSurveysPage() {
 
                 {/* Add/Edit Question Form */}
                 <Card className="bg-gray-50">
-                  <CardContent className="p-4">
-                    <h4 className="font-medium text-gray-900 mb-4">
+                  <CardContent className="p-3 md:p-4">
+                    <h4 className="font-medium text-gray-900 mb-3 md:mb-4 text-sm md:text-base">
                       {editingQuestionIndex !== null ? 'Edit Question' : 'Add New Question'}
                     </h4>
                     
-                    <div className="space-y-4">
+                    <div className="space-y-3 md:space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Question Text</label>
+                        <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">Question Text</label>
                         <Input
                           placeholder="Enter your question"
                           value={currentQuestion.text}
@@ -1046,9 +1069,9 @@ export default function PollsSurveysPage() {
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Question Type</label>
+                          <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">Question Type</label>
                           <Select 
                             value={currentQuestion.type} 
                             onValueChange={(value) => handleQuestionTypeChange(value as any)}
@@ -1151,7 +1174,7 @@ export default function PollsSurveysPage() {
               </div>
             </div>
             
-            <div className="p-6 border-t flex items-center justify-end space-x-3">
+            <div className="p-3 md:p-6 border-t flex flex-col-reverse md:flex-row items-stretch md:items-center justify-end gap-2 md:gap-3 sticky bottom-0 bg-white">
               <Button
                 variant="outline"
                 onClick={() => {
@@ -1171,15 +1194,17 @@ export default function PollsSurveysPage() {
                   })
                   setEditingQuestionIndex(null)
                 }}
+                className="text-sm h-9 md:h-10"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleCreatePoll}
                 disabled={!newPoll.title?.trim() || !newPoll.questions?.length}
-                className="bg-indigo-600 hover:bg-indigo-700"
+                className="bg-indigo-600 hover:bg-indigo-700 text-sm h-9 md:h-10"
               >
-                Create Poll/Survey ({newPoll.questions?.length || 0} questions)
+                <span className="hidden md:inline">Create Poll/Survey ({newPoll.questions?.length || 0} questions)</span>
+                <span className="md:hidden">Create ({newPoll.questions?.length || 0} questions)</span>
               </Button>
             </div>
           </motion.div>
