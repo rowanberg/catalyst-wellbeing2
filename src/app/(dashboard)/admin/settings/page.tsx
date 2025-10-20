@@ -62,12 +62,6 @@ interface SchoolSettings {
   }
 }
 
-interface GeminiConfig {
-  apiKey: string
-  selectedModel: string
-  isConfigured: boolean
-}
-
 function SchoolSettingsContent() {
   const { profile } = useAppSelector((state) => state.auth)
   const [settings, setSettings] = useState<SchoolSettings | null>(null)
@@ -75,14 +69,6 @@ function SchoolSettingsContent() {
   const [saving, setSaving] = useState(false)
   const { addToast } = useToast()
   const router = useRouter()
-  
-  // Gemini AI Configuration
-  const [geminiConfig, setGeminiConfig] = useState<GeminiConfig>({
-    apiKey: '',
-    selectedModel: 'gemini-1.5-flash',
-    isConfigured: false
-  })
-  const [geminiTesting, setGeminiTesting] = useState(false)
 
   useEffect(() => {
     if (profile) {
@@ -237,15 +223,6 @@ function SchoolSettingsContent() {
                 >
                   <CreditCard className="h-4 w-4 mr-2 flex-shrink-0" />
                   <span className="text-sm font-medium truncate">Subscription</span>
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={fetchSettings}
-                  size="sm"
-                  className="flex-1 sm:flex-none min-w-0 px-3 py-2"
-                >
-                  <RefreshCw className="h-4 w-4 mr-2 flex-shrink-0" />
-                  <span className="text-sm truncate">Reset</span>
                 </Button>
                 <Button 
                   onClick={saveSettings} 
@@ -851,160 +828,6 @@ function SchoolSettingsContent() {
                   placeholder="America/New_York"
                 />
                 <p className="text-xs text-gray-500 mt-2">e.g., America/New_York, Europe/London</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Gemini AI Configuration - Enhanced Mobile */}
-        <Card className="mt-6 sm:mt-8 bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200 rounded-xl overflow-hidden shadow-lg">
-          <CardHeader className="pb-4 sm:pb-6 px-4 sm:px-6">
-            <div className="flex items-start gap-3 sm:gap-4">
-              <div className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl shadow-lg flex-shrink-0">
-                <Settings className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <CardTitle className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900">Gemini AI Configuration</CardTitle>
-                <CardDescription className="text-sm sm:text-base text-gray-600 mt-1">
-                  Configure your Gemini API key for AI assistant features
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6 px-4 sm:px-6 pb-6">
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 sm:p-5">
-              <div className="flex items-start gap-3 sm:gap-4">
-                <div className="p-2 bg-blue-500 rounded-full flex-shrink-0">
-                  <div className="w-2 h-2 bg-white rounded-full"></div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-blue-900 mb-2 text-sm sm:text-base">Setup Required</h4>
-                  <p className="text-sm sm:text-base text-blue-700 mb-4">
-                    To use the AI Assistant features, you need to configure your Gemini API key from Google AI Studio.
-                  </p>
-                  <div className="space-y-3 text-sm sm:text-base text-blue-700">
-                    <div className="flex items-start gap-2">
-                      <span className="font-medium text-blue-800 flex-shrink-0">Step 1:</span>
-                      <span>Go to <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-800 font-medium">Google AI Studio</a></span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="font-medium text-blue-800 flex-shrink-0">Step 2:</span>
-                      <span>Create a new API key</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="font-medium text-blue-800 flex-shrink-0">Step 3:</span>
-                      <span>Copy and paste it below</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="font-medium text-blue-800 flex-shrink-0">Step 4:</span>
-                      <span>Select your preferred model</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 sm:p-5">
-              <div className="flex items-start gap-3 sm:gap-4">
-                <div className="p-2 bg-amber-500 rounded-full flex-shrink-0">
-                  <div className="w-2 h-2 bg-white rounded-full"></div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-amber-900 mb-2 text-sm sm:text-base">Model Compatibility Notice</h4>
-                  <p className="text-sm sm:text-base text-amber-700">
-                    Currently, all model selections use <strong>Gemini Pro</strong> due to API version compatibility. 
-                    Gemini 1.5 Flash and Pro models are not yet available in the v1beta API used by this library.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <Label htmlFor="gemini-api-key" className="text-sm font-medium text-gray-700 mb-2 block flex items-center">
-                  <Settings className="h-4 w-4 mr-2 text-purple-600" />
-                  Gemini API Key
-                </Label>
-                <Input
-                  id="gemini-api-key"
-                  type="password"
-                  value={geminiConfig.apiKey}
-                  onChange={(e) => setGeminiConfig(prev => ({ ...prev, apiKey: e.target.value }))}
-                  placeholder="Enter your Gemini API key (starts with AIza...)"
-                  className="w-full h-11 text-base font-mono border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
-                <p className="text-xs sm:text-sm text-gray-500 mt-2">Your API key will be encrypted and stored securely</p>
-              </div>
-
-              <div>
-                <Label className="text-sm font-medium text-gray-700 mb-3 block">AI Model Selection</Label>
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-gray-200 hover:border-purple-300 transition-colors">
-                    <input 
-                      type="radio" 
-                      id="gemini-flash" 
-                      name="gemini-model" 
-                      value="gemini-1.5-flash" 
-                      checked={geminiConfig.selectedModel === 'gemini-1.5-flash'}
-                      onChange={(e) => setGeminiConfig(prev => ({ ...prev, selectedModel: e.target.value }))}
-                      className="mt-1 text-purple-600 scale-110" 
-                    />
-                    <Label htmlFor="gemini-flash" className="cursor-pointer flex-1">
-                      <div className="font-medium text-gray-900 mb-1">Gemini 1.5 Flash - Fast and efficient (Recommended)</div>
-                      <div className="text-sm text-gray-600">1,500 requests/day, supports text + images</div>
-                    </Label>
-                  </div>
-                  <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-gray-200 hover:border-purple-300 transition-colors">
-                    <input 
-                      type="radio" 
-                      id="gemini-pro" 
-                      name="gemini-model" 
-                      value="gemini-1.5-pro" 
-                      checked={geminiConfig.selectedModel === 'gemini-1.5-pro'}
-                      onChange={(e) => setGeminiConfig(prev => ({ ...prev, selectedModel: e.target.value }))}
-                      className="mt-1 text-purple-600 scale-110" 
-                    />
-                    <Label htmlFor="gemini-pro" className="cursor-pointer flex-1">
-                      <div className="font-medium text-gray-900 mb-1">Gemini 1.5 Pro - Most capable</div>
-                      <div className="text-sm text-gray-600">50 requests/day, advanced reasoning + images</div>
-                    </Label>
-                  </div>
-                  <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-gray-200 hover:border-purple-300 transition-colors">
-                    <input 
-                      type="radio" 
-                      id="gemini-basic" 
-                      name="gemini-model" 
-                      value="gemini-pro" 
-                      checked={geminiConfig.selectedModel === 'gemini-pro'}
-                      onChange={(e) => setGeminiConfig(prev => ({ ...prev, selectedModel: e.target.value }))}
-                      className="mt-1 text-purple-600 scale-110" 
-                    />
-                    <Label htmlFor="gemini-basic" className="cursor-pointer flex-1">
-                      <div className="font-medium text-gray-900 mb-1">Gemini 1.0 Pro - Reliable</div>
-                      <div className="text-sm text-gray-600">No daily limit, text only</div>
-                    </Label>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3 pt-4 sm:flex-row">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  disabled={true}
-                  className="flex-1 sm:flex-none text-purple-600 border-purple-200 hover:bg-purple-50 h-11"
-                >
-                  <Settings className="h-4 w-4 mr-2" />
-                  Test Connection (Coming Soon)
-                </Button>
-                <Button 
-                  size="sm"
-                  disabled={true}
-                  className="flex-1 sm:flex-none bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 h-11"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Configuration (Coming Soon)
-                </Button>
               </div>
             </div>
           </CardContent>

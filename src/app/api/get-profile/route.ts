@@ -5,6 +5,9 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 const profileCache = new Map<string, { profile: any; timestamp: number }>()
 const PROFILE_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
+// Request deduplication map (prevents concurrent duplicate requests)
+const inFlightRequests = new Map<string, Promise<any>>()
+
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await request.json()
@@ -30,21 +33,39 @@ export async function POST(request: NextRequest) {
       return response
     }
     
+    // Check for in-flight request (prevents duplicate concurrent requests)
+    const inFlightKey = `inflight-${userId}`
+    if (inFlightRequests.has(inFlightKey)) {
+      console.log(`🔄 [ProfileCache] Waiting for in-flight request for user ${userId}`)
+      const inFlightProfile = await inFlightRequests.get(inFlightKey)!
+      return NextResponse.json(inFlightProfile)
+    }
+    
     console.log(`🔄 [ProfileCache] MISS for user ${userId}`)
 
-    // Get user profile with school information
-    const { data: profile, error } = await supabaseAdmin
-      .from('profiles')
-      .select(`
-        *,
-        schools (
-          id,
-          name,
-          school_code
-        )
-      `)
-      .eq('user_id', userId)
-      .single()
+    // Create promise for in-flight tracking
+    const fetchPromise = (async () => {
+      // Get user profile with school information
+      const { data: profile, error } = await supabaseAdmin
+        .from('profiles')
+        .select(`
+          *,
+          schools (
+            id,
+            name,
+            school_code
+          )
+        `)
+        .eq('user_id', userId)
+        .single()
+      
+      return { profile, error }
+    })()
+    
+    // Store in-flight request
+    inFlightRequests.set(inFlightKey, fetchPromise.then(({ profile }) => profile))
+    
+    const { profile, error } = await fetchPromise
 
     if (error) {
       console.error('Profile fetch error:', error)
@@ -87,13 +108,21 @@ export async function POST(request: NextRequest) {
       profileCache.clear()
       entries.slice(0, 100).forEach(([key, value]) => profileCache.set(key, value))
     }
+    
+    // Clean up in-flight request
+    inFlightRequests.delete(inFlightKey)
 
     const response = NextResponse.json(profile)
     response.headers.set('X-Cache', 'MISS')
-    response.headers.set('Cache-Control', 'private, max-age=120')
+    response.headers.set('Cache-Control', 'private, max-age=300')
     return response
   } catch (error) {
     console.error('Get profile API error:', error)
+    // Clean up in-flight request on error
+    const { userId } = await request.json().catch(() => ({}))
+    if (userId) {
+      inFlightRequests.delete(`inflight-${userId}`)
+    }
     return NextResponse.json(
       { message: `Internal server error: ${error instanceof Error ? error.message : 'Unknown error'}` },
       { status: 500 }

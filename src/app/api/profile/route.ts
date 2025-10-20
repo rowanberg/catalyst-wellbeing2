@@ -3,6 +3,13 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { logger } from '@/lib/logger'
 
+// Server-side cache (5 minute TTL)
+const profileCache = new Map<string, { profile: any; timestamp: number }>()
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+// Request deduplication
+const inFlightRequests = new Map<string, Promise<any>>()
+
 // Create Supabase client with cookie-based auth
 async function createSupabaseServerClient() {
   const cookieStore = await cookies()
@@ -31,24 +38,53 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get user profile (removed email and student_number columns that don't exist)
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select(`
-        id,
-        user_id,
-        first_name,
-        last_name,
-        role,
-        school_id,
-        created_at,
-        updated_at
-      `)
-      .eq('user_id', user.id)
-      .single()
+    // Check cache first
+    const cacheKey = `profile-${user.id}`
+    const cached = profileCache.get(cacheKey)
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      logger.debug('Profile cache hit', { userId: user.id })
+      const response = NextResponse.json(cached.profile)
+      response.headers.set('X-Cache', 'HIT')
+      response.headers.set('Cache-Control', 'private, max-age=300')
+      return response
+    }
 
-    if (profileError) {
+    // Check for in-flight request
+    const inFlightKey = `inflight-${user.id}`
+    if (inFlightRequests.has(inFlightKey)) {
+      logger.debug('Waiting for in-flight profile request', { userId: user.id })
+      const profile = await inFlightRequests.get(inFlightKey)!
+      return NextResponse.json(profile)
+    }
+
+    // Create fetch promise for deduplication
+    const fetchPromise = (async () => {
+      // Get user profile (removed email and student_number columns that don't exist)
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          user_id,
+          first_name,
+          last_name,
+          role,
+          school_id,
+          created_at,
+          updated_at
+        `)
+        .eq('user_id', user.id)
+        .single()
+      return { profile, profileError }
+    })()
+
+    // Store in-flight request
+    inFlightRequests.set(inFlightKey, fetchPromise.then(({ profile }) => profile))
+
+    const { profile, profileError } = await fetchPromise
+
+    if (profileError || !profile) {
       logger.error('Error fetching profile', profileError)
+      inFlightRequests.delete(inFlightKey)
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
@@ -100,10 +136,34 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json(profile)
+    // Store in cache
+    profileCache.set(cacheKey, { profile, timestamp: Date.now() })
+    logger.debug('Profile cached', { userId: user.id })
+
+    // Clean up cache (keep last 100 entries)
+    if (profileCache.size > 100) {
+      const entries = Array.from(profileCache.entries())
+      entries.sort((a, b) => b[1].timestamp - a[1].timestamp)
+      profileCache.clear()
+      entries.slice(0, 100).forEach(([k, v]) => profileCache.set(k, v))
+    }
+
+    // Clean up in-flight request
+    inFlightRequests.delete(inFlightKey)
+
+    const response = NextResponse.json(profile)
+    response.headers.set('X-Cache', 'MISS')
+    response.headers.set('Cache-Control', 'private, max-age=300')
+    return response
 
   } catch (error) {
     logger.error('Error in profile GET', error)
+    // Clean up in-flight on error
+    const supabase = await createSupabaseServerClient()
+    const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }))
+    if (user) {
+      inFlightRequests.delete(`inflight-${user.id}`)
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

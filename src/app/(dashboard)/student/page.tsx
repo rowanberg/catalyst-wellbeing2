@@ -492,8 +492,58 @@ const StudentDashboardContent = () => {
   }, [])
 
   // OPTIMIZED: Parallel loading - fetch all 4 APIs simultaneously
-  const fetchDashboardData = useCallback(async () => {
+  const fetchDashboardData = useCallback(async (forceRefresh = false) => {
     try {
+      // Check cache first
+      const dashboardCacheKey = 'student_dashboard_data'
+      const cacheTimestamp = sessionStorage.getItem(`${dashboardCacheKey}_timestamp`)
+      
+      // Use cached data if it's less than 5 minutes old and not forcing refresh
+      if (!forceRefresh && cacheTimestamp) {
+        const age = Date.now() - parseInt(cacheTimestamp)
+        if (age < 5 * 60 * 1000) { // 5 minutes
+          try {
+            const cachedDashboard = sessionStorage.getItem(`${dashboardCacheKey}_dashboard`)
+            const cachedSchool = sessionStorage.getItem(`${dashboardCacheKey}_school`)
+            const cachedAnnouncements = sessionStorage.getItem(`${dashboardCacheKey}_announcements`)
+            const cachedPolls = sessionStorage.getItem(`${dashboardCacheKey}_polls`)
+            
+            if (cachedDashboard) {
+              const dashboardData = JSON.parse(cachedDashboard)
+              setProfile(dashboardData.profile)
+              setStats(dashboardData.stats)
+              setQuests(dashboardData.quests)
+              setMood(dashboardData.mood)
+              setAcademicData(dashboardData.academic)
+              
+              if (dashboardData.mood?.current && dashboardData.mood.current !== '') {
+                setMoodLockedDate(getTodayDate())
+              } else {
+                setMoodLockedDate('')
+              }
+            }
+            
+            if (cachedSchool) {
+              setSchoolInfo(JSON.parse(cachedSchool))
+            }
+            
+            if (cachedAnnouncements) {
+              setAnnouncements(JSON.parse(cachedAnnouncements))
+            }
+            
+            if (cachedPolls) {
+              setPolls(JSON.parse(cachedPolls))
+            }
+            
+            devLog('✅ [CACHE] Using cached dashboard data (age:', Math.round(age/1000), 'seconds)')
+            setLoading(false)
+            return
+          } catch (error) {
+            devLog('⚠️ [CACHE] Invalid cached data, fetching fresh')
+          }
+        }
+      }
+      
       setLoading(true)
       devLog('🚀 [DASHBOARD] Starting parallel data fetch...')
       
@@ -508,23 +558,37 @@ const StudentDashboardContent = () => {
       ])
       
       // Process dashboard data
+      let dashboardDataToCache: any = null
       if (dashboardRes.status === 'fulfilled' && dashboardRes.value.ok) {
         const data = await dashboardRes.value.json()
         devLog('✅ [DASHBOARD] Dashboard API loaded')
         
-        setProfile(data.profile)
-        setStats({
+        const statsData = {
           ...data.stats,
           weeklyXP: data.stats.weeklyXP || 0,
           monthlyXP: data.stats.monthlyXP || 0,
           rank: data.stats.rank || 0,
           nextLevelXP: data.stats.nextLevelXP || 100
-        })
-        setQuests({
+        }
+        
+        const questsData = {
           ...data.quests,
           streakData: data.quests.streakData || { current: 0, best: 0, lastCompleted: "" }
-        })
+        }
+        
+        const academicDataProcessed = {
+          recentTests: data.academic?.recentTests || [],
+          upcomingExams: data.academic?.upcomingExams || [],
+          subjectPerformance: data.academic?.subjectPerformance || [],
+          overallGPA: data.academic?.overallGPA || 0,
+          loading: false
+        }
+        
+        setProfile(data.profile)
+        setStats(statsData)
+        setQuests(questsData)
         setMood(data.mood)
+        setAcademicData(academicDataProcessed)
         
         if (data.mood?.current && data.mood.current !== '') {
           setMoodLockedDate(getTodayDate())
@@ -532,35 +596,58 @@ const StudentDashboardContent = () => {
           setMoodLockedDate('')
         }
         
-        setAcademicData({
-          recentTests: data.academic?.recentTests || [],
-          upcomingExams: data.academic?.upcomingExams || [],
-          subjectPerformance: data.academic?.subjectPerformance || [],
-          overallGPA: data.academic?.overallGPA || 0,
-          loading: false
-        })
+        // Prepare data for caching
+        dashboardDataToCache = {
+          profile: data.profile,
+          stats: statsData,
+          quests: questsData,
+          mood: data.mood,
+          academic: academicDataProcessed
+        }
       }
       
       // Process school info
+      let schoolDataToCache = null
       if (schoolRes.status === 'fulfilled' && schoolRes.value.ok) {
         const schoolData = await schoolRes.value.json()
         setSchoolInfo(schoolData.schoolInfo)
+        schoolDataToCache = schoolData.schoolInfo
         devLog('✅ [SCHOOL-INFO] School info loaded')
       }
       
       // Process announcements
+      let announcementsToCache = null
       if (announcementsRes.status === 'fulfilled' && announcementsRes.value && announcementsRes.value.ok) {
         const announcementsData = await announcementsRes.value.json()
         setAnnouncements(announcementsData.announcements || [])
+        announcementsToCache = announcementsData.announcements || []
         devLog('✅ [ANNOUNCEMENTS] Announcements loaded')
       }
       
       // Process polls
+      let pollsToCache = null
       if (pollsRes.status === 'fulfilled' && pollsRes.value.ok) {
         const pollsData = await pollsRes.value.json()
         setPolls(pollsData.polls || [])
+        pollsToCache = pollsData.polls || []
         devLog('✅ [POLLS] Polls loaded')
       }
+      
+      // Cache all the data
+      sessionStorage.setItem(`${dashboardCacheKey}_timestamp`, Date.now().toString())
+      if (dashboardDataToCache) {
+        sessionStorage.setItem(`${dashboardCacheKey}_dashboard`, JSON.stringify(dashboardDataToCache))
+      }
+      if (schoolDataToCache) {
+        sessionStorage.setItem(`${dashboardCacheKey}_school`, JSON.stringify(schoolDataToCache))
+      }
+      if (announcementsToCache) {
+        sessionStorage.setItem(`${dashboardCacheKey}_announcements`, JSON.stringify(announcementsToCache))
+      }
+      if (pollsToCache) {
+        sessionStorage.setItem(`${dashboardCacheKey}_polls`, JSON.stringify(pollsToCache))
+      }
+      devLog('💾 [CACHE] Dashboard data cached')
       
       setLoading(false)
       devLog('🏁 [DASHBOARD] All data loaded in parallel!')
@@ -624,7 +711,7 @@ const StudentDashboardContent = () => {
     }
 
     initializeDashboard()
-  }, [authChecked, authLoading, reduxUser, reduxProfile, router]) // Removed 'loading' to prevent re-fetch
+  }, [authChecked, authLoading, reduxUser, reduxProfile?.role, router, fetchDashboardData]) // Only check role, not entire profile
 
   // Quest toggle handler
   const handleQuestToggle = async (questType: keyof QuestStatus) => {

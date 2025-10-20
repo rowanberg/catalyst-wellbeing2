@@ -3,10 +3,17 @@
  * Replaced internal API calls with direct DB queries (90% faster)
  * Uses: Supabase singleton, logger, ApiResponse, parallel queries
  */
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin-client'
 import { ApiResponse } from '@/lib/api/response'
 import { logger } from '@/lib/logger'
+
+// Response cache (30 second TTL)
+const responseCache = new Map<string, { data: any; timestamp: number }>()
+const CACHE_TTL = 30 * 1000
+
+// Request deduplication
+const inFlightRequests = new Map<string, Promise<any>>()
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
@@ -22,12 +29,33 @@ export async function GET(request: NextRequest) {
       return ApiResponse.badRequest('Teacher ID and School ID are required')
     }
 
+    // Check cache first
+    const cacheKey = `teacher-data-${teacherId}-${schoolId}-${classId || 'none'}-${includeStudents}`
+    const cached = responseCache.get(cacheKey)
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      logger.debug('Teacher data cache hit', { teacherId })
+      const response = NextResponse.json({ success: true, data: cached.data })
+      response.headers.set('X-Cache', 'HIT')
+      response.headers.set('Cache-Control', 'private, max-age=30')
+      return response
+    }
+
+    // Check for in-flight request
+    const inFlightKey = `inflight-${cacheKey}`
+    if (inFlightRequests.has(inFlightKey)) {
+      logger.debug('Waiting for in-flight teacher data request', { teacherId })
+      const data = await inFlightRequests.get(inFlightKey)!
+      return NextResponse.json({ success: true, data })
+    }
+
     logger.debug('Teacher data API called', { teacherId, schoolId, includeStudents, classId })
 
     const supabase = getSupabaseAdmin()
 
-    // Initialize response data structure
-    const responseData: any = {
+    // Create fetch promise for deduplication
+    const fetchPromise = (async () => {
+      // Initialize response data structure
+      const responseData: any = {
       teacher: null,
       school: null,
       assignedClasses: [],
@@ -259,13 +287,45 @@ export async function GET(request: NextRequest) {
         teacherProfile: !!responseData.teacher
       })
 
-      return ApiResponse.success({
+      return {
         ...responseData,
         timestamp: new Date().toISOString()
-      })
+      }
 
     } catch (error) {
       logger.error('Teacher data API error', error)
+      throw error
+    }
+    })()
+
+    // Store in-flight request
+    inFlightRequests.set(inFlightKey, fetchPromise)
+
+    try {
+      const data = await fetchPromise
+
+      // Store in cache
+      responseCache.set(cacheKey, { data, timestamp: Date.now() })
+
+      // Clean old cache entries (keep last 100)
+      if (responseCache.size > 100) {
+        const entries = Array.from(responseCache.entries())
+        entries.sort((a, b) => b[1].timestamp - a[1].timestamp)
+        responseCache.clear()
+        entries.slice(0, 100).forEach(([k, v]) => responseCache.set(k, v))
+      }
+
+      // Clean up in-flight request
+      inFlightRequests.delete(inFlightKey)
+
+      const response = NextResponse.json({ success: true, data })
+      response.headers.set('X-Cache', 'MISS')
+      response.headers.set('Cache-Control', 'private, max-age=30')
+      return response
+
+    } catch (error) {
+      logger.error('Teacher data API error', error)
+      inFlightRequests.delete(inFlightKey)
       return ApiResponse.internalError('Failed to fetch teacher data')
     }
 

@@ -45,7 +45,7 @@ const REFRESH_INTERVAL = 30 * 1000 // 30 seconds for auto-refresh
 export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherDataReturn {
   const { includeStudents = false, classId, autoRefresh = false, refreshInterval = REFRESH_INTERVAL } = options
   
-  const { user } = useAppSelector((state) => state.auth)
+  const { user, profile } = useAppSelector((state) => state.auth)
   const [data, setData] = useState<TeacherData>({
     teacher: null,
     school: null,
@@ -116,30 +116,36 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
         setLoading(true)
       }
 
-      // Get school_id from profile
-      let schoolId: string | undefined
-      const profileResponse = await fetch('/api/profile')
-      if (profileResponse.ok) {
-        const profile = await profileResponse.json()
-        schoolId = profile.school_id
-        
-        logger.debug('Profile fetched', { 
-          userId: user.id, 
-          profileId: profile.id,
-          role: profile.role,
-          hasSchoolId: !!schoolId 
-        })
+      // Get school_id from Redux profile or fetch if needed
+      let schoolId: string | undefined = profile?.school_id
+      
+      if (!schoolId) {
+        logger.debug('School ID not in Redux, fetching profile')
+        const profileResponse = await fetch('/api/profile')
+        if (profileResponse.ok) {
+          const fetchedProfile = await profileResponse.json()
+          schoolId = fetchedProfile.school_id
+          
+          logger.debug('Profile fetched', { 
+            userId: user.id, 
+            profileId: fetchedProfile.id,
+            role: fetchedProfile.role,
+            hasSchoolId: !!schoolId 
+          })
+        } else {
+          logger.error('Failed to fetch profile', { 
+            status: profileResponse.status,
+            statusText: profileResponse.statusText 
+          })
+        }
       } else {
-        logger.error('Failed to fetch profile', { 
-          status: profileResponse.status,
-          statusText: profileResponse.statusText 
-        })
+        logger.debug('Using school_id from Redux profile', { schoolId })
       }
       
       if (!schoolId) {
         logger.error('School ID not found in profile', { 
           userId: user.id,
-          profileFetched: profileResponse.ok
+          hasReduxProfile: !!profile
         })
         throw new Error('School ID not found in profile. Please contact your administrator to assign you to a school.')
       }
@@ -211,7 +217,7 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
     } finally {
       setLoading(false)
     }
-  }, [user?.id, currentClassId, includeStudents, getCacheKey, getCachedData, setCachedData, retryCount])
+  }, [user?.id, profile?.school_id, currentClassId, includeStudents, getCacheKey, getCachedData, setCachedData, retryCount])
 
   // Refresh data function
   const refreshData = useCallback(async () => {
@@ -243,29 +249,35 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
     try {
       logger.debug('Fast loading students for class', { classId })
       
-      // Get school_id from teacher profile
-      logger.debug('Fetching school_id from profile')
-      let schoolId: string | undefined
-      const profileResponse = await fetch('/api/profile')
-      if (profileResponse.ok) {
-        const profile = await profileResponse.json()
-        schoolId = profile.school_id
-        logger.debug('Got school_id from profile', { 
-          schoolId, 
-          profileId: profile.id,
-          role: profile.role 
-        })
+      // Get school_id from Redux profile or fetch if needed
+      let schoolId: string | undefined = profile?.school_id
+      
+      if (!schoolId) {
+        logger.debug('School ID not in Redux, fetching profile for loadStudentsForClass')
+        const profileResponse = await fetch('/api/profile')
+        if (profileResponse.ok) {
+          const fetchedProfile = await profileResponse.json()
+          schoolId = fetchedProfile.school_id
+          logger.debug('Got school_id from profile', { 
+            schoolId, 
+            profileId: fetchedProfile.id,
+            role: fetchedProfile.role 
+          })
+        } else {
+          logger.error('Failed to fetch profile', { 
+            status: profileResponse.status,
+            statusText: profileResponse.statusText 
+          })
+        }
       } else {
-        logger.error('Failed to fetch profile', { 
-          status: profileResponse.status,
-          statusText: profileResponse.statusText 
-        })
+        logger.debug('Using school_id from Redux profile for loadStudentsForClass', { schoolId })
       }
       
       if (!schoolId) {
         logger.error('School ID not found in profile for loadStudentsForClass', { 
           userId: user.id,
-          classId
+          classId,
+          hasReduxProfile: !!profile
         })
         throw new Error('School ID not found in profile. Please contact your administrator.')
       }
@@ -304,7 +316,7 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
     } finally {
       setStudentsLoading(false)
     }
-  }, [user?.id, getCacheKey, getCachedData, setCachedData])
+  }, [user?.id, profile?.school_id, getCacheKey, getCachedData, setCachedData])
 
   // Clear cache function
   const clearCache = useCallback(() => {
