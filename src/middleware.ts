@@ -76,7 +76,7 @@ export async function middleware(req: NextRequest) {
     // Build CSP header - exclude upgrade-insecure-requests in development
     const cspDirectives = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.supabase.co https://cdn.jsdelivr.net https://accounts.google.com https://apis.google.com",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://*.supabase.co https://cdn.jsdelivr.net https://accounts.google.com https://apis.google.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com",
       "font-src 'self' https://fonts.gstatic.com data:",
       "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://*.googleusercontent.com",

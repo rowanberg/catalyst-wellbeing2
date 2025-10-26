@@ -14,8 +14,7 @@ const STATIC_ASSETS = [
   '/offline.html',
   '/manifest.json',
   '/icon-192x192.png',
-  '/icon-512x512.png',
-  '/apple-touch-icon.png'
+  '/icon-512x512.png'
 ];
 
 // API endpoints to cache with stale-while-revalidate
