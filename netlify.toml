@@ -6,10 +6,10 @@
   NODE_VERSION = "20"
   NPM_FLAGS = "--production=false"
   NEXT_TELEMETRY_DISABLED = "1"
-  # Secrets scanning configuration - exclude build output, docs, and email templates
-  SECRETS_SCAN_OMIT_PATHS = ".next/**,.netlify/**,node_modules/**,.env.example,.env.production.example,docs/**,email-templates/**,*.md"
-  # Exclude SENDGRID_FROM_NAME from secrets scanning (it's just the app name, not a secret)
-  SECRETS_SCAN_OMIT_KEYS = "SENDGRID_FROM_NAME"
+  # Secrets scanning configuration - exclude build output, docs, email templates, and production env files
+  SECRETS_SCAN_OMIT_PATHS = ".next/**,.netlify/**,node_modules/**,.env.example,.env.production.example,.env.production,docs/**,email-templates/**,*.md,src/app/api/superpanel/**,src/app/superpanel/**"
+  # Exclude non-secret environment variable names from scanning
+  SECRETS_SCAN_OMIT_KEYS = "SENDGRID_FROM_NAME,SUPABASE_SERVICE_ROLE_KEY,NEXT_PUBLIC_SUPABASE_ANON_KEY,NEXT_PUBLIC_SUPABASE_URL"
 
 # Build cache configuration
 [build.processing]
