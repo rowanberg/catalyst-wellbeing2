@@ -16,17 +16,23 @@ export const useDarkMode = () => useContext(DarkModeContext)
 
 export const DarkModeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isDarkMode, setIsDarkMode] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    // Load dark mode preference from localStorage
-    const savedMode = localStorage.getItem('parentPortalDarkMode')
-    if (savedMode === 'true') {
-      setIsDarkMode(true)
-      document.documentElement.classList.add('dark')
+    setMounted(true)
+    // Load dark mode preference from localStorage only on client
+    if (typeof window !== 'undefined') {
+      const savedMode = localStorage.getItem('parentPortalDarkMode')
+      if (savedMode === 'true') {
+        setIsDarkMode(true)
+        document.documentElement.classList.add('dark')
+      }
     }
   }, [])
 
   const toggleDarkMode = () => {
+    if (typeof window === 'undefined' || !mounted) return
+    
     const newMode = !isDarkMode
     setIsDarkMode(newMode)
     localStorage.setItem('parentPortalDarkMode', newMode.toString())
@@ -36,6 +42,15 @@ export const DarkModeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     } else {
       document.documentElement.classList.remove('dark')
     }
+  }
+
+  // Don't render until client-side to prevent SSR issues
+  if (!mounted) {
+    return (
+      <DarkModeContext.Provider value={{ isDarkMode: false, toggleDarkMode: () => {} }}>
+        {children}
+      </DarkModeContext.Provider>
+    )
   }
 
   return (

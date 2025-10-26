@@ -39,8 +39,8 @@ import {
   Image as ImageIcon,
   Zap,
   ThumbsUp,
-  Laugh,
-  Angry,
+  Smile as Laugh,
+  Frown as Angry,
   Shield,
   School,
   Crown,
@@ -256,43 +256,53 @@ function WhatsAppContactCard({ parent, onOpenChat }: {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
+      className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-md sm:shadow-lg border border-gray-100 hover:shadow-lg transition-shadow duration-200"
     >
-      {/* Parent Info */}
-      <div className="flex items-center mb-4">
-        <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
-          {parent.name.split(' ').map((n: string) => n[0]).join('')}
+      {/* Parent Info - Mobile Optimized */}
+      <div className="flex items-start sm:items-center mb-4">
+        <div className="relative flex-shrink-0">
+          <div className="w-14 h-14 sm:w-12 sm:h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl sm:rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md">
+            {parent.name.split(' ').map((n: string) => n[0]).join('')}
+          </div>
+          {/* Online Status Indicator */}
+          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
         </div>
-        <div className="ml-3 flex-1">
-          <h3 className="font-semibold text-gray-900">{parent.name}</h3>
-          <p className="text-sm text-gray-500">Parent</p>
-        </div>
-        <div className="flex items-center text-green-500">
-          <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-          <span className="text-xs font-medium">WhatsApp</span>
+        
+        <div className="ml-3 sm:ml-4 flex-1 min-w-0">
+          <h3 className="font-bold text-base sm:text-lg text-gray-900 truncate">{parent.name}</h3>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-green-50 text-green-700 text-xs font-medium">
+              Parent
+            </span>
+            <div className="flex items-center text-green-600">
+              <MessageCircle className="w-3 h-3 mr-1" />
+              <span className="text-xs font-medium">Active</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Quick Action Button */}
+      {/* Quick Action Button - Touch Optimized */}
       <button
         onClick={() => onOpenChat(parent.phone || '', parent.name)}
         disabled={!parent.phone}
-        className={`w-full py-3 px-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl mb-4 ${
+        className={`w-full py-3.5 sm:py-3 px-4 rounded-xl font-semibold text-sm sm:text-base flex items-center justify-center gap-2 transition-all duration-200 shadow-md hover:shadow-lg active:scale-[0.98] mb-4 ${
           parent.phone 
             ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700' 
-            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
         }`}
       >
         <MessageCircle className="w-5 h-5" />
-        {parent.phone ? 'Open WhatsApp Chat' : 'Phone Number Not Available'}
+        <span className="hidden sm:inline">{parent.phone ? 'Open WhatsApp Chat' : 'Phone Number Not Available'}</span>
+        <span className="sm:hidden">{parent.phone ? 'Chat on WhatsApp' : 'No Phone Number'}</span>
       </button>
 
-      {/* Quick Messages */}
+      {/* Quick Messages - Mobile Grid */}
       <div className="space-y-2">
-        <p className="text-xs font-medium text-gray-600 mb-3">
-          {parent.phone ? 'Quick messages:' : 'Phone number required for WhatsApp:'}
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+          {parent.phone ? 'Quick Messages' : 'Setup Required'}
         </p>
-        <div className="grid grid-cols-1 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {quickMessages.map((message, index) => (
             <button
               key={index}
@@ -303,13 +313,13 @@ function WhatsAppContactCard({ parent, onOpenChat }: {
                 window.open(whatsappUrl, '_blank')
               }}
               disabled={!parent.phone}
-              className={`text-left text-sm p-3 rounded-lg transition-colors duration-150 border ${
+              className={`text-left text-xs sm:text-sm p-3 sm:p-2.5 rounded-lg transition-all duration-150 border active:scale-[0.98] ${
                 parent.phone
-                  ? 'bg-gray-50 hover:bg-green-50 text-gray-700 hover:text-green-700 border-gray-100 hover:border-green-200'
-                  : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                  ? 'bg-gray-50 hover:bg-green-50 text-gray-700 hover:text-green-700 border-gray-200 hover:border-green-300 hover:shadow-sm'
+                  : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed opacity-50'
               }`}
             >
-              {message}
+              <span className="line-clamp-2">{message}</span>
             </button>
           ))}
         </div>

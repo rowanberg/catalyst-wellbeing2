@@ -157,6 +157,7 @@ export async function POST(request: NextRequest) {
       success: true,
       mood: moodEntry,
       isLocked: true,
+      lockedDate: today,
       message: 'Mood saved successfully! Your mood is now locked for today.'
     })
 

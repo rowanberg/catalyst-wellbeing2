@@ -1,0 +1,9 @@
+node_modules
+.next
+__tests__
+firebase
+cd firebase
+supabase/functions
+scripts/*.ts
+*.config.js
+*.config.ts

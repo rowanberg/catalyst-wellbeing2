@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Catalyst Wellbeing</string>
+    <string name="title_activity_main">Catalyst Wellbeing</string>
+    <string name="package_name">com.catalystwells.app</string>
+    <string name="custom_url_scheme">com.catalystwells.app</string>
+</resources>

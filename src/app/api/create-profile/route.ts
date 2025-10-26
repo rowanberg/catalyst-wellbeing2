@@ -10,6 +10,17 @@ export async function POST(request: NextRequest) {
 
     // Check if we need to create the user (for regular signups)
     if (email && password) {
+      // Check if email already exists
+      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
+      const emailExists = existingUsers?.users?.some((u: any) => u.email?.toLowerCase() === email.toLowerCase())
+      
+      if (emailExists) {
+        return NextResponse.json(
+          { message: 'An account with this email already exists' },
+          { status: 400 }
+        )
+      }
+      
       // Create user with admin client - Supabase automatically sends confirmation email
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email,
@@ -69,6 +80,7 @@ export async function POST(request: NextRequest) {
     // Create the user profile
     const profileData: any = {
       user_id: user.id,
+      email: email || '', // Add email to profile for lookups
       first_name: firstName,
       last_name: lastName,
       role,
@@ -111,6 +123,13 @@ export async function POST(request: NextRequest) {
 
     if (profileError) {
       console.error('Profile creation error:', profileError)
+      
+      // ROLLBACK: Delete auth user if profile creation fails
+      if (shouldCreateUser && user?.id) {
+        console.log('Rolling back auth user creation due to profile error')
+        await supabaseAdmin.auth.admin.deleteUser(user.id)
+      }
+      
       return NextResponse.json(
         { message: `Failed to create profile: ${profileError.message}` },
         { status: 500 }

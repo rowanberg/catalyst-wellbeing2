@@ -109,134 +109,139 @@ export default function StudyPlanDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
-      {/* Header */}
+      {/* Compact Mobile Header */}
       <div className="bg-white/95 backdrop-blur-xl shadow-lg border-b border-white/20 sticky top-0 z-10">
-        <div className="px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+        <div className="px-3 sm:px-4 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
               <Button
                 onClick={() => router.back()}
                 variant="ghost"
                 size="sm"
-                className="p-2"
+                className="p-1.5 sm:p-2 shrink-0"
               >
-                <ArrowLeft className="h-5 w-5" />
+                <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Study Plans</h1>
-                <p className="text-sm text-gray-600">Manage your personalized learning journey</p>
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-xl font-bold text-gray-900 truncate">Study Plans</h1>
+                <p className="text-xs sm:text-sm text-gray-600 hidden sm:block">Manage your learning journey</p>
               </div>
             </div>
             <Button
               onClick={() => router.push('/student/study-plan')}
-              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shrink-0 text-xs sm:text-sm px-2 sm:px-4 py-1.5 sm:py-2"
+              size="sm"
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Create New Plan
+              <Plus className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Create New Plan</span>
+              <span className="sm:hidden">New</span>
             </Button>
           </div>
         </div>
       </div>
 
-      <div className="px-4 py-6">
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="px-3 sm:px-4 py-4 sm:py-6">
+        {/* Stats Overview - 2 columns on mobile, 4 on desktop */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-8">
           <FloatingCard delay={0.1}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-3 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                 <div>
-                  <p className="text-sm text-gray-600">Total Plans</p>
-                  <p className="text-2xl font-bold text-gray-900">{studyPlans.length}</p>
+                  <p className="text-xs sm:text-sm text-gray-600">Total Plans</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{studyPlans.length}</p>
                 </div>
-                <div className="p-3 bg-blue-100 rounded-full">
-                  <BookOpen className="h-6 w-6 text-blue-600" />
+                <div className="p-2 sm:p-3 bg-blue-100 rounded-full">
+                  <BookOpen className="h-4 w-4 sm:h-6 sm:w-6 text-blue-600" />
                 </div>
               </div>
             </CardContent>
           </FloatingCard>
 
           <FloatingCard delay={0.2}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-3 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                 <div>
-                  <p className="text-sm text-gray-600">Active Plans</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-xs sm:text-sm text-gray-600">Active Plans</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">
                     {studyPlans.filter(p => p.isActive && p.progress < 100).length}
                   </p>
                 </div>
-                <div className="p-3 bg-green-100 rounded-full">
-                  <Play className="h-6 w-6 text-green-600" />
+                <div className="p-2 sm:p-3 bg-green-100 rounded-full">
+                  <Play className="h-4 w-4 sm:h-6 sm:w-6 text-green-600" />
                 </div>
               </div>
             </CardContent>
           </FloatingCard>
 
           <FloatingCard delay={0.3}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-3 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                 <div>
-                  <p className="text-sm text-gray-600">Completed</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-xs sm:text-sm text-gray-600">Completed</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">
                     {studyPlans.filter(p => p.progress >= 100).length}
                   </p>
                 </div>
-                <div className="p-3 bg-purple-100 rounded-full">
-                  <Award className="h-6 w-6 text-purple-600" />
+                <div className="p-2 sm:p-3 bg-purple-100 rounded-full">
+                  <Award className="h-4 w-4 sm:h-6 sm:w-6 text-purple-600" />
                 </div>
               </div>
             </CardContent>
           </FloatingCard>
 
           <FloatingCard delay={0.4}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-3 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                 <div>
-                  <p className="text-sm text-gray-600">Avg Progress</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-xs sm:text-sm text-gray-600">Avg Progress</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">
                     {studyPlans.length > 0 
                       ? Math.round(studyPlans.reduce((sum, p) => sum + p.progress, 0) / studyPlans.length)
                       : 0}%
                   </p>
                 </div>
-                <div className="p-3 bg-pink-100 rounded-full">
-                  <TrendingUp className="h-6 w-6 text-pink-600" />
+                <div className="p-2 sm:p-3 bg-pink-100 rounded-full">
+                  <TrendingUp className="h-4 w-4 sm:h-6 sm:w-6 text-pink-600" />
                 </div>
               </div>
             </CardContent>
           </FloatingCard>
         </div>
 
-        {/* Tabs */}
-        <div className="flex space-x-1 bg-white/50 p-1 rounded-lg mb-6 w-fit">
-          {[
-            { id: 'active', label: 'Active Plans', count: studyPlans.filter(p => p.isActive && p.progress < 100).length },
-            { id: 'completed', label: 'Completed', count: studyPlans.filter(p => p.progress >= 100).length },
-            { id: 'all', label: 'All Plans', count: studyPlans.length }
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                activeTab === tab.id
-                  ? 'bg-white text-purple-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              {tab.label} ({tab.count})
-            </button>
-          ))}
+        {/* Tabs - Scrollable on mobile */}
+        <div className="overflow-x-auto pb-2 mb-4 sm:mb-6 -mx-3 px-3 sm:mx-0 sm:px-0">
+          <div className="flex space-x-1 bg-white/50 p-1 rounded-lg w-fit min-w-full sm:min-w-0">
+            {[
+              { id: 'active', label: 'Active Plans', shortLabel: 'Active', count: studyPlans.filter(p => p.isActive && p.progress < 100).length },
+              { id: 'completed', label: 'Completed', shortLabel: 'Done', count: studyPlans.filter(p => p.progress >= 100).length },
+              { id: 'all', label: 'All Plans', shortLabel: 'All', count: studyPlans.length }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? 'bg-white text-purple-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 active:bg-white/50'
+                }`}
+              >
+                <span className="hidden sm:inline">{tab.label} ({tab.count})</span>
+                <span className="sm:hidden">{tab.shortLabel} ({tab.count})</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Study Plans Grid */}
         {filteredPlans.length === 0 ? (
           <FloatingCard delay={0.5}>
-            <CardContent className="p-12 text-center">
-              <div className="text-6xl mb-4">📚</div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">
+            <CardContent className="p-6 sm:p-12 text-center">
+              <div className="text-4xl sm:text-6xl mb-3 sm:mb-4">📚</div>
+              <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">
                 {activeTab === 'active' ? 'No Active Plans' : 
                  activeTab === 'completed' ? 'No Completed Plans' : 'No Study Plans'}
               </h3>
-              <p className="text-gray-600 mb-6">
+              <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
                 {activeTab === 'active' 
                   ? 'Create your first study plan to start your learning journey!'
                   : activeTab === 'completed'
@@ -253,107 +258,107 @@ export default function StudyPlanDashboard() {
             </CardContent>
           </FloatingCard>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
             {filteredPlans.map((plan, index) => (
               <FloatingCard key={plan.id} delay={index * 0.1}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg font-bold text-gray-800 mb-1">
+                <CardHeader className="pb-2 sm:pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-base sm:text-lg font-bold text-gray-800 mb-1 truncate">
                         {plan.name}
                       </CardTitle>
-                      <p className="text-sm text-gray-600 line-clamp-2">{plan.goal}</p>
+                      <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">{plan.goal}</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                       {plan.progress >= 100 && (
-                        <Badge variant="default" className="bg-green-500">
-                          <Award className="h-3 w-3 mr-1" />
-                          Complete
+                        <Badge variant="default" className="bg-green-500 text-xs px-1.5 py-0.5">
+                          <Award className="h-2.5 w-2.5 sm:h-3 sm:w-3 sm:mr-1" />
+                          <span className="hidden sm:inline">Complete</span>
                         </Badge>
                       )}
                       {plan.isActive && plan.progress < 100 && (
-                        <Badge variant="default" className="bg-blue-500">
-                          <Play className="h-3 w-3 mr-1" />
-                          Active
+                        <Badge variant="default" className="bg-blue-500 text-xs px-1.5 py-0.5">
+                          <Play className="h-2.5 w-2.5 sm:h-3 sm:w-3 sm:mr-1" />
+                          <span className="hidden sm:inline">Active</span>
                         </Badge>
                       )}
                       {!plan.isActive && plan.progress < 100 && (
-                        <Badge variant="outline">
-                          <Pause className="h-3 w-3 mr-1" />
-                          Paused
+                        <Badge variant="outline" className="text-xs px-1.5 py-0.5">
+                          <Pause className="h-2.5 w-2.5 sm:h-3 sm:w-3 sm:mr-1" />
+                          <span className="hidden sm:inline">Paused</span>
                         </Badge>
                       )}
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-3 sm:space-y-4">
                   {/* Progress */}
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-gray-600">Progress</span>
-                      <span className="text-sm font-semibold text-gray-800">{plan.progress}%</span>
+                    <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                      <span className="text-xs sm:text-sm text-gray-600">Progress</span>
+                      <span className="text-xs sm:text-sm font-semibold text-gray-800">{plan.progress}%</span>
                     </div>
-                    <Progress value={plan.progress} className="h-2" />
+                    <Progress value={plan.progress} className="h-1.5 sm:h-2" />
                   </div>
 
                   {/* Stats */}
-                  <div className="grid grid-cols-3 gap-4 text-center">
+                  <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
                     <div>
-                      <div className="text-lg font-bold text-blue-600">{plan.subjects.length}</div>
-                      <div className="text-xs text-gray-600">Subjects</div>
+                      <div className="text-base sm:text-lg font-bold text-blue-600">{plan.subjects.length}</div>
+                      <div className="text-[10px] sm:text-xs text-gray-600">Subjects</div>
                     </div>
                     <div>
-                      <div className="text-lg font-bold text-purple-600">{plan.totalWeeklyHours}h</div>
-                      <div className="text-xs text-gray-600">Per Week</div>
+                      <div className="text-base sm:text-lg font-bold text-purple-600">{plan.totalWeeklyHours}h</div>
+                      <div className="text-[10px] sm:text-xs text-gray-600">Per Week</div>
                     </div>
                     <div>
-                      <div className="text-lg font-bold text-pink-600">{plan.sessions.length}</div>
-                      <div className="text-xs text-gray-600">Sessions</div>
+                      <div className="text-base sm:text-lg font-bold text-pink-600">{plan.sessions.length}</div>
+                      <div className="text-[10px] sm:text-xs text-gray-600">Sessions</div>
                     </div>
                   </div>
 
                   {/* Subjects Preview */}
                   <div>
-                    <div className="text-sm font-medium text-gray-700 mb-2">Subjects</div>
+                    <div className="text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">Subjects</div>
                     <div className="flex flex-wrap gap-1">
                       {plan.subjects.slice(0, 3).map((subject) => (
-                        <Badge key={subject.id} variant="outline" className="text-xs">
+                        <Badge key={subject.id} variant="outline" className="text-[10px] sm:text-xs px-1.5 py-0.5">
                           {subject.name}
                         </Badge>
                       ))}
                       {plan.subjects.length > 3 && (
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 py-0.5">
                           +{plan.subjects.length - 3} more
                         </Badge>
                       )}
                     </div>
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex gap-2 pt-2">
+                  {/* Actions - Touch-optimized */}
+                  <div className="flex gap-1.5 sm:gap-2 pt-2">
                     <Button
                       onClick={() => router.push(`/student/study-plan/${plan.id}`)}
-                      className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                      className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 active:scale-95 transition-transform"
                       size="sm"
                     >
-                      <BookOpen className="h-4 w-4 mr-1" />
-                      View Plan
+                      <BookOpen className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                      <span className="text-xs sm:text-sm">View</span>
                     </Button>
                     <Button
                       onClick={() => togglePlanStatus(plan.id)}
                       variant="outline"
                       size="sm"
-                      className="px-3"
+                      className="px-2 sm:px-3 active:scale-95 transition-transform"
                     >
-                      {plan.isActive ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                      {plan.isActive ? <Pause className="h-3 w-3 sm:h-4 sm:w-4" /> : <Play className="h-3 w-3 sm:h-4 sm:w-4" />}
                     </Button>
                     <Button
                       onClick={() => deletePlan(plan.id)}
                       variant="outline"
                       size="sm"
-                      className="px-3 text-red-500 hover:text-red-700"
+                      className="px-2 sm:px-3 text-red-500 hover:text-red-700 active:scale-95 transition-transform"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                     </Button>
                   </div>
                 </CardContent>

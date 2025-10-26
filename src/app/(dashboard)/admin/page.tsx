@@ -38,6 +38,10 @@ import { useAppSelector, useAppDispatch } from '@/lib/redux/hooks'
 import { signOut } from '@/lib/redux/slices/authSlice'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+// import { SchoolSystemReportModal, ReportType } from '@/components/admin/school-system-report-modal'
+// import { TroubleshootIssueModal } from '@/components/admin/troubleshoot-issue-modal'
+// import { FloatingHelpButton } from '@/components/ui/floating-help-button'
+import { OfflineAPI } from '@/lib/api/offline-wrapper'
 
 interface SchoolInfo {
   id: string
@@ -86,7 +90,7 @@ function AdminDashboardContent() {
     needsSupport: 0,
     atRisk: 0
   })
-  const [isLoading, setIsLoading] = useState(false) // Changed to false by default
+  const [isLoading, setIsLoading] = useState(false) 
   const [error, setError] = useState<string | null>(null)
   const [featureLoading, setFeatureLoading] = useState<string | null>(null)
   const [showSetupBanner, setShowSetupBanner] = useState(false)
@@ -123,11 +127,25 @@ function AdminDashboardContent() {
       try {
         setIsLoading(true)
         
-        // Check URL parameters for setup completion
+        // Check for setup completion parameter
         const urlParams = new URLSearchParams(window.location.search)
         const setupCompleted = urlParams.get('setup') === 'completed'
         
-        // Fetch school info
+        // Try OfflineAPI first for PWA support
+        try {
+          const adminData = await OfflineAPI.fetchAdminDashboard()
+          if (adminData) {
+            setSchoolInfo(adminData.school)
+            setSchoolStats(adminData.stats)
+            setDataFetched(true)
+            setIsLoading(false)
+            return
+          }
+        } catch (offlineError) {
+          console.log('[Admin] OfflineAPI failed, using regular fetch:', offlineError)
+        }
+        
+        // Fallback to regular fetch
         const schoolResponse = await fetch('/api/admin/school')
         if (!schoolResponse.ok) {
           const errorData = await schoolResponse.json().catch(() => ({ message: 'Unknown error' }))

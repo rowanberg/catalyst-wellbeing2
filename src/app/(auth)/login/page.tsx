@@ -14,6 +14,7 @@ import { handleError } from '@/lib/utils/errorHandling'
 import Link from 'next/link'
 import { Eye, EyeOff, AlertCircle, GraduationCap, Mail, Lock, Moon, Sun, AlertTriangle, ArrowLeft } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
+import { PWAMiniPrompt } from '@/components/ui/pwa-mini-prompt'
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -302,6 +303,7 @@ export default function LoginPage() {
   }
 
   return (
+    <>
     <div className="min-h-screen w-full flex flex-col lg:flex-row lg:h-screen lg:overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 relative transition-colors duration-300">
       {/* Optimized geometric background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -673,5 +675,7 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+    <PWAMiniPrompt />
+    </>
   )
 }

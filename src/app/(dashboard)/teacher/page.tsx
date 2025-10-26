@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, Suspense } from 'react'
+import React, { useState, useEffect, useRef, Suspense, useMemo, useCallback, memo } from 'react'
 import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AnimatedProgressBar } from '@/components/ui/animated-progress-bar'
-import { FloatingParticles } from '@/components/ui/floating-particles'
+import { detectDevicePerformance, getAnimationConfig } from '@/lib/utils/devicePerformance'
 
 // Dynamic imports for heavy components (lazy load on demand)
 const GradeBasedStudentRoster = dynamic(() => import('@/components/teacher/GradeBasedStudentRoster'), {
@@ -28,6 +28,9 @@ const ParentCommunicationSystem = dynamic(() => import('@/components/teacher/par
 })
 const InteractiveActivitiesSystem = dynamic(() => import('@/components/teacher/interactive-activities-system'), {
   loading: () => <div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div>
+})
+const TeacherCommunityPage = dynamic(() => import('./community/page').then(mod => ({ default: mod.default })), {
+  loading: () => <div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div></div>
 })
 const UpdateResultsSystem = dynamic(() => import('@/components/teacher/UpdateResultsSystem'), {
   loading: () => <div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-600"></div></div>
@@ -80,7 +83,6 @@ import {
   X
 } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
-import { MessagingNavButton } from '@/components/ui/messaging-nav-button'
 import { ProfileDropdown } from '@/components/ui/profile-dropdown'
 import { useAppSelector } from '@/lib/redux/hooks'
 import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
@@ -144,6 +146,22 @@ function TeacherDashboardContent() {
 }
 
 function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any }) {
+  // Device performance detection
+  const devicePerf = useMemo(() => detectDevicePerformance(), [])
+  const animConfig = useMemo(() => getAnimationConfig(devicePerf.mode), [devicePerf.mode])
+  
+  // Conditional Motion wrapper - memoized for performance
+  const ConditionalMotion = useMemo(() => {
+    const Component = memo(({ children, ...props }: any) => {
+      if (!animConfig.enableAnimations) {
+        return <div {...(props.className ? { className: props.className } : {})}>{children}</div>
+      }
+      return <motion.div {...props}>{children}</motion.div>
+    })
+    Component.displayName = 'ConditionalMotion'
+    return Component
+  }, [animConfig.enableAnimations])
+  
   const [students, setStudents] = useState<StudentOverview[]>([])
   const [analytics, setAnalytics] = useState<ClassAnalytics>({
     totalStudents: 0,
@@ -164,7 +182,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
   const [isDataFetching, setIsDataFetching] = useState(false) // Prevent concurrent API calls
   const fetchingRef = useRef(false) // More reliable concurrent call protection
   const [dataFetched, setDataFetched] = useState(false)
-  const [activeTab, setActiveTab] = useState<'analytics' | 'overview' | 'roster' | 'incidents' | 'shoutouts' | 'interventions' | 'quests' | 'messaging' | 'blackmarks' | 'activities' | 'communication' | 'settings' | 'results'>('overview')
+  const [activeTab, setActiveTab] = useState<'analytics' | 'overview' | 'roster' | 'community' | 'incidents' | 'shoutouts' | 'interventions' | 'quests' | 'blackmarks' | 'activities' | 'communication' | 'settings' | 'results'>('overview')
   const [notifications, setNotifications] = useState<Array<{id: string, message: string, type: 'success' | 'error' | 'warning' | 'info'}>>([])
   const [realTimeData, setRealTimeData] = useState({
     newHelpRequests: 0,
@@ -174,35 +192,27 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
   const [selectedStudent, setSelectedStudent] = useState<StudentOverview | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
+  // Optimized real-time notifications with longer interval
   useEffect(() => {
-    // Only set up interval after initial load
     if (!user || !profile) return
 
     const interval = setInterval(() => {
-      // Simulate real-time events without fetching data
-      const randomEvents = [
-        { type: 'help_request', message: 'New help request from student' },
-        { type: 'quest_completed', message: 'Student completed a quest!' },
-        { type: 'mood_update', message: 'Student mood updated' }
-      ]
+      // Only update if user is on overview tab
+      if (activeTab !== 'overview') return
       
-      if (Math.random() > 0.8) { // Reduced to 20% chance
-        const event = randomEvents[Math.floor(Math.random() * randomEvents.length)]
-        const notificationType = event.type === 'help_request' ? 'warning' : 'info'
-        addNotification(event.message, notificationType)
-        
-        // Update real-time counters
-        setRealTimeData(prev => ({
-          ...prev,
-          newHelpRequests: event.type === 'help_request' ? prev.newHelpRequests + 1 : prev.newHelpRequests,
-          completedQuests: event.type === 'quest_completed' ? prev.completedQuests + 1 : prev.completedQuests,
-          recentActivity: prev.recentActivity + 1
-        }))
+      if (Math.random() > 0.85) { // Reduced to 15% chance
+        const events = [
+          { type: 'help_request', message: 'New help request from student' },
+          { type: 'quest_completed', message: 'Student completed a quest!' },
+          { type: 'mood_update', message: 'Student mood updated' }
+        ]
+        const event = events[Math.floor(Math.random() * events.length)]
+        addNotification(event.message, event.type === 'help_request' ? 'warning' : 'info')
       }
-    }, 30000) // Increased to 30 seconds
+    }, 45000) // Increased to 45 seconds
 
     return () => clearInterval(interval)
-  }, [user, profile])
+  }, [user, profile, activeTab])
 
   const addNotification = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
     const id = Date.now().toString()
@@ -214,22 +224,29 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
     }, 5000)
   }
 
+  // Optimized data loading with cache validation
   useEffect(() => {
-    // Check if data is already cached in sessionStorage
-    const cachedAnalytics = sessionStorage.getItem('teacher_analytics')
-    const cachedStudents = sessionStorage.getItem('teacher_students')
+    const cacheKey = `teacher_cache_${user?.id}`
+    const cached = sessionStorage.getItem(cacheKey)
+    const cacheTimestamp = sessionStorage.getItem(`${cacheKey}_timestamp`)
+    const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
     
-    if (cachedAnalytics && cachedStudents) {
-      // Use cached data
-      setAnalytics(JSON.parse(cachedAnalytics))
-      setStudents(JSON.parse(cachedStudents))
-      setDataFetched(true)
+    if (cached && cacheTimestamp) {
+      const age = Date.now() - parseInt(cacheTimestamp)
+      if (age < CACHE_DURATION) {
+        const data = JSON.parse(cached)
+        setAnalytics(data.analytics)
+        setStudents(data.students)
+        setDataFetched(true)
+        setLoading(false)
+        return
+      }
     }
-    // Only fetch if we don't have cached data
-    if (!dataFetched && user && profile && user.id && profile.user_id) {
+    
+    if (!dataFetched && user?.id && profile?.user_id) {
       fetchClassData()
     }
-  }, [])
+  }, [user?.id, profile?.user_id])
 
   // Add a timeout to prevent infinite loading
   useEffect(() => {
@@ -287,9 +304,10 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
         const studentsData = combinedData.students || []
         setStudents(studentsData)
         
-        // Cache the data in sessionStorage
-        sessionStorage.setItem('teacher_analytics', JSON.stringify(analyticsData))
-        sessionStorage.setItem('teacher_students', JSON.stringify(studentsData))
+        // Cache with timestamp for expiration
+        const cacheKey = `teacher_cache_${user.id}`
+        sessionStorage.setItem(cacheKey, JSON.stringify({ analytics: analyticsData, students: studentsData }))
+        sessionStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString())
         
         setDataFetched(true)
       } else {
@@ -337,67 +355,8 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
     }
   }
 
-  if ((loading && !dataFetched) || !profile) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-        <div className="text-center">
-          <motion.div
-            className="relative w-16 h-16 mx-auto mb-6"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            <motion.div
-              className="absolute inset-0 border-4 border-blue-200 rounded-full"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-            />
-            <motion.div
-              className="absolute inset-2 border-4 border-transparent border-t-blue-500 border-r-purple-500 rounded-full"
-              animate={{ rotate: -360 }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-            />
-            <motion.div
-              className="absolute inset-0 flex items-center justify-center"
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              <GraduationCap className="w-6 h-6 text-blue-600" />
-            </motion.div>
-          </motion.div>
-          <motion.p 
-            className="text-slate-600 font-medium text-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            Loading your dashboard...
-          </motion.p>
-          <motion.div
-            className="flex justify-center mt-3 space-x-1"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-          >
-            {[0, 1, 2].map((i) => (
-              <motion.div
-                key={i}
-                className="w-2 h-2 bg-blue-400 rounded-full"
-                animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
-                transition={{
-                  duration: 1.5,
-                  repeat: Infinity,
-                  delay: i * 0.2,
-                }}
-              />
-            ))}
-          </motion.div>
-        </div>
-      </div>
-    )
-  }
-
-  const getMoodIcon = (mood: string) => {
+  // Memoized helper functions - MUST be before any early returns
+  const getMoodIcon = useCallback((mood: string) => {
     switch (mood) {
       case 'happy': return <Smile className="h-4 w-4 text-yellow-500" />
       case 'excited': return <Zap className="h-4 w-4 text-orange-500" />
@@ -407,12 +366,162 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
       case 'anxious': return <Brain className="h-4 w-4 text-purple-500" />
       default: return <Meh className="h-4 w-4 text-gray-400" />
     }
+  }, [])
+
+  // Memoized stat cards data
+  const statCards = useMemo(() => [
+    { 
+      icon: Users, 
+      label: 'My Students', 
+      value: analytics.totalStudents, 
+      color: 'from-blue-600 to-indigo-600', 
+      bgColor: 'from-blue-50 to-indigo-50',
+      trend: '+12%',
+      description: 'Assigned to my classes',
+      iconBg: 'from-blue-500 to-indigo-500'
+    },
+    { 
+      icon: TrendingUp, 
+      label: 'Average XP', 
+      value: analytics.averageXP, 
+      color: 'from-emerald-600 to-teal-600', 
+      bgColor: 'from-emerald-50 to-teal-50',
+      trend: '+12%',
+      description: 'Across all my classes',
+      iconBg: 'from-emerald-500 to-teal-500'
+    },
+    { 
+      icon: Heart, 
+      label: 'Active Today', 
+      value: analytics.activeToday, 
+      color: 'from-rose-600 to-pink-600', 
+      bgColor: 'from-rose-50 to-pink-50',
+      trend: '+8%',
+      description: 'Students online today',
+      iconBg: 'from-rose-500 to-pink-500'
+    },
+    { 
+      icon: AlertTriangle, 
+      label: 'Help Requests', 
+      value: analytics.helpRequests, 
+      color: 'from-amber-600 to-orange-600', 
+      bgColor: 'from-amber-50 to-orange-50',
+      trend: '-3%',
+      description: 'From my students',
+      iconBg: 'from-amber-500 to-orange-500'
+    }
+  ], [analytics])
+
+  // Memoized quick actions
+  const quickActions = useMemo(() => [
+    { 
+      icon: Star, 
+      label: 'Send Shout-out', 
+      description: 'Recognize student achievements', 
+      color: 'from-amber-500 to-orange-500',
+      bgColor: 'from-amber-50 to-orange-50',
+      iconColor: 'from-amber-400 to-orange-400',
+      action: () => setActiveTab('shoutouts'),
+      stats: '12 this week'
+    },
+    { 
+      icon: BarChart3, 
+      label: 'Update Results', 
+      description: 'Grade entry & analytics hub', 
+      color: 'from-emerald-600 to-teal-500',
+      bgColor: 'from-emerald-50 to-teal-50',
+      iconColor: 'from-emerald-500 to-teal-400',
+      action: () => window.open('/teacher/update-results', '_blank'),
+      stats: '5 pending'
+    },
+    { 
+      icon: Trophy, 
+      label: 'Create Quest', 
+      description: 'Design learning challenges', 
+      color: 'from-rose-500 to-pink-600',
+      bgColor: 'from-rose-50 to-pink-50',
+      iconColor: 'from-rose-400 to-pink-500',
+      action: () => setActiveTab('quests'),
+      stats: '5 active quests'
+    },
+    { 
+      icon: AlertTriangle, 
+      label: 'Black Marks', 
+      description: 'Manage disciplinary records', 
+      color: 'from-red-600 to-rose-600',
+      bgColor: 'from-red-50 to-rose-50',
+      iconColor: 'from-red-500 to-rose-500',
+      action: () => setActiveTab('blackmarks'),
+      stats: '2 pending'
+    }
+  ], [])
+
+  // Skeleton loader component
+  const SkeletonCard = memo(() => (
+    <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-4 sm:p-6 animate-pulse">
+      <div className="flex items-start justify-between mb-4">
+        <div className="w-12 h-12 bg-gray-200 rounded-xl" />
+        <div className="w-16 h-6 bg-gray-200 rounded-full" />
+      </div>
+      <div className="space-y-2">
+        <div className="w-24 h-4 bg-gray-200 rounded" />
+        <div className="w-16 h-8 bg-gray-200 rounded" />
+        <div className="w-32 h-3 bg-gray-200 rounded" />
+      </div>
+    </div>
+  ))
+  SkeletonCard.displayName = 'SkeletonCard'
+
+  if (loading) {
+    return (
+      <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 min-h-screen">
+        {/* Header Skeleton */}
+        <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 shadow-sm">
+          <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2 flex-1">
+                <div className="w-48 h-8 bg-gray-200 rounded animate-pulse" />
+                <div className="w-32 h-4 bg-gray-200 rounded animate-pulse" />
+              </div>
+              <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
+            </div>
+          </div>
+        </div>
+        
+        {/* Content Skeleton */}
+        <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 h-64 animate-pulse">
+              <div className="w-40 h-6 bg-gray-200 rounded mb-4" />
+              <div className="space-y-3">
+                <div className="w-full h-4 bg-gray-200 rounded" />
+                <div className="w-full h-4 bg-gray-200 rounded" />
+                <div className="w-3/4 h-4 bg-gray-200 rounded" />
+              </div>
+            </div>
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 h-64 animate-pulse">
+              <div className="w-40 h-6 bg-gray-200 rounded mb-4" />
+              <div className="space-y-3">
+                <div className="w-full h-4 bg-gray-200 rounded" />
+                <div className="w-full h-4 bg-gray-200 rounded" />
+                <div className="w-3/4 h-4 bg-gray-200 rounded" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative min-h-screen flex overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-indigo-500/5 to-purple-500/5" />
-      <FloatingParticles count={20} className="fixed inset-0 z-0" />
       
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
@@ -464,7 +573,6 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
             { id: 'results', label: 'Update Results', icon: BarChart3, color: 'text-emerald-600', bgColor: 'bg-emerald-50' },
             { id: 'quests', label: 'Quests', icon: Trophy, color: 'text-rose-500', bgColor: 'bg-rose-50' },
             { id: 'blackmarks', label: 'Black Marks', icon: AlertTriangle, color: 'text-red-600', bgColor: 'bg-red-50' },
-            { id: 'messaging', label: 'Messages', icon: MessageCircle, color: 'text-indigo-600', bgColor: 'bg-indigo-50' },
             { id: 'incidents', label: 'Incidents', icon: Shield, color: 'text-slate-600', bgColor: 'bg-slate-50' }
           ].map((item) => {
             const Icon = item.icon
@@ -474,7 +582,18 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                 key={item.id}
                 onClick={() => {
                   if (item.isLink && item.href) {
-                    window.location.href = item.href
+                    // Special handling for Community: full screen on mobile, inline on desktop
+                    if (item.id === 'community') {
+                      const isMobile = window.innerWidth < 1024 // lg breakpoint
+                      if (isMobile) {
+                        window.location.href = item.href
+                      } else {
+                        setActiveTab(item.id as any)
+                        setSidebarOpen(false)
+                      }
+                    } else {
+                      window.location.href = item.href
+                    }
                   } else {
                     setActiveTab(item.id as any)
                     setSidebarOpen(false)
@@ -511,11 +630,6 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
         
         {/* Sidebar Footer */}
         <div className="p-3 sm:p-4 border-t border-gray-200/50 space-y-2">
-          {/* Mobile Messaging Button */}
-          <div className="sm:hidden">
-            <MessagingNavButton userRole="teacher" variant="outline" compact />
-          </div>
-          
           <Button 
             variant="outline" 
             size="sm" 
@@ -559,73 +673,56 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col relative z-10 lg:ml-0 min-w-0 overflow-hidden">
-        {/* Professional Header */}
-        <header className="bg-gradient-to-r from-slate-50 via-gray-50 to-blue-50 backdrop-blur-2xl border-b border-gray-300/60 shadow-sm relative z-30">
-          <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
+        {/* Enhanced Header with Time-Based Greeting */}
+        <header className="bg-gradient-to-r from-white via-blue-50/30 to-white border-b border-gray-200 shadow-sm relative z-30">
+          <div className="px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                 {/* Mobile Menu Button */}
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="lg:hidden p-2.5 hover:bg-gray-100 rounded-xl flex-shrink-0 transition-colors"
+                  className="lg:hidden p-2 hover:bg-gray-100 rounded-lg flex-shrink-0"
                   onClick={() => setSidebarOpen(!sidebarOpen)}
                 >
-                  {sidebarOpen ? <X className="h-5 w-5 text-gray-600" /> : <Menu className="h-5 w-5 text-gray-600" />}
+                  <Menu className="h-5 w-5 text-gray-600" />
                 </Button>
                 
                 <div className="min-w-0 flex-1">
-                  <motion.h1 
-                    className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 truncate"
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6 }}
-                  >
-                    <span className="hidden sm:inline">Welcome back, {profile?.first_name || 'Teacher'}</span>
-                    <span className="sm:hidden">Welcome, {profile?.first_name || 'Teacher'}</span>
-                  </motion.h1>
-                  <motion.div 
-                    className="text-sm sm:text-base text-gray-600 flex items-center gap-2 mt-1"
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.2 }}
-                  >
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                    <span className="hidden sm:inline font-medium">
-                      {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                    </span>
-                    <span className="sm:hidden font-medium">
-                      {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </span>
-                  </motion.div>
+                  <h1 className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent truncate">
+                    {(() => {
+                      const hour = new Date().getHours()
+                      const firstName = profile?.first_name || 'Teacher'
+                      if (hour < 12) return `Good Morning, ${firstName}! ☀️`
+                      if (hour < 17) return `Good Afternoon, ${firstName}! 🌤️`
+                      return `Good Evening, ${firstName}! 🌙`
+                    })()}
+                  </h1>
+                  <p className="text-xs sm:text-sm text-gray-600 font-medium flex items-center gap-2">
+                    <span className="hidden sm:inline">Ready to inspire young minds today</span>
+                    <span className="sm:hidden">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                    <span className="hidden sm:inline text-gray-400">•</span>
+                    <span className="hidden sm:inline">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+                  </p>
                 </div>
               </div>
               
-              <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
-                {/* Mobile Stats Badge */}
-                <div className="flex sm:hidden items-center space-x-2 px-3 py-2 bg-blue-50 rounded-xl border border-blue-200/50">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span className="text-sm font-semibold text-gray-700">{analytics.activeToday}</span>
-                </div>
-                
-                {/* Desktop Stats */}
-                <div className="hidden md:flex items-center space-x-5 px-4 py-2.5 bg-gray-50/80 rounded-xl border border-gray-200/80 backdrop-blur-sm">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full"></div>
-                    <span className="text-sm font-semibold text-gray-700">{analytics.activeToday} Active</span>
+              <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                {/* Compact Stats - Mobile & Desktop */}
+                <div className="hidden sm:flex items-center gap-3 px-3 py-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200/50">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm font-semibold text-gray-700">{analytics.activeToday}</span>
+                    <span className="text-xs text-gray-600">active</span>
                   </div>
-                  <div className="w-px h-5 bg-gray-300"></div>
-                  <div className="flex items-center space-x-2">
-                    <Bell className="h-4 w-4 text-amber-600" />
+                  <div className="w-px h-4 bg-blue-300"></div>
+                  <div className="flex items-center gap-1.5">
+                    <Bell className="h-3.5 w-3.5 text-amber-600" />
                     <span className="text-sm font-semibold text-gray-700">{analytics.helpRequests}</span>
+                    <span className="text-xs text-gray-600">requests</span>
                   </div>
                 </div>
                 
-                <div className="hidden sm:block">
-                  <MessagingNavButton userRole="teacher" />
-                </div>
-                
-                {/* Professional Profile Dropdown */}
                 <ProfileDropdown />
               </div>
             </div>
@@ -638,68 +735,26 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
 
           {/* Tab Content */}
           <div className="min-h-[300px] sm:min-h-[400px]">
-          <AnimatePresence>
+          <AnimatePresence mode="wait">
             {activeTab === 'overview' && (
-              <motion.div
+              <ConditionalMotion
                 key="overview"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
+                initial={animConfig.enableAnimations ? { opacity: 0, y: 20 } : false}
+                animate={animConfig.enableAnimations ? { opacity: 1, y: 0 } : false}
+                exit={animConfig.enableAnimations ? { opacity: 0, y: -20 } : false}
+                transition={{ duration: animConfig.animationDuration }}
                 className="space-y-4 sm:space-y-6 lg:space-y-8"
               >
-                {/* Enhanced Analytics Cards - Mobile 2x2 Layout */}
+                {/* Optimized Analytics Cards - Mobile 2x2 Layout */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-                {[
-                  { 
-                    icon: Users, 
-                    label: 'My Students', 
-                    value: analytics.totalStudents, 
-                    color: 'from-blue-600 to-indigo-600', 
-                    bgColor: 'from-blue-50 to-indigo-50',
-                    trend: '+12%',
-                    description: 'Assigned to my classes',
-                    iconBg: 'from-blue-500 to-indigo-500'
-                  },
-                  { 
-                    icon: TrendingUp, 
-                    label: 'Average XP', 
-                    value: analytics.averageXP, 
-                    color: 'from-emerald-600 to-teal-600', 
-                    bgColor: 'from-emerald-50 to-teal-50',
-                    trend: '+12%',
-                    description: 'Across all my classes',
-                    iconBg: 'from-emerald-500 to-teal-500'
-                  },
-                  { 
-                    icon: Heart, 
-                    label: 'Active Today', 
-                    value: analytics.activeToday, 
-                    color: 'from-rose-600 to-pink-600', 
-                    bgColor: 'from-rose-50 to-pink-50',
-                    trend: '+8%',
-                    description: 'Students online today',
-                    iconBg: 'from-rose-500 to-pink-500'
-                  },
-                  { 
-                    icon: AlertTriangle, 
-                    label: 'Help Requests', 
-                    value: analytics.helpRequests, 
-                    color: 'from-amber-600 to-orange-600', 
-                    bgColor: 'from-amber-50 to-orange-50',
-                    trend: '-3%',
-                    description: 'From my students',
-                    iconBg: 'from-amber-500 to-orange-500'
-                  }
-                ].map((stat, index) => {
+                {statCards.map((stat, index) => {
                   const Icon = stat.icon
                   return (
-                    <motion.div
+                    <ConditionalMotion
                       key={stat.label}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      whileHover={{ scale: 1.03, y: -4 }}
-                      className="group"
+                      initial={animConfig.enableAnimations ? { opacity: 0, y: 20 } : false}
+                      animate={animConfig.enableAnimations ? { opacity: 1, y: 0 } : false}
+                      transition={{ delay: animConfig.enableAnimations ? index * 0.05 : 0, duration: animConfig.animationDuration }}
                     >
                       <Card className="bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-xl border border-white/20 shadow-2xl hover:shadow-3xl transition-all duration-700 overflow-hidden relative group">
                         <div className={`absolute inset-0 bg-gradient-to-br ${stat.bgColor} opacity-50 group-hover:opacity-70 transition-opacity duration-500`} />
@@ -708,193 +763,92 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                           {/* Mobile 2x2 Optimized Layout */}
                           <div className="lg:hidden">
                             <div className="text-center space-y-2">
-                              <motion.div 
-                                className={`w-10 h-10 mx-auto rounded-xl bg-gradient-to-r ${stat.iconBg} text-white shadow-lg flex items-center justify-center`}
-                                whileHover={{ scale: 1.05, rotate: 5 }}
-                                transition={{ duration: 0.3 }}
-                              >
+                              <div className={`w-10 h-10 mx-auto rounded-xl bg-gradient-to-r ${stat.iconBg} text-white shadow-lg flex items-center justify-center`}>
                                 <Icon className="h-5 w-5" />
-                              </motion.div>
+                              </div>
                               
                               <div>
-                                <motion.p 
-                                  className="text-xl sm:text-2xl font-bold text-gray-900"
-                                  key={stat.value}
-                                  initial={{ scale: 1.1, opacity: 0 }}
-                                  animate={{ scale: 1, opacity: 1 }}
-                                  transition={{ type: "spring", bounce: 0.3 }}
-                                >
+                                <p className="text-xl sm:text-2xl font-bold text-gray-900">
                                   {stat.value}
-                                </motion.p>
+                                </p>
                                 <p className="text-xs font-semibold text-gray-700 truncate">{stat.label}</p>
                                 <p className="text-xs text-gray-500 truncate leading-tight">{stat.description}</p>
                               </div>
                               
-                              <motion.div 
-                                className={`inline-flex px-2 py-1 rounded-full text-xs font-bold ${
-                                  stat.trend.startsWith('+') 
-                                    ? 'bg-emerald-100 text-emerald-700' 
-                                    : stat.trend.startsWith('-')
-                                    ? 'bg-rose-100 text-rose-700'
-                                    : 'bg-gray-100 text-gray-700'
-                                }`}
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                transition={{ delay: index * 0.1 + 0.2 }}
-                              >
+                              <div className={`inline-flex px-2 py-1 rounded-full text-xs font-bold ${
+                                stat.trend.startsWith('+') 
+                                  ? 'bg-emerald-100 text-emerald-700' 
+                                  : 'bg-rose-100 text-rose-700'
+                              }`}>
                                 {stat.trend}
-                              </motion.div>
+                              </div>
                             </div>
                           </div>
                           
                           {/* Desktop Layout */}
                           <div className="hidden lg:block">
                             <div className="flex items-start justify-between mb-3 sm:mb-4">
-                              <motion.div 
-                                className={`p-2 sm:p-3 rounded-2xl bg-gradient-to-r ${stat.iconBg} text-white shadow-lg group-hover:shadow-2xl transition-all duration-300`}
-                                whileHover={{ rotate: [0, -10, 10, 0], scale: 1.1 }}
-                                transition={{ duration: 0.5 }}
-                              >
+                              <div className={`p-2 sm:p-3 rounded-2xl bg-gradient-to-r ${stat.iconBg} text-white shadow-lg group-hover:shadow-2xl transition-all duration-300`}>
                                 <Icon className="h-5 w-5 sm:h-7 sm:w-7" />
-                              </motion.div>
-                              <motion.div 
-                                className={`px-2 py-1 rounded-full text-xs font-semibold backdrop-blur-sm ${
+                              </div>
+                              <div className={`px-2 py-1 rounded-full text-xs font-semibold backdrop-blur-sm ${
                                   stat.trend.startsWith('+') 
                                     ? 'bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 border border-emerald-200' 
                                     : 'bg-gradient-to-r from-rose-100 to-red-100 text-rose-700 border border-rose-200'
-                                }`}
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                transition={{ delay: index * 0.1 + 0.3 }}
-                              >
+                                }`}>
                                 {stat.trend}
-                              </motion.div>
+                              </div>
                             </div>
                             <div className="space-y-1 sm:space-y-2">
                               <p className="text-xs sm:text-sm font-medium text-gray-600">{stat.label}</p>
-                              <motion.p 
-                                className="text-2xl sm:text-3xl font-bold text-gray-900"
-                                key={stat.value}
-                                initial={{ scale: 1.2, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                transition={{ type: "spring", bounce: 0.4 }}
-                              >
+                              <p className="text-2xl sm:text-3xl font-bold text-gray-900">
                                 {stat.value}
-                              </motion.p>
+                              </p>
                               <p className="text-xs text-gray-500">{stat.description}</p>
-                            </div>
-                            <div className="mt-3 sm:mt-4 h-2 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full overflow-hidden shadow-inner">
-                              <motion.div 
-                                className={`h-full bg-gradient-to-r ${stat.iconBg} rounded-full shadow-sm relative`}
-                                initial={{ width: 0 }}
-                                animate={{ width: `${Math.min(stat.value * 2, 100)}%` }}
-                                transition={{ delay: index * 0.2, duration: 1.5, ease: "easeOut" }}
-                              >
-                                <div className="absolute inset-0 bg-gradient-to-r from-white/30 to-transparent rounded-full" />
-                              </motion.div>
                             </div>
                           </div>
                         </CardContent>
                       </Card>
-                    </motion.div>
+                    </ConditionalMotion>
                   )
                 })}
               </div>
 
-              {/* Enhanced Quick Actions - Mobile 2x2 Layout */}
+              {/* Optimized Quick Actions - Mobile 2x2 Layout */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-4 lg:gap-6">
-                {[
-                  { 
-                    icon: Star, 
-                    label: 'Send Shout-out', 
-                    description: 'Recognize student achievements', 
-                    color: 'from-amber-500 to-orange-500',
-                    bgColor: 'from-amber-50 to-orange-50',
-                    iconColor: 'from-amber-400 to-orange-400',
-                    action: () => setActiveTab('shoutouts'),
-                    stats: '12 this week'
-                  },
-                  { 
-                    icon: BarChart3, 
-                    label: 'Update Results', 
-                    description: 'Grade entry & analytics hub', 
-                    color: 'from-emerald-600 to-teal-500',
-                    bgColor: 'from-emerald-50 to-teal-50',
-                    iconColor: 'from-emerald-500 to-teal-400',
-                    action: () => window.open('/teacher/update-results', '_blank'),
-                    stats: '5 pending'
-                  },
-                  { 
-                    icon: Trophy, 
-                    label: 'Create Quest', 
-                    description: 'Design learning challenges', 
-                    color: 'from-rose-500 to-pink-600',
-                    bgColor: 'from-rose-50 to-pink-50',
-                    iconColor: 'from-rose-400 to-pink-500',
-                    action: () => setActiveTab('quests'),
-                    stats: '5 active quests'
-                  },
-                  { 
-                    icon: AlertTriangle, 
-                    label: 'Black Marks', 
-                    description: 'Manage disciplinary records', 
-                    color: 'from-red-600 to-rose-600',
-                    bgColor: 'from-red-50 to-rose-50',
-                    iconColor: 'from-red-500 to-rose-500',
-                    action: () => setActiveTab('blackmarks'),
-                    stats: '2 pending'
-                  }
-                ].map((action, index) => {
+                {quickActions.map((action, index) => {
                   const Icon = action.icon
                   return (
                     <motion.button
                       key={action.label}
                       onClick={action.action}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.4 + index * 0.1 }}
-                      whileHover={{ scale: 1.03, y: -4 }}
-                      whileTap={{ scale: 0.97 }}
-                      className="p-3 sm:p-4 lg:p-6 bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-xl border border-white/20 rounded-xl sm:rounded-2xl shadow-xl sm:shadow-2xl hover:shadow-2xl sm:hover:shadow-3xl transition-all duration-700 text-left group relative overflow-hidden"
+                      initial={animConfig.enableAnimations ? { opacity: 0, y: 20 } : false}
+                      animate={animConfig.enableAnimations ? { opacity: 1, y: 0 } : false}
+                      transition={{ delay: 0.3 + index * 0.05 }}
+                      whileHover={animConfig.enableAnimations ? { scale: 1.02 } : undefined}
+                      whileTap={animConfig.enableAnimations ? { scale: 0.98 } : undefined}
+                      className="p-3 sm:p-4 lg:p-6 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 text-left group relative overflow-hidden"
                     >
-                      <div className={`absolute inset-0 bg-gradient-to-br ${action.bgColor} opacity-60 group-hover:opacity-80 transition-opacity duration-500`} />
-                      <div className={`absolute inset-0 bg-gradient-to-br ${action.color} opacity-0 group-hover:opacity-15 transition-opacity duration-500`} />
+                      <div className={`absolute inset-0 bg-gradient-to-br ${action.bgColor} opacity-50 group-hover:opacity-70 transition-opacity duration-300`} />
                       <div className="relative z-10">
-                        <div className="flex items-start justify-between mb-3 sm:mb-4">
-                          <motion.div 
-                            className={`p-2 sm:p-3 rounded-2xl bg-gradient-to-r ${action.iconColor} text-white shadow-lg group-hover:shadow-2xl transition-all duration-300`}
-                            whileHover={{ rotate: [0, -5, 5, 0], scale: 1.1 }}
-                            transition={{ duration: 0.4 }}
-                          >
-                            <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
-                          </motion.div>
-                          <motion.div 
-                            className="text-xs text-gray-600 font-medium bg-gradient-to-r from-white/80 to-white/60 backdrop-blur-sm px-2 py-1 rounded-full border border-white/30"
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ delay: index * 0.1 + 0.5 }}
-                          >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className={`p-2 sm:p-2.5 rounded-xl bg-gradient-to-r ${action.iconColor} text-white shadow-md transition-shadow duration-200 group-hover:shadow-lg`}>
+                            <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                          </div>
+                          <div className="text-xs text-gray-600 font-medium bg-white/80 px-2 py-1 rounded-full border border-gray-200">
                             {action.stats}
-                          </motion.div>
+                          </div>
                         </div>
-                        <div className="space-y-1 sm:space-y-2">
-                          <h3 className="text-base sm:text-lg font-semibold text-gray-900 group-hover:text-gray-800 transition-colors">
+                        <div className="space-y-1">
+                          <h3 className="text-sm sm:text-base font-semibold text-gray-900">
                             {action.label}
                           </h3>
-                          <p className="text-xs sm:text-sm text-gray-600 group-hover:text-gray-700 transition-colors">
+                          <p className="text-xs text-gray-600 line-clamp-2">
                             {action.description}
                           </p>
                         </div>
-                        <div className="mt-3 sm:mt-4 flex items-center justify-between">
-                          <div className="h-1 flex-1 bg-gradient-to-r from-gray-200 to-gray-300 rounded-full overflow-hidden mr-3">
-                            <motion.div 
-                              className={`h-full bg-gradient-to-r ${action.iconColor} rounded-full`}
-                              initial={{ width: 0 }}
-                              animate={{ width: "75%" }}
-                              transition={{ delay: index * 0.2 + 0.8, duration: 1 }}
-                            />
-                          </div>
-                          <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all duration-300" />
+                        <div className="mt-2 sm:mt-3 flex items-center justify-end">
+                          <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all duration-200" />
                         </div>
                       </div>
                     </motion.button>
@@ -1057,14 +1011,14 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                     <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl">
                       <div className="text-3xl font-bold text-purple-600 mb-2">78%</div>
                       <div className="text-sm font-medium text-purple-800">Participation Rate</div>
-                      <div className="mt-2 h-2 bg-purple-200 rounded-full">
+                      <div className="mt-2 h-1 bg-purple-200 rounded-full">
                         <div className="h-full w-3/4 bg-purple-500 rounded-full"></div>
                       </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-              </motion.div>
+              </ConditionalMotion>
             )}
 
             {activeTab === 'roster' && (
@@ -1110,6 +1064,18 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                 className="space-y-4 sm:space-y-8"
               >
                 <UpdateResultsSystem />
+              </motion.div>
+            )}
+
+            {activeTab === 'community' && (
+              <motion.div
+                key="community"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-4 sm:space-y-8"
+              >
+                <TeacherCommunityPage />
               </motion.div>
             )}
 

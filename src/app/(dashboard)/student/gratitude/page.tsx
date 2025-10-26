@@ -39,6 +39,7 @@ export default function GratitudeJournalPage() {
   const [showForm, setShowForm] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [gratitudeText, setGratitudeText] = useState('')
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [celebrationMessages] = useState([
     "🌟 You're amazing! Keep spreading positivity!",
     "💫 Your grateful heart makes a difference!",
@@ -113,6 +114,10 @@ export default function GratitudeJournalPage() {
     if (!user) return
 
     setIsLoading(true)
+    setSubmitError(null)
+    
+    console.log('Submitting gratitude entry:', data)
+    
     try {
       const response = await fetch('/api/student/gratitude', {
         method: 'POST',
@@ -124,36 +129,45 @@ export default function GratitudeJournalPage() {
 
       if (response.ok) {
         const result = await response.json()
+        console.log('Gratitude entry saved successfully:', result)
         
         // Show success message
         setShowSuccess(true)
-        setTimeout(() => setShowSuccess(false), 3000)
         
         // Update XP/gems in Redux
+        console.log('Updating XP and Gems:', result.xpGained, result.gemsGained)
         if (result.xpGained && result.gemsGained) {
           dispatch(updateXP(result.xpGained))
           dispatch(updateGems(result.gemsGained))
+        } else {
+          console.error('XP/Gems not returned from API:', result)
         }
         
-        // Reset form and hide modal
-        reset()
-        setShowForm(false)
-        setGratitudeText('')
-        
-        // Clear cache and refresh entries (skip cache to get fresh data)
+        // Clear cache
         const cacheKey = `gratitude_entries_${user.id}`
         const cacheTimestampKey = `${cacheKey}_timestamp`
         sessionStorage.removeItem(cacheKey)
         sessionStorage.removeItem(cacheTimestampKey)
         
-        fetchEntries(true) // Skip cache to ensure fresh data
+        // Fetch entries to update list
+        fetchEntries(true)
+        
+        // Reset form
+        reset()
+        setGratitudeText('')
+        
+        // Keep success message visible for 3 seconds, then reload page to show updated XP/Gems
+        setTimeout(() => {
+          window.location.reload()
+        }, 3000)
       } else {
         const errorData = await response.text()
         console.error('API Error:', response.status, errorData)
-        throw new Error(`Failed to save gratitude entry: ${response.status}`)
+        setSubmitError(`Failed to save entry (${response.status}). Please try again.`)
       }
     } catch (error: any) {
       console.error('Error saving gratitude entry:', error)
+      setSubmitError(error.message || 'An unexpected error occurred. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -218,33 +232,38 @@ export default function GratitudeJournalPage() {
           </div>
         )}
 
+        {/* Success Message - Full Width Banner */}
+        <AnimatePresence>
+          {showSuccess && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: -20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -20 }}
+              className="mb-4 sm:mb-6 bg-gradient-to-r from-green-400 via-emerald-500 to-green-400 text-white p-6 rounded-2xl shadow-2xl border-2 border-green-300"
+            >
+              <div className="text-center space-y-3">
+                <div className="flex items-center justify-center space-x-3">
+                  <Sparkles className="h-6 w-6 animate-bounce" />
+                  <span className="font-bold text-xl sm:text-2xl">🎉 Fantastic Work! 🎉</span>
+                  <Sparkles className="h-6 w-6 animate-bounce" />
+                </div>
+                <div className="text-base sm:text-lg font-semibold">
+                  You earned <strong className="text-yellow-200">+15 XP</strong> and <strong className="text-yellow-200">+3 Gems</strong>!
+                </div>
+                <div className="text-sm sm:text-base opacity-95">
+                  {celebrationMessages[Math.floor(Math.random() * celebrationMessages.length)]}
+                </div>
+                <div className="text-xs sm:text-sm mt-2 opacity-80">
+                  Refreshing your progress...
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Entry Form */}
         {showForm && (
           <Card className="mb-4 sm:mb-8 relative overflow-hidden">
-            <AnimatePresence>
-              {showSuccess && (
-                <motion.div
-                  initial={{ opacity: 0, y: -50 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -50 }}
-                  className="absolute top-0 left-0 right-0 bg-gradient-to-r from-green-400 to-emerald-500 text-white p-4 z-10"
-                >
-                  <div className="text-center space-y-2">
-                    <div className="flex items-center justify-center space-x-2">
-                      <Sparkles className="h-5 w-5 animate-pulse" />
-                      <span className="font-bold text-base sm:text-lg">🎉 Fantastic Work! 🎉</span>
-                      <Sparkles className="h-5 w-5 animate-pulse" />
-                    </div>
-                    <div className="text-sm sm:text-base">
-                      You earned <strong>+15 XP</strong> and <strong>+3 Gems</strong>!
-                    </div>
-                    <div className="text-xs sm:text-sm opacity-90">
-                      {celebrationMessages[Math.floor(Math.random() * celebrationMessages.length)]}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
             
             <CardHeader className="px-4 sm:px-6">
               <CardTitle className="text-lg sm:text-xl flex items-center">
@@ -274,6 +293,11 @@ export default function GratitudeJournalPage() {
                   </div>
                   {errors.content && (
                     <p className="text-sm text-red-600">{errors.content.message}</p>
+                  )}
+                  {submitError && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-sm text-red-600">{submitError}</p>
+                    </div>
                   )}
                 </div>
 

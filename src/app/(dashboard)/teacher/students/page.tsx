@@ -488,6 +488,7 @@ export default function TeacherStudentsPage() {
   const [showManageMode, setShowManageMode] = useState(false)
   const [deletingClass, setDeletingClass] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
+  const [expandedStudent, setExpandedStudent] = useState<string | null>(null)
 
   const { user } = useAppSelector((state) => state.auth)
 
@@ -2019,285 +2020,203 @@ export default function TeacherStudentsPage() {
                   <StudentSkeleton count={6} viewMode={viewMode} />
                 </div>
               ) : filteredAndSortedStudents.length > 0 ? (
-                <div className={`grid gap-4 sm:gap-6 ${
-                  viewMode === 'grid' 
-                    ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4' 
-                    : 'grid-cols-1'
-                }`}>
+                <div className="space-y-2">
                   {filteredAndSortedStudents.map((student: any, index: number) => (
                     <motion.div
                       key={student.id || `student-${index}`}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: index * 0.05 }}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.03 }}
                     >
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Card className={`group cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.01] border border-gray-200/50 bg-white/95 backdrop-blur-sm shadow-md hover:shadow-blue-200/30 overflow-hidden ${
-                            viewMode === 'list' ? 'p-0' : ''
-                          }`}>
-                            <CardContent className="p-0">
-                              {/* Compact Mobile Layout */}
-                              <div className="sm:hidden">
-                                <div className="bg-gradient-to-r from-blue-500 to-indigo-500 p-3">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                      <div className="relative">
-                                        <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                                          {(student.first_name || student.last_name || 'U').charAt(0).toUpperCase()}
-                                        </div>
-                                        <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full ${
-                                          student.wellbeing_status === 'thriving' ? 'bg-green-400' :
-                                          student.wellbeing_status === 'good' ? 'bg-blue-400' :
-                                          student.wellbeing_status === 'managing' ? 'bg-yellow-400' :
-                                          student.wellbeing_status === 'needs_support' ? 'bg-orange-400' :
-                                          'bg-gray-400'
-                                        }`}></div>
-                                      </div>
-                                      <div className="text-white min-w-0 flex-1">
-                                        <h3 className="font-semibold text-sm truncate">
-                                          {`${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unknown Student'}
-                                        </h3>
-                                        <p className="text-blue-100 text-xs opacity-90 truncate">{student.email || 'No email'}</p>
-                                      </div>
-                                    </div>
-                                    <div className="text-lg">{moodEmojis[student.current_mood] || '😐'}</div>
-                                  </div>
+                      <Card className="group cursor-pointer transition-all duration-200 border border-gray-200 bg-white hover:border-gray-300 hover:shadow-md overflow-hidden">
+                        <CardContent className="p-0">
+                          {/* Compact Row - Always Visible */}
+                          <div 
+                            className="flex items-center gap-3 p-3 sm:p-4"
+                            onClick={() => setExpandedStudent(expandedStudent === student.id ? null : student.id)}
+                          >
+                            {/* Avatar */}
+                            <div className="relative flex-shrink-0">
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center text-white font-bold text-sm sm:text-base shadow-sm">
+                                {(student.first_name || student.last_name || 'U').charAt(0).toUpperCase()}
+                              </div>
+                              <div className={`absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
+                                student.wellbeing_status === 'thriving' ? 'bg-green-500' :
+                                student.wellbeing_status === 'good' ? 'bg-blue-500' :
+                                student.wellbeing_status === 'managing' ? 'bg-yellow-500' :
+                                student.wellbeing_status === 'needs_support' ? 'bg-orange-500' :
+                                'bg-gray-400'
+                              }`}></div>
+                            </div>
+
+                            {/* Student Info - Flexible Layout */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">
+                                  {`${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unknown Student'}
+                                </h3>
+                                <span className="text-lg flex-shrink-0">{moodEmojis[student.current_mood] || '😐'}</span>
+                              </div>
+                              <p className="text-xs sm:text-sm text-gray-500 truncate">{student.email || 'No email'}</p>
+                            </div>
+
+                            {/* Quick Stats - Desktop */}
+                            <div className="hidden sm:flex items-center gap-6">
+                              <div className="text-center">
+                                <div className="flex items-center gap-1 text-gray-700">
+                                  <Zap className="h-3.5 w-3.5 text-amber-500" />
+                                  <span className="text-sm font-semibold">{student.xp || 0}</span>
                                 </div>
-                                
-                                {/* Mobile Stats */}
-                                <div className="p-3">
-                                  <div className="flex justify-between items-center text-center">
-                                    <div>
-                                      <div className="text-sm font-bold text-gray-900">{student.xp || 0}</div>
-                                      <div className="text-xs text-gray-500">XP</div>
+                                <div className="text-xs text-gray-500">XP</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="flex items-center gap-1 text-gray-700">
+                                  <Star className="h-3.5 w-3.5 text-blue-500" />
+                                  <span className="text-sm font-semibold">{student.level || 1}</span>
+                                </div>
+                                <div className="text-xs text-gray-500">Level</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="flex items-center gap-1 text-gray-700">
+                                  <TrendingUp className="h-3.5 w-3.5 text-green-500" />
+                                  <span className="text-sm font-semibold">{student.streak_days || 0}</span>
+                                </div>
+                                <div className="text-xs text-gray-500">Streak</div>
+                              </div>
+                            </div>
+
+                            {/* Expand Icon */}
+                            <div className="flex-shrink-0">
+                              <motion.div
+                                animate={{ rotate: expandedStudent === student.id ? 90 : 0 }}
+                                transition={{ duration: 0.2 }}
+                              >
+                                <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600" />
+                              </motion.div>
+                            </div>
+                          </div>
+
+                          {/* Expanded Details - Shows on Click */}
+                          <AnimatePresence>
+                            {expandedStudent === student.id && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="border-t border-gray-100 bg-gray-50"
+                              >
+                                <div className="p-4 sm:p-6 space-y-4">
+                                  {/* Mobile Stats - Only in Expanded View */}
+                                  <div className="sm:hidden grid grid-cols-3 gap-3 pb-4 border-b border-gray-200">
+                                    <div className="text-center p-2 bg-white rounded-lg">
+                                      <div className="flex items-center justify-center gap-1 text-gray-700 mb-1">
+                                        <Zap className="h-4 w-4 text-amber-500" />
+                                        <span className="text-sm font-bold">{student.xp || 0}</span>
+                                      </div>
+                                      <div className="text-xs text-gray-500">XP Points</div>
                                     </div>
-                                    <div>
-                                      <div className="text-sm font-bold text-gray-900">{student.level || 1}</div>
+                                    <div className="text-center p-2 bg-white rounded-lg">
+                                      <div className="flex items-center justify-center gap-1 text-gray-700 mb-1">
+                                        <Star className="h-4 w-4 text-blue-500" />
+                                        <span className="text-sm font-bold">{student.level || 1}</span>
+                                      </div>
                                       <div className="text-xs text-gray-500">Level</div>
                                     </div>
-                                    <div>
-                                      <div className="text-sm font-bold text-gray-900">{student.streak_days || 0}</div>
-                                      <div className="text-xs text-gray-500">Streak</div>
+                                    <div className="text-center p-2 bg-white rounded-lg">
+                                      <div className="flex items-center justify-center gap-1 text-gray-700 mb-1">
+                                        <TrendingUp className="h-4 w-4 text-green-500" />
+                                        <span className="text-sm font-bold">{student.streak_days || 0}</span>
+                                      </div>
+                                      <div className="text-xs text-gray-500">Day Streak</div>
                                     </div>
                                   </div>
-                                </div>
-                              </div>
-                              
-                              {/* Desktop Layout */}
-                              <div className="hidden sm:block">
-                                <div className="bg-gradient-to-r from-blue-500 to-indigo-500 p-5">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                      <div className="relative">
-                                        <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                                          {(student.first_name || student.last_name || 'U').charAt(0).toUpperCase()}
-                                        </div>
-                                        <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white shadow-lg ${
+
+                                  {/* Additional Info */}
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="bg-white p-3 rounded-lg border border-gray-200">
+                                      <div className="text-xs text-gray-500 mb-1">Wellbeing Status</div>
+                                      <div className="flex items-center gap-2">
+                                        <div className={`w-2 h-2 rounded-full ${
                                           student.wellbeing_status === 'thriving' ? 'bg-green-500' :
                                           student.wellbeing_status === 'good' ? 'bg-blue-500' :
                                           student.wellbeing_status === 'managing' ? 'bg-yellow-500' :
                                           student.wellbeing_status === 'needs_support' ? 'bg-orange-500' :
                                           'bg-gray-400'
-                                        }`}>
-                                          <div className="w-2 h-2 bg-white rounded-full mx-auto mt-1"></div>
-                                        </div>
-                                      </div>
-                                      <div className="text-white min-w-0 flex-1">
-                                        <h3 className="font-bold text-lg mb-1 truncate">
-                                          {`${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unknown Student'}
-                                        </h3>
-                                        <p className="text-blue-100 text-base opacity-90 truncate mb-1">{student.email || 'No email'}</p>
-                                        <div className="flex items-center gap-2">
-                                          <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                            student.wellbeing_status === 'thriving' ? 'bg-green-500/20 text-green-100' :
-                                            student.wellbeing_status === 'good' ? 'bg-blue-500/20 text-blue-100' :
-                                            student.wellbeing_status === 'managing' ? 'bg-yellow-500/20 text-yellow-100' :
-                                            student.wellbeing_status === 'needs_support' ? 'bg-orange-500/20 text-orange-100' :
-                                            'bg-gray-500/20 text-gray-100'
-                                          }`}>
-                                            {student.wellbeing_status?.replace('_', ' ') || 'Managing'}
-                                          </div>
-                                        </div>
+                                        }`}></div>
+                                        <span className="text-sm font-medium text-gray-900 capitalize">
+                                          {student.wellbeing_status?.replace('_', ' ') || 'Not Set'}
+                                        </span>
                                       </div>
                                     </div>
-                                    <div className="text-right">
-                                      <div className="text-3xl mb-2">{moodEmojis[student.current_mood] || '😐'}</div>
-                                      <p className="text-sm text-blue-100 capitalize opacity-90 font-medium">{student.current_mood || 'neutral'}</p>
-                                    </div>
-                                  </div>
-                                </div>
-                                
-                                {/* Desktop Stats */}
-                                <div className="p-5">
-                                  <div className="grid grid-cols-3 gap-4">
-                                    <div className="text-center">
-                                      <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
-                                        <Zap className="h-6 w-6 text-white" />
-                                      </div>
-                                      <div className="font-bold text-lg text-gray-900">{student.xp || 0}</div>
-                                      <div className="text-sm text-gray-500 font-medium">XP Points</div>
-                                    </div>
-                                    <div className="text-center">
-                                      <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg">
-                                        <Star className="h-6 w-6 text-white" />
-                                      </div>
-                                      <div className="font-bold text-lg text-gray-900">{student.level || 1}</div>
-                                      <div className="text-sm text-gray-500 font-medium">Level</div>
-                                    </div>
-                                    <div className="text-center">
-                                      <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-green-400 to-emerald-500 rounded-xl flex items-center justify-center shadow-lg">
-                                        <TrendingUp className="h-6 w-6 text-white" />
-                                      </div>
-                                      <div className="font-bold text-lg text-gray-900">{student.streak_days || 0}</div>
-                                      <div className="text-sm text-gray-500 font-medium">Day Streak</div>
-                                    </div>
-                                  </div>
-                                  
-                                  {/* Additional Info Row */}
-                                  <div className="mt-4 pt-4 border-t border-gray-100">
-                                    <div className="flex items-center justify-between text-sm">
-                                      <div className="flex items-center gap-2 text-gray-600">
-                                        <Users className="h-4 w-4" />
-                                        <span>Student ID: {student.student_number || 'N/A'}</span>
-                                      </div>
-                                      <div className="flex items-center gap-1 text-gray-500">
-                                        <Eye className="h-4 w-4" />
-                                        <span>View Details</span>
+                                    <div className="bg-white p-3 rounded-lg border border-gray-200">
+                                      <div className="text-xs text-gray-500 mb-1">Current Mood</div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-lg">{moodEmojis[student.current_mood] || '😐'}</span>
+                                        <span className="text-sm font-medium text-gray-900 capitalize">
+                                          {student.current_mood || 'Neutral'}
+                                        </span>
                                       </div>
                                     </div>
                                   </div>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </DialogTrigger>
 
-                        {/* Student Details Modal */}
-                        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                          <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2">
-                              <User className="h-5 w-5 text-blue-600" />
-                              {`${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unknown Student'} - Student Details
-                            </DialogTitle>
-                            <DialogDescription>
-                              Detailed information about the student (Read-only)
-                            </DialogDescription>
-                          </DialogHeader>
-
-                          <div className="space-y-6">
-                            {/* Student Information */}
-                            <div className="bg-gray-50 rounded-lg p-4">
-                              <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                                <UserCheck className="h-4 w-4" />
-                                Student Information
-                              </h3>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                  <label className="text-sm font-medium text-gray-600">Full Name</label>
-                                  <p className="text-gray-900">{`${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unknown Student'}</p>
-                                </div>
-                                <div>
-                                  <label className="text-sm font-medium text-gray-600">Email</label>
-                                  <p className="text-gray-900">{student.email || 'No email'}</p>
-                                </div>
-                                <div>
-                                  <label className="text-sm font-medium text-gray-600">Class</label>
-                                  <p className="text-gray-900">
-                                    {(() => {
-                                      const currentClass = classes.find(c => c.id === selectedClass) || assignedClasses.find(c => c.id === selectedClass)
-                                      return currentClass?.class_name || 
-                                             currentClass?.name || 
-                                             student.class_name ||
-                                             `Class ${currentClass?.class_code || selectedClass?.substring(0, 8) || 'Unknown'}`
-                                    })()}
-                                  </p>
-                                </div>
-                                <div>
-                                  <label className="text-sm font-medium text-gray-600">Current Mood</label>
-                                  <p className="text-gray-900 flex items-center gap-1">
-                                    {moodEmojis[student.current_mood] || '😐'}
-                                    <span className="capitalize">{student.current_mood}</span>
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Academic Progress */}
-                            <div className="bg-blue-50 rounded-lg p-4">
-                              <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                                <Activity className="h-4 w-4" />
-                                Academic Progress
-                              </h3>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <label className="text-sm font-medium text-gray-600">XP Points</label>
-                                  <p className="text-gray-900 flex items-center gap-1">
-                                    <Zap className="h-4 w-4 text-yellow-500" />
-                                    {student.xpPoints}
-                                  </p>
-                                </div>
-                                <div>
-                                  <label className="text-sm font-medium text-gray-600">Current Level</label>
-                                  <p className="text-gray-900 flex items-center gap-1">
-                                    <Star className="h-4 w-4 text-blue-500" />
-                                    Level {student.level}
-                                  </p>
-                                </div>
-                                <div>
-                                  <label className="text-sm font-medium text-gray-600">Streak Days</label>
-                                  <p className="text-gray-900 flex items-center gap-1">
-                                    <TrendingUp className="h-4 w-4 text-green-500" />
-                                    {student.streak_days || 0} days
-                                  </p>
-                                </div>
-                                <div>
-                                  <label className="text-sm font-medium text-gray-600">Wellbeing Status</label>
-                                  <div className="text-gray-900 flex items-center gap-1">
-                                    <div className={`w-3 h-3 rounded-full ${wellbeingColors[student.wellbeing_status] || 'bg-gray-400'}`}></div>
-                                    <span className="capitalize">{student.wellbeing_status?.replace('-', ' ')}</span>
+                                  {/* Action Buttons */}
+                                  <div className="flex flex-wrap gap-2 pt-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        // Handle view profile
+                                      }}
+                                      className="flex-1 sm:flex-none h-9 text-xs"
+                                    >
+                                      <Eye className="h-3.5 w-3.5 mr-1.5" />
+                                      View Profile
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        // Handle message
+                                      }}
+                                      className="flex-1 sm:flex-none h-9 text-xs"
+                                    >
+                                      <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+                                      Message
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        router.push(`/teacher/examinations?student=${student.id}`)
+                                      }}
+                                      className="flex-1 sm:flex-none h-9 text-xs"
+                                    >
+                                      <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
+                                      Results
+                                    </Button>
                                   </div>
                                 </div>
-                              </div>
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </CardContent>
+                      </Card>
                     </motion.div>
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-12">
                   <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    {searchTerm ? 'No Students Found' : 'No Students in Class'}
-                  </h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Students Found</h3>
                   <p className="text-gray-600">
-                    {searchTerm 
-                      ? `No students match "${searchTerm}". Try a different search term.`
-                      : 'This class doesn\'t have any students assigned yet.'
-                    }
+                    {searchTerm ? `No students matching "${searchTerm}"` : 'No students in this class yet'}
                   </p>
                 </div>
               )}
-              </div>
-            </motion.div>
-          )}
-
-          {grades.length === 0 && !loading && currentView === 'grades' && (
-            <motion.div
-              key="empty-grades"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <div className="text-center py-12">
-                <GraduationCap className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No Grade Levels Available</h3>
-                <p className="text-gray-600">
-                  You haven't been assigned to any grade levels yet. Please contact your administrator to set up your classes.
-                </p>
               </div>
             </motion.div>
           )}

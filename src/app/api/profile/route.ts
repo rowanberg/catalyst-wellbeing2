@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 
     // Create fetch promise for deduplication
     const fetchPromise = (async () => {
-      // Get user profile (removed email and student_number columns that don't exist)
+      // Get user profile with school information via JOIN
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select(`
@@ -69,8 +69,25 @@ export async function GET(request: NextRequest) {
           last_name,
           role,
           school_id,
+          grade_level,
+          class_name,
+          avatar_url,
+          profile_picture_url,
+          bio,
+          xp,
+          gems,
+          level,
+          streak_days,
           created_at,
-          updated_at
+          updated_at,
+          school:schools(
+            id,
+            name,
+            school_code,
+            address,
+            city,
+            country
+          )
         `)
         .eq('user_id', user.id)
         .single()

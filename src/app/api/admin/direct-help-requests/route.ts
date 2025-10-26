@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-export const dynamic = 'force-dynamic'
+// export const dynamic = 'force-dynamic' // Removed for Capacitor
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { decryptMessage } from '@/lib/schoolEncryption'
 import { cookies } from 'next/headers'

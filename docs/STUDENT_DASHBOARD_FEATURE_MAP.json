@@ -1,0 +1,273 @@
+{
+  "feature_interaction_map": {
+    "version": "1.0",
+    "analysis_date": "2025-01-20",
+    "existing_features": {
+      "profile_section": {
+        "components": ["Profile Card", "Avatar", "Name Display", "School Info", "Grade/Class Info"],
+        "data_sources": ["/api/student/dashboard", "/api/student/profile"],
+        "interactions": {
+          "messages_button": { "action": "router.push('/student/messaging')", "icon": "MessageCircle" },
+          "settings_button": { "action": "router.push('/student/settings')", "icon": "Settings" }
+        },
+        "displayed_data": ["level", "streak_days", "total_quests_completed", "xp", "gems"]
+      },
+      "school_updates": {
+        "components": ["Polls List", "Announcements List"],
+        "data_sources": ["/api/polls", "/api/admin/announcements"],
+        "interactions": {
+          "respond_to_poll": { "action": "handlePollResponse(poll)", "modal": "showPollModal" },
+          "view_all_updates": { "action": "router.push('/student/announcements')" }
+        },
+        "displayed_data": ["poll.title", "poll.description", "announcement.title", "announcement.content"]
+      },
+      "daily_inspiration": {
+        "components": ["Inspiration Quote", "Quick Action Buttons"],
+        "data_sources": ["Static array by day of week"],
+        "interactions": {
+          "black_marks_button": { "action": "router.push('/student/black-marks')" },
+          "messages_button": { "action": "router.push('/student/messaging')" },
+          "badges_button": { "action": "router.push('/student/achievements')" },
+          "leaderboard_button": { "action": "router.push('/student/leaderboard')" }
+        }
+      },
+      "weekly_progress": {
+        "components": ["Weekly XP Display", "Class Rank", "Streak Counter"],
+        "data_sources": ["/api/student/dashboard"],
+        "displayed_data": ["weeklyXP", "rank", "streakDays"]
+      },
+      "academic_performance": {
+        "components": ["GPA Display", "Subject Performance Cards", "Progress Bars"],
+        "data_sources": ["/api/student/dashboard"],
+        "displayed_data": ["overallGPA", "subjectPerformance[]"]
+      },
+      "recent_tests": {
+        "components": ["Test Results List", "Grade Badges", "Score Display"],
+        "data_sources": ["/api/student/dashboard"],
+        "interactions": {
+          "view_all_grades": { "action": "router.push('/student/grades')" }
+        },
+        "displayed_data": ["recentTests[]"]
+      },
+      "upcoming_exams": {
+        "components": ["Exam List", "Date/Time Display", "Type Badge"],
+        "data_sources": ["/api/student/dashboard"],
+        "interactions": {
+          "exam_prep": { "action": "router.push(`/student/exam-prep/${exam.id}`)" },
+          "view_exams": { "action": "router.push('/student/examinations')" },
+          "view_calendar": { "action": "router.push('/student/calendar')" }
+        },
+        "displayed_data": ["upcomingExams[]"]
+      },
+      "performance_analytics": {
+        "components": ["Grade Distribution", "Study Streak", "Focus Areas"],
+        "data_sources": ["/api/student/dashboard"],
+        "interactions": {
+          "study_plans": { "action": "router.push('/student/study-plan')" },
+          "analytics": { "action": "router.push('/student/analytics')" },
+          "view_details": { "action": "router.push('/student/analytics')" }
+        }
+      },
+      "achievement_cards": {
+        "components": ["XP Card", "Gems Card", "Level Card", "Quests Card"],
+        "data_sources": ["/api/student/dashboard"],
+        "interactions": {
+          "open_wallet": { "action": "router.push('/student/wallet')" }
+        },
+        "displayed_data": ["xp", "gems", "level", "totalQuestsCompleted"]
+      },
+      "daily_quests": {
+        "components": ["Quest List", "Progress Bar", "Quest Cards"],
+        "data_sources": ["/api/student/dashboard", "/api/student/quests"],
+        "interactions": {
+          "gratitude": { "action": "router.push('/student/gratitude')" },
+          "kindness": { "action": "router.push('/student/kindness')" },
+          "courage": { "action": "router.push('/student/courage-log')" },
+          "breathing": { "action": "router.push('/student/breathing')" },
+          "water": { "action": "router.push('/student/habits')" },
+          "sleep": { "action": "router.push('/student/habits')" },
+          "toggle_quest": { "action": "handleQuestToggle(questType)" }
+        },
+        "api_calls": ["/api/student/quests"],
+        "displayed_data": ["quests.status", "quests.progress"]
+      },
+      "mood_tracker": {
+        "components": ["Mood Selection Grid", "Current Mood Display"],
+        "data_sources": ["/api/student/dashboard", "/api/student/mood"],
+        "interactions": {
+          "update_mood": { "action": "handleMoodUpdate(moodType)" }
+        },
+        "api_calls": ["/api/student/mood"],
+        "displayed_data": ["mood.current", "moodLockedDate"]
+      },
+      "virtual_pet": {
+        "components": ["Pet Display", "Happiness Bar", "Care Instructions"],
+        "data_sources": ["/api/student/dashboard"],
+        "interactions": {
+          "care_for_pet": { "action": "router.push('/student/pet')" },
+          "pet_interaction": { "action": "setShowWhiskersAnimation(true)" }
+        },
+        "displayed_data": ["petName", "petHappiness"]
+      },
+      "mindfulness": {
+        "components": ["Mindfulness Buttons"],
+        "interactions": {
+          "breathing": { "action": "router.push('/student/breathing')" },
+          "affirmations": { "action": "router.push('/student/affirmations')" },
+          "gratitude": { "action": "router.push('/student/gratitude')" }
+        },
+        "api_calls": ["/api/student/mindfulness"]
+      },
+      "digital_safety": {
+        "components": ["Safety Quiz Button", "Kindness Pledge Button"],
+        "interactions": {
+          "safety_quiz": { "action": "router.push('/student/digital-citizenship')" },
+          "kindness_pledge": { "action": "router.push('/student/anti-bullying')" }
+        }
+      },
+      "help_request": {
+        "components": ["SOS Button", "Help Modal"],
+        "data_sources": ["/api/student/help"],
+        "interactions": {
+          "request_help": { "action": "router.push('/student/help')" },
+          "submit_help": { "action": "handleHelpSubmit()" }
+        },
+        "api_calls": ["/api/student/help"]
+      }
+    },
+    "api_endpoints": {
+      "main_dashboard": {
+        "endpoint": "/api/student/dashboard",
+        "method": "GET",
+        "returns": ["profile", "mood", "quests", "stats", "academic"],
+        "cache_time": "5 minutes"
+      },
+      "school_info": {
+        "endpoint": "/api/student/school-info",
+        "method": "GET",
+        "returns": ["schoolInfo"],
+        "cache_time": "session"
+      },
+      "announcements": {
+        "endpoint": "/api/admin/announcements",
+        "method": "GET",
+        "params": ["school_id", "audience=students", "limit=2"],
+        "returns": ["announcements[]"],
+        "cache_time": "5 minutes"
+      },
+      "polls": {
+        "endpoint": "/api/polls",
+        "method": "GET",
+        "params": ["limit=2"],
+        "returns": ["polls[]"],
+        "cache_time": "3 minutes"
+      },
+      "mood_update": {
+        "endpoint": "/api/student/mood",
+        "method": "POST",
+        "body": ["mood"],
+        "returns": ["message"]
+      },
+      "quest_toggle": {
+        "endpoint": "/api/student/quests",
+        "method": "POST",
+        "body": ["questType", "completed"],
+        "returns": ["success"]
+      },
+      "help_request": {
+        "endpoint": "/api/student/help",
+        "method": "POST",
+        "body": ["urgency", "message"],
+        "returns": ["success"]
+      },
+      "mindfulness": {
+        "endpoint": "/api/student/mindfulness",
+        "method": "POST",
+        "body": ["sessionType"],
+        "returns": ["xpGained"]
+      },
+      "poll_response": {
+        "endpoint": "/api/polls/responses",
+        "method": "POST",
+        "body": ["pollId", "answers[]"],
+        "returns": ["success"]
+      }
+    },
+    "navigation_targets": {
+      "internal_routes": [
+        "/student/messaging",
+        "/student/settings",
+        "/student/announcements",
+        "/student/black-marks",
+        "/student/achievements",
+        "/student/leaderboard",
+        "/student/grades",
+        "/student/examinations",
+        "/student/calendar",
+        "/student/exam-prep/[id]",
+        "/student/study-plan",
+        "/student/analytics",
+        "/student/wallet",
+        "/student/gratitude",
+        "/student/kindness",
+        "/student/courage-log",
+        "/student/breathing",
+        "/student/habits",
+        "/student/pet",
+        "/student/affirmations",
+        "/student/digital-citizenship",
+        "/student/anti-bullying",
+        "/student/help"
+      ]
+    },
+    "state_management": {
+      "redux_slices": ["authSlice"],
+      "local_state": [
+        "loading", "profile", "schoolInfo", "authChecked",
+        "stats", "academicData", "quests", "mood", "moodLockedDate",
+        "announcements", "polls", "showPollModal", "selectedPoll",
+        "pollResponses", "showHelpModal", "helpRequest", "showWhiskersAnimation"
+      ],
+      "session_storage": [
+        "schoolInfo", "student_polls", "announcements_[schoolId]",
+        "student_dashboard_data"
+      ]
+    },
+    "performance_issues": {
+      "current_load_time": "8-10 seconds",
+      "api_calls_on_load": 4,
+      "sequential_loading": true,
+      "cache_strategy": "sessionStorage with 5-minute TTL",
+      "bottlenecks": [
+        "All data loaded on initial render",
+        "Sequential API calls",
+        "No lazy loading",
+        "Single monolithic dashboard API"
+      ]
+    }
+  },
+  "new_architecture": {
+    "tabs": {
+      "today": {
+        "features": ["daily_quests", "upcoming_exams", "weekly_progress", "school_updates"],
+        "api": "/api/v2/student/today",
+        "priority": "high"
+      },
+      "growth": {
+        "features": ["academic_performance", "recent_tests", "performance_analytics", "achievement_cards"],
+        "api": "/api/v2/student/growth",
+        "priority": "medium"
+      },
+      "wellbeing": {
+        "features": ["mood_tracker", "virtual_pet", "mindfulness", "digital_safety", "help_request"],
+        "api": "/api/v2/student/wellbeing",
+        "priority": "medium"
+      },
+      "profile": {
+        "features": ["profile_section", "achievement_cards", "daily_inspiration"],
+        "api": "/api/v2/student/profile",
+        "priority": "low"
+      }
+    }
+  }
+}

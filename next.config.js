@@ -23,9 +23,10 @@ const nextConfig = {
     dirs: ['src']
   },
   
-  // Disable static export to allow dynamic API routes
+  // Static export DISABLED - Capacitor uses live backend URL instead
+  // APK loads from https://catalystwells.netlify.app (configured in capacitor.config.ts)
   // output: 'export',
-  trailingSlash: true,
+  // trailingSlash removed - was causing 404 on API routes
   images: {
     unoptimized: true
   },
@@ -75,8 +76,18 @@ const nextConfig = {
       tls: false,
     }
     
-    // Optimize for client components
-    if (!isServer) {
+    // Prevent chunk corruption with streaming routes during dev hot reload
+    if (dev) {
+      config.optimization = {
+        ...config.optimization,
+        removeAvailableModules: false,
+        removeEmptyChunks: false,
+        splitChunks: false,
+      }
+    }
+    
+    // Optimize for client components in production
+    if (!isServer && !dev) {
       config.optimization = {
         ...config.optimization,
         splitChunks: {
@@ -105,16 +116,15 @@ const nextConfig = {
     removeConsole: process.env.NODE_ENV === 'production',
   },
   
+  // Skip static generation for dynamic admin pages
+  async redirects() {
+    return []
+  },
+  
   // Enable build caching for faster builds
   experimental: {
     // Optimize CSS
     optimizeCss: true,
-    // Turbopack configuration (if needed)
-    // turbo: {
-    //   rules: {
-    //     '*.svg': ['@svgr/webpack'],
-    //   },
-    // },
   },
 }
 

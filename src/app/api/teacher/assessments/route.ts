@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
         title,
         type,
         max_score,
+        pass_mark,
         created_at,
         class_id,
         due_date,
@@ -80,7 +81,17 @@ export async function POST(request: NextRequest) {
     console.log('✅ POST /assessments - Teacher verified:', { role: profile.role, school_id: profile.school_id })
 
     const body = await request.json()
-    const { title, type, max_score, class_id, due_date, rubric_criteria } = body
+    const { title, type, max_score, pass_mark, class_id, due_date, rubric_criteria } = body
+
+    console.log('📝 Creating assessment with data:', {
+      title,
+      type,
+      max_score,
+      pass_mark,
+      class_id,
+      teacher_id: user.id,
+      school_id: profile.school_id
+    })
 
     // Validate required fields
     if (!class_id) {
@@ -94,6 +105,7 @@ export async function POST(request: NextRequest) {
         title,
         type,
         max_score,
+        pass_mark: pass_mark || 50,
         class_id,
         due_date: due_date || null,
         teacher_id: user.id,
@@ -104,9 +116,15 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (createError) {
-      console.error('Error creating assessment:', createError)
-      return NextResponse.json({ error: 'Failed to create assessment' }, { status: 500 })
+      console.error('❌ Error creating assessment:', createError)
+      return NextResponse.json({ error: 'Failed to create assessment', details: createError.message }, { status: 500 })
     }
+
+    console.log('✅ Assessment created successfully:', {
+      id: assessment.id,
+      title: assessment.title,
+      teacher_id: assessment.teacher_id
+    })
 
     return NextResponse.json({ assessment })
 

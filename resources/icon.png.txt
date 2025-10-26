@@ -1,0 +1,11 @@
+Place your app icon here as: icon.png
+
+Requirements:
+- Size: 1024x1024 pixels
+- Format: PNG
+- No transparency (solid background)
+- Square aspect ratio
+
+After adding icon.png to this folder, run:
+npm install -g @capacitor/assets
+npx capacitor-assets generate --iconBackgroundColor '#3b82f6'

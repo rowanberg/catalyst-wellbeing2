@@ -7,7 +7,8 @@ import {
   School, Users, DollarSign, AlertTriangle, TrendingUp, 
   Search, Filter, SortAsc, Eye, Settings, Bell, LogOut,
   Moon, Sun, BarChart3, PieChart, Activity, Shield,
-  Calendar, MapPin, CreditCard, UserCheck, AlertCircle, X
+  Calendar, MapPin, CreditCard, UserCheck, AlertCircle, X,
+  Key, CheckCircle, XCircle, Clock, Zap, RefreshCw
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -44,6 +45,32 @@ interface DashboardStats {
   user_limit_warnings: number
 }
 
+interface ApiKeyStats {
+  total_keys: number
+  active_keys: number
+  disabled_keys: number
+  total_daily_requests: number
+  keys_near_limit: number
+  keys_at_limit: number
+  average_usage: number
+}
+
+interface ApiKey {
+  id: string
+  key_preview: string
+  daily_request_count: number
+  daily_limit: number
+  usage_percentage: number
+  current_minute_request_count: number
+  minute_limit: number
+  is_disabled: boolean
+  last_used_timestamp: string
+  hours_since_used: number
+  hours_until_reset: number
+  created_at: string
+  status: 'active' | 'near_limit' | 'at_limit' | 'disabled'
+}
+
 export default function SuperAdminDashboard() {
   const router = useRouter()
   const [schools, setSchools] = useState<School[]>([])
@@ -57,6 +84,13 @@ export default function SuperAdminDashboard() {
   const [selectedSchool, setSelectedSchool] = useState<School | null>(null)
   const [notifications, setNotifications] = useState<any[]>([])
   const { addToast } = useToast()
+  
+  // API Keys tab state
+  const [activeTab, setActiveTab] = useState<'overview' | 'api-keys'>('overview')
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([])
+  const [apiKeyStats, setApiKeyStats] = useState<ApiKeyStats | null>(null)
+  const [apiKeysLoading, setApiKeysLoading] = useState(false)
+  const [toggleLoading, setToggleLoading] = useState<string | null>(null)
 
   useEffect(() => {
     fetchDashboardData()
@@ -105,6 +139,53 @@ export default function SuperAdminDashboard() {
       console.error('Failed to fetch notifications:', error)
     }
   }
+
+  const fetchApiKeys = async () => {
+    try {
+      setApiKeysLoading(true)
+      const response = await fetch('/api/superpanel/api-keys')
+      if (response.ok) {
+        const data = await response.json()
+        setApiKeys(data.keys || [])
+        setApiKeyStats(data.stats || null)
+      } else {
+        console.error('Failed to fetch API keys')
+      }
+    } catch (error) {
+      console.error('Failed to fetch API keys:', error)
+    } finally {
+      setApiKeysLoading(false)
+    }
+  }
+
+  const toggleKeyStatus = async (keyId: string, currentStatus: boolean) => {
+    try {
+      setToggleLoading(keyId)
+      const response = await fetch('/api/superpanel/api-keys', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keyId, isDisabled: !currentStatus })
+      })
+      
+      if (response.ok) {
+        // Refresh API keys data
+        await fetchApiKeys()
+      } else {
+        console.error('Failed to toggle key status')
+      }
+    } catch (error) {
+      console.error('Error toggling key status:', error)
+    } finally {
+      setToggleLoading(null)
+    }
+  }
+
+  // Fetch API keys when switching to API Keys tab
+  useEffect(() => {
+    if (activeTab === 'api-keys' && apiKeys.length === 0) {
+      fetchApiKeys()
+    }
+  }, [activeTab])
 
   const filteredAndSortedSchools = schools
     .filter(school => {
@@ -248,9 +329,71 @@ export default function SuperAdminDashboard() {
       </header>
 
       <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3 sm:py-8">
-        {/* Alert Banners - Simplified */}
-        <AnimatePresence>
-          {notifications.slice(0, 3).map((notification, index) => (
+        {/* Tab Navigation */}
+        <div className={`flex gap-2 mb-6 border-b ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`px-4 sm:px-6 py-3 font-medium transition-all relative ${
+              activeTab === 'overview'
+                ? darkMode
+                  ? 'text-purple-400'
+                  : 'text-purple-600'
+                : darkMode
+                  ? 'text-slate-400 hover:text-slate-300'
+                  : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <School className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Schools Overview</span>
+              <span className="sm:hidden">Overview</span>
+            </div>
+            {activeTab === 'overview' && (
+              <motion.div
+                layoutId="activeTab"
+                className={`absolute bottom-0 left-0 right-0 h-0.5 ${
+                  darkMode ? 'bg-purple-400' : 'bg-purple-600'
+                }`}
+              />
+            )}
+          </button>
+          
+          <button
+            onClick={() => setActiveTab('api-keys')}
+            className={`px-4 sm:px-6 py-3 font-medium transition-all relative ${
+              activeTab === 'api-keys'
+                ? darkMode
+                  ? 'text-purple-400'
+                  : 'text-purple-600'
+                : darkMode
+                  ? 'text-slate-400 hover:text-slate-300'
+                  : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Key className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">API Keys</span>
+              <span className="sm:hidden">Keys</span>
+              {apiKeyStats && apiKeyStats.keys_at_limit > 0 && (
+                <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+              )}
+            </div>
+            {activeTab === 'api-keys' && (
+              <motion.div
+                layoutId="activeTab"
+                className={`absolute bottom-0 left-0 right-0 h-0.5 ${
+                  darkMode ? 'bg-purple-400' : 'bg-purple-600'
+                }`}
+              />
+            )}
+          </button>
+        </div>
+        {/* Overview Tab Content */}
+        {activeTab === 'overview' && (
+          <>
+            {/* Alert Banners - Simplified */}
+            <AnimatePresence>
+              {notifications.slice(0, 3).map((notification, index) => (
             <motion.div
               key={notification.id}
               initial={{ opacity: 0, y: -20 }}
@@ -478,6 +621,243 @@ export default function SuperAdminDashboard() {
               </div>
             )}
           </motion.div>
+        )}
+          </>
+        )}
+
+        {/* API Keys Tab Content */}
+        {activeTab === 'api-keys' && (
+          <div>
+            {/* API Keys Stats */}
+            {apiKeyStats && (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-4 sm:mb-8">
+                {/* Total Keys */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`p-3 sm:p-6 rounded-xl sm:rounded-2xl transition-all duration-300 ${
+                    darkMode ? 'bg-slate-800/40 backdrop-blur-xl border border-slate-700/50' : 'bg-white/80 backdrop-blur-xl border border-gray-200/50'
+                  } shadow-xl hover:shadow-2xl hover:-translate-y-1`}
+                >
+                  <div className="flex items-center justify-between mb-2 sm:mb-4">
+                    <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl ${darkMode ? 'bg-slate-700/50' : 'bg-gray-100/50'}`}>
+                      <Key className={`w-4 h-4 sm:w-6 sm:h-6 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                    </div>
+                  </div>
+                  <div className={`text-lg sm:text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {apiKeyStats.total_keys}
+                  </div>
+                  <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>
+                    Total API Keys
+                  </p>
+                </motion.div>
+
+                {/* Active Keys */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className={`p-3 sm:p-6 rounded-xl sm:rounded-2xl transition-all duration-300 ${
+                    darkMode ? 'bg-slate-800/40 backdrop-blur-xl border border-slate-700/50' : 'bg-white/80 backdrop-blur-xl border border-gray-200/50'
+                  } shadow-xl hover:shadow-2xl hover:-translate-y-1`}
+                >
+                  <div className="flex items-center justify-between mb-2 sm:mb-4">
+                    <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl ${darkMode ? 'bg-slate-700/50' : 'bg-gray-100/50'}`}>
+                      <CheckCircle className={`w-4 h-4 sm:w-6 sm:h-6 ${darkMode ? 'text-green-400' : 'text-green-600'}`} />
+                    </div>
+                  </div>
+                  <div className={`text-lg sm:text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {apiKeyStats.active_keys}
+                  </div>
+                  <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>
+                    Active Keys
+                  </p>
+                </motion.div>
+
+                {/* Total Requests Today */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className={`p-3 sm:p-6 rounded-xl sm:rounded-2xl transition-all duration-300 ${
+                    darkMode ? 'bg-slate-800/40 backdrop-blur-xl border border-slate-700/50' : 'bg-white/80 backdrop-blur-xl border border-gray-200/50'
+                  } shadow-xl hover:shadow-2xl hover:-translate-y-1`}
+                >
+                  <div className="flex items-center justify-between mb-2 sm:mb-4">
+                    <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl ${darkMode ? 'bg-slate-700/50' : 'bg-gray-100/50'}`}>
+                      <Zap className={`w-4 h-4 sm:w-6 sm:h-6 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
+                    </div>
+                  </div>
+                  <div className={`text-lg sm:text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {apiKeyStats.total_daily_requests.toLocaleString()}
+                  </div>
+                  <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>
+                    Requests Today
+                  </p>
+                </motion.div>
+
+                {/* Average Usage */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className={`p-3 sm:p-6 rounded-xl sm:rounded-2xl transition-all duration-300 ${
+                    darkMode ? 'bg-slate-800/40 backdrop-blur-xl border border-slate-700/50' : 'bg-white/80 backdrop-blur-xl border border-gray-200/50'
+                  } shadow-xl hover:shadow-2xl hover:-translate-y-1`}
+                >
+                  <div className="flex items-center justify-between mb-2 sm:mb-4">
+                    <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl ${darkMode ? 'bg-slate-700/50' : 'bg-gray-100/50'}`}>
+                      <Activity className={`w-4 h-4 sm:w-6 sm:h-6 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`} />
+                    </div>
+                  </div>
+                  <div className={`text-lg sm:text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {apiKeyStats.average_usage}
+                  </div>
+                  <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>
+                    Avg Usage/Key
+                  </p>
+                </motion.div>
+              </div>
+            )}
+
+            {/* Refresh Button */}
+            <div className="flex justify-between items-center mb-4">
+              <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                API Key Management
+              </h3>
+              <Button
+                onClick={fetchApiKeys}
+                disabled={apiKeysLoading}
+                variant="outline"
+                size="sm"
+                className={`${darkMode ? 'border-slate-600 text-slate-300' : 'border-gray-300 text-gray-600'}`}
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${apiKeysLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
+
+            {/* API Keys Table */}
+            {apiKeysLoading ? (
+              <div className="flex justify-center py-12">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  className="w-12 h-12 border-4 border-purple-500/30 border-t-purple-500 rounded-full"
+                />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {apiKeys.map((key, index) => (
+                  <motion.div
+                    key={key.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className={`p-4 rounded-xl border transition-all ${
+                      darkMode ? 'bg-slate-800/50 border-slate-700' : 'bg-white border-gray-200'
+                    } hover:shadow-lg`}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      {/* Key Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <code className={`text-xs font-mono truncate ${darkMode ? 'text-slate-300' : 'text-gray-700'}`}>
+                            {key.key_preview}
+                          </code>
+                          <Badge className={`${
+                            key.status === 'active' ? 'bg-green-500' :
+                            key.status === 'near_limit' ? 'bg-yellow-500' :
+                            key.status === 'at_limit' ? 'bg-red-500' :
+                            'bg-gray-500'
+                          } text-white text-xs`}>
+                            {key.status.replace('_', ' ').toUpperCase()}
+                          </Badge>
+                        </div>
+                        
+                        {/* Usage Stats */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                          <div>
+                            <p className={`${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>Daily Usage</p>
+                            <p className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                              {key.daily_request_count} / {key.daily_limit}
+                            </p>
+                          </div>
+                          <div>
+                            <p className={`${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>Usage %</p>
+                            <p className={`font-semibold ${
+                              key.usage_percentage >= 80 ? 'text-red-400' :
+                              key.usage_percentage >= 60 ? 'text-yellow-400' :
+                              'text-green-400'
+                            }`}>
+                              {key.usage_percentage}%
+                            </p>
+                          </div>
+                          <div>
+                            <p className={`${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>Last Used</p>
+                            <p className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                              {key.hours_since_used}h ago
+                            </p>
+                          </div>
+                          <div>
+                            <p className={`${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>Resets In</p>
+                            <p className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                              {key.hours_until_reset}h
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Progress Bar */}
+                        <div className="mt-3">
+                          <div className={`h-2 rounded-full overflow-hidden ${
+                            darkMode ? 'bg-slate-700' : 'bg-gray-200'
+                          }`}>
+                            <div
+                              className={`h-full transition-all ${
+                                key.usage_percentage >= 80 ? 'bg-red-500' :
+                                key.usage_percentage >= 60 ? 'bg-yellow-500' :
+                                'bg-green-500'
+                              }`}
+                              style={{ width: `${key.usage_percentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Toggle Button */}
+                      <Button
+                        onClick={() => toggleKeyStatus(key.id, key.is_disabled)}
+                        disabled={toggleLoading === key.id}
+                        size="sm"
+                        className={`${
+                          key.is_disabled
+                            ? 'bg-green-600 hover:bg-green-700'
+                            : 'bg-red-600 hover:bg-red-700'
+                        } text-white`}
+                      >
+                        {toggleLoading === key.id ? (
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                        ) : key.is_disabled ? (
+                          <><CheckCircle className="w-4 h-4 mr-1" /> Enable</>
+                        ) : (
+                          <><XCircle className="w-4 h-4 mr-1" /> Disable</>
+                        )}
+                      </Button>
+                    </div>
+                  </motion.div>
+                ))}
+
+                {/* Empty State */}
+                {apiKeys.length === 0 && !apiKeysLoading && (
+                  <div className={`text-center py-12 ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>
+                    <Key className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                    <h3 className="text-lg font-semibold mb-2">No API Keys Found</h3>
+                    <p className="text-sm">Add API keys to the database to start using them.</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </div>
 

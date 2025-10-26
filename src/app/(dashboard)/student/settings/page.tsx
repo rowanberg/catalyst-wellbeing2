@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo, memo, lazy, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { useAppSelector } from '@/lib/redux/hooks'
@@ -44,7 +44,87 @@ import {
   Phone,
   Link
 } from 'lucide-react'
-import { AdvancedProfilePictureUpload } from '@/components/ui/advanced-profile-picture-upload'
+
+// Lazy load heavy components
+const AdvancedProfilePictureUpload = lazy(() => import('@/components/ui/advanced-profile-picture-upload').then(mod => ({ default: mod.AdvancedProfilePictureUpload })))
+
+// Static configuration data (outside component for performance)
+const PRIVACY_SETTINGS = [
+  { key: 'privateProfile', label: 'Private Profile', description: 'Hide your profile from other users', icon: EyeOff },
+  { key: 'dataSync', label: 'Data Sync', description: 'Sync your data across devices', icon: RotateCw }
+] as const
+
+const NOTIFICATION_SETTINGS = [
+  { key: 'notifications', label: 'Push Notifications', description: 'Receive updates and reminders', icon: Bell },
+  { key: 'soundEffects', label: 'Sound Effects', description: 'Play sounds for interactions', icon: Volume2 },
+  { key: 'animations', label: 'Animations', description: 'Enable smooth transitions', icon: Zap },
+  { key: 'hapticFeedback', label: 'Haptic Feedback', description: 'Feel vibrations for interactions', icon: Heart }
+] as const
+
+// Memoized setting item component
+const SettingItem = memo(({ 
+  settingKey, 
+  label, 
+  description, 
+  icon: Icon, 
+  checked, 
+  onChange,
+  iconColor = 'blue'
+}: { 
+  settingKey: string
+  label: string
+  description: string
+  icon: any
+  checked: boolean
+  onChange: (checked: boolean) => void
+  iconColor?: 'blue' | 'green'
+}) => {
+  const bgColor = iconColor === 'blue' ? 'bg-[#F4978E]/20' : 'bg-[#FBC4AB]/20'
+  const textColor = iconColor === 'blue' ? 'text-[#F08080]' : 'text-[#F4978E]'
+  
+  return (
+    <div className="p-3 sm:p-4 bg-[#FFF5EE]/50 rounded-xl sm:rounded-2xl border border-[#F8AD9D]/20">
+      {/* Mobile Layout */}
+      <div className="sm:hidden">
+        <div className="flex items-start justify-between">
+          <div className="flex items-start space-x-2 flex-1 min-w-0">
+            <div className={`p-1.5 ${bgColor} rounded-lg flex-shrink-0 mt-0.5`}>
+              <Icon className={`h-3 w-3 ${textColor}`} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-slate-800 font-medium text-xs">{label}</p>
+              <p className="text-slate-600 text-[10px] mt-0.5 leading-relaxed">{description}</p>
+            </div>
+          </div>
+          <Switch
+            checked={checked}
+            onCheckedChange={onChange}
+            className="flex-shrink-0 ml-2 data-[state=checked]:bg-[#F08080] data-[state=unchecked]:bg-slate-200"
+          />
+        </div>
+      </div>
+
+      {/* Desktop Layout */}
+      <div className="hidden sm:flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className={`p-2 ${bgColor} rounded-xl`}>
+            <Icon className={`h-5 w-5 ${textColor}`} />
+          </div>
+          <div>
+            <p className="text-slate-800 font-medium">{label}</p>
+            <p className="text-slate-600 text-sm">{description}</p>
+          </div>
+        </div>
+        <Switch
+          checked={checked}
+          onCheckedChange={onChange}
+          className="data-[state=checked]:bg-[#F08080] data-[state=unchecked]:bg-slate-200"
+        />
+      </div>
+    </div>
+  )
+})
+SettingItem.displayName = 'SettingItem'
 
 interface Profile {
   id?: string
@@ -251,9 +331,15 @@ const StudentSettingsPage = () => {
   }, [reduxProfile, getCachedData, setCachedData])
 
   useEffect(() => {
-    fetchProfileAndSettings()
-    checkWhatsAppConfig()
-  }, []) // Only run once on mount
+    // Use single fetch to reduce initial load time
+    const initializeSettings = async () => {
+      await Promise.all([
+        fetchProfileAndSettings(),
+        checkWhatsAppConfig()
+      ])
+    }
+    initializeSettings()
+  }, [fetchProfileAndSettings, checkWhatsAppConfig]) // Only run once on mount
 
   // Debounced save settings with optimistic updates
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
@@ -343,32 +429,38 @@ const StudentSettingsPage = () => {
 
   const handleSettingChange = useCallback((key: keyof SettingsState, value: any) => {
     setSettings(prev => {
+      // Early return if value hasn't changed (prevent unnecessary re-renders)
+      if (prev[key] === value) return prev
+      
       const newSettings = { ...prev, [key]: value }
       
-      // Apply theme changes immediately with cross-account persistence
-      if (key === 'theme') {
-        const isDark = value === 'dark' || (value === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-        document.documentElement.classList.toggle('dark', isDark)
-        // Store theme preference globally for cross-account consistency
-        localStorage.setItem('catalyst-theme-preference', value)
-      }
-      
-      // Apply font size changes immediately with accessibility persistence
-      if (key === 'fontSize') {
-        document.documentElement.style.fontSize = `${value}px`
-        localStorage.setItem('catalyst-font-size', value.toString())
-      }
-      
-      // Apply language changes with cross-account support
-      if (key === 'language') {
-        document.documentElement.lang = value.toLowerCase().substring(0, 2)
-        localStorage.setItem('catalyst-language', value)
-      }
-      
-      // Haptic feedback with user preference respect
-      if (newSettings.hapticFeedback && 'vibrate' in navigator) {
-        navigator.vibrate(50)
-      }
+      // Batch DOM updates using requestAnimationFrame
+      requestAnimationFrame(() => {
+        // Apply theme changes immediately with cross-account persistence
+        if (key === 'theme') {
+          const isDark = value === 'dark' || (value === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          document.documentElement.classList.toggle('dark', isDark)
+          // Store theme preference globally for cross-account consistency
+          localStorage.setItem('catalyst-theme-preference', value)
+        }
+        
+        // Apply font size changes immediately with accessibility persistence
+        if (key === 'fontSize') {
+          document.documentElement.style.fontSize = `${value}px`
+          localStorage.setItem('catalyst-font-size', value.toString())
+        }
+        
+        // Apply language changes with cross-account support
+        if (key === 'language') {
+          document.documentElement.lang = value.toLowerCase().substring(0, 2)
+          localStorage.setItem('catalyst-language', value)
+        }
+        
+        // Haptic feedback with user preference respect
+        if (newSettings.hapticFeedback && 'vibrate' in navigator) {
+          navigator.vibrate(50)
+        }
+      })
       
       return newSettings
     })
@@ -431,25 +523,29 @@ const StudentSettingsPage = () => {
     }
   }, [])
 
-  if (loading) {
+  // Memoize loading state to prevent re-renders
+  const loadingScreen = useMemo(() => {
+    if (!loading) return null
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-[#FFF5EE] via-[#FFE4E1] to-[#FFDAB9] flex items-center justify-center">
         <div className="relative">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-white/20 border-t-violet-400"></div>
-          <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-purple-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-[#F08080]/20 border-t-[#F4978E]"></div>
+          <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[#F8AD9D] animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
         </div>
       </div>
     )
-  }
+  }, [loading])
+
+  if (loadingScreen) return loadingScreen
 
   return (
     <UnifiedAuthGuard requiredRole="student">
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+      <div className="min-h-screen bg-gradient-to-br from-[#FFF5EE] via-[#FFE4E1] to-[#FFDAB9] relative overflow-hidden">
         {/* Premium Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 via-purple-500/10 to-fuchsia-500/10" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_2px_2px,rgba(147,51,234,0.15)_1px,transparent_0)] bg-[length:32px_32px]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#F08080]/10 via-[#F4978E]/10 to-[#FBC4AB]/10" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_2px_2px,rgba(240,128,128,0.08)_1px,transparent_0)] bg-[length:32px_32px]" />
         
-        <div className="relative z-10 p-4 sm:p-6 lg:p-8">
+        <div className="relative z-10 px-3 py-4 sm:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto">
             
             {/* Mobile-Optimized Header */}
@@ -459,7 +555,7 @@ const StudentSettingsPage = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <div className="bg-white/10 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-white/20 shadow-2xl p-4 sm:p-6 lg:p-8">
+              <div className="bg-white/90 backdrop-blur-xl rounded-xl sm:rounded-2xl lg:rounded-3xl border border-[#F8AD9D]/30 shadow-2xl p-3 sm:p-6 lg:p-8">
                 {/* Mobile Header Layout */}
                 <div className="flex flex-col space-y-4 sm:hidden">
                   {/* Top Row - Back Button and Save */}
@@ -468,7 +564,7 @@ const StudentSettingsPage = () => {
                       onClick={() => router.back()}
                       variant="ghost"
                       size="sm"
-                      className="text-white/80 hover:text-white hover:bg-white/10 rounded-xl p-2"
+                      className="text-slate-600 hover:text-slate-800 hover:bg-[#FBC4AB]/30 rounded-xl p-2"
                     >
                       <ArrowLeft className="h-5 w-5" />
                     </Button>
@@ -478,8 +574,8 @@ const StudentSettingsPage = () => {
                       size="sm"
                       className={`border-0 rounded-xl px-4 py-2 font-semibold transition-all ${
                         hasUnsavedChanges 
-                          ? 'bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white' 
-                          : 'bg-gray-500/50 text-gray-300 cursor-not-allowed'
+                          ? 'bg-gradient-to-r from-[#F08080] to-[#F4978E] hover:from-[#F4978E] hover:to-[#F8AD9D] text-white shadow-md' 
+                          : 'bg-gray-300/50 text-gray-500 cursor-not-allowed'
                       }`}
                     >
                       {saving ? (
@@ -495,14 +591,14 @@ const StudentSettingsPage = () => {
                   
                   {/* Title Row */}
                   <div className="flex items-center space-x-3">
-                    <div className="p-3 bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 rounded-xl shadow-lg">
+                    <div className="p-3 bg-gradient-to-br from-[#F08080] via-[#F4978E] to-[#F8AD9D] rounded-xl shadow-lg">
                       <Settings className="h-6 w-6 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h1 className="text-xl font-black bg-gradient-to-r from-white via-purple-200 to-white bg-clip-text text-transparent truncate">
+                      <h1 className="text-xl font-black bg-gradient-to-r from-[#F08080] via-[#F4978E] to-[#F8AD9D] bg-clip-text text-transparent truncate">
                         Settings Studio
                       </h1>
-                      <p className="text-white/80 text-sm font-medium">Customize your experience</p>
+                      <p className="text-slate-600 text-sm font-medium">Customize your experience</p>
                     </div>
                   </div>
                 </div>
@@ -514,19 +610,19 @@ const StudentSettingsPage = () => {
                       onClick={() => router.back()}
                       variant="ghost"
                       size="sm"
-                      className="text-white/80 hover:text-white hover:bg-white/10 rounded-2xl p-3"
+                      className="text-slate-600 hover:text-slate-800 hover:bg-[#FBC4AB]/30 rounded-2xl p-3"
                     >
                       <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div className="flex items-center space-x-4">
-                      <div className="p-4 bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 rounded-2xl shadow-2xl">
+                      <div className="p-4 bg-gradient-to-br from-[#F08080] via-[#F4978E] to-[#F8AD9D] rounded-2xl shadow-2xl">
                         <Settings className="h-8 w-8 text-white" />
                       </div>
                       <div>
-                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black bg-gradient-to-r from-white via-purple-200 to-white bg-clip-text text-transparent">
+                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black bg-gradient-to-r from-[#F08080] via-[#F4978E] to-[#F8AD9D] bg-clip-text text-transparent">
                           Settings Studio
                         </h1>
-                        <p className="text-white/80 text-base lg:text-lg font-medium">Customize your experience</p>
+                        <p className="text-slate-600 text-base lg:text-lg font-medium">Customize your experience</p>
                       </div>
                     </div>
                   </div>
@@ -534,10 +630,10 @@ const StudentSettingsPage = () => {
                   <Button
                     onClick={() => saveSettings()}
                     disabled={saving || !hasUnsavedChanges}
-                    className={`border-0 rounded-2xl px-6 py-3 font-bold transition-all ${
+                    className={`border-0 rounded-2xl px-6 py-3 font-bold transition-all shadow-lg ${
                       hasUnsavedChanges 
-                        ? 'bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white' 
-                        : 'bg-gray-500/50 text-gray-300 cursor-not-allowed'
+                        ? 'bg-gradient-to-r from-[#F08080] to-[#F4978E] hover:from-[#F4978E] hover:to-[#F8AD9D] text-white' 
+                        : 'bg-gray-300/50 text-gray-500 cursor-not-allowed'
                     }`}
                   >
                     {saving ? (
@@ -553,8 +649,8 @@ const StudentSettingsPage = () => {
               </div>
             </motion.div>
 
-            {/* Optimized Settings Grid - Full Width Desktop Layout */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
+            {/* Optimized Settings Grid - Mobile-First Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
               
               {/* Profile Section */}
               <motion.div
@@ -562,25 +658,31 @@ const StudentSettingsPage = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.6, delay: 0.1 }}
               >
-                <Card className="bg-white/10 backdrop-blur-xl shadow-2xl border border-white/20 rounded-2xl sm:rounded-3xl h-full">
-                  <CardHeader className="pb-3 sm:pb-6">
-                    <CardTitle className="flex items-center space-x-2 sm:space-x-3 text-base sm:text-lg text-white">
-                      <User className="h-4 w-4 sm:h-5 sm:w-5 text-violet-300" />
+                <Card className="bg-white/95 backdrop-blur-xl shadow-xl border border-[#F8AD9D]/30 rounded-xl sm:rounded-2xl h-full">
+                  <CardHeader className="p-3 pb-2 sm:p-6 sm:pb-4">
+                    <CardTitle className="flex items-center space-x-2 sm:space-x-3 text-sm sm:text-base lg:text-lg text-slate-800">
+                      <User className="h-4 w-4 sm:h-5 sm:w-5 text-[#F08080]" />
                       <span className="truncate">Profile Settings</span>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6 pb-6">
-                    <AdvancedProfilePictureUpload
-                      currentImage={profile?.profile_picture_url}
-                      onImageUpdate={(imageUrl) => {
-                        setProfile(prev => ({ ...prev, profile_picture_url: imageUrl }))
-                      }}
-                    />
+                  <CardContent className="space-y-3 sm:space-y-6 p-3 sm:px-6 sm:pb-6">
+                    <Suspense fallback={
+                      <div className="flex items-center justify-center p-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-2 border-white/20 border-t-violet-400"></div>
+                      </div>
+                    }>
+                      <AdvancedProfilePictureUpload
+                        currentImage={profile?.profile_picture_url}
+                        onImageUpdate={(imageUrl) => {
+                          setProfile(prev => ({ ...prev, profile_picture_url: imageUrl }))
+                        }}
+                      />
+                    </Suspense>
                     
                     {/* Mobile-Optimized Student ID */}
                     <div className="space-y-2 sm:space-y-3">
-                      <label className="text-white/80 font-medium text-xs sm:text-sm">Student ID</label>
-                      <div className="p-3 sm:p-4 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 backdrop-blur-sm">
+                      <label className="text-slate-700 font-medium text-xs sm:text-sm">Student ID</label>
+                      <div className="p-3 sm:p-4 bg-[#FFF5EE]/80 rounded-xl sm:rounded-2xl border border-[#F8AD9D]/30 backdrop-blur-sm">
                         {/* Mobile Layout */}
                         <div className="sm:hidden">
                           <div className="flex items-center space-x-2 mb-2">
@@ -588,7 +690,7 @@ const StudentSettingsPage = () => {
                               <Users className="h-3 w-3 text-white" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-white/90 font-medium text-xs">Your Student ID</p>
+                              <p className="text-slate-800 font-medium text-xs">Your Student ID</p>
                             </div>
                           </div>
                           <div className="flex items-center justify-between">
@@ -598,7 +700,7 @@ const StudentSettingsPage = () => {
                                   {profile?.id || 'Not available'}
                                 </code>
                               ) : (
-                                <span className="text-xs text-white/60">••••••••••••</span>
+                                <span className="text-xs text-slate-500">••••••••••••</span>
                               )}
                             </div>
                             <div className="flex items-center space-x-1 flex-shrink-0">
@@ -606,7 +708,7 @@ const StudentSettingsPage = () => {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setShowStudentId(!showStudentId)}
-                                className="h-6 w-6 p-0 text-white/60 hover:text-white hover:bg-white/10 rounded-lg"
+                                className="h-6 w-6 p-0 text-slate-500 hover:text-slate-700 hover:bg-[#FBC4AB]/30 rounded-lg"
                               >
                                 {showStudentId ? <EyeOff className="h-2.5 w-2.5" /> : <Eye className="h-2.5 w-2.5" />}
                               </Button>
@@ -615,14 +717,14 @@ const StudentSettingsPage = () => {
                                   variant="ghost"
                                   size="sm"
                                   onClick={copyStudentId}
-                                  className="h-6 w-6 p-0 text-white/60 hover:text-white hover:bg-white/10 rounded-lg"
+                                  className="h-6 w-6 p-0 text-slate-500 hover:text-slate-700 hover:bg-[#FBC4AB]/30 rounded-lg"
                                 >
                                   {copiedStudentId ? <Check className="h-2.5 w-2.5 text-green-400" /> : <Copy className="h-2.5 w-2.5" />}
                                 </Button>
                               )}
                             </div>
                           </div>
-                          <p className="text-xs text-white/60 mt-2 leading-relaxed">
+                          <p className="text-xs text-slate-600 mt-2 leading-relaxed">
                             Share this ID with your parents for registration
                           </p>
                         </div>
@@ -631,24 +733,24 @@ const StudentSettingsPage = () => {
                         <div className="hidden sm:block">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-3">
-                              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                              <div className="w-10 h-10 bg-gradient-to-r from-[#F08080] to-[#F4978E] rounded-xl flex items-center justify-center">
                                 <Users className="h-5 w-5 text-white" />
                               </div>
                               <div>
-                                <p className="text-white/90 font-medium">Your Student ID</p>
+                                <p className="text-slate-800 font-medium">Your Student ID</p>
                                 <div className="flex items-center space-x-2 mt-1">
                                   {showStudentId ? (
-                                    <code className="text-sm font-mono text-blue-300 bg-blue-500/20 px-2 py-1 rounded">
+                                    <code className="text-sm font-mono text-[#F08080] bg-[#F4978E]/20 px-2 py-1 rounded">
                                       {profile?.id || 'Not available'}
                                     </code>
                                   ) : (
-                                    <span className="text-sm text-white/60">••••••••••••</span>
+                                    <span className="text-sm text-slate-500">••••••••••••</span>
                                   )}
                                   <Button
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => setShowStudentId(!showStudentId)}
-                                    className="h-6 w-6 p-0 text-white/60 hover:text-white hover:bg-white/10"
+                                    className="h-6 w-6 p-0 text-slate-500 hover:text-slate-700 hover:bg-[#FBC4AB]/30"
                                   >
                                     {showStudentId ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                                   </Button>
@@ -657,16 +759,16 @@ const StudentSettingsPage = () => {
                                       variant="ghost"
                                       size="sm"
                                       onClick={copyStudentId}
-                                      className="h-6 w-6 p-0 text-white/60 hover:text-white hover:bg-white/10"
+                                      className="h-6 w-6 p-0 text-slate-500 hover:text-slate-700 hover:bg-[#FBC4AB]/30"
                                     >
-                                      {copiedStudentId ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
+                                      {copiedStudentId ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
                                     </Button>
                                   )}
                                 </div>
                               </div>
                             </div>
                           </div>
-                          <p className="text-xs text-white/60 mt-3">
+                          <p className="text-xs text-slate-600 mt-3">
                             Share this ID with your parents for registration and family messaging
                           </p>
                         </div>
@@ -683,57 +785,25 @@ const StudentSettingsPage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
               >
-                <Card className="bg-white/10 backdrop-blur-xl shadow-2xl border border-white/20 rounded-2xl sm:rounded-3xl">
-                  <CardHeader className="pb-3 sm:pb-6">
-                    <CardTitle className="flex items-center space-x-2 sm:space-x-3 text-base sm:text-lg text-white">
-                      <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-blue-300" />
+                <Card className="bg-white/95 backdrop-blur-xl shadow-xl border border-[#F8AD9D]/30 rounded-xl sm:rounded-2xl h-full">
+                  <CardHeader className="p-3 pb-2 sm:p-6 sm:pb-4">
+                    <CardTitle className="flex items-center space-x-2 sm:space-x-3 text-base sm:text-lg text-slate-800">
+                      <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-[#F4978E]" />
                       <span className="truncate">Privacy & Security</span>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3 sm:space-y-6 px-4 sm:px-6 pb-6">
-                    {[
-                      { key: 'privateProfile', label: 'Private Profile', description: 'Hide your profile from other users', icon: EyeOff },
-                      { key: 'dataSync', label: 'Data Sync', description: 'Sync your data across devices', icon: RotateCw }
-                    ].map(({ key, label, description, icon: Icon }) => (
-                      <div key={key} className="p-3 sm:p-4 bg-white/5 rounded-xl sm:rounded-2xl border border-white/10">
-                        {/* Mobile Layout */}
-                        <div className="sm:hidden">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start space-x-2 flex-1 min-w-0">
-                              <div className="p-1.5 bg-blue-500/20 rounded-lg flex-shrink-0 mt-0.5">
-                                <Icon className="h-3 w-3 text-blue-300" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-white font-medium text-xs">{label}</p>
-                                <p className="text-white/60 text-[10px] mt-0.5 leading-relaxed">{description}</p>
-                              </div>
-                            </div>
-                            <Switch
-                              checked={settings[key as keyof SettingsState] as boolean}
-                              onCheckedChange={(checked) => handleSettingChange(key as keyof SettingsState, checked)}
-                              className="flex-shrink-0 ml-2 data-[state=checked]:bg-violet-500 data-[state=unchecked]:bg-white/20"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Desktop Layout */}
-                        <div className="hidden sm:flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <div className="p-2 bg-blue-500/20 rounded-xl">
-                              <Icon className="h-5 w-5 text-blue-300" />
-                            </div>
-                            <div>
-                              <p className="text-white font-medium">{label}</p>
-                              <p className="text-white/60 text-sm">{description}</p>
-                            </div>
-                          </div>
-                          <Switch
-                            checked={settings[key as keyof SettingsState] as boolean}
-                            onCheckedChange={(checked) => handleSettingChange(key as keyof SettingsState, checked)}
-                            className="data-[state=checked]:bg-violet-500 data-[state=unchecked]:bg-white/20"
-                          />
-                        </div>
-                      </div>
+                  <CardContent className="space-y-3 sm:space-y-6 p-3 sm:px-6 sm:pb-6">
+                    {PRIVACY_SETTINGS.map(({ key, label, description, icon }) => (
+                      <SettingItem
+                        key={key}
+                        settingKey={key}
+                        label={label}
+                        description={description}
+                        icon={icon}
+                        checked={settings[key as keyof SettingsState] as boolean}
+                        onChange={(checked) => handleSettingChange(key as keyof SettingsState, checked)}
+                        iconColor="blue"
+                      />
                     ))}
                   </CardContent>
                 </Card>
@@ -745,59 +815,25 @@ const StudentSettingsPage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.3 }}
               >
-                <Card className="bg-white/10 backdrop-blur-xl shadow-2xl border border-white/20 rounded-2xl sm:rounded-3xl">
-                  <CardHeader className="pb-3 sm:pb-6">
-                    <CardTitle className="flex items-center space-x-2 sm:space-x-3 text-base sm:text-lg text-white">
-                      <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-green-300" />
+                <Card className="bg-white/95 backdrop-blur-xl shadow-xl border border-[#F8AD9D]/30 rounded-xl sm:rounded-2xl h-full">
+                  <CardHeader className="p-3 pb-2 sm:p-6 sm:pb-4">
+                    <CardTitle className="flex items-center space-x-2 sm:space-x-3 text-base sm:text-lg text-slate-800">
+                      <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-[#F8AD9D]" />
                       <span className="truncate">Notifications & Preferences</span>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3 sm:space-y-6 px-4 sm:px-6 pb-6">
-                    {[
-                      { key: 'notifications', label: 'Push Notifications', description: 'Receive updates and reminders', icon: Bell },
-                      { key: 'soundEffects', label: 'Sound Effects', description: 'Play sounds for interactions', icon: Volume2 },
-                      { key: 'animations', label: 'Animations', description: 'Enable smooth transitions', icon: Zap },
-                      { key: 'hapticFeedback', label: 'Haptic Feedback', description: 'Feel vibrations for interactions', icon: Heart }
-                    ].map(({ key, label, description, icon: Icon }) => (
-                      <div key={key} className="p-3 sm:p-4 bg-white/5 rounded-xl sm:rounded-2xl border border-white/10">
-                        {/* Mobile Layout */}
-                        <div className="sm:hidden">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start space-x-2 flex-1 min-w-0">
-                              <div className="p-1.5 bg-green-500/20 rounded-lg flex-shrink-0 mt-0.5">
-                                <Icon className="h-3 w-3 text-green-300" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-white font-medium text-xs">{label}</p>
-                                <p className="text-white/60 text-[10px] mt-0.5 leading-relaxed">{description}</p>
-                              </div>
-                            </div>
-                            <Switch
-                              checked={settings[key as keyof SettingsState] as boolean}
-                              onCheckedChange={(checked) => handleSettingChange(key as keyof SettingsState, checked)}
-                              className="flex-shrink-0 ml-2 data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-white/20"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Desktop Layout */}
-                        <div className="hidden sm:flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <div className="p-2 bg-green-500/20 rounded-xl">
-                              <Icon className="h-5 w-5 text-green-300" />
-                            </div>
-                            <div>
-                              <p className="text-white font-medium">{label}</p>
-                              <p className="text-white/60 text-sm">{description}</p>
-                            </div>
-                          </div>
-                          <Switch
-                            checked={settings[key as keyof SettingsState] as boolean}
-                            onCheckedChange={(checked) => handleSettingChange(key as keyof SettingsState, checked)}
-                            className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-white/20"
-                          />
-                        </div>
-                      </div>
+                  <CardContent className="space-y-3 sm:space-y-6 p-3 sm:px-6 sm:pb-6">
+                    {NOTIFICATION_SETTINGS.map(({ key, label, description, icon }) => (
+                      <SettingItem
+                        key={key}
+                        settingKey={key}
+                        label={label}
+                        description={description}
+                        icon={icon}
+                        checked={settings[key as keyof SettingsState] as boolean}
+                        onChange={(checked) => handleSettingChange(key as keyof SettingsState, checked)}
+                        iconColor="green"
+                      />
                     ))}
                   </CardContent>
                 </Card>
@@ -808,67 +844,67 @@ const StudentSettingsPage = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.4 }}
-                className="xl:col-span-1 lg:col-span-2"
+                className="lg:col-span-2 xl:col-span-3"
               >
-                <Card className="bg-white/10 backdrop-blur-xl shadow-2xl border border-white/20 rounded-2xl sm:rounded-3xl">
-                  <CardHeader className="pb-3 sm:pb-6">
-                    <CardTitle className="flex items-center space-x-2 sm:space-x-3 text-base sm:text-lg text-white">
-                      <User className="h-4 w-4 sm:h-5 sm:w-5 text-orange-300" />
+                <Card className="bg-white/95 backdrop-blur-xl shadow-xl border border-[#F8AD9D]/30 rounded-xl sm:rounded-2xl h-full">
+                  <CardHeader className="p-3 pb-2 sm:p-6 sm:pb-4">
+                    <CardTitle className="flex items-center space-x-2 sm:space-x-3 text-sm sm:text-base lg:text-lg text-slate-800">
+                      <User className="h-4 w-4 sm:h-5 sm:w-5 text-[#F08080]" />
                       <span className="truncate">Account Management</span>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3 sm:space-y-6 px-4 sm:px-6 pb-6">
+                  <CardContent className="space-y-3 sm:space-y-6 p-3 sm:px-6 sm:pb-6">
                     {/* Account Information */}
-                    <div className="p-3 sm:p-4 bg-white/5 rounded-xl sm:rounded-2xl border border-white/10">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center space-x-3">
-                          <div className="p-2 bg-orange-500/20 rounded-xl">
-                            <User className="h-5 w-5 text-orange-300" />
+                    <div className="p-2.5 sm:p-4 bg-[#FFF5EE]/50 rounded-lg sm:rounded-xl border border-[#F8AD9D]/20">
+                      <div className="flex items-center justify-between mb-2 sm:mb-3">
+                        <div className="flex items-center space-x-2 sm:space-x-3">
+                          <div className="p-1.5 sm:p-2 bg-[#F08080]/20 rounded-lg sm:rounded-xl">
+                            <User className="h-4 w-4 sm:h-5 sm:w-5 text-[#F08080]" />
                           </div>
                           <div>
-                            <p className="text-white font-medium">Account Information</p>
-                            <p className="text-white/60 text-sm">View your account details</p>
+                            <p className="text-slate-800 font-medium text-xs sm:text-sm">Account Information</p>
+                            <p className="text-slate-600 text-[10px] sm:text-sm">View your account details</p>
                           </div>
                         </div>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                         <div>
-                          <p className="text-white/60 text-xs">Full Name</p>
-                          <p className="text-white/90 font-medium">{profile?.first_name} {profile?.last_name}</p>
+                          <p className="text-slate-600 text-xs">Full Name</p>
+                          <p className="text-slate-800 font-medium">{profile?.first_name} {profile?.last_name}</p>
                         </div>
                         <div>
-                          <p className="text-white/60 text-xs">Account Type</p>
-                          <p className="text-white/90 font-medium">Student Account</p>
+                          <p className="text-slate-600 text-xs">Account Type</p>
+                          <p className="text-slate-800 font-medium">Student Account</p>
                         </div>
                       </div>
                     </div>
 
                     {/* Data & Storage */}
-                    <div className="p-3 sm:p-4 bg-white/5 rounded-xl sm:rounded-2xl border border-white/10">
+                    <div className="p-3 sm:p-4 bg-[#FFF5EE]/50 rounded-xl sm:rounded-2xl border border-[#F8AD9D]/20">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-3">
-                          <div className="p-2 bg-blue-500/20 rounded-xl">
-                            <Globe className="h-5 w-5 text-blue-300" />
+                          <div className="p-2 bg-[#F4978E]/20 rounded-xl">
+                            <Globe className="h-5 w-5 text-[#F4978E]" />
                           </div>
                           <div>
-                            <p className="text-white font-medium">Data & Storage</p>
-                            <p className="text-white/60 text-sm">Manage your data usage</p>
+                            <p className="text-slate-800 font-medium">Data & Storage</p>
+                            <p className="text-slate-600 text-sm">Manage your data usage</p>
                           </div>
                         </div>
                       </div>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-white/70">Profile Data</span>
-                          <span className="text-white/90">2.4 MB</span>
+                          <span className="text-slate-600">Profile Data</span>
+                          <span className="text-slate-800 font-medium">2.4 MB</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-white/70">Messages</span>
-                          <span className="text-white/90">15.2 MB</span>
+                          <span className="text-slate-600">Messages</span>
+                          <span className="text-slate-800 font-medium">15.2 MB</span>
                         </div>
-                        <div className="w-full bg-white/20 rounded-full h-2 mt-3">
-                          <div className="bg-gradient-to-r from-blue-400 to-blue-600 h-2 rounded-full" style={{ width: '25%' }}></div>
+                        <div className="w-full bg-slate-200 rounded-full h-2 mt-3">
+                          <div className="bg-gradient-to-r from-[#F08080] to-[#F4978E] h-2 rounded-full" style={{ width: '25%' }}></div>
                         </div>
-                        <p className="text-white/60 text-xs">17.6 MB of 100 MB used</p>
+                        <p className="text-slate-600 text-xs">17.6 MB of 100 MB used</p>
                       </div>
                     </div>
 
@@ -876,22 +912,22 @@ const StudentSettingsPage = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <Button
                         variant="outline"
-                        className="bg-white/5 border-white/20 text-white/80 hover:bg-white/10 hover:text-white rounded-xl p-3 h-auto justify-start"
+                        className="bg-[#FFF5EE]/50 border-[#F8AD9D]/30 text-slate-700 hover:bg-[#FBC4AB]/30 hover:text-slate-900 rounded-xl p-3 h-auto justify-start"
                       >
-                        <RefreshCw className="h-4 w-4 mr-2" />
+                        <RefreshCw className="h-4 w-4 mr-2 text-[#F08080]" />
                         <div className="text-left">
                           <p className="font-medium text-sm">Sync Data</p>
-                          <p className="text-xs text-white/60">Update across devices</p>
+                          <p className="text-xs text-slate-600">Update across devices</p>
                         </div>
                       </Button>
                       <Button
                         variant="outline"
-                        className="bg-white/5 border-white/20 text-white/80 hover:bg-white/10 hover:text-white rounded-xl p-3 h-auto justify-start"
+                        className="bg-[#FFF5EE]/50 border-[#F8AD9D]/30 text-slate-700 hover:bg-[#FBC4AB]/30 hover:text-slate-900 rounded-xl p-3 h-auto justify-start"
                       >
-                        <Shield className="h-4 w-4 mr-2" />
+                        <Shield className="h-4 w-4 mr-2 text-[#F4978E]" />
                         <div className="text-left">
                           <p className="font-medium text-sm">Privacy Center</p>
-                          <p className="text-xs text-white/60">Manage permissions</p>
+                          <p className="text-xs text-slate-600">Manage permissions</p>
                         </div>
                       </Button>
                     </div>
@@ -907,11 +943,11 @@ const StudentSettingsPage = () => {
                 transition={{ duration: 0.6, delay: 0.45 }}
                 className="xl:col-span-2 lg:col-span-1"
               >
-                <Card className="bg-white/10 backdrop-blur-xl shadow-2xl border border-white/20 rounded-2xl sm:rounded-3xl">
+                <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border border-[#F8AD9D]/30 rounded-2xl sm:rounded-3xl">
                   <CardHeader className="pb-3 sm:pb-6">
-                    <CardTitle className="flex items-center justify-between text-base sm:text-lg text-white">
+                    <CardTitle className="flex items-center justify-between text-base sm:text-lg text-slate-800">
                       <div className="flex items-center space-x-2 sm:space-x-3">
-                        <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-300" />
+                        <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 text-[#F08080]" />
                         <span className="truncate">WhatsApp Configuration</span>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -921,9 +957,9 @@ const StudentSettingsPage = () => {
                             setWhatsappConfig(prev => ({ ...prev, isEnabled: checked }))
                             setHasUnsavedChanges(true)
                           }}
-                          className="data-[state=checked]:bg-green-500"
+                          className="data-[state=checked]:bg-[#F08080]"
                         />
-                        <span className="text-xs text-white/60">
+                        <span className="text-xs text-slate-600">
                           {whatsappConfig.isEnabled ? 'Enabled' : 'Disabled'}
                         </span>
                       </div>
@@ -933,8 +969,8 @@ const StudentSettingsPage = () => {
                     
                     {/* Phone Number Input */}
                     <div className="space-y-2">
-                      <label className="text-white/80 text-sm font-medium flex items-center space-x-2">
-                        <Phone className="h-4 w-4 text-green-300" />
+                      <label className="text-slate-700 text-sm font-medium flex items-center space-x-2">
+                        <Phone className="h-4 w-4 text-[#F4978E]" />
                         <span>Phone Number</span>
                       </label>
                       <Input
@@ -950,10 +986,10 @@ const StudentSettingsPage = () => {
                           }))
                           setHasUnsavedChanges(true)
                         }}
-                        className={`bg-white/10 border-white/20 text-white placeholder-white/50 rounded-xl ${
+                        className={`bg-white border-[#F8AD9D]/30 text-slate-800 placeholder-slate-400 rounded-xl ${
                           whatsappConfig.phoneNumber && !validatePhoneNumber(whatsappConfig.phoneNumber)
                             ? 'border-red-400 focus:border-red-400'
-                            : 'focus:border-green-400'
+                            : 'focus:border-[#F08080]'
                         }`}
                       />
                       {whatsappConfig.phoneNumber && !validatePhoneNumber(whatsappConfig.phoneNumber) && (
@@ -962,15 +998,15 @@ const StudentSettingsPage = () => {
                           <span>Please enter a valid phone number with country code</span>
                         </p>
                       )}
-                      <p className="text-white/60 text-xs">
+                      <p className="text-slate-600 text-xs">
                         Enter your phone number with country code (e.g., +1234567890)
                       </p>
                     </div>
 
                     {/* WhatsApp Link Input */}
                     <div className="space-y-2">
-                      <label className="text-white/80 text-sm font-medium flex items-center space-x-2">
-                        <Link className="h-4 w-4 text-green-300" />
+                      <label className="text-slate-700 text-sm font-medium flex items-center space-x-2">
+                        <Link className="h-4 w-4 text-[#F4978E]" />
                         <span>WhatsApp Link</span>
                       </label>
                       <Input
@@ -981,21 +1017,21 @@ const StudentSettingsPage = () => {
                           setWhatsappConfig(prev => ({ ...prev, whatsappLink: e.target.value }))
                           setHasUnsavedChanges(true)
                         }}
-                        className="bg-white/10 border-white/20 text-white placeholder-white/50 rounded-xl focus:border-green-400"
+                        className="bg-white border-[#F8AD9D]/30 text-slate-800 placeholder-slate-400 rounded-xl focus:border-[#F08080]"
                       />
-                      <p className="text-white/60 text-xs">
+                      <p className="text-slate-600 text-xs">
                         Custom WhatsApp link (optional - auto-generated from phone number)
                       </p>
                     </div>
 
                     {/* Auto-generated Link Display */}
                     {whatsappConfig.phoneNumber && validatePhoneNumber(whatsappConfig.phoneNumber) && (
-                      <div className="p-3 bg-green-500/10 border border-green-400/20 rounded-xl">
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-xl">
                         <div className="flex items-start space-x-2">
-                          <Check className="h-4 w-4 text-green-300 mt-0.5 flex-shrink-0" />
+                          <Check className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <p className="text-green-300 text-sm font-medium">Auto-generated WhatsApp Link:</p>
-                            <p className="text-green-200/80 text-xs mt-1 break-all">
+                            <p className="text-green-700 text-sm font-medium">Auto-generated WhatsApp Link:</p>
+                            <p className="text-green-600 text-xs mt-1 break-all">
                               {generateWhatsAppLink(whatsappConfig.phoneNumber)}
                             </p>
                           </div>
@@ -1005,8 +1041,8 @@ const StudentSettingsPage = () => {
 
                     {/* Test WhatsApp Link */}
                     {(whatsappConfig.whatsappLink || (whatsappConfig.phoneNumber && validatePhoneNumber(whatsappConfig.phoneNumber))) && (
-                      <div className="flex items-center justify-between pt-4 border-t border-white/20">
-                        <div className="text-xs text-white/60">
+                      <div className="flex items-center justify-between pt-4 border-t border-[#F8AD9D]/20">
+                        <div className="text-xs text-slate-600">
                           <p>Test your WhatsApp configuration</p>
                         </div>
                         <Button
@@ -1014,7 +1050,7 @@ const StudentSettingsPage = () => {
                             const linkToTest = whatsappConfig.whatsappLink || generateWhatsAppLink(whatsappConfig.phoneNumber)
                             window.open(linkToTest, '_blank')
                           }}
-                          className="bg-green-500 hover:bg-green-600 text-white border-0 rounded-xl px-4 py-2 font-medium transition-all duration-200 flex items-center gap-2"
+                          className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0 rounded-xl px-4 py-2 font-medium transition-all duration-200 flex items-center gap-2 shadow-md"
                         >
                           <MessageCircle className="h-4 w-4" />
                           Test WhatsApp
@@ -1023,17 +1059,17 @@ const StudentSettingsPage = () => {
                     )}
 
                     {/* Save Configuration */}
-                    <div className="flex items-center justify-between pt-4 border-t border-white/20">
-                      <div className="text-xs text-white/60">
+                    <div className="flex items-center justify-between pt-4 border-t border-[#F8AD9D]/20">
+                      <div className="text-xs text-slate-600">
                         <p>Configure WhatsApp for quick communication</p>
                       </div>
                       <Button
                         onClick={() => saveWhatsAppConfig(whatsappConfig)}
                         disabled={saving || (!whatsappConfig.phoneNumber && !whatsappConfig.whatsappLink)}
-                        className={`px-6 py-2 rounded-xl font-medium transition-all ${
+                        className={`px-6 py-2 rounded-xl font-medium transition-all shadow-md ${
                           (whatsappConfig.phoneNumber || whatsappConfig.whatsappLink)
-                            ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white' 
-                            : 'bg-gray-500/50 text-gray-300 cursor-not-allowed'
+                            ? 'bg-gradient-to-r from-[#F08080] to-[#F4978E] hover:from-[#F4978E] hover:to-[#F8AD9D] text-white' 
+                            : 'bg-gray-300/50 text-gray-500 cursor-not-allowed'
                         }`}
                       >
                         {saving ? (
@@ -1055,25 +1091,25 @@ const StudentSettingsPage = () => {
                 transition={{ duration: 0.6, delay: 0.5 }}
                 className="xl:col-span-3 lg:col-span-2"
               >
-                <Card className="bg-white/10 backdrop-blur-xl shadow-2xl border border-white/20 rounded-2xl sm:rounded-3xl">
+                <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border border-[#F8AD9D]/30 rounded-2xl sm:rounded-3xl">
                   <CardHeader className="pb-3 sm:pb-6">
-                    <CardTitle className="flex items-center space-x-2 sm:space-x-3 text-base sm:text-lg text-white">
-                      <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-red-300" />
+                    <CardTitle className="flex items-center space-x-2 sm:space-x-3 text-base sm:text-lg text-slate-800">
+                      <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-[#F08080]" />
                       <span className="truncate">Account Management</span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6 pb-6">
                     
                     {/* Sign Out Section */}
-                    <div className="p-4 sm:p-6 bg-red-500/10 border border-red-400/20 rounded-xl sm:rounded-2xl">
+                    <div className="p-4 sm:p-6 bg-red-50 border border-red-200 rounded-xl sm:rounded-2xl">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div className="flex items-start space-x-3">
-                          <div className="p-2 bg-red-500/20 rounded-xl flex-shrink-0">
-                            <LogOut className="h-5 w-5 text-red-300" />
+                          <div className="p-2 bg-red-100 rounded-xl flex-shrink-0">
+                            <LogOut className="h-5 w-5 text-red-600" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h3 className="text-white font-semibold text-sm sm:text-base">Sign Out</h3>
-                            <p className="text-red-200/80 text-xs sm:text-sm mt-1 leading-relaxed">
+                            <h3 className="text-slate-800 font-semibold text-sm sm:text-base">Sign Out</h3>
+                            <p className="text-slate-600 text-xs sm:text-sm mt-1 leading-relaxed">
                               Sign out of your account and clear all session data. You'll need to log in again to access your dashboard.
                             </p>
                           </div>
@@ -1089,17 +1125,17 @@ const StudentSettingsPage = () => {
                     </div>
 
                     {/* Account Info */}
-                    <div className="p-4 sm:p-6 bg-blue-500/10 border border-blue-400/20 rounded-xl sm:rounded-2xl">
+                    <div className="p-4 sm:p-6 bg-[#FFF5EE] border border-[#F8AD9D]/30 rounded-xl sm:rounded-2xl">
                       <div className="flex items-start space-x-3">
-                        <div className="p-2 bg-blue-500/20 rounded-xl flex-shrink-0">
-                          <User className="h-5 w-5 text-blue-300" />
+                        <div className="p-2 bg-[#F4978E]/20 rounded-xl flex-shrink-0">
+                          <User className="h-5 w-5 text-[#F08080]" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-white font-semibold text-sm sm:text-base">Account Information</h3>
-                          <div className="mt-2 space-y-1 text-xs sm:text-sm text-blue-200/80">
-                            <p><span className="text-blue-300 font-medium">Name:</span> {profile?.first_name} {profile?.last_name}</p>
-                            <p><span className="text-blue-300 font-medium">Student ID:</span> {profile?.id ? `${profile.id.slice(0, 8)}...` : 'Not available'}</p>
-                            <p><span className="text-blue-300 font-medium">Role:</span> Student</p>
+                          <h3 className="text-slate-800 font-semibold text-sm sm:text-base">Account Information</h3>
+                          <div className="mt-2 space-y-1 text-xs sm:text-sm text-slate-600">
+                            <p><span className="text-[#F08080] font-medium">Name:</span> {profile?.first_name} {profile?.last_name}</p>
+                            <p><span className="text-[#F08080] font-medium">Student ID:</span> {profile?.id ? `${profile.id.slice(0, 8)}...` : 'Not available'}</p>
+                            <p><span className="text-[#F08080] font-medium">Role:</span> Student</p>
                           </div>
                         </div>
                       </div>

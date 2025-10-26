@@ -3,17 +3,22 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback } from 'react'
+import dynamicImport from 'next/dynamic'
 import { useAppSelector, useAppDispatch } from '@/lib/redux/hooks'
 import { fetchProfile } from '@/lib/redux/slices/authSlice'
 import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
+import { OfflineAPI } from '@/lib/api/offline-wrapper'
 import { AnimatePresence, motion } from 'framer-motion'
-import BottomNavigation, { DesktopNavigation } from '@/components/parent/BottomNavigation'
-import HomeTab from '@/components/parent/HomeTab'
-import CommunityTab from '@/components/parent/CommunityTab'
-import AnalyticsTab from '@/components/parent/AnalyticsTab'
-import ProfileTab from '@/components/parent/ProfileTab'
 import { Loader, Users } from 'lucide-react'
 import { DarkModeProvider, useDarkMode } from '@/contexts/DarkModeContext'
+
+// Dynamic imports to prevent SSR issues
+const BottomNavigation = dynamicImport(() => import('@/components/parent/BottomNavigation').then(mod => ({ default: mod.default })), { ssr: false })
+const DesktopNavigation = dynamicImport(() => import('@/components/parent/BottomNavigation').then(mod => ({ default: mod.DesktopNavigation })), { ssr: false })
+const HomeTab = dynamicImport(() => import('@/components/parent/HomeTab'), { ssr: false })
+const CommunityTab = dynamicImport(() => import('@/components/parent/CommunityTab'), { ssr: false })
+const AnalyticsTab = dynamicImport(() => import('@/components/parent/AnalyticsTab'), { ssr: false })
+const ProfileTab = dynamicImport(() => import('@/components/parent/ProfileTab'), { ssr: false })
 
 function ParentDashboardContent() {
   const { isDarkMode } = useDarkMode()
@@ -78,11 +83,26 @@ function ParentDashboardContent() {
     if (!selectedChild) return
     
     try {
+      // Try OfflineAPI first for PWA support
+      try {
+        const dashboardData = await OfflineAPI.fetchParentDashboard()
+        if (dashboardData) {
+          const hasActions = dashboardData.actionCenter?.some(
+            (action: any) => action.priority === 'high'
+          )
+          setHasNotifications(hasActions)
+          return
+        }
+      } catch (offlineError) {
+        console.log('[Parent] OfflineAPI failed, using regular fetch:', offlineError)
+      }
+      
+      // Fallback to regular fetch
       const response = await fetch(`/api/v1/parents/dashboard?student_id=${selectedChild}`)
       if (response.ok) {
         const result = await response.json()
         const hasActions = result.data?.actionCenter?.some(
-          (item: any) => item.type !== 'success'
+          (action: any) => action.priority === 'high'
         )
         setHasNotifications(hasActions)
       }
@@ -116,8 +136,14 @@ function ParentDashboardContent() {
       }
     }
 
-    window.addEventListener('childSelected', handleChildSelected)
-    return () => window.removeEventListener('childSelected', handleChildSelected)
+    if (typeof window !== 'undefined') {
+      window.addEventListener('childSelected', handleChildSelected)
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('childSelected', handleChildSelected)
+      }
+    }
   }, [])
 
   if (loadingChildren) {

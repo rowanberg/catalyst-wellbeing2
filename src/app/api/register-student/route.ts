@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
       .from('profiles')
       .insert({
         user_id: authData.user.id,
+        email: validatedData.email, // Store email in profiles for easy lookups
         first_name: validatedData.firstName,
         last_name: validatedData.lastName,
         role: 'student',

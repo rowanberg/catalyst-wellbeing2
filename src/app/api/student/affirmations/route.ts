@@ -55,20 +55,42 @@ export async function POST(request: NextRequest) {
       }
 
       // Award XP and gems for each session
-      const { data: profile } = await supabase
+      const xpReward = 15
+      const gemsReward = 3
+      
+      console.log('[Affirmations] Awarding rewards:', { user_id: user.id, xpReward, gemsReward, sessionsCompleted })
+      
+      const { data: profile, error: profileFetchError } = await supabase
         .from('profiles')
-        .select('xp, gems')
+        .select('xp, gems, level')
         .eq('user_id', user.id)
         .single()
 
+      if (profileFetchError) {
+        console.error('[Affirmations] Error fetching profile:', profileFetchError)
+        return NextResponse.json({ 
+          success: true, 
+          sessionsCompleted,
+          xpGained: xpReward,
+          gemsGained: gemsReward,
+          warning: 'Could not update wallet, but session recorded'
+        })
+      }
+
       if (profile) {
-        const xpReward = 15
-        const gemsReward = 3
         const newXp = (profile.xp || 0) + xpReward
         const newGems = (profile.gems || 0) + gemsReward
         const newLevel = Math.floor(newXp / 100) + 1
 
-        await supabase
+        console.log('[Affirmations] Updating profile:', { 
+          oldXp: profile.xp, 
+          newXp, 
+          oldGems: profile.gems, 
+          newGems, 
+          newLevel 
+        })
+
+        const { error: updateError } = await supabase
           .from('profiles')
           .update({
             xp: newXp,
@@ -77,11 +99,27 @@ export async function POST(request: NextRequest) {
           })
           .eq('user_id', user.id)
 
+        if (updateError) {
+          console.error('[Affirmations] Error updating profile:', updateError)
+          return NextResponse.json({ 
+            success: true, 
+            sessionsCompleted,
+            xpGained: xpReward,
+            gemsGained: gemsReward,
+            warning: 'Session recorded but wallet update failed'
+          })
+        }
+
+        console.log('[Affirmations] ✅ Success! Profile updated successfully')
+        
         return NextResponse.json({ 
           success: true, 
           sessionsCompleted,
           xpGained: xpReward,
-          gemsGained: gemsReward
+          gemsGained: gemsReward,
+          newXp,
+          newGems,
+          newLevel
         })
       }
     }

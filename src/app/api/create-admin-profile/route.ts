@@ -81,6 +81,7 @@ export async function POST(request: NextRequest) {
       const { data: updatedProfile, error: updateError } = await supabaseAdmin
         .from('profiles')
         .update({
+          email: user.email, // Update email in profiles
           first_name: firstName,
           last_name: lastName,
           role: 'admin',
@@ -107,6 +108,7 @@ export async function POST(request: NextRequest) {
         .from('profiles')
         .insert({
           user_id: user.id,
+          email: user.email, // Store email in profiles for easy lookups
           first_name: firstName,
           last_name: lastName,
           role: 'admin',

@@ -74,6 +74,7 @@ interface Assessment {
   title: string
   type: 'quiz' | 'test' | 'assignment' | 'project' | 'exam'
   max_score: number
+  pass_mark: number
   created_at: string
   class_id: string
   due_date?: string
@@ -144,6 +145,7 @@ export default function UpdateResultsSystem() {
     title: '',
     type: 'quiz' as 'quiz' | 'test' | 'assignment' | 'project' | 'exam',
     max_score: 100,
+    pass_mark: 50,
     class_id: '',
     due_date: ''
   })
@@ -1663,7 +1665,32 @@ export default function UpdateResultsSystem() {
                     onChange={(e) => setNewAssessment({ ...newAssessment, max_score: parseInt(e.target.value) || 100 })}
                     placeholder="100"
                     className="w-full"
+                    min="1"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
+                    Pass Mark <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    type="number"
+                    value={newAssessment.pass_mark}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value) || 0
+                      if (value <= newAssessment.max_score) {
+                        setNewAssessment({ ...newAssessment, pass_mark: value })
+                      }
+                    }}
+                    placeholder="50"
+                    className="w-full"
+                    min="0"
+                    max={newAssessment.max_score}
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Minimum score required to pass (max: {newAssessment.max_score})
+                  </p>
                 </div>
 
                 <div className="flex gap-2 sm:gap-3 mt-4 sm:mt-5">
@@ -1691,7 +1718,7 @@ export default function UpdateResultsSystem() {
                           const data = await response.json()
                           setAssessments([...assessments, data.assessment])
                           setShowCreateModal(false)
-                          setNewAssessment({ title: '', type: 'quiz', max_score: 100, class_id: '', due_date: '' })
+                          setNewAssessment({ title: '', type: 'quiz', max_score: 100, pass_mark: 50, class_id: '', due_date: '' })
                           toast.success('Assessment created successfully!')
                         } else {
                           const error = await response.json()
@@ -1713,7 +1740,7 @@ export default function UpdateResultsSystem() {
                   <Button
                     onClick={() => {
                       setShowCreateModal(false)
-                      setNewAssessment({ title: '', type: 'quiz', max_score: 100, class_id: '', due_date: '' })
+                      setNewAssessment({ title: '', type: 'quiz', max_score: 100, pass_mark: 50, class_id: '', due_date: '' })
                     }}
                     variant="outline"
                     className="flex-1"

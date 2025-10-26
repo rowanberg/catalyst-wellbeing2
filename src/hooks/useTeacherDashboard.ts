@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { OfflineAPI } from '@/lib/api/offline-wrapper'
 
 interface TeacherDashboardData {
   analytics: {
@@ -45,6 +46,17 @@ interface TeacherDashboardData {
 }
 
 const fetchTeacherDashboard = async (teacherId: string): Promise<TeacherDashboardData> => {
+  try {
+    // Try OfflineAPI first for PWA support
+    const data = await OfflineAPI.fetchTeacherDashboard(teacherId)
+    if (data) {
+      return data
+    }
+  } catch (error) {
+    console.log('[Teacher] Falling back to regular fetch:', error)
+  }
+  
+  // Fallback to regular fetch
   const response = await fetch(`/api/teacher/dashboard-combined?teacher_id=${teacherId}`)
   
   if (!response.ok) {

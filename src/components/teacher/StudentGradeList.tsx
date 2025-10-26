@@ -35,6 +35,7 @@ interface Assessment {
   title: string
   type: 'quiz' | 'test' | 'assignment' | 'project' | 'exam'
   max_score: number
+  pass_mark: number
   created_at: string
   class_id: string
   due_date?: string
@@ -92,14 +93,17 @@ export default function StudentGradeList({
   const handleScoreChange = (studentId: string, score: number) => {
     if (!assessment) return
     
-    const percentage = (score / assessment.max_score) * 100
+    // Cap score at max_score to prevent invalid percentages
+    const validScore = Math.min(Math.max(0, score), assessment.max_score)
+    
+    const percentage = (validScore / assessment.max_score) * 100
     const letterGrade = calculateLetterGrade(percentage)
     
     const updatedGrade: Grade = {
       id: grades[studentId]?.id || `temp_${Date.now()}_${studentId}`,
       student_id: studentId,
       assessment_id: assessment.id,
-      score,
+      score: validScore,
       percentage,
       letter_grade: letterGrade,
       feedback: grades[studentId]?.feedback || localGrades[studentId]?.feedback || '',
@@ -155,6 +159,28 @@ export default function StudentGradeList({
     }
   }
 
+  const getPassFailStatus = (score: number) => {
+    if (!assessment?.pass_mark) return null
+    return score >= assessment.pass_mark
+  }
+
+  const getPassFailBadge = (score: number) => {
+    const isPassing = getPassFailStatus(score)
+    if (isPassing === null) return null
+    
+    return isPassing ? (
+      <Badge className="bg-green-100 text-green-700 border-green-300 text-xs font-semibold">
+        <CheckCircle className="h-3 w-3 mr-1" />
+        PASS
+      </Badge>
+    ) : (
+      <Badge className="bg-red-100 text-red-700 border-red-300 text-xs font-semibold">
+        <AlertCircle className="h-3 w-3 mr-1" />
+        FAIL
+      </Badge>
+    )
+  }
+
   const hasUnsavedChanges = Object.keys(localGrades).length > 0
 
   if (!assessment) {
@@ -201,6 +227,8 @@ export default function StudentGradeList({
   const gradedStudents = Object.keys(grades).length
   const averageScore = Object.values(grades).reduce((acc, g) => acc + g.percentage, 0) / gradedStudents || 0
   const completionRate = (gradedStudents / totalStudents) * 100
+  const passCount = assessment?.pass_mark ? Object.values(grades).filter(g => g.score >= assessment.pass_mark).length : 0
+  const passRate = gradedStudents > 0 ? (passCount / gradedStudents) * 100 : 0
 
   return (
     <div className="space-y-4">
@@ -235,6 +263,15 @@ export default function StudentGradeList({
             </div>
             <p className="text-lg font-bold text-orange-700 mt-1">{completionRate.toFixed(0)}%</p>
           </div>
+          {assessment.pass_mark && gradedStudents > 0 && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-emerald-600" />
+                <span className="text-xs text-emerald-600 font-medium">Pass Rate</span>
+              </div>
+              <p className="text-lg font-bold text-emerald-700 mt-1">{passRate.toFixed(0)}% ({passCount}/{gradedStudents})</p>
+            </div>
+          )}
         </div>
       )}
 
@@ -251,9 +288,7 @@ export default function StudentGradeList({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.03 }}
-                className={`p-4 bg-white border rounded-xl hover:shadow-md transition-all ${
-                  hasGrade ? 'border-green-200 bg-green-50/30' : 'border-slate-200'
-                }`}
+                className="p-4 bg-white border border-slate-200 rounded-xl hover:shadow-md transition-all"
               >
                 <div className="space-y-3">
                   {/* Student Info */}
@@ -267,21 +302,24 @@ export default function StudentGradeList({
                   </div>
                   
                   {/* Score Input */}
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      placeholder="Score"
-                      min="0"
-                      max={assessment.max_score}
-                      value={grade?.score || ''}
-                      onChange={(e) => handleScoreChange(student.id, parseFloat(e.target.value) || 0)}
-                      className="w-24 text-center"
-                    />
-                    <span className="text-sm text-slate-500">/ {assessment.max_score}</span>
-                    {hasGrade && (
-                      <Badge className={`ml-auto ${getGradeColor(grade.letter_grade)}`}>
-                        {grade.letter_grade} ({Math.round(grade.percentage)}%)
-                      </Badge>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        placeholder="Score"
+                        min="0"
+                        max={assessment.max_score}
+                        value={grade?.score || ''}
+                        onChange={(e) => handleScoreChange(student.id, parseFloat(e.target.value) || 0)}
+                        className="w-24 text-center"
+                      />
+                      <span className="text-sm text-slate-500">/ {assessment.max_score}</span>
+                    </div>
+                    {hasGrade && assessment.pass_mark && (
+                      <div className="flex items-center justify-between">
+                        {getPassFailBadge(grade.score)}
+                        <span className="text-xs text-slate-500">Pass mark: {assessment.pass_mark}</span>
+                      </div>
                     )}
                   </div>
                   
@@ -310,6 +348,9 @@ export default function StudentGradeList({
                 <th className="text-center px-4 py-3 text-xs font-medium text-slate-600">Score</th>
                 <th className="text-center px-4 py-3 text-xs font-medium text-slate-600">Percentage</th>
                 <th className="text-center px-4 py-3 text-xs font-medium text-slate-600">Grade</th>
+                {assessment.pass_mark && (
+                  <th className="text-center px-4 py-3 text-xs font-medium text-slate-600">Status</th>
+                )}
                 {showFeedback && (
                   <th className="text-center px-4 py-3 text-xs font-medium text-slate-600">Actions</th>
                 )}
@@ -327,9 +368,7 @@ export default function StudentGradeList({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: index * 0.02 }}
-                      className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${
-                        hasGrade ? 'bg-green-50/30' : ''
-                      }`}
+                      className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
                     >
                       <td className="px-4 py-3 text-sm text-slate-600">{index + 1}</td>
                       <td className="px-4 py-3">
@@ -362,7 +401,7 @@ export default function StudentGradeList({
                       <td className="px-4 py-3 text-center">
                         {hasGrade ? (
                           <span className="font-medium text-sm">
-                            {Math.round(grade.percentage)}%
+                            {Math.min(Math.round(grade.percentage), 100)}%
                           </span>
                         ) : (
                           <span className="text-sm text-slate-400">—</span>
@@ -377,6 +416,11 @@ export default function StudentGradeList({
                           <span className="text-sm text-slate-400">—</span>
                         )}
                       </td>
+                      {assessment.pass_mark && (
+                        <td className="px-4 py-3 text-center">
+                          {hasGrade ? getPassFailBadge(grade.score) : <span className="text-sm text-slate-400">—</span>}
+                        </td>
+                      )}
                       {showFeedback && (
                         <td className="px-4 py-3 text-center">
                           <Button
@@ -427,9 +471,7 @@ export default function StudentGradeList({
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.02 }}
-                className={`flex items-center gap-3 p-3 bg-white border rounded-lg hover:shadow-sm transition-all ${
-                  hasGrade ? 'border-green-200 bg-green-50/30' : 'border-slate-200'
-                }`}
+                className="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-lg hover:shadow-sm transition-all"
               >
                 <span className="text-xs text-slate-500 w-8">{index + 1}</span>
                 <div className="flex-1 min-w-0">

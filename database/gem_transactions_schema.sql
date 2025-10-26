@@ -136,12 +136,14 @@ $$;
 CREATE OR REPLACE FUNCTION update_profile_gems()
 RETURNS TRIGGER
 LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
     -- Only process credit_issued transactions
     IF NEW.transaction_type = 'credit_issued' THEN
         -- Update student's gem count
-        UPDATE profiles
+        UPDATE public.profiles
         SET gems = COALESCE(gems, 0) + NEW.amount,
             updated_at = NOW()
         WHERE user_id = NEW.student_id;
