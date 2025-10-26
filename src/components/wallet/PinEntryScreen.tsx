@@ -73,7 +73,7 @@ export function PinEntryScreen({
     lastClickTime.current = now;
     
     // Haptic feedback for mobile
-    if (navigator.vibrate) {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate(10);
     }
     
@@ -101,7 +101,7 @@ export function PinEntryScreen({
     lastClickTime.current = now;
     
     // Haptic feedback
-    if (navigator.vibrate) {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate(10);
     }
     
@@ -117,7 +117,7 @@ export function PinEntryScreen({
     lastClickTime.current = now;
     
     // Haptic feedback
-    if (navigator.vibrate) {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate(15);
     }
     

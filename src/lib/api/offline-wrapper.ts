@@ -282,11 +282,14 @@ export class OfflineAPI {
 }
 
 /**
- * Auto-prefetch on app load
+ * Manual prefetch initialization
+ * Call this from client components after mount to avoid SSR issues
  */
-if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.onLine) {
-  // Prefetch after a short delay to not block initial load
-  setTimeout(() => {
-    OfflineAPI.prefetchDashboards();
-  }, 5000);
+export function initializeOfflineAPI() {
+  if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.onLine) {
+    // Prefetch after a short delay to not block initial load
+    setTimeout(() => {
+      OfflineAPI.prefetchDashboards();
+    }, 5000);
+  }
 }

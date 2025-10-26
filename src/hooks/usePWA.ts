@@ -11,13 +11,15 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function usePWA() {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   
   useEffect(() => {
+    // Skip SSR
+    if (typeof window === 'undefined') return;
     // Initialize IndexedDB
     initializeDB();
     
@@ -31,7 +33,7 @@ export function usePWA() {
     checkInstalled();
     
     // Register service worker
-    if ('serviceWorker' in navigator) {
+    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
       navigator.serviceWorker
         .register('/service-worker.js')
         .then((reg) => {
@@ -43,7 +45,7 @@ export function usePWA() {
             const newWorker = reg.installing;
             if (newWorker) {
               newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                if (newWorker.state === 'installed' && typeof navigator !== 'undefined' && navigator.serviceWorker.controller) {
                   setUpdateAvailable(true);
                 }
               });

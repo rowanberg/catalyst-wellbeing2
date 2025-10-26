@@ -196,7 +196,7 @@ export function ProfileTab({ data, loading, error, onRefresh, profile }: Profile
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleVibrate = useCallback(() => {
-    if (navigator.vibrate) navigator.vibrate(10)
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10)
   }, [])
 
   const compressImage = useCallback(async (image: File): Promise<Blob> => {

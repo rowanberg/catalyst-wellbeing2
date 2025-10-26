@@ -86,6 +86,9 @@ export default function CreatePostComposer({ onClose, teacherId }: CreatePostCom
 
   const startVoiceRecording = async () => {
     try {
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices) {
+        throw new Error('Media devices not available')
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       const mediaRecorder = new MediaRecorder(stream)
       const audioChunks: Blob[] = []

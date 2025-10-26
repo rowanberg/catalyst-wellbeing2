@@ -268,10 +268,12 @@ function CodeBlock({ code, onCopy }: { code: string; onCopy?: (code: string) => 
   }
   
   const handleCopy = () => {
-    navigator.clipboard.writeText(actualCode)
-    setCopied(true)
-    onCopy?.(actualCode)
-    setTimeout(() => setCopied(false), 2000)
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(actualCode)
+      setCopied(true)
+      onCopy?.(actualCode)
+      setTimeout(() => setCopied(false), 2000)
+    }
   }
   
   // Language badge color mapping
@@ -493,9 +495,11 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
   const [copied, setCopied] = React.useState(false)
   
   const handleCopyAll = () => {
-    navigator.clipboard.writeText(content)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(content)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
   }
   
   const formatContent = (text: string) => {
@@ -1732,7 +1736,7 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
                     {hoveredMessage === message.id && (
                       <motion.div initial={{ opacity: 0, x: -5 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-1">
                         <button 
-                          onClick={() => { navigator.clipboard.writeText(message.content); setCopiedCode(message.id); setTimeout(() => setCopiedCode(null), 2000) }} 
+                          onClick={() => { if (typeof navigator !== 'undefined' && navigator.clipboard) { navigator.clipboard.writeText(message.content); setCopiedCode(message.id); setTimeout(() => setCopiedCode(null), 2000) } }} 
                           className="px-2 py-1 rounded-md text-xs text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all flex items-center gap-1" 
                           title="Copy message"
                         >

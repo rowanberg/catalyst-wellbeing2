@@ -38,6 +38,9 @@ export function QRScanner({ isOpen, onClose, onScan }: QRScannerProps) {
       setIsScanning(true);
 
       // Request camera access
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices) {
+        throw new Error('Camera not available');
+      }
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment' } // Use back camera on mobile
       });

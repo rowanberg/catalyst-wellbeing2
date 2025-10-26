@@ -166,6 +166,9 @@ export function ExamInterface({
 
   const setupWebcam = async () => {
     try {
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices) {
+        throw new Error('Webcam not available')
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: true, 
         audio: false 

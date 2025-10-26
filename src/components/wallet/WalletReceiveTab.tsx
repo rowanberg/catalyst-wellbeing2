@@ -31,21 +31,25 @@ export function WalletReceiveTab({ wallet, currentStudent }: WalletReceiveTabPro
   }, [wallet?.walletAddress]);
 
   const copyAddress = () => {
-    navigator.clipboard.writeText(wallet?.walletAddress || '');
-    setCopied(true);
-    toast.success('Address copied to clipboard!');
-    setTimeout(() => setCopied(false), 2000);
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(wallet?.walletAddress || '');
+      setCopied(true);
+      toast.success('Address copied to clipboard!');
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const copyTag = () => {
-    navigator.clipboard.writeText(wallet?.studentTag || '');
-    setCopiedTag(true);
-    toast.success('Student tag copied!');
-    setTimeout(() => setCopiedTag(false), 2000);
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(wallet?.studentTag || '');
+      setCopiedTag(true);
+      toast.success('Student tag copied!');
+      setTimeout(() => setCopiedTag(false), 2000);
+    }
   };
 
   const shareTag = () => {
-    if (navigator.share) {
+    if (typeof navigator !== 'undefined' && navigator.share) {
       navigator.share({
         title: 'My Student Tag',
         text: `Send me currency using my student tag: ${wallet?.studentTag}`,
@@ -89,13 +93,13 @@ export function WalletReceiveTab({ wallet, currentStudent }: WalletReceiveTabPro
       : `💰 Payment Request\n\nSend ${selectedCurrency === 'mind_gems' ? 'Mind Gems' : 'Fluxon'} to ${paymentData.recipientName}\n\nStudent Tag: ${wallet.studentTag}\n\nClick to pay: ${paymentLink}`;
 
     // Share or copy the payment request
-    if (navigator.share) {
+    if (typeof navigator !== 'undefined' && navigator.share) {
       navigator.share({
         title: 'Wells Wallet - Payment Request',
         text: requestText,
         url: paymentLink
       });
-    } else {
+    } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(requestText);
       toast.success('Payment link copied to clipboard!');
     }
@@ -251,8 +255,10 @@ export function WalletReceiveTab({ wallet, currentStudent }: WalletReceiveTabPro
                 <p className="text-green-300 text-xs sm:text-sm font-medium">Payment Link Generated:</p>
                 <button
                   onClick={() => {
-                    navigator.clipboard.writeText(paymentRequestUrl);
-                    toast.success('Link copied!');
+                    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                      navigator.clipboard.writeText(paymentRequestUrl);
+                      toast.success('Link copied!');
+                    }
                   }}
                   className="p-1 hover:bg-green-500/20 rounded text-green-300"
                 >

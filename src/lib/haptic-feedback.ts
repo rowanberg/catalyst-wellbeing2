@@ -3,8 +3,8 @@
  * Provides tactile feedback for better user experience on mobile devices
  */
 
-// Check if the browser supports the Vibration API
-const supportsVibration = typeof navigator !== 'undefined' && 'vibrate' in navigator
+// Check if the browser supports the Vibration API (runtime check)
+const supportsVibration = () => typeof navigator !== 'undefined' && 'vibrate' in navigator
 
 // Haptic feedback patterns (in milliseconds)
 export const HapticPatterns: Record<string, number | number[]> = {
@@ -30,7 +30,7 @@ export type HapticType = keyof typeof HapticPatterns
  */
 export const triggerHaptic = (type: HapticType = 'light', force: boolean = false): void => {
   // Check if vibration is supported
-  if (!supportsVibration) return
+  if (!supportsVibration()) return
 
   // Check user preferences (can be extended to check localStorage settings)
   const userPreference = getUserHapticPreference()
@@ -58,6 +58,7 @@ const getUserHapticPreference = (): boolean => {
   }
   
   // Default to enabled on mobile devices
+  if (typeof navigator === 'undefined') return false
   return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 }
 

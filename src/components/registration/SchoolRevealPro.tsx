@@ -200,9 +200,11 @@ export default function SchoolRevealPro({
   }
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(schoolId)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(schoolId)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
   }
 
   const iconVariants = [

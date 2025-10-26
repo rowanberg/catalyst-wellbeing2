@@ -66,6 +66,9 @@ export default function OMRScanningInterface({ assessment, onGradesScanned }: OM
   // Start camera for live scanning
   const startCamera = useCallback(async () => {
     try {
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices) {
+        throw new Error('Camera not available')
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
           facingMode: 'environment', // Use back camera on mobile

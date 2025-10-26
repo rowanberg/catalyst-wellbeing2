@@ -128,7 +128,7 @@ export const AdvancedSettingsDropdown = ({
     }))
     
     // Simulate haptic feedback
-    if (settings.hapticFeedback && 'vibrate' in navigator) {
+    if (settings.hapticFeedback && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       navigator.vibrate(50)
     }
     

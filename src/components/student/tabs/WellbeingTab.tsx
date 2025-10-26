@@ -64,7 +64,7 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
       return
     }
 
-    if (navigator.vibrate) {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate(10)
     }
 
@@ -82,7 +82,7 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
         setSelectedMood(moodId)
         setMoodLocked(true) // Lock all moods immediately
         
-        if (navigator.vibrate) {
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
           navigator.vibrate([10, 50, 10])
         }
         
@@ -546,7 +546,7 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
                   <Button
                     className="w-full bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white shadow-md hover:shadow-lg transition-all h-12"
                     onClick={() => {
-                      if (navigator.vibrate) navigator.vibrate(10)
+                      if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10)
                       router.push('/student/help')
                     }}
                   >
