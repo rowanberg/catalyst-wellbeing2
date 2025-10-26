@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/build-optimize.js && next build",
+    "build": "next build",
     "build:netlify": "npm ci --production=false && npm run build",
     "build:capacitor": "next build",
     "start": "next start",
