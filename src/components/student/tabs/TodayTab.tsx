@@ -100,7 +100,8 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-[#F08080] to-[#F4978E] rounded-3xl p-6 text-white shadow-2xl"
+        className="rounded-3xl p-6 text-white shadow-2xl"
+        style={{ background: 'linear-gradient(to right, var(--theme-primary), var(--theme-secondary))' }}
       >
         <h1 className="text-2xl sm:text-3xl font-bold mb-2">{greeting}</h1>
         <p className="text-white/90 text-sm sm:text-base mb-4">{timeContext}</p>
@@ -146,8 +147,8 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
           <Card className="border-0 shadow-lg rounded-2xl bg-white">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <Zap className="w-5 h-5 text-[#F08080]" />
-                <span className="text-2xl font-bold text-[#F08080]">
+                <Zap className="w-5 h-5" style={{ color: 'var(--theme-primary)' }} />
+                <span className="text-2xl font-bold" style={{ color: 'var(--theme-primary)' }}>
                   {todayData.weeklyProgress?.xp || 0}
                 </span>
               </div>
@@ -164,8 +165,8 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
           <Card className="border-0 shadow-lg rounded-2xl bg-white">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <Trophy className="w-5 h-5 text-[#F4978E]" />
-                <span className="text-2xl font-bold text-[#F4978E]">
+                <Trophy className="w-5 h-5" style={{ color: 'var(--theme-secondary)' }} />
+                <span className="text-2xl font-bold" style={{ color: 'var(--theme-secondary)' }}>
                   #{todayData.weeklyProgress?.rank || 0}
                 </span>
               </div>
@@ -182,8 +183,8 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
           <Card className="border-0 shadow-lg rounded-2xl bg-white">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <Target className="w-5 h-5 text-[#F8AD9D]" />
-                <span className="text-2xl font-bold text-[#F8AD9D]">
+                <Target className="w-5 h-5" style={{ color: 'var(--theme-accent)' }} />
+                <span className="text-2xl font-bold" style={{ color: 'var(--theme-accent)' }}>
                   {todayData.weeklyProgress?.streak || 0}
                 </span>
               </div>
@@ -200,8 +201,8 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
           <Card className="border-0 shadow-lg rounded-2xl bg-white">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <Award className="w-5 h-5 text-[#F4978E]" />
-                <span className="text-2xl font-bold text-[#F4978E]">
+                <Award className="w-5 h-5" style={{ color: 'var(--theme-secondary)' }} />
+                <span className="text-2xl font-bold" style={{ color: 'var(--theme-secondary)' }}>
                   {todayData.quests.completed}/{todayData.quests.total}
                 </span>
               </div>
@@ -219,12 +220,13 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
       >
         <Card className="border-0 shadow-lg rounded-2xl bg-white">
           <CardHeader 
-            className="bg-gradient-to-r from-[#FFDAB9]/20 to-[#FBC4AB]/20 cursor-pointer"
+            className="cursor-pointer"
+            style={{ background: 'linear-gradient(to right, color-mix(in srgb, var(--theme-highlight) 20%, transparent), color-mix(in srgb, var(--theme-tertiary) 20%, transparent))' }}
             onClick={() => setQuestsExpanded(!questsExpanded)}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-gradient-to-br from-[#F08080] to-[#F4978E] rounded-xl shadow-sm">
+                <div className="p-2 rounded-xl shadow-sm" style={{ background: 'linear-gradient(to bottom right, var(--theme-primary), var(--theme-secondary))' }}>
                   <Target className="h-5 w-5 text-white" />
                 </div>
                 <div>
@@ -288,60 +290,57 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                         className={cn(
                           "p-4 rounded-2xl border-2 transition-all text-left shadow-sm",
                           quest.completed 
-                            ? "bg-gradient-to-br from-[#FBC4AB]/30 to-[#F8AD9D]/30 border-[#F4978E] cursor-not-allowed opacity-75"
-                            : "bg-white border-slate-200 hover:border-[#F8AD9D] hover:shadow-md active:scale-[0.98] cursor-pointer"
+                            ? "cursor-not-allowed opacity-75"
+                            : "bg-white border-slate-200 hover:shadow-md active:scale-[0.98] cursor-pointer"
                         )}
+                        style={quest.completed ? {
+                          background: 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-tertiary) 30%, transparent), color-mix(in srgb, var(--theme-accent) 30%, transparent))',
+                          borderColor: 'var(--theme-secondary)'
+                        } : {
+                          borderColor: undefined
+                        }}
+                        onMouseEnter={(e) => !quest.completed && (e.currentTarget.style.borderColor = 'var(--theme-accent)')}
+                        onMouseLeave={(e) => !quest.completed && (e.currentTarget.style.borderColor = 'rgb(226, 232, 240)')}
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex items-start space-x-3">
                             <motion.div
                               animate={quest.completed ? { scale: [1, 1.2, 1] } : {}}
                               transition={{ duration: 0.3 }}
-                              className={cn(
-                                "p-2 rounded-xl mt-0.5",
-                                quest.completed 
-                                  ? "bg-[#FFDAB9]" 
-                                  : "bg-slate-100"
-                              )}
+                              className="p-2 rounded-xl mt-0.5"
+                              style={{ backgroundColor: quest.completed ? 'var(--theme-highlight)' : 'rgb(241, 245, 249)' }}
                             >
                               {quest.completed ? (
-                                <CheckCircle2 className="h-4 w-4 text-[#F08080]" />
+                                <CheckCircle2 className="h-4 w-4" style={{ color: 'var(--theme-primary)' }} />
                               ) : (
                                 <Circle className="h-4 w-4 text-slate-400" />
                               )}
                             </motion.div>
                             <div className="flex-1">
-                              <p className={cn(
-                                "font-semibold text-sm",
-                                quest.completed ? "text-[#F08080]" : "text-slate-800"
-                              )}>
+                              <p className="font-semibold text-sm" style={{ color: quest.completed ? 'var(--theme-primary)' : 'rgb(30, 41, 59)' }}>
                                 {quest.title}
                               </p>
-                              <p className={cn(
-                                "text-xs mt-1",
-                                quest.completed ? "text-[#F4978E]" : "text-slate-500"
-                              )}>
+                              <p className="text-xs mt-1" style={{ color: quest.completed ? 'var(--theme-secondary)' : 'rgb(100, 116, 139)' }}>
                                 {quest.description}
                               </p>
                             </div>
                           </div>
                           <div className="flex flex-col items-end">
-                            <Badge 
-                              variant="secondary"
-                              className={cn(
-                                "text-xs",
-                                quest.completed 
-                                  ? "bg-[#FFDAB9] text-[#F08080]" 
-                                  : "bg-slate-100 text-slate-600"
-                              )}
-                            >
+                            <div style={quest.completed ? {
+                                backgroundColor: 'var(--theme-highlight)',
+                                color: 'var(--theme-primary)'
+                              } : {
+                                backgroundColor: 'rgb(241, 245, 249)',
+                                color: 'rgb(71, 85, 105)'
+                              }} className="text-xs px-2.5 py-0.5 rounded-full font-medium inline-flex items-center">
                               {quest.xp} XP
-                            </Badge>
+                            </div>
                             {quest.completed && (
                               <motion.div
                                 initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}
-                                className="text-xs font-bold text-[#F08080] mt-1 bg-[#FFDAB9]/50 px-2 py-1 rounded-md"
+                                className="text-xs font-bold mt-1 px-2 py-1 rounded-md"
+                                style={{ color: 'var(--theme-primary)', backgroundColor: 'color-mix(in srgb, var(--theme-highlight) 50%, transparent)' }}
                               >
                                 COMPLETED
                               </motion.div>
@@ -357,12 +356,13 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                     <motion.div
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="mt-6 p-4 bg-gradient-to-r from-[#FFDAB9] via-[#FBC4AB] to-[#F8AD9D] rounded-2xl text-center shadow-sm"
+                      className="mt-6 p-4 rounded-2xl text-center shadow-sm"
+                      style={{ background: 'linear-gradient(to right, var(--theme-highlight), var(--theme-tertiary), var(--theme-accent))' }}
                     >
-                      <p className="text-lg font-bold text-[#F08080] mb-1">
+                      <p className="text-lg font-bold mb-1" style={{ color: 'var(--theme-primary)' }}>
                         🎉 All Quests Complete!
                       </p>
-                      <p className="text-sm text-[#F4978E]">
+                      <p className="text-sm" style={{ color: 'var(--theme-secondary)' }}>
                         Amazing work today, champion!
                       </p>
                     </motion.div>
@@ -383,10 +383,10 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
           transition={{ delay: 0.4 }}
         >
           <Card className="border-0 shadow-lg h-full rounded-2xl bg-white">
-            <CardHeader className="bg-gradient-to-r from-[#FFDAB9]/30 to-[#FBC4AB]/30 rounded-t-2xl">
+            <CardHeader className="rounded-t-2xl" style={{ background: 'linear-gradient(to right, color-mix(in srgb, var(--theme-highlight) 30%, transparent), color-mix(in srgb, var(--theme-tertiary) 30%, transparent))' }}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-gradient-to-br from-[#F08080] to-[#F8AD9D] rounded-xl shadow-sm">
+                  <div className="p-2 rounded-xl shadow-sm" style={{ background: 'linear-gradient(to bottom right, var(--theme-primary), var(--theme-accent))' }}>
                     <Calendar className="h-5 w-5 text-white" />
                   </div>
                   <CardTitle className="text-lg">Upcoming Deadlines</CardTitle>
@@ -395,7 +395,9 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                   variant="ghost"
                   size="sm"
                   onClick={() => router.push('/student/calendar')}
-                  className="text-[#F08080] hover:text-[#F4978E]"
+                  style={{ color: 'var(--theme-primary)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = 'var(--theme-secondary)'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'var(--theme-primary)'}
                 >
                   View All
                   <ChevronRight className="h-4 w-4 ml-1" />
@@ -409,12 +411,13 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                     <motion.div
                       key={exam.id}
                       whileHover={{ x: 4 }}
-                      className="flex items-center justify-between p-3 bg-[#FFDAB9]/30 rounded-2xl border border-[#FBC4AB] cursor-pointer shadow-sm hover:shadow-md transition-shadow"
+                      className="flex items-center justify-between p-3 rounded-2xl cursor-pointer shadow-sm hover:shadow-md transition-shadow"
+                      style={{ backgroundColor: 'color-mix(in srgb, var(--theme-highlight) 30%, transparent)', borderWidth: '1px', borderStyle: 'solid', borderColor: 'var(--theme-tertiary)' }}
                       onClick={() => handleExamPrepClick(exam.id)}
                     >
                       <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-[#FBC4AB]/50 rounded-xl">
-                          <Clock className="h-4 w-4 text-[#F08080]" />
+                        <div className="p-2 rounded-xl" style={{ backgroundColor: 'color-mix(in srgb, var(--theme-tertiary) 50%, transparent)' }}>
+                          <Clock className="h-4 w-4" style={{ color: 'var(--theme-primary)' }} />
                         </div>
                         <div>
                           <p className="font-medium text-sm text-slate-800">
@@ -425,7 +428,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                           </p>
                         </div>
                       </div>
-                      <ChevronRight className="w-5 h-5 text-[#F8AD9D]" />
+                      <ChevronRight className="w-5 h-5" style={{ color: 'var(--theme-accent)' }} />
                     </motion.div>
                   ))}
                 </div>
@@ -459,7 +462,9 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                   variant="ghost"
                   size="sm"
                   onClick={() => router.push('/student/announcements')}
-                  className="text-[#F4978E] hover:text-[#F08080]"
+                  style={{ color: 'var(--theme-secondary)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = 'var(--theme-primary)'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'var(--theme-secondary)'}
                 >
                   View All
                   <ChevronRight className="h-4 w-4 ml-1" />
@@ -472,10 +477,11 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                   <motion.div
                     key={poll.id}
                     whileHover={{ x: 4 }}
-                    className="p-3 bg-[#FBC4AB]/30 rounded-2xl border border-[#F8AD9D] cursor-pointer shadow-sm hover:shadow-md transition-shadow"
+                    className="p-3 rounded-2xl cursor-pointer shadow-sm hover:shadow-md transition-shadow"
+                    style={{ backgroundColor: 'color-mix(in srgb, var(--theme-tertiary) 30%, transparent)', borderWidth: '1px', borderStyle: 'solid', borderColor: 'var(--theme-accent)' }}
                     onClick={() => router.push('/student/announcements')}
                   >
-                    <Badge className="bg-[#FFDAB9] text-[#F08080] mb-2">POLL</Badge>
+                    <div className="mb-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: 'var(--theme-highlight)', color: 'var(--theme-primary)' }}>POLL</div>
                     <p className="font-medium text-sm text-slate-800">{poll.title}</p>
                     <p className="text-xs text-slate-500 mt-1">
                       {poll.questions?.length || 0} questions • Tap to respond
@@ -483,19 +489,79 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                   </motion.div>
                 ))}
                 
-                {todayData.schoolUpdates?.announcements?.slice(0, 2).map((announcement: any) => (
+                {todayData.schoolUpdates?.announcements?.slice(0, 2).map((announcement: any, index: number) => (
                   <motion.div
                     key={announcement.id}
-                    whileHover={{ x: 4 }}
-                    className="p-3 bg-[#FFDAB9]/30 rounded-2xl border border-[#FBC4AB] shadow-sm"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    whileHover={{ x: 6, scale: 1.01 }}
+                    className="group relative p-4 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden"
+                    style={{ 
+                      backgroundColor: 'color-mix(in srgb, var(--theme-highlight) 40%, white)',
+                      borderWidth: '1.5px',
+                      borderStyle: 'solid',
+                      borderColor: 'var(--theme-tertiary)'
+                    }}
+                    onClick={() => router.push('/student/announcements')}
                   >
-                    <Badge className="bg-[#FBC4AB] text-[#F4978E] mb-2">NEWS</Badge>
-                    <p className="font-medium text-sm text-slate-800 line-clamp-2">
-                      {announcement.title}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      {new Date(announcement.created_at).toLocaleDateString()}
-                    </p>
+                    {/* Gradient overlay on hover */}
+                    <motion.div
+                      className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300"
+                      style={{ background: 'linear-gradient(135deg, var(--theme-primary), var(--theme-secondary))' }}
+                    />
+                    
+                    {/* Content */}
+                    <div className="relative z-10">
+                      <div className="flex items-start justify-between mb-2.5">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold shadow-sm" 
+                          style={{ 
+                            background: 'linear-gradient(135deg, var(--theme-secondary), var(--theme-primary))',
+                            color: 'white'
+                          }}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                          ANNOUNCEMENT
+                        </div>
+                        {announcement.priority === 'high' && (
+                          <div className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-100 text-red-600 border border-red-200">
+                            URGENT
+                          </div>
+                        )}
+                      </div>
+                      
+                      <h4 className="font-semibold text-[15px] text-slate-900 line-clamp-2 leading-snug mb-2 group-hover:text-slate-700 transition-colors">
+                        {announcement.title}
+                      </h4>
+                      
+                      {announcement.content && (
+                        <p className="text-xs text-slate-600 line-clamp-1 mb-2">
+                          {announcement.content}
+                        </p>
+                      )}
+                      
+                      <div className="flex items-center gap-3 text-[11px] text-slate-500">
+                        <span className="flex items-center gap-1">
+                          <span className="w-1 h-1 rounded-full" style={{ backgroundColor: 'var(--theme-accent)' }}></span>
+                          {new Date(announcement.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </span>
+                        {announcement.author && (
+                          <span className="flex items-center gap-1">
+                            <span className="text-slate-400">•</span>
+                            {announcement.author}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Hover arrow indicator */}
+                    <motion.div
+                      className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      initial={{ x: -10 }}
+                      whileHover={{ x: 0 }}
+                    >
+                      <ChevronRight className="h-4 w-4" style={{ color: 'var(--theme-primary)' }} />
+                    </motion.div>
                   </motion.div>
                 ))}
 

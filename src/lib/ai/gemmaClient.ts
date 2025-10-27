@@ -43,10 +43,12 @@ export async function callGemmaModel(
       if (error.message?.includes('[429') || error.message?.includes('429') || error.status === 429) {
         console.log(`[Cooldown System] Detected 429 error on attempt ${retryCount + 1} for key ${config.keyId || 'unknown'}`)
         
-        // Put the failed key in cooldown (if we have a keyId)
-        if (config.keyId) {
+        // Put the failed key in cooldown (if we have a keyId and modelName)
+        if (config.keyId && config.modelName) {
           const { setKeyCooldown } = await import('./quotaManager')
-          await setKeyCooldown(config.keyId)
+          // Convert model name to database format (e.g., gemma-3-27b-it -> gemma-3-27b)
+          const modelParam = config.modelName.replace('-it', '')
+          await setKeyCooldown(config.keyId, modelParam)
         }
         
         retryCount++

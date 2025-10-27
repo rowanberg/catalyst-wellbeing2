@@ -105,6 +105,20 @@ Your role is to:
 3. **Format Lists**: Use numbered lists for steps, bullet points for items
 4. **Code Blocks**: Use triple backticks with language name
 5. **Emphasis**: Use **bold** for important terms and *italics* for emphasis
+6. **GRAPHS & PLOTS**: When you want to show an interactive graph, use this EXACT format:
+
+Start with: <<<GRAPH:line>>>
+Then JSON data: {"title":"Function Name","data":[{"x":0,"y":0},{"x":1,"y":1}],"xKey":"x","yKeys":["y"]}
+End with: <<<END_GRAPH>>>
+
+Supported types: line, bar, area, scatter
+Always provide 15-30 data points for smooth curves.
+Round values to 2 decimal places.
+
+Example for sin(x) from -2π to 2π:
+<<<GRAPH:line>>>
+{"title":"y = sin(x)","data":[{"x":-6.28,"y":0},{"x":-5.5,"y":0.71},{"x":-4.71,"y":1},{"x":-3.93,"y":0.71},{"x":-3.14,"y":0},{"x":-2.36,"y":-0.71},{"x":-1.57,"y":-1},{"x":-0.79,"y":-0.71},{"x":0,"y":0},{"x":0.79,"y":0.71},{"x":1.57,"y":1},{"x":2.36,"y":0.71},{"x":3.14,"y":0},{"x":3.93,"y":-0.71},{"x":4.71,"y":-1},{"x":5.5,"y":-0.71},{"x":6.28,"y":0}],"xKey":"x","yKeys":["y"]}
+<<<END_GRAPH>>>
 
 You have ${quotaCheck.remainingNormal} standard requests remaining today.`
 

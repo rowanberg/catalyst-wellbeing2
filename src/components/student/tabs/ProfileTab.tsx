@@ -32,11 +32,11 @@ const ProfileInfoCard = memo(({ profileData, imageError, setImageError, uploadin
     transition={{ delay: 0.4 }}
   >
     <Card className="border-0 shadow-lg rounded-2xl bg-white">
-      <CardContent className="p-6">
-        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+      <CardContent className="p-5 sm:p-6">
+        <div className="flex flex-col sm:flex-row items-center sm:items-center gap-4 sm:gap-5">
           {/* Avatar */}
           <div className="relative flex-shrink-0">
-            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-[#FFDAB9]/50 shadow-xl overflow-hidden bg-gradient-to-br from-[#FFDAB9] to-[#FBC4AB]">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full shadow-lg overflow-hidden" style={{ borderWidth: '3px', borderStyle: 'solid', borderColor: 'color-mix(in srgb, var(--theme-highlight) 50%, transparent)', background: 'linear-gradient(to bottom right, var(--theme-highlight), var(--theme-tertiary))' }}>
               {(() => {
                 const avatarUrl = profileData.profile.avatar_url || profileData.profile.profile_picture_url
                 console.log('Avatar URL:', avatarUrl)
@@ -48,8 +48,8 @@ const ProfileInfoCard = memo(({ profileData, imageError, setImageError, uploadin
                     <Image
                       src={avatarUrl}
                       alt="Profile"
-                      width={128}
-                      height={128}
+                      width={96}
+                      height={96}
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         console.error('Image load error:', e)
@@ -61,7 +61,7 @@ const ProfileInfoCard = memo(({ profileData, imageError, setImageError, uploadin
                 } else {
                   console.log('Showing initial:', profileData.profile.first_name?.charAt(0) || 'S')
                   return (
-                    <div className="w-full h-full flex items-center justify-center text-[#F08080] text-3xl sm:text-5xl font-bold">
+                    <div className="w-full h-full flex items-center justify-center text-2xl sm:text-3xl font-bold" style={{ color: 'var(--theme-primary)' }}>
                       {profileData.profile.first_name?.charAt(0)?.toUpperCase() || 'S'}
                     </div>
                   )
@@ -72,17 +72,20 @@ const ProfileInfoCard = memo(({ profileData, imageError, setImageError, uploadin
             <button 
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="absolute bottom-0 right-0 p-2 bg-[#F08080] rounded-full text-white shadow-lg hover:bg-[#F4978E] transition-all hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed group"
+              className="absolute bottom-0 right-0 p-1.5 rounded-full text-white shadow-md transition-all hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed group"
+              style={{ backgroundColor: 'var(--theme-primary)' }}
+              onMouseEnter={(e) => !uploading && (e.currentTarget.style.backgroundColor = 'var(--theme-secondary)')}
+              onMouseLeave={(e) => !uploading && (e.currentTarget.style.backgroundColor = 'var(--theme-primary)')}
             >
               {uploading ? (
                 <div className="relative">
-                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                  <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
                 </div>
               ) : (
-                <Camera className="h-4 w-4" />
+                <Camera className="h-3.5 w-3.5" />
               )}
             </button>
             <input
@@ -95,32 +98,40 @@ const ProfileInfoCard = memo(({ profileData, imageError, setImageError, uploadin
           </div>
 
           {/* Profile Info */}
-          <div className="flex-1 text-center sm:text-left">
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
-              {profileData.profile.first_name} {profileData.profile.last_name}
-            </h2>
-            <div className="text-slate-600 mt-1 text-sm sm:text-base flex items-center justify-center sm:justify-start gap-2">
-              <Badge variant="outline" className="bg-[#FFDAB9]/20 border-[#F08080]/30 text-[#F08080] font-mono">
-                ID: {profileData.profile.student_tag || 'N/A'}
-              </Badge>
+          <div className="flex-1 text-center sm:text-left min-w-0">
+            {/* Name and ID */}
+            <div className="mb-3">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">
+                {profileData.profile.first_name} {profileData.profile.last_name}
+              </h2>
+              <div className="flex items-center justify-center sm:justify-start gap-2 mt-1.5">
+                <p className="text-xs sm:text-sm text-slate-600">
+                  {profileData.profile.school?.name || 'Catalyst Wells Student'}
+                </p>
+                <span className="text-slate-400">•</span>
+                <div className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono" style={{ backgroundColor: 'color-mix(in srgb, var(--theme-highlight) 20%, transparent)', color: 'var(--theme-primary)' }}>
+                  {profileData.profile.student_tag || 'N/A'}
+                </div>
+              </div>
             </div>
             
-            <div className="flex flex-wrap justify-center sm:justify-start items-center gap-2 mt-4">
+            {/* Grade and Class Badges */}
+            <div className="flex flex-wrap justify-center sm:justify-start items-center gap-2">
               {profileData.profile.grade_level && (
-                <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#FFDAB9]/40 to-[#FBC4AB]/40 rounded-xl border border-[#F4978E]/20">
-                  <GraduationCap className="h-5 w-5 text-[#F08080]" />
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'linear-gradient(to right, color-mix(in srgb, var(--theme-highlight) 30%, transparent), color-mix(in srgb, var(--theme-tertiary) 30%, transparent))', borderWidth: '1px', borderStyle: 'solid', borderColor: 'color-mix(in srgb, var(--theme-secondary) 20%, transparent)' }}>
+                  <GraduationCap className="h-4 w-4" style={{ color: 'var(--theme-primary)' }} />
                   <div className="text-left">
-                    <p className="text-xs text-slate-500 font-medium">Grade</p>
-                    <p className="text-sm font-bold text-[#F08080]">{profileData.profile.grade_level}</p>
+                    <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">Grade</p>
+                    <p className="text-sm font-bold leading-tight" style={{ color: 'var(--theme-primary)' }}>{profileData.profile.grade_level}</p>
                   </div>
                 </div>
               )}
               {profileData.profile.class_name && (
-                <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#FBC4AB]/40 to-[#F8AD9D]/40 rounded-xl border border-[#F4978E]/20">
-                  <Users className="h-5 w-5 text-[#F4978E]" />
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'linear-gradient(to right, color-mix(in srgb, var(--theme-tertiary) 30%, transparent), color-mix(in srgb, var(--theme-accent) 30%, transparent))', borderWidth: '1px', borderStyle: 'solid', borderColor: 'color-mix(in srgb, var(--theme-secondary) 20%, transparent)' }}>
+                  <Users className="h-4 w-4" style={{ color: 'var(--theme-secondary)' }} />
                   <div className="text-left">
-                    <p className="text-xs text-slate-500 font-medium">Class</p>
-                    <p className="text-sm font-bold text-[#F4978E]">{profileData.profile.class_name}</p>
+                    <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">Class</p>
+                    <p className="text-sm font-bold leading-tight" style={{ color: 'var(--theme-secondary)' }}>{profileData.profile.class_name}</p>
                   </div>
                 </div>
               )}
@@ -141,9 +152,9 @@ const QuickActionsCard = memo(({ router }: any) => (
     transition={{ delay: 0.5 }}
   >
     <Card className="border-0 shadow-lg rounded-2xl bg-white">
-      <CardHeader className="bg-gradient-to-r from-[#FFDAB9]/30 to-[#FBC4AB]/30 rounded-t-2xl">
+      <CardHeader className="rounded-t-2xl" style={{ background: 'linear-gradient(to right, color-mix(in srgb, var(--theme-highlight) 30%, transparent), color-mix(in srgb, var(--theme-tertiary) 30%, transparent))' }}>
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-gradient-to-br from-[#F08080] to-[#F4978E] rounded-xl shadow-sm">
+          <div className="p-2 rounded-xl shadow-sm" style={{ background: 'linear-gradient(to bottom right, var(--theme-primary), var(--theme-secondary))' }}>
             <Sparkles className="h-5 w-5 text-white" />
           </div>
           <CardTitle className="text-lg">Quick Actions</CardTitle>
@@ -153,30 +164,42 @@ const QuickActionsCard = memo(({ router }: any) => (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <button
             onClick={() => router.push('/student/settings')}
-            className="flex flex-col items-center gap-2 p-4 rounded-xl bg-gradient-to-br from-[#FFDAB9]/20 to-[#FBC4AB]/20 hover:from-[#FFDAB9]/40 hover:to-[#FBC4AB]/40 transition-all active:scale-95 border border-[#FBC4AB]/30"
+            className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all active:scale-95"
+            style={{ background: 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 20%, transparent), color-mix(in srgb, var(--theme-tertiary) 20%, transparent))', borderWidth: '1px', borderStyle: 'solid', borderColor: 'color-mix(in srgb, var(--theme-tertiary) 30%, transparent)' }}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 40%, transparent), color-mix(in srgb, var(--theme-tertiary) 40%, transparent))'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 20%, transparent), color-mix(in srgb, var(--theme-tertiary) 20%, transparent))'}
           >
-            <Settings className="h-6 w-6 text-[#F08080]" />
+            <Settings className="h-6 w-6" style={{ color: 'var(--theme-primary)' }} />
             <span className="text-xs font-medium text-slate-700">Settings</span>
           </button>
           <button
             onClick={() => router.push('/student/messaging')}
-            className="flex flex-col items-center gap-2 p-4 rounded-xl bg-gradient-to-br from-[#FFDAB9]/20 to-[#FBC4AB]/20 hover:from-[#FFDAB9]/40 hover:to-[#FBC4AB]/40 transition-all active:scale-95 border border-[#FBC4AB]/30"
+            className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all active:scale-95"
+            style={{ background: 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 20%, transparent), color-mix(in srgb, var(--theme-tertiary) 20%, transparent))', borderWidth: '1px', borderStyle: 'solid', borderColor: 'color-mix(in srgb, var(--theme-tertiary) 30%, transparent)' }}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 40%, transparent), color-mix(in srgb, var(--theme-tertiary) 40%, transparent))'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 20%, transparent), color-mix(in srgb, var(--theme-tertiary) 20%, transparent))'}
           >
-            <MessageCircle className="h-6 w-6 text-[#F4978E]" />
+            <MessageCircle className="h-6 w-6" style={{ color: 'var(--theme-secondary)' }} />
             <span className="text-xs font-medium text-slate-700">Messages</span>
           </button>
           <button
             onClick={() => router.push('/student/analytics')}
-            className="flex flex-col items-center gap-2 p-4 rounded-xl bg-gradient-to-br from-[#FFDAB9]/20 to-[#FBC4AB]/20 hover:from-[#FFDAB9]/40 hover:to-[#FBC4AB]/40 transition-all active:scale-95 border border-[#FBC4AB]/30"
+            className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all active:scale-95"
+            style={{ background: 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 20%, transparent), color-mix(in srgb, var(--theme-tertiary) 20%, transparent))', borderWidth: '1px', borderStyle: 'solid', borderColor: 'color-mix(in srgb, var(--theme-tertiary) 30%, transparent)' }}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 40%, transparent), color-mix(in srgb, var(--theme-tertiary) 40%, transparent))'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 20%, transparent), color-mix(in srgb, var(--theme-tertiary) 20%, transparent))'}
           >
-            <BarChart3 className="h-6 w-6 text-[#F8AD9D]" />
+            <BarChart3 className="h-6 w-6" style={{ color: 'var(--theme-accent)' }} />
             <span className="text-xs font-medium text-slate-700">Analytics</span>
           </button>
           <button
             onClick={() => router.push('/student/quests')}
-            className="flex flex-col items-center gap-2 p-4 rounded-xl bg-gradient-to-br from-[#FFDAB9]/20 to-[#FBC4AB]/20 hover:from-[#FFDAB9]/40 hover:to-[#FBC4AB]/40 transition-all active:scale-95 border border-[#FBC4AB]/30"
+            className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all active:scale-95"
+            style={{ background: 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 20%, transparent), color-mix(in srgb, var(--theme-tertiary) 20%, transparent))', borderWidth: '1px', borderStyle: 'solid', borderColor: 'color-mix(in srgb, var(--theme-tertiary) 30%, transparent)' }}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 40%, transparent), color-mix(in srgb, var(--theme-tertiary) 40%, transparent))'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 20%, transparent), color-mix(in srgb, var(--theme-tertiary) 20%, transparent))'}
           >
-            <Target className="h-6 w-6 text-[#F4978E]" />
+            <Target className="h-6 w-6" style={{ color: 'var(--theme-secondary)' }} />
             <span className="text-xs font-medium text-slate-700">Quests</span>
           </button>
         </div>
@@ -336,7 +359,7 @@ export function ProfileTab({ data, loading, error, onRefresh, profile }: Profile
   if (loading && !data) {
     return (
       <div className="space-y-6 pb-8">
-        <div className="h-32 bg-gradient-to-r from-[#F08080] to-[#F4978E] rounded-3xl animate-pulse" />
+        <div className="h-32 rounded-3xl animate-pulse" style={{ background: 'linear-gradient(to right, var(--theme-primary), var(--theme-secondary))' }} />
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="h-24 bg-slate-200 rounded-2xl animate-pulse" />
@@ -351,10 +374,10 @@ export function ProfileTab({ data, loading, error, onRefresh, profile }: Profile
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] p-4">
-        <Shield className="h-16 w-16 mb-4 text-[#F08080]" />
+        <Shield className="h-16 w-16 mb-4" style={{ color: 'var(--theme-primary)' }} />
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Error loading profile</h2>
         <p className="text-slate-600 mb-4">{error}</p>
-        <Button onClick={onRefresh} className="bg-[#F08080] hover:bg-[#F4978E]">
+        <Button onClick={onRefresh} style={{ backgroundColor: 'var(--theme-primary)' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--theme-secondary)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--theme-primary)'}>
           Try Again
         </Button>
       </div>
@@ -368,7 +391,8 @@ export function ProfileTab({ data, loading, error, onRefresh, profile }: Profile
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-[#F08080] to-[#F4978E] rounded-3xl p-6 sm:p-8 text-white shadow-2xl"
+        className="rounded-3xl p-6 sm:p-8 text-white shadow-2xl"
+        style={{ background: 'linear-gradient(to right, var(--theme-primary), var(--theme-secondary))' }}
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
@@ -418,8 +442,8 @@ export function ProfileTab({ data, loading, error, onRefresh, profile }: Profile
           <Card className="border-0 shadow-lg rounded-2xl bg-white">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <Zap className="w-5 h-5 text-[#F08080]" />
-                <span className="text-2xl font-bold text-[#F08080]">{profileData.stats.xp}</span>
+                <Zap className="w-5 h-5" style={{ color: 'var(--theme-primary)' }} />
+                <span className="text-2xl font-bold" style={{ color: 'var(--theme-primary)' }}>{profileData.stats.xp}</span>
               </div>
               <p className="text-xs text-slate-600">Total XP</p>
               <Progress value={xpProgress} className="h-1.5 mt-2" />
@@ -431,8 +455,8 @@ export function ProfileTab({ data, loading, error, onRefresh, profile }: Profile
           <Card className="border-0 shadow-lg rounded-2xl bg-white">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <Trophy className="w-5 h-5 text-[#F4978E]" />
-                <span className="text-2xl font-bold text-[#F4978E]">#{profileData.stats.rank}</span>
+                <Trophy className="w-5 h-5" style={{ color: 'var(--theme-secondary)' }} />
+                <span className="text-2xl font-bold" style={{ color: 'var(--theme-secondary)' }}>#{profileData.stats.rank}</span>
               </div>
               <p className="text-xs text-slate-600">Class Rank</p>
             </CardContent>

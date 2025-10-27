@@ -15,6 +15,7 @@ import { LuminexAvatar } from './LuminexAvatar'
 import { UserAvatar } from './UserAvatar'
 import { QuotaIndicator } from './QuotaIndicator'
 import { supabase } from '@/lib/supabaseClient'
+import AIGraphRenderer from './AIGraphRenderer'
 
 interface ChatMessage {
   id: string
@@ -446,12 +447,12 @@ function parseInlineMarkdown(text: string): React.ReactNode[] {
     if (match[1]) {
       // **bold**
       parts.push(
-        <strong key={`bold-${key++}`} className="font-semibold text-slate-900">{match[1]}</strong>
+        <strong key={`bold-${key++}`} className="font-semibold text-white">{match[1]}</strong>
       )
     } else if (match[2]) {
       // *italic*
       parts.push(
-        <em key={`italic-${key++}`} className="italic text-slate-800">{match[2]}</em>
+        <em key={`italic-${key++}`} className="italic text-slate-100">{match[2]}</em>
       )
     } else if (match[3]) {
       // <sup>superscript</sup>
@@ -467,13 +468,13 @@ function parseInlineMarkdown(text: string): React.ReactNode[] {
       // <b> or <strong>
       const content = match[5] || match[7]
       parts.push(
-        <strong key={`bold-${key++}`} className="font-semibold text-slate-900">{content}</strong>
+        <strong key={`bold-${key++}`} className="font-semibold text-white">{content}</strong>
       )
     } else if (match[6] || match[8]) {
       // <i> or <em>
       const content = match[6] || match[8]
       parts.push(
-        <em key={`italic-${key++}`} className="italic text-slate-800">{content}</em>
+        <em key={`italic-${key++}`} className="italic text-slate-100">{content}</em>
       )
     }
     
@@ -503,6 +504,72 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
   }
   
   const formatContent = (text: string) => {
+    // Check for explicit graph markers: <<<GRAPH:type>>> ... <<<END_GRAPH>>>
+    const graphPattern = /<<<GRAPH:(line|bar|area|scatter)>>>\s*({[\s\S]*?})\s*<<<END_GRAPH>>>/g
+    const graphMatches = Array.from(text.matchAll(graphPattern))
+    
+    if (graphMatches.length > 0) {
+      const elements: React.ReactNode[] = []
+      let lastIndex = 0
+      
+      graphMatches.forEach((match, idx) => {
+        // Add text before graph
+        if (match.index! > lastIndex) {
+          const textBefore = text.substring(lastIndex, match.index)
+          if (textBefore.trim()) {
+            elements.push(
+              <div key={`text-${idx}`} className="mb-4">
+                {formatTextContent(textBefore)}
+              </div>
+            )
+          }
+        }
+        
+        // Parse and render graph
+        try {
+          const graphType = match[1] as 'line' | 'bar' | 'area' | 'scatter'
+          const graphJson = JSON.parse(match[2])
+          const graphData = {
+            type: graphType,
+            title: graphJson.title,
+            data: graphJson.data,
+            xKey: graphJson.xKey || 'x',
+            yKeys: graphJson.yKeys || ['y']
+          }
+          elements.push(<AIGraphRenderer key={`graph-${idx}`} graphData={graphData} />)
+        } catch (e) {
+          console.error('Failed to parse graph data:', e)
+          // If parsing fails, show as code block
+          elements.push(
+            <div key={`error-${idx}`} className="text-red-400 text-sm">
+              ⚠️ Graph data parsing error
+            </div>
+          )
+        }
+        
+        lastIndex = match.index! + match[0].length
+      })
+      
+      // Add remaining text after last graph
+      if (lastIndex < text.length) {
+        const textAfter = text.substring(lastIndex)
+        if (textAfter.trim()) {
+          elements.push(
+            <div key="text-final">
+              {formatTextContent(textAfter)}
+            </div>
+          )
+        }
+      }
+      
+      return <>{elements}</>
+    }
+    
+    // No graphs found, process normally
+    return formatTextContent(text)
+  }
+  
+  const formatTextContent = (text: string) => {
     const parts = text.split(/(```[\s\S]*?```)/g)
     
     return parts.map((part, partIndex) => {
@@ -526,55 +593,78 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
         }
         
         // Markdown tables (| Header | Header |)
-        if (line.includes('|')) {
+        if (line.includes('|') && line.trim().startsWith('|')) {
           // Collect all consecutive lines that look like table rows
           const tableLines: string[] = []
           let j = i
-          while (j < lines.length && lines[j].includes('|')) {
+          while (j < lines.length && lines[j].includes('|') && lines[j].trim()) {
             tableLines.push(lines[j])
             j++
           }
           
           // Check if we have at least 2 lines (header + separator or header + data)
           if (tableLines.length >= 2) {
-            // Parse table
-            const headers = tableLines[0].split('|').map(h => h.trim()).filter(h => h)
+            // Parse table - better handling of pipe-separated values
+            const parseTableRow = (row: string) => {
+              // Remove leading/trailing pipes and split
+              return row.trim().split('|')
+                .map(cell => cell.trim())
+                .filter((cell, idx, arr) => {
+                  // Keep non-empty cells or middle empty cells (preserve structure)
+                  return cell !== '' || (idx > 0 && idx < arr.length - 1)
+                })
+            }
+            
+            const headers = parseTableRow(tableLines[0])
             
             // Check if second line is a separator (contains dashes)
-            const isSeparator = tableLines[1].includes('-')
+            const isSeparator = tableLines[1].includes('-') && tableLines[1].includes('|')
             const startDataRow = isSeparator ? 2 : 1
             
             if (headers.length > 0 && tableLines.length > startDataRow) {
-              const rows = tableLines.slice(startDataRow).map(row => 
-                row.split('|').map(cell => cell.trim()).filter(cell => cell !== '')
-              ).filter(row => row.length > 0)
+              const rows = tableLines.slice(startDataRow)
+                .map(row => parseTableRow(row))
+                .filter(row => row.length > 0 && !row.every(cell => cell === ''))
               
               if (rows.length > 0) {
+                // Calculate column widths based on content
+                const colCount = headers.length
+                const colWidths = headers.map((_, idx) => {
+                  const maxLength = Math.max(
+                    headers[idx]?.length || 0,
+                    ...rows.map(row => row[idx]?.length || 0)
+                  )
+                  return `${Math.max(15, Math.min(35, maxLength * 1.2))}%`
+                })
+                
                 elements.push(
-                  <div key={key} className="my-4 overflow-x-auto rounded-xl shadow-md" style={{ borderColor: '#ffc8dd60' }}>
-                    <table className="w-full">
+                  <div key={key} className="my-4 overflow-x-auto rounded-xl shadow-lg border border-purple-500/30">
+                    <table className="w-full table-fixed" style={{ minWidth: `${colCount * 200}px` }}>
                       <thead>
-                        <tr style={{ background: 'linear-gradient(to right, #cdb4db, #ffc8dd, #ffafcc)' }}>
+                        <tr style={{ background: 'linear-gradient(to right, #a855f7, #ec4899, #f472b6)' }}>
                           {headers.map((header, idx) => (
                             <th 
-                              key={idx} 
-                              className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider border-r last:border-r-0"
-                              style={{ borderRightColor: '#ffc8dd80' }}
+                              key={idx}
+                              style={{ width: colWidths[idx] }}
+                              className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider border-r border-purple-400/30 last:border-r-0"
                             >
-                              {header}
+                              <div className="break-words">{parseInlineMarkdown(header)}</div>
                             </th>
                           ))}
                         </tr>
                       </thead>
-                      <tbody className="bg-white divide-y divide-slate-200">
+                      <tbody className="bg-slate-800/50 divide-y divide-slate-700/50">
                         {rows.map((row, rowIdx) => (
-                          <tr key={rowIdx} className="hover:bg-slate-50 transition-colors">
+                          <tr key={rowIdx} className="hover:bg-slate-700/50 transition-colors">
                             {headers.map((_, cellIdx) => (
                               <td 
-                                key={cellIdx} 
-                                className="px-4 py-3 text-sm text-slate-700 border-r border-slate-100 last:border-r-0"
+                                key={cellIdx}
+                                style={{ width: colWidths[cellIdx] }}
+                                className="px-4 py-3 text-sm text-slate-200 border-r border-slate-700/30 last:border-r-0"
                               >
-                                {row[cellIdx] || '—'}
+                                <div className="break-words leading-relaxed">
+                                  {row[cellIdx] ? parseInlineMarkdown(row[cellIdx]) : '—'}
+                                </div>
                               </td>
                             ))}
                           </tr>
@@ -583,7 +673,7 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
                     </table>
                   </div>
                 )
-                i = j
+                i = j - 1
                 continue
               }
             }
@@ -597,19 +687,19 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
           
           if (level === 1 || level === 2) {
             elements.push(
-              <h2 key={key} className="text-xl font-bold mt-6 mb-4 text-slate-900 border-b border-slate-200 pb-2">
+              <h2 key={key} className="text-xl font-bold mt-6 mb-4 text-white border-b border-slate-700/50 pb-2">
                 {parseInlineMarkdown(heading)}
               </h2>
             )
           } else if (level === 3) {
             elements.push(
-              <h3 key={key} className="text-lg font-semibold mt-5 mb-3 text-slate-800">
+              <h3 key={key} className="text-lg font-semibold mt-5 mb-3 text-slate-100">
                 {parseInlineMarkdown(heading)}
               </h3>
             )
           } else {
             elements.push(
-              <h4 key={key} className="text-base font-semibold mt-4 mb-2 text-slate-700">
+              <h4 key={key} className="text-base font-semibold mt-4 mb-2 text-slate-200">
                 {parseInlineMarkdown(heading)}
               </h4>
             )
@@ -630,8 +720,8 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
             const nestedContent = lines[j].replace(/^\s*[*-]\s/, '')
             nestedItems.push(
               <div key={`${key}-nested-${j}`} className="flex gap-2.5 my-1">
-                <span className="text-slate-500 min-w-[0.75rem] text-xs mt-1">•</span>
-                <span className="flex-1 text-slate-700 leading-relaxed text-sm">{parseInlineMarkdown(nestedContent)}</span>
+                <span className="text-slate-400 min-w-[0.75rem] text-xs mt-1">•</span>
+                <span className="flex-1 text-slate-300 leading-relaxed text-sm">{parseInlineMarkdown(nestedContent)}</span>
               </div>
             )
             j++
@@ -639,9 +729,9 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
           
           elements.push(
             <div key={key} className="flex gap-3 my-2">
-              <span className="font-bold min-w-[2rem] text-sm mt-0.5 flex-shrink-0" style={{ color: '#cdb4db' }}>{number}.</span>
+              <span className="font-bold min-w-[2rem] text-sm mt-0.5 flex-shrink-0" style={{ color: '#c084fc' }}>{number}.</span>
               <div className="flex-1">
-                <div className="text-slate-800 leading-relaxed font-medium mb-1">
+                <div className="text-slate-100 leading-relaxed font-medium mb-1">
                   {parseInlineMarkdown(content)}
                 </div>
                 {nestedItems.length > 0 && (
@@ -662,9 +752,50 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
           const content = line.replace(/^[*-]\s/, '')
           elements.push(
             <div key={key} className="flex gap-3 my-1.5">
-              <span className="text-slate-600 font-bold min-w-[1rem] text-sm mt-0.5">•</span>
-              <span className="flex-1 text-slate-700 leading-relaxed">{parseInlineMarkdown(content)}</span>
+              <span className="text-slate-400 font-bold min-w-[1rem] text-sm mt-0.5">•</span>
+              <span className="flex-1 text-slate-200 leading-relaxed">{parseInlineMarkdown(content)}</span>
             </div>
+          )
+          i++
+          continue
+        }
+        
+        // Links [text](url)
+        if (line.includes('[') && line.includes('](')) {
+          const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g
+          const parts: React.ReactNode[] = []
+          let lastIndex = 0
+          let match
+          
+          while ((match = linkRegex.exec(line)) !== null) {
+            // Add text before link
+            if (match.index > lastIndex) {
+              parts.push(parseInlineMarkdown(line.substring(lastIndex, match.index)))
+            }
+            // Add link
+            parts.push(
+              <a 
+                key={match.index}
+                href={match[2]} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-purple-400 hover:text-purple-300 underline decoration-purple-400/50 hover:decoration-purple-300 transition-colors"
+              >
+                {match[1]}
+              </a>
+            )
+            lastIndex = match.index + match[0].length
+          }
+          
+          // Add remaining text
+          if (lastIndex < line.length) {
+            parts.push(parseInlineMarkdown(line.substring(lastIndex)))
+          }
+          
+          elements.push(
+            <p key={key} className="my-2 leading-relaxed text-slate-200">
+              {parts}
+            </p>
           )
           i++
           continue
@@ -673,7 +804,7 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
         // Regular paragraphs
         const parsedLine = parseInlineMarkdown(line)
         elements.push(
-          <p key={key} className="my-2 leading-relaxed text-slate-700">
+          <p key={key} className="my-2 leading-relaxed text-slate-200">
             {parsedLine}
           </p>
         )
@@ -687,16 +818,16 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
   return (
     <div className="space-y-2 text-[15px] leading-relaxed">
       {formatContent(content)}
-      {showCopyButton && (
-        <div className="mt-4 pt-3 border-t border-slate-200">
+      {showCopyButton && content && (
+        <div className="mt-4 pt-3 border-t border-slate-700/50">
           <button
             onClick={handleCopyAll}
-            className="flex items-center gap-2 px-4 py-2 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-sm text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
           >
             {copied ? (
               <>
-                <Check className="h-4 w-4 text-green-600" />
-                <span className="text-green-600">Copied!</span>
+                <Check className="h-4 w-4 text-emerald-400" />
+                <span className="text-emerald-400">Copied!</span>
               </>
             ) : (
               <>
@@ -736,6 +867,12 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // Debug profile data
+  useEffect(() => {
+    console.log('[AI Helper] Profile data:', profile)
+    console.log('[AI Helper] Full name:', profile?.full_name)
+  }, [profile])
 
 // ...
   // Load sessions from localStorage on mount (wait for profile to be loaded)
@@ -866,16 +1003,19 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
     const userId = profile?.id
     if (!userId) return
 
+    // If only image is sent without text, provide a default message
+    const messageContent = inputMessage.trim() || (selectedImage ? 'Analyze this image for me.' : '')
+    
     const userMessage: ChatMessage = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type: 'user',
-      content: inputMessage,
+      content: messageContent,
       timestamp: new Date().toISOString(),
       imageData: selectedImage || undefined
     }
 
     setMessages(prev => [...prev, userMessage])
-    const currentInput = inputMessage
+    const currentInput = messageContent
     const currentImage = selectedImage
     setInputMessage('')
     setSelectedImage(null)
@@ -919,14 +1059,63 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
         throw new Error(error.error || 'Failed to get response')
       }
 
-      // Handle streaming response with smooth updates
+      // Handle streaming response with ultra-smooth requestAnimationFrame updates
       const reader = response.body?.getReader()
       const decoder = new TextDecoder()
       let accumulatedText = ''
       const aiMessageId = (Date.now() + 1).toString()
       let isFirstChunk = true
-      let lastUpdateTime = 0
-      const UPDATE_THROTTLE = 16 // ~60fps for ultra-smooth animation
+      let pendingUpdate = false
+      let animationFrameId: number | null = null
+
+      // Check if user is near bottom of scroll (within 150px)
+      const isNearBottom = () => {
+        const container = messagesEndRef.current?.parentElement?.parentElement
+        if (!container) return true
+        const threshold = 150
+        const position = container.scrollTop + container.clientHeight
+        const height = container.scrollHeight
+        return height - position < threshold
+      }
+
+      // Ultra-smooth update function using RAF with smart scroll
+      const smoothUpdate = () => {
+        pendingUpdate = false
+        const shouldAutoScroll = isNearBottom()
+        
+        setMessages(prev => {
+          const existing = prev.find(m => m.id === aiMessageId)
+          if (existing) {
+            return prev.map(m => 
+              m.id === aiMessageId 
+                ? { ...m, content: accumulatedText }
+                : m
+            )
+          } else {
+            return [...prev, {
+              id: aiMessageId,
+              type: 'ai' as const,
+              content: accumulatedText,
+              timestamp: new Date().toISOString()
+            }]
+          }
+        })
+        
+        // Only auto-scroll if user is near bottom (smart scroll)
+        if (shouldAutoScroll) {
+          requestAnimationFrame(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+          })
+        }
+      }
+
+      // Request update on next frame
+      const requestUpdate = () => {
+        if (!pendingUpdate) {
+          pendingUpdate = true
+          animationFrameId = requestAnimationFrame(smoothUpdate)
+        }
+      }
 
       if (reader) {
         while (true) {
@@ -954,35 +1143,8 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
                     isFirstChunk = false
                   }
                   
-                  // Throttle updates for smoother animation
-                  const now = Date.now()
-                  if (now - lastUpdateTime >= UPDATE_THROTTLE || isFirstChunk) {
-                    lastUpdateTime = now
-                    
-                    // Update the AI message in real-time
-                    setMessages(prev => {
-                      const existing = prev.find(m => m.id === aiMessageId)
-                      if (existing) {
-                        return prev.map(m => 
-                          m.id === aiMessageId 
-                            ? { ...m, content: accumulatedText }
-                            : m
-                        )
-                      } else {
-                        return [...prev, {
-                          id: aiMessageId,
-                          type: 'ai' as const,
-                          content: accumulatedText,
-                          timestamp: new Date().toISOString()
-                        }]
-                      }
-                    })
-                    
-                    // Smooth auto-scroll to follow the response
-                    setTimeout(() => {
-                      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-                    }, 0)
-                  }
+                  // Request smooth update on next animation frame
+                  requestUpdate()
                 }
               } catch (e) {
                 // Ignore JSON parse errors for partial chunks
@@ -1133,14 +1295,14 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
   // Render centered input
   function renderCenteredInput() {
     return (
-      <div className="w-full sm:max-w-2xl sm:mx-auto px-2 sm:px-0">
+      <div className="w-full sm:max-w-3xl lg:max-w-4xl sm:mx-auto px-2 sm:px-4">
         {selectedImage && (
           <motion.div 
             initial={{ opacity: 0, y: 10 }} 
             animate={{ opacity: 1, y: 0 }} 
             className="mb-4 relative inline-block"
           >
-            <div className="relative h-32 rounded-xl overflow-hidden border-2 border-slate-200 shadow-sm">
+            <div className="relative h-32 rounded-xl overflow-hidden border-2 border-slate-700 shadow-lg">
               <Image 
                 src={selectedImage} 
                 alt="Preview" 
@@ -1161,19 +1323,19 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
         )}
         
         <div className="flex items-end gap-3">
-          <div className="flex-1 relative bg-white rounded-2xl border-2 shadow-lg hover:shadow-xl transition-all duration-200"
+          <div className="flex-1 relative bg-slate-900/50 backdrop-blur-xl rounded-2xl border-2 shadow-2xl hover:shadow-purple-500/20 transition-all duration-200"
           style={{
-            borderColor: '#ffc8dd60'
+            borderColor: 'rgba(168, 85, 247, 0.3)'
           }}
           onFocus={(e) => {
             if (e.currentTarget.contains(e.target)) {
-              e.currentTarget.style.borderColor = '#ffc8dd'
-              e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(255, 200, 221, 0.1), 0 10px 10px -5px rgba(255, 200, 221, 0.04)'
+              e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.6)'
+              e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(168, 85, 247, 0.2), 0 10px 10px -5px rgba(168, 85, 247, 0.1)'
             }
           }}
           onBlur={(e) => {
             if (e.currentTarget.contains(e.target)) {
-              e.currentTarget.style.borderColor = '#ffc8dd60'
+              e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.3)'
             }
           }}>
             <textarea
@@ -1188,26 +1350,26 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
               }}
               placeholder="Ask me anything about your homework..."
               rows={1}
-              className="w-full bg-transparent text-slate-900 placeholder:text-slate-400 px-5 py-4 pr-14 text-base focus:outline-none resize-none overflow-y-auto min-h-[64px] max-h-[160px]"
+              className="w-full bg-transparent text-white placeholder:text-slate-500 px-5 sm:px-6 py-4 sm:py-5 pr-16 text-base sm:text-lg focus:outline-none resize-none overflow-y-auto min-h-[72px] sm:min-h-[80px] max-h-[180px] sm:max-h-[200px]"
               style={{ scrollbarWidth: 'none' }}
               autoFocus
             />
             
-            <div className="absolute right-3 bottom-3">
+            <div className="absolute right-3 sm:right-4 bottom-3 sm:bottom-4">
               <Button 
                 onClick={() => fileInputRef.current?.click()} 
                 size="sm" 
                 variant="ghost" 
                 type="button" 
                 title="Attach image" 
-                className="h-9 w-9 p-0 text-slate-400 rounded-lg transition-all"
+                className="h-10 w-10 sm:h-11 sm:w-11 p-0 text-slate-400 rounded-lg transition-all"
                 style={{
-                  '--hover-bg': '#ffc8dd15',
-                  '--hover-color': '#ffc8dd'
+                  '--hover-bg': 'rgba(168, 85, 247, 0.15)',
+                  '--hover-color': '#c084fc'
                 } as React.CSSProperties}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#ffc8dd15'
-                  e.currentTarget.style.color = '#ffc8dd'
+                  e.currentTarget.style.backgroundColor = 'rgba(168, 85, 247, 0.15)'
+                  e.currentTarget.style.color = '#c084fc'
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = 'transparent'
@@ -1221,29 +1383,142 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" aria-label="Upload image" />
           </div>
           
-          <Button 
-            onClick={sendMessage} 
-            disabled={!inputMessage.trim() && !selectedImage} 
-            title="Send message" 
+          <motion.button
+            onClick={sendMessage}
+            disabled={!inputMessage.trim() && !selectedImage}
+            title="Send message"
             className={cn(
-              "h-[64px] w-[64px] p-0 rounded-2xl shadow-lg transition-all duration-200 flex items-center justify-center",
+              "relative h-[72px] w-[72px] sm:h-[80px] sm:w-[80px] rounded-2xl transition-all duration-300 flex items-center justify-center overflow-hidden group",
               (!inputMessage.trim() && !selectedImage)
-                ? "bg-slate-200 cursor-not-allowed"
-                : "bg-gradient-to-br from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 hover:shadow-2xl hover:scale-105 active:scale-95"
+                ? "bg-slate-800 cursor-not-allowed"
+                : "cursor-pointer"
             )}
+            whileHover={(!inputMessage.trim() && !selectedImage) ? {} : { scale: 1.08 }}
+            whileTap={(!inputMessage.trim() && !selectedImage) ? {} : { scale: 0.92 }}
+            animate={(!inputMessage.trim() && !selectedImage) ? {} : {
+              boxShadow: [
+                '0 0 20px rgba(168, 85, 247, 0.4)',
+                '0 0 30px rgba(236, 72, 153, 0.5)',
+                '0 0 20px rgba(168, 85, 247, 0.4)',
+              ]
+            }}
+            transition={{
+              boxShadow: { duration: 2, repeat: Infinity, ease: 'easeInOut' },
+              scale: { duration: 0.15 }
+            }}
           >
-            <Send className="h-6 w-6 text-white" />
-          </Button>
+            {/* Animated gradient border */}
+            {(!inputMessage.trim() && !selectedImage) ? null : (
+              <motion.div
+                className="absolute inset-0 rounded-2xl"
+                style={{
+                  background: 'linear-gradient(45deg, #a855f7, #ec4899, #8b5cf6, #d946ef)',
+                  backgroundSize: '400% 400%'
+                }}
+                animate={{
+                  backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: 'linear'
+                }}
+              />
+            )}
+            
+            {/* Inner content */}
+            <div className={cn(
+              "relative z-10 w-[calc(100%-4px)] h-[calc(100%-4px)] rounded-[14px] flex items-center justify-center",
+              (!inputMessage.trim() && !selectedImage)
+                ? "bg-slate-800"
+                : "bg-gradient-to-br from-purple-600 via-pink-600 to-purple-700"
+            )}>
+              {/* Shine effect */}
+              {(!inputMessage.trim() && !selectedImage) ? null : (
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                  animate={{
+                    x: ['-100%', '200%']
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: 'linear',
+                    repeatDelay: 1
+                  }}
+                />
+              )}
+              
+              {/* Icon with pulse */}
+              <motion.div
+                animate={(!inputMessage.trim() && !selectedImage) ? {} : {
+                  scale: [1, 1.1, 1]
+                }}
+                transition={{
+                  duration: 1.5,
+                  repeat: Infinity,
+                  ease: 'easeInOut'
+                }}
+              >
+                <Send className={cn(
+                  "h-6 w-6 sm:h-7 sm:w-7",
+                  (!inputMessage.trim() && !selectedImage) ? "text-slate-600" : "text-white drop-shadow-lg"
+                )} />
+              </motion.div>
+              
+              {/* Sparkle particles */}
+              {(!inputMessage.trim() && !selectedImage) ? null : (
+                <>
+                  <motion.div
+                    className="absolute top-2 right-2 w-1 h-1 bg-white rounded-full"
+                    animate={{
+                      scale: [0, 1, 0],
+                      opacity: [0, 1, 0]
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: Infinity,
+                      delay: 0
+                    }}
+                  />
+                  <motion.div
+                    className="absolute bottom-3 left-3 w-1 h-1 bg-white rounded-full"
+                    animate={{
+                      scale: [0, 1, 0],
+                      opacity: [0, 1, 0]
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: Infinity,
+                      delay: 0.5
+                    }}
+                  />
+                  <motion.div
+                    className="absolute top-1/2 left-2 w-1 h-1 bg-white rounded-full"
+                    animate={{
+                      scale: [0, 1, 0],
+                      opacity: [0, 1, 0]
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: Infinity,
+                      delay: 1
+                    }}
+                  />
+                </>
+              )}
+            </div>
+          </motion.button>
         </div>
         
-        <div className="mt-4 flex items-center justify-center gap-4 text-xs text-slate-400">
+        <div className="mt-4 flex items-center justify-center gap-4 text-xs text-slate-500">
           <span className="flex items-center gap-1.5">
-            <kbd className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-slate-600 font-mono text-[10px]">Enter</kbd>
+            <kbd className="px-2 py-1 bg-slate-800 border border-slate-700 rounded text-slate-300 font-mono text-[10px]">Enter</kbd>
             to send
           </span>
-          <span className="text-slate-300">•</span>
+          <span className="text-slate-600">•</span>
           <span className="flex items-center gap-1.5">
-            <kbd className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-slate-600 font-mono text-[10px]">Shift + Enter</kbd>
+            <kbd className="px-2 py-1 bg-slate-800 border border-slate-700 rounded text-slate-300 font-mono text-[10px]">Shift + Enter</kbd>
             for new line
           </span>
         </div>
@@ -1252,28 +1527,30 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 flex overflow-hidden bg-white">
+    <div className="fixed inset-0 flex overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       {/* Sidebar */}
-      <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }} className="hidden lg:flex flex-col w-80 bg-gradient-to-b from-slate-50 to-white border-r border-slate-200 shadow-sm">
+      <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }} className="hidden lg:flex flex-col w-80 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 border-r border-slate-700/50 shadow-2xl">
         {/* History View - Full Screen */}
         {showHistory ? (
           <>
             {/* History Header with Back Button */}
-            <div className="p-5 bg-white border-b border-slate-200 shadow-sm">
+            <div className="p-5 bg-slate-900/50 border-b border-slate-700/50 shadow-sm backdrop-blur-xl">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <History className="h-5 w-5 text-purple-600" />
-                  <h2 className="text-base font-bold text-slate-900 tracking-tight">Chat History</h2>
+                  <div className="p-2 rounded-xl bg-purple-500/20 backdrop-blur-sm">
+                    <History className="h-5 w-5 text-purple-400" />
+                  </div>
+                  <h2 className="text-base font-bold text-white tracking-tight">Chat History</h2>
                 </div>
                 <Button
                   onClick={() => setShowHistory(false)}
-                  className="h-8 w-8 p-0 rounded-lg flex items-center justify-center transition-all duration-200 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900"
+                  className="h-8 w-8 p-0 rounded-lg flex items-center justify-center transition-all duration-200 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700"
                   title="Back to main view"
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-              <div className="text-xs text-slate-500">{sessions.length} conversation{sessions.length !== 1 ? 's' : ''} saved</div>
+              <div className="text-xs text-slate-400">{sessions.length} conversation{sessions.length !== 1 ? 's' : ''} saved</div>
             </div>
 
             {/* Full History List */}
@@ -1281,9 +1558,9 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
               <div className="space-y-2">
                 {sessions.length === 0 ? (
                   <div className="text-center py-16">
-                    <MessageCircle className="h-16 w-16 text-slate-300 mx-auto mb-4" />
+                    <MessageCircle className="h-16 w-16 text-slate-600 mx-auto mb-4" />
                     <div className="text-sm text-slate-400 font-medium">No conversations yet</div>
-                    <div className="text-xs text-slate-400 mt-2">Start a new chat to begin</div>
+                    <div className="text-xs text-slate-500 mt-2">Start a new chat to begin</div>
                   </div>
                 ) : (
                   sessions.map((session) => (
@@ -1296,8 +1573,8 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
                       className={cn(
                         "w-full text-left px-3 py-3 rounded-xl text-xs transition-all duration-200 group relative overflow-hidden",
                         currentSessionId === session.id
-                          ? "bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 border-2 shadow-md"
-                          : "bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 hover:shadow-sm"
+                          ? "bg-gradient-to-br from-purple-900/40 via-pink-900/30 to-purple-900/40 border-2 shadow-lg"
+                          : "bg-slate-800/50 hover:bg-slate-800/70 border border-slate-700/50 hover:border-slate-600 hover:shadow-md backdrop-blur-sm"
                       )}
                       style={{
                         borderColor: currentSessionId === session.id ? '#ffc8dd' : undefined
@@ -1306,19 +1583,19 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
                       whileTap={{ scale: 0.98 }}
                     >
                       {currentSessionId === session.id && (
-                        <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-purple-500 to-pink-500"></div>
+                        <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-purple-500 to-pink-500 shadow-lg shadow-purple-500/50"></div>
                       )}
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-slate-800 truncate mb-1.5 text-sm">
+                          <div className="font-semibold text-white truncate mb-1.5 text-sm">
                             {session.title}
                           </div>
-                          <div className="flex items-center gap-2 text-[10px] text-slate-500">
-                            <div className="flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-full">
+                          <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                            <div className="flex items-center gap-1 bg-slate-700/50 px-2 py-0.5 rounded-full">
                               <MessageCircle className="h-2.5 w-2.5" />
                               <span className="font-medium">{session.messages.length}</span>
                             </div>
-                            <span className="text-slate-300">•</span>
+                            <span className="text-slate-600">•</span>
                             <span className="font-medium">{new Date(session.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                           </div>
                         </div>
@@ -1328,7 +1605,7 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
                               e.stopPropagation()
                               deleteSession(session.id)
                             }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-red-50 rounded-lg cursor-pointer"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-red-500/20 rounded-lg cursor-pointer"
                             title="Delete session"
                             role="button"
                             tabIndex={0}
@@ -1341,7 +1618,7 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
                               }
                             }}
                           >
-                            <X className="h-3.5 w-3.5 text-red-500" />
+                            <X className="h-3.5 w-3.5 text-red-400" />
                           </motion.div>
                         )}
                       </div>
@@ -1355,22 +1632,22 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
           <>
             {/* Normal Sidebar View */}
             {/* Header Section */}
-            <div className="p-5 bg-white border-b border-slate-200 shadow-sm">
+            <div className="p-5 bg-slate-900/50 border-b border-slate-700/50 shadow-sm backdrop-blur-xl">
               <div className="flex items-center gap-3 mb-4">
                 <div className="relative">
                   <LuminexAvatar size={40} animated={true} />
-                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full animate-pulse"></div>
+                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-slate-900 rounded-full animate-pulse shadow-lg shadow-emerald-500/50"></div>
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-base font-bold text-slate-900 tracking-tight">Luminex AI</h2>
-                  <p className="text-[10px] text-slate-500 font-medium">Your Homework Assistant</p>
+                  <h2 className="text-base font-bold text-white tracking-tight">Luminex AI</h2>
+                  <p className="text-[10px] text-slate-400 font-medium">Your Homework Assistant</p>
                 </div>
               </div>
               <Button 
                 onClick={createNewSession} 
-                className="w-full text-white text-sm font-semibold h-10 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-95"
+                className="w-full text-white text-sm font-semibold h-10 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-xl hover:scale-[1.02] active:scale-95 border border-purple-500/30"
                 style={{
-                  background: 'linear-gradient(135deg, #cdb4db 0%, #ffc8dd 50%, #ffafcc 100%)'
+                  background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #f472b6 100%)'
                 }}
               >
                 <Plus className="h-4 w-4" />
@@ -1379,42 +1656,42 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
             </div>
 
             {/* Stats Overview */}
-            <div className="px-4 py-3 bg-gradient-to-br from-purple-50 to-pink-50 border-b border-purple-100">
+            <div className="px-4 py-3 bg-gradient-to-br from-purple-900/20 to-pink-900/20 border-b border-slate-700/50">
               <div className="grid grid-cols-3 gap-2">
-                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-2.5 border border-purple-100/50 shadow-sm">
+                <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-2.5 border border-purple-500/20 shadow-sm">
                   <div className="flex flex-col items-center">
-                    <MessageCircle className="h-4 w-4 text-purple-600 mb-1" />
-                    <div className="text-lg font-bold text-slate-900">{sessions.reduce((acc, s) => acc + s.messages.length, 0)}</div>
-                    <div className="text-[8px] text-slate-500 font-medium text-center">Total Msgs</div>
+                    <MessageCircle className="h-4 w-4 text-purple-400 mb-1" />
+                    <div className="text-lg font-bold text-white">{sessions.reduce((acc, s) => acc + s.messages.length, 0)}</div>
+                    <div className="text-[8px] text-slate-400 font-medium text-center">Total Msgs</div>
                   </div>
                 </div>
-                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-2.5 border border-pink-100/50 shadow-sm">
+                <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-2.5 border border-pink-500/20 shadow-sm">
                   <div className="flex flex-col items-center">
-                    <Sparkles className="h-4 w-4 text-pink-600 mb-1" />
-                    <div className="text-lg font-bold text-slate-900">{sessions.length}</div>
-                    <div className="text-[8px] text-slate-500 font-medium text-center">Chats</div>
+                    <Sparkles className="h-4 w-4 text-pink-400 mb-1" />
+                    <div className="text-lg font-bold text-white">{sessions.length}</div>
+                    <div className="text-[8px] text-slate-400 font-medium text-center">Chats</div>
                   </div>
                 </div>
-                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-2.5 border border-blue-100/50 shadow-sm">
+                <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-2.5 border border-blue-500/20 shadow-sm">
                   <div className="flex flex-col items-center">
-                    <Clock className="h-4 w-4 text-blue-600 mb-1" />
-                    <div className="text-lg font-bold text-slate-900">{messages.length}</div>
-                    <div className="text-[8px] text-slate-500 font-medium text-center">Active</div>
+                    <Clock className="h-4 w-4 text-blue-400 mb-1" />
+                    <div className="text-lg font-bold text-white">{messages.length}</div>
+                    <div className="text-[8px] text-slate-400 font-medium text-center">Active</div>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* AI Quota Section */}
-            <div className="px-4 py-3 bg-white border-b border-slate-200">
+            <div className="px-4 py-3 bg-transparent border-b border-slate-700/50">
               <QuotaIndicator />
             </div>
 
             {/* History Toggle Button */}
-            <div className="px-4 py-3 border-b border-slate-200">
+            <div className="px-4 py-3 border-b border-slate-700/50">
               <Button
                 onClick={() => setShowHistory(true)}
-                className="w-full h-9 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 bg-white border-2 border-slate-200 hover:border-purple-300 hover:bg-purple-50 text-slate-700 hover:text-purple-700"
+                className="w-full h-9 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 bg-slate-800 border-2 border-slate-700 hover:border-purple-500 hover:bg-slate-700 text-slate-300 hover:text-purple-300"
               >
                 <History className="h-4 w-4" />
                 <span className="text-sm font-semibold">Show History</span>
@@ -1427,20 +1704,20 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
         )}
 
         {/* Footer Section */}
-        <div className="bg-gradient-to-br from-slate-50 to-white border-t border-slate-200 shadow-lg px-4 py-3">
+        <div className="bg-slate-900/50 border-t border-slate-700/50 shadow-2xl px-4 py-3 backdrop-blur-xl">
           <div className="space-y-2">
             <div className="flex items-center justify-between text-[10px]">
-              <div className="flex items-center gap-1.5 text-slate-600">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <div className="flex items-center gap-1.5 text-slate-300">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-lg shadow-emerald-500/50"></div>
                 <span className="font-semibold">Online & Ready</span>
               </div>
-              <span className="text-slate-400 font-medium">Saved locally</span>
+              <span className="text-slate-500 font-medium">Saved locally</span>
             </div>
             
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-2 border border-blue-100">
-              <div className="text-[9px] text-slate-700 space-y-0.5">
+            <div className="bg-gradient-to-r from-blue-900/20 to-purple-900/20 rounded-lg p-2 border border-blue-500/20">
+              <div className="text-[9px] text-slate-400 space-y-0.5">
                 <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-2.5 w-2.5 text-green-600" />
+                  <CheckCircle2 className="h-2.5 w-2.5 text-emerald-400" />
                   <span className="font-semibold">Images • Press Enter • 30-month retention</span>
                 </div>
               </div>
@@ -1465,26 +1742,28 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
         initial={{ x: '-100%' }}
         animate={{ x: isMobileSidebarOpen ? 0 : '-100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="fixed left-0 top-0 bottom-0 w-80 bg-gradient-to-b from-slate-50 to-white border-r border-slate-200 shadow-xl z-50 lg:hidden flex flex-col"
+        className="fixed left-0 top-0 bottom-0 w-80 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 border-r border-slate-700/50 shadow-2xl z-50 lg:hidden flex flex-col"
       >
         {/* Mobile History View - Full Screen */}
         {showHistory ? (
           <>
             {/* History Header with Back Button */}
-            <div className="p-4 bg-white border-b border-slate-200">
+            <div className="p-4 bg-slate-900/50 border-b border-slate-700/50 backdrop-blur-xl">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <History className="h-5 w-5 text-purple-600" />
-                  <h2 className="text-sm font-bold text-slate-900">Chat History</h2>
+                  <div className="p-1.5 rounded-lg bg-purple-500/20">
+                    <History className="h-5 w-5 text-purple-400" />
+                  </div>
+                  <h2 className="text-sm font-bold text-white">Chat History</h2>
                 </div>
                 <Button
                   onClick={() => setShowHistory(false)}
-                  className="h-7 w-7 p-0 rounded-lg flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600"
+                  className="h-7 w-7 p-0 rounded-lg flex items-center justify-center bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-              <div className="text-xs text-slate-500">{sessions.length} conversation{sessions.length !== 1 ? 's' : ''} saved</div>
+              <div className="text-xs text-slate-400">{sessions.length} conversation{sessions.length !== 1 ? 's' : ''} saved</div>
             </div>
 
             {/* Full History List */}
@@ -1492,9 +1771,9 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
               <div className="space-y-2">
                 {sessions.length === 0 ? (
                   <div className="text-center py-12">
-                    <MessageCircle className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                    <MessageCircle className="h-12 w-12 text-slate-600 mx-auto mb-3" />
                     <div className="text-sm text-slate-400 font-medium">No conversations yet</div>
-                    <div className="text-xs text-slate-400 mt-1">Start a new chat to begin</div>
+                    <div className="text-xs text-slate-500 mt-1">Start a new chat to begin</div>
                   </div>
                 ) : (
                   sessions.map((session) => (
@@ -1508,8 +1787,8 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
                       className={cn(
                         "w-full text-left px-3 py-2.5 rounded-lg text-xs transition-all duration-150 group relative",
                         currentSessionId === session.id
-                          ? "bg-gradient-to-br from-purple-50 to-pink-50 border-2 shadow-sm"
-                          : "bg-white hover:bg-slate-50 border border-slate-200 hover:shadow-sm"
+                          ? "bg-gradient-to-br from-purple-900/40 via-pink-900/30 to-purple-900/40 border-2 shadow-lg"
+                          : "bg-slate-800/50 hover:bg-slate-800/70 border border-slate-700/50 hover:shadow-md backdrop-blur-sm"
                       )}
                       style={{
                         borderColor: currentSessionId === session.id ? '#ffc8dd' : undefined
@@ -1519,7 +1798,7 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-slate-700 truncate mb-1">
+                          <div className="font-medium text-white truncate mb-1">
                             {session.title}
                           </div>
                           <div className="flex items-center gap-2 text-[10px] text-slate-400">
@@ -1535,7 +1814,7 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
                               e.stopPropagation()
                               deleteSession(session.id)
                             }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 rounded cursor-pointer"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-500/20 rounded cursor-pointer"
                             title="Delete session"
                             role="button"
                             tabIndex={0}
@@ -1546,7 +1825,7 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
                               }
                             }}
                           >
-                            <X className="h-3 w-3 text-red-500" />
+                            <X className="h-3 w-3 text-red-400" />
                           </div>
                         )}
                       </div>
@@ -1560,20 +1839,20 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
           <>
             {/* Normal Mobile Sidebar View */}
             {/* Mobile Sidebar Header */}
-            <div className="p-4 bg-white border-b border-slate-200">
+            <div className="p-4 bg-slate-900/50 border-b border-slate-700/50 backdrop-blur-xl">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <LuminexAvatar size={36} animated={true} />
                   <div className="flex-1">
-                    <h2 className="text-sm font-semibold text-slate-900">Luminex AI</h2>
-                    <p className="text-[10px] text-slate-500">Powered by Catalyst Innovations</p>
+                    <h2 className="text-sm font-semibold text-white">Luminex AI</h2>
+                    <p className="text-[10px] text-slate-400">Powered by Catalyst Innovations</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setIsMobileSidebarOpen(false)}
-                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                  className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
                 >
-                  <X className="h-5 w-5 text-slate-600" />
+                  <X className="h-5 w-5 text-slate-300" />
                 </button>
               </div>
               <Button 
@@ -1581,9 +1860,9 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
                   createNewSession()
                   setIsMobileSidebarOpen(false)
                 }} 
-                className="w-full text-white text-xs h-9 rounded-lg flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-md"
+                className="w-full text-white text-xs h-9 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-xl border border-purple-500/30"
                 style={{
-                  background: 'linear-gradient(to right, #cdb4db, #ffc8dd, #ffafcc)'
+                  background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #f472b6 100%)'
                 }}
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -1592,37 +1871,37 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
             </div>
 
             {/* Stats Overview */}
-            <div className="px-4 py-3 bg-gradient-to-br from-purple-50 to-pink-50 border-b border-purple-100">
+            <div className="px-4 py-3 bg-gradient-to-br from-purple-900/20 to-pink-900/20 border-b border-slate-700/50">
               <div className="grid grid-cols-3 gap-2">
-                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-2 border border-purple-100/50">
+                <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-2 border border-purple-500/20">
                   <div className="flex flex-col items-center">
-                    <MessageCircle className="h-3.5 w-3.5 text-purple-600 mb-1" />
-                    <div className="text-sm font-bold text-slate-900">{sessions.reduce((acc, s) => acc + s.messages.length, 0)}</div>
-                    <div className="text-[8px] text-slate-500 font-medium">Total</div>
+                    <MessageCircle className="h-3.5 w-3.5 text-purple-400 mb-1" />
+                    <div className="text-sm font-bold text-white">{sessions.reduce((acc, s) => acc + s.messages.length, 0)}</div>
+                    <div className="text-[8px] text-slate-400 font-medium">Total</div>
                   </div>
                 </div>
-                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-2 border border-pink-100/50">
+                <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-2 border border-pink-500/20">
                   <div className="flex flex-col items-center">
-                    <Sparkles className="h-3.5 w-3.5 text-pink-600 mb-1" />
-                    <div className="text-sm font-bold text-slate-900">{sessions.length}</div>
+                    <Sparkles className="h-3.5 w-3.5 text-pink-400 mb-1" />
+                    <div className="text-sm font-bold text-white">{sessions.length}</div>
                     <div className="text-[8px] text-slate-500 font-medium">Chats</div>
                   </div>
                 </div>
-                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-2 border border-blue-100/50">
+                <div className="bg-slate-800/50 backdrop-blur-sm rounded-lg p-2 border border-blue-500/20">
                   <div className="flex flex-col items-center">
-                    <Clock className="h-3.5 w-3.5 text-blue-600 mb-1" />
-                    <div className="text-sm font-bold text-slate-900">{messages.length}</div>
-                    <div className="text-[8px] text-slate-500 font-medium">Active</div>
+                    <Clock className="h-3.5 w-3.5 text-blue-400 mb-1" />
+                    <div className="text-sm font-bold text-white">{messages.length}</div>
+                    <div className="text-[8px] text-slate-400 font-medium">Active</div>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* History Toggle Button */}
-            <div className="px-4 py-3 border-b border-slate-200">
+            <div className="px-4 py-3 border-b border-slate-700/50">
               <Button
                 onClick={() => setShowHistory(true)}
-                className="w-full h-8 rounded-lg flex items-center justify-center gap-2 bg-white border-2 border-slate-200 hover:border-purple-300 hover:bg-purple-50 text-slate-700"
+                className="w-full h-8 rounded-xl flex items-center justify-center gap-2 bg-slate-800 border-2 border-slate-700 hover:border-purple-500 hover:bg-slate-700 text-slate-300 hover:text-purple-300"
               >
                 <History className="h-3.5 w-3.5" />
                 <span className="text-xs font-semibold">Show History</span>
@@ -1633,19 +1912,19 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
             <div className="flex-1"></div>
 
             {/* Footer */}
-            <div className="p-4 bg-white border-t border-slate-200">
+            <div className="p-4 bg-slate-900/50 border-t border-slate-700/50 backdrop-blur-xl">
               <div className="flex flex-col gap-3">
                 {/* AI Quota Indicator */}
                 <QuotaIndicator />
                 
-                <div className="flex items-center justify-between text-[10px] text-slate-600">
+                <div className="flex items-center justify-between text-[10px] text-slate-300">
                   <span className="flex items-center gap-1">
-                    <MessageCircle className="h-3 w-3 text-slate-400" />
+                    <MessageCircle className="h-3 w-3 text-slate-500" />
                     {sessions.length} {sessions.length === 1 ? 'conversation' : 'conversations'}
                   </span>
-                  <span className="text-slate-400">Saved locally</span>
+                  <span className="text-slate-500">Saved locally</span>
                 </div>
-                <div className="text-[9px] text-slate-400">
+                <div className="text-[9px] text-slate-500">
                   Tip: Images supported • Press Enter to send
                 </div>
               </div>
@@ -1661,17 +1940,29 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
             initial={{ opacity: 0, y: -10 }} 
             animate={{ opacity: 1, y: 0 }} 
             transition={{ duration: 0.3 }} 
-            className="px-2 sm:px-6 py-2 sm:py-3 border-b border-slate-100 bg-white"
+            className="px-3 sm:px-6 py-3 sm:py-4 border-b border-slate-700/50 bg-gradient-to-r from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-xl shadow-lg"
           >
             <div className="flex items-center justify-between w-full sm:max-w-4xl sm:mx-auto">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setIsMobileSidebarOpen(true)}
-                  className="lg:hidden p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                  className="lg:hidden p-2.5 hover:bg-slate-700/50 rounded-xl transition-all duration-200 border border-slate-700/50 hover:border-purple-500/30 hover:shadow-lg hover:shadow-purple-500/10"
                 >
-                  <Menu className="h-5 w-5 text-slate-600" />
+                  <Menu className="h-5 w-5 text-slate-300" />
                 </button>
-                <h1 className="text-xs sm:text-sm font-medium text-slate-900">Luminex AI</h1>
+                <div className="flex items-center gap-2.5">
+                  <div className="hidden sm:block">
+                    <LuminexAvatar size={32} animated={false} />
+                  </div>
+                  <div>
+                    <h1 className="text-sm sm:text-base font-bold bg-gradient-to-r from-white to-slate-200 bg-clip-text text-transparent">Luminex AI</h1>
+                    <p className="text-[10px] text-slate-400 font-medium hidden sm:block">Homework Assistant</p>
+                  </div>
+                </div>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 text-[10px] text-slate-400">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-lg shadow-emerald-500/50"></div>
+                <span className="font-semibold">Online</span>
               </div>
             </div>
           </motion.div>
@@ -1682,20 +1973,32 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
             {inputPosition === 'center' && displayedMessages.length === 0 && (
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }} className="w-full">
                 {/* Mobile Menu Button - Fixed Position */}
-                <button
+                <motion.button
                   onClick={() => setIsMobileSidebarOpen(true)}
-                  className="lg:hidden fixed top-4 left-4 z-30 p-2 bg-white hover:bg-slate-100 rounded-lg transition-colors shadow-md border border-slate-200"
+                  className="lg:hidden fixed top-4 left-4 z-30 p-3 bg-gradient-to-br from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 rounded-xl transition-all duration-200 shadow-2xl border border-slate-700/50 hover:border-purple-500/30 hover:shadow-purple-500/20"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  <Menu className="h-5 w-5 text-slate-600" />
-                </button>
+                  <Menu className="h-5 w-5 text-slate-300" />
+                </motion.button>
                 
                 <div className="text-center mb-8">
                   <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.4 }}>
                     <div className="mx-auto mb-6 flex justify-center">
                       <LuminexAvatar size={64} animated={true} />
                     </div>
-                    <h2 className="text-3xl font-semibold text-slate-900 mb-3">How can I help you today?</h2>
-                    <p className="text-slate-500 max-w-md mx-auto">Ask me anything about your homework, and I'll guide you through it step by step.</p>
+                    <h2 className="text-3xl font-semibold mb-3">
+                      {profile?.first_name ? (
+                        <>
+                          <span className="bg-gradient-to-br from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">Hi </span>
+                          <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">{profile.first_name}</span>
+                          <span className="bg-gradient-to-br from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">, how can I help you today?</span>
+                        </>
+                      ) : (
+                        <span className="bg-gradient-to-br from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">How can I help you today?</span>
+                      )}
+                    </h2>
+                    <p className="text-slate-400 max-w-md mx-auto">Ask me anything about your homework, and I'll guide you through it step by step.</p>
                   </motion.div>
                 </div>
                 {renderCenteredInput()}
@@ -1720,7 +2023,7 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
                   {message.type === 'ai' ? (
                     <LuminexAvatar size={28} animated={false} />
                   ) : (
-                    <UserAvatar size={28} name={profile?.full_name} />
+                    <UserAvatar size={28} name={profile?.first_name || profile?.last_name} />
                   )}
                 </div>
                 
@@ -1729,15 +2032,15 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
                   <div className="flex items-center justify-between">
                     <span 
                       className="text-xs font-semibold"
-                      style={{ color: message.type === 'ai' ? '#cdb4db' : '#a2d2ff' }}
+                      style={{ color: message.type === 'ai' ? '#c084fc' : '#60a5fa' }}
                     >
-                      {message.type === 'user' ? 'You' : 'Luminex AI'}
+                      {message.type === 'user' ? (profile?.first_name || 'You') : 'Luminex AI'}
                     </span>
                     {hoveredMessage === message.id && (
                       <motion.div initial={{ opacity: 0, x: -5 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-1">
                         <button 
                           onClick={() => { if (typeof navigator !== 'undefined' && navigator.clipboard) { navigator.clipboard.writeText(message.content); setCopiedCode(message.id); setTimeout(() => setCopiedCode(null), 2000) } }} 
-                          className="px-2 py-1 rounded-md text-xs text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all flex items-center gap-1" 
+                          className="px-2 py-1 rounded-md text-xs text-slate-400 hover:text-white hover:bg-slate-700 transition-all flex items-center gap-1" 
                           title="Copy message"
                         >
                           {copiedCode === message.id ? (
@@ -1752,16 +2055,16 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
                   
                   {/* Message card */}
                   <div className={cn(
-                    "rounded-2xl p-3 sm:p-4 shadow-sm transition-all duration-200",
+                    "rounded-2xl p-3 sm:p-4 shadow-lg transition-all duration-200",
                     message.type === 'ai' 
-                      ? 'border hover:shadow-md' 
-                      : 'border hover:shadow-md'
+                      ? 'border hover:shadow-xl backdrop-blur-xl' 
+                      : 'border hover:shadow-xl backdrop-blur-xl'
                   )}
                   style={{
                     background: message.type === 'ai'
-                      ? 'linear-gradient(to bottom right, #ffc8dd15, #ffafcc15, #cdb4db10)'
-                      : 'linear-gradient(to bottom right, #bde0fe20, #a2d2ff15)',
-                    borderColor: message.type === 'ai' ? '#ffc8dd40' : '#a2d2ff40'
+                      ? 'linear-gradient(to bottom right, rgba(168, 85, 247, 0.15), rgba(236, 72, 153, 0.1), rgba(139, 92, 246, 0.05))'
+                      : 'linear-gradient(to bottom right, rgba(59, 130, 246, 0.15), rgba(96, 165, 250, 0.1))',
+                    borderColor: message.type === 'ai' ? 'rgba(168, 85, 247, 0.3)' : 'rgba(59, 130, 246, 0.3)'
                   }}>
                     {message.imageData && (
                       <div className="relative max-w-full sm:max-w-md mb-4">
@@ -1803,10 +2106,10 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
                   <LuminexAvatar size={28} animated={true} />
                 </div>
                 <div className="flex-1 space-y-2">
-                  <span className="text-xs font-semibold" style={{ color: '#cdb4db' }}>Luminex AI</span>
+                  <span className="text-xs font-semibold" style={{ color: '#c084fc' }}>Luminex AI</span>
                   <div className="flex items-center gap-3">
                     <FluidThinking size={28} />
-                    <span className="text-sm text-slate-500 italic">Thinking...</span>
+                    <span className="text-sm text-slate-300 italic">Thinking...</span>
                   </div>
                 </div>
               </motion.div>
@@ -1821,16 +2124,16 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
             initial={{ opacity: 0, y: 20 }} 
             animate={{ opacity: 1, y: 0 }} 
             transition={{ duration: 0.4 }} 
-            className="px-2 sm:px-4 py-3 sm:py-4 border-t border-slate-200 bg-gradient-to-b from-white to-slate-50/30"
+            className="px-2 sm:px-4 py-3 sm:py-4 border-t border-slate-700/50 bg-slate-900/50 backdrop-blur-xl"
           >
-            <div className="w-full sm:max-w-4xl sm:mx-auto">
+            <div className="w-full sm:max-w-4xl lg:max-w-5xl sm:mx-auto">
               {selectedImage && (
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }} 
                   animate={{ opacity: 1, y: 0 }} 
                   className="mb-3 relative inline-block"
                 >
-                  <div className="relative h-24 sm:h-32 rounded-xl overflow-hidden border-2 border-slate-200 shadow-sm">
+                  <div className="relative h-24 sm:h-32 rounded-xl overflow-hidden border-2 border-slate-700 shadow-lg">
                     <Image 
                       src={selectedImage} 
                       alt="Preview" 
@@ -1851,19 +2154,19 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
               )}
               
               <div className="flex items-end gap-3">
-                <div className="flex-1 relative bg-white rounded-2xl border-2 shadow-sm hover:shadow-md transition-all duration-200"
+                <div className="flex-1 relative bg-slate-900/50 backdrop-blur-xl rounded-2xl border-2 shadow-2xl hover:shadow-purple-500/20 transition-all duration-200"
                 style={{
-                  borderColor: '#ffc8dd60'
+                  borderColor: 'rgba(168, 85, 247, 0.3)'
                 }}
                 onFocus={(e) => {
                   if (e.currentTarget.contains(e.target)) {
-                    e.currentTarget.style.borderColor = '#ffc8dd'
-                    e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(255, 200, 221, 0.1), 0 4px 6px -2px rgba(255, 200, 221, 0.05)'
+                    e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.6)'
+                    e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(168, 85, 247, 0.2), 0 4px 6px -2px rgba(168, 85, 247, 0.1)'
                   }
                 }}
                 onBlur={(e) => {
                   if (e.currentTarget.contains(e.target)) {
-                    e.currentTarget.style.borderColor = '#ffc8dd60'
+                    e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.3)'
                   }
                 }}>
                   <textarea 
@@ -1878,32 +2181,32 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
                     }} 
                     placeholder="Ask me anything about your homework..." 
                     rows={1} 
-                    className="w-full bg-transparent text-slate-900 placeholder:text-slate-400 px-4 py-3 pr-12 text-sm focus:outline-none resize-none overflow-y-auto min-h-[52px] max-h-[140px]" 
+                    className="w-full bg-transparent text-white placeholder:text-slate-500 px-4 sm:px-5 py-3 sm:py-4 pr-12 sm:pr-14 text-sm sm:text-base focus:outline-none resize-none overflow-y-auto min-h-[60px] sm:min-h-[68px] max-h-[160px] sm:max-h-[180px]" 
                     style={{ scrollbarWidth: 'none' }} 
                   />
                   
-                  <div className="absolute right-3 bottom-3">
+                  <div className="absolute right-3 sm:right-4 bottom-3 sm:bottom-4">
                     <Button 
                       onClick={() => fileInputRef.current?.click()} 
                       size="sm" 
                       variant="ghost" 
                       type="button" 
                       title="Attach image" 
-                      className="h-8 w-8 p-0 text-slate-400 rounded-lg transition-all"
+                      className="h-9 w-9 sm:h-10 sm:w-10 p-0 text-slate-400 rounded-lg transition-all"
                       style={{
-                        '--hover-bg': '#ffc8dd15',
-                        '--hover-color': '#ffc8dd'
+                        '--hover-bg': 'rgba(168, 85, 247, 0.15)',
+                        '--hover-color': '#c084fc'
                       } as React.CSSProperties}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#ffc8dd15'
-                        e.currentTarget.style.color = '#ffc8dd'
+                        e.currentTarget.style.backgroundColor = 'rgba(168, 85, 247, 0.15)'
+                        e.currentTarget.style.color = '#c084fc'
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.backgroundColor = 'transparent'
                         e.currentTarget.style.color = '#94a3b8'
                       }}
                     >
-                      <Paperclip className="h-4 w-4" />
+                      <Paperclip className="h-4 w-4 sm:h-5 sm:w-5" />
                     </Button>
                   </div>
                   
@@ -1915,24 +2218,19 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
                   disabled={!inputMessage.trim() && !selectedImage} 
                   title="Send message" 
                   className={cn(
-                    "h-[52px] w-[52px] p-0 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center",
+                    "h-[60px] w-[60px] sm:h-[68px] sm:w-[68px] p-0 rounded-xl shadow-2xl transition-all duration-200 flex items-center justify-center border",
                     (!inputMessage.trim() && !selectedImage)
-                      ? "bg-slate-200 cursor-not-allowed"
-                      : "hover:shadow-lg hover:scale-105 active:scale-95"
+                      ? "bg-slate-800 cursor-not-allowed border-slate-700"
+                      : "bg-gradient-to-br from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 border-purple-500/30 hover:shadow-purple-500/50 hover:shadow-2xl hover:scale-105 active:scale-95"
                   )}
-                  style={{
-                    background: (!inputMessage.trim() && !selectedImage)
-                      ? undefined
-                      : 'linear-gradient(to bottom right, #cdb4db, #ffc8dd, #ffafcc)'
-                  }}
                 >
-                  <Send className="h-5 w-5 text-white" />
+                  <Send className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </Button>
               </div>
               
               {/* Helper text */}
-              <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
-                <span>Press <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-slate-600 font-mono">Enter</kbd> to send</span>
+              <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+                <span>Press <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 font-mono">Enter</kbd> to send</span>
                 <span>Shift + Enter for new line</span>
               </div>
             </div>

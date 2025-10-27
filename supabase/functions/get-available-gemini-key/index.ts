@@ -81,8 +81,27 @@ serve(async (req) => {
       }
     })
 
-    // 3. Call the cooldown-aware PostgreSQL function to get an available key
-    const { data, error } = await supabase.rpc('get_available_gemini_key_with_cooldown')
+    // 3. Get model parameter from request (default to flash2)
+    let model = 'flash2'
+    try {
+      const body = await req.json()
+      model = body.model || 'flash2'
+      
+      // Validate model
+      const validModels = ['flash2', 'gemma-27b', 'gemma-3-27b', 'gemma-12b', 'gemma-3-12b', 'gemma-4b', 'gemma-3-4b']
+      if (!validModels.includes(model)) {
+        return new Response(
+          JSON.stringify({ error: `Invalid model: ${model}. Must be one of: ${validModels.join(', ')}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    } catch (e) {
+      // If no body or parsing fails, use default flash2
+      console.log('No model specified, using flash2')
+    }
+
+    // 4. Call the PostgreSQL function with model parameter
+    const { data, error } = await supabase.rpc('get_available_gemini_key', { p_model: model })
 
     if (error) {
       console.error('Database error:', error)
@@ -115,7 +134,7 @@ serve(async (req) => {
     // 5. Decrypt the API key
     let decryptedKey: string
     try {
-      decryptedKey = await decryptApiKey(keyData.out_api_key, encryptionKey)
+      decryptedKey = await decryptApiKey(keyData.encrypted_key, encryptionKey)
     } catch (error) {
       console.error('Decryption failed:', error)
       return new Response(
@@ -128,9 +147,9 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         apiKey: decryptedKey,
-        keyId: keyData.out_key_id,
-        remainingDaily: keyData.out_remaining_daily,
-        remainingMinute: keyData.out_remaining_minute
+        keyId: keyData.key_id,
+        remainingDaily: keyData.remaining_daily,
+        remainingMinute: keyData.remaining_minute
       }),
       { 
         status: 200, 

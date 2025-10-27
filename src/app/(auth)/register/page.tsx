@@ -224,7 +224,16 @@ export default function RegisterPage() {
       })
 
       if (!response.ok) {
-        throw new ValidationError('SCHOOL_VERIFICATION_FAILED', `HTTP ${response.status}: ${response.statusText}`)
+        // User-friendly error messages based on status code
+        if (response.status === 404) {
+          throw new ValidationError('SCHOOL_NOT_FOUND', 'School ID not found. Please check and try again.')
+        } else if (response.status === 400) {
+          throw new ValidationError('INVALID_SCHOOL_ID', 'Invalid School ID format. Please enter a valid 12-character School ID.')
+        } else if (response.status >= 500) {
+          throw new ValidationError('SERVER_ERROR', 'Unable to verify school at this time. Please try again later.')
+        } else {
+          throw new ValidationError('SCHOOL_VERIFICATION_FAILED', 'Could not verify School ID. Please try again.')
+        }
       }
 
       const data = await response.json()
@@ -238,7 +247,7 @@ export default function RegisterPage() {
           description: `Found: ${data.schoolName}`
         })
       } else {
-        throw new ValidationError('SCHOOL_NOT_FOUND', data.message || 'School not found')
+        throw new ValidationError('SCHOOL_NOT_FOUND', 'School ID not found. Please verify with your school administrator.')
       }
     } catch (error) {
       const appError = handleError(error, 'school verification')
@@ -574,8 +583,13 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen lg:h-screen w-full flex flex-col lg:flex-row bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100">
-      <style jsx>{`
+    <div className="min-h-screen lg:h-screen w-full flex flex-col lg:flex-row bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 lg:overflow-hidden">
+      <style jsx global>{`
+        @media (min-width: 1024px) {
+          body {
+            overflow: hidden;
+          }
+        }
         @keyframes blob {
           0% { transform: translate(0px, 0px) scale(1); }
           33% { transform: translate(30px, -50px) scale(1.1); }
@@ -680,7 +694,7 @@ export default function RegisterPage() {
       </div>
 
       {/* Right Panel - Enterprise Registration Form */}
-      <div className="lg:flex-1 bg-white flex items-start justify-center p-4 lg:p-8 overflow-y-auto min-h-screen lg:min-h-0">
+      <div className="lg:flex-1 bg-white flex items-start justify-center p-4 lg:p-8 overflow-y-auto min-h-screen lg:h-full">
         <div className="w-full max-w-lg lg:max-w-xl">
           {/* Compact Professional Header */}
           <div className="mb-6 lg:mb-8">
@@ -839,6 +853,11 @@ export default function RegisterPage() {
                         {...register('schoolId')}
                         type="text"
                         maxLength={12}
+                        onChange={(e) => {
+                          const upperValue = e.target.value.toUpperCase()
+                          e.target.value = upperValue
+                          setValue('schoolId', upperValue)
+                        }}
                         className={`w-full pl-10 lg:pl-12 pr-10 lg:pr-12 py-3 lg:py-3.5 text-base lg:text-lg font-mono tracking-wider border-2 rounded-lg lg:rounded-xl transition-all focus:outline-none text-gray-900 ${
                           schoolVerified 
                             ? 'border-green-400 bg-green-50 focus:border-green-500' 

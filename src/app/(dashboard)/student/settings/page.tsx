@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
+import { ThemeLoader } from '@/components/student/ThemeLoader'
 import { 
   Settings, 
   ArrowLeft,
@@ -79,17 +80,15 @@ const SettingItem = memo(({
   onChange: (checked: boolean) => void
   iconColor?: 'blue' | 'green'
 }) => {
-  const bgColor = iconColor === 'blue' ? 'bg-[#F4978E]/20' : 'bg-[#FBC4AB]/20'
-  const textColor = iconColor === 'blue' ? 'text-[#F08080]' : 'text-[#F4978E]'
   
   return (
-    <div className="p-3 sm:p-4 bg-[#FFF5EE]/50 rounded-xl sm:rounded-2xl border border-[#F8AD9D]/20">
+    <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl border" style={{ backgroundColor: 'color-mix(in srgb, var(--theme-highlight) 50%, transparent)', borderColor: 'color-mix(in srgb, var(--theme-accent) 20%, transparent)' }}>
       {/* Mobile Layout */}
       <div className="sm:hidden">
         <div className="flex items-start justify-between">
           <div className="flex items-start space-x-2 flex-1 min-w-0">
-            <div className={`p-1.5 ${bgColor} rounded-lg flex-shrink-0 mt-0.5`}>
-              <Icon className={`h-3 w-3 ${textColor}`} />
+            <div className="p-1.5 rounded-lg flex-shrink-0 mt-0.5" style={{ backgroundColor: 'color-mix(in srgb, var(--theme-secondary) 20%, transparent)' }}>
+              <Icon className="h-3 w-3" style={{ color: 'var(--theme-primary)' }} />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-slate-800 font-medium text-xs">{label}</p>
@@ -99,7 +98,7 @@ const SettingItem = memo(({
           <Switch
             checked={checked}
             onCheckedChange={onChange}
-            className="flex-shrink-0 ml-2 data-[state=checked]:bg-[#F08080] data-[state=unchecked]:bg-slate-200"
+            className="flex-shrink-0 ml-2 data-[state=unchecked]:bg-slate-200"
           />
         </div>
       </div>
@@ -107,8 +106,8 @@ const SettingItem = memo(({
       {/* Desktop Layout */}
       <div className="hidden sm:flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className={`p-2 ${bgColor} rounded-xl`}>
-            <Icon className={`h-5 w-5 ${textColor}`} />
+          <div className="p-2 rounded-xl" style={{ backgroundColor: 'color-mix(in srgb, var(--theme-secondary) 20%, transparent)' }}>
+            <Icon className="h-5 w-5" style={{ color: 'var(--theme-primary)' }} />
           </div>
           <div>
             <p className="text-slate-800 font-medium">{label}</p>
@@ -118,7 +117,7 @@ const SettingItem = memo(({
         <Switch
           checked={checked}
           onCheckedChange={onChange}
-          className="data-[state=checked]:bg-[#F08080] data-[state=unchecked]:bg-slate-200"
+          className="data-[state=unchecked]:bg-slate-200"
         />
       </div>
     </div>
@@ -135,7 +134,7 @@ interface Profile {
 }
 
 interface SettingsState {
-  theme: 'light' | 'dark' | 'system'
+  theme: 'fiery-rose' | 'ocean-sunset' | 'fresh-meadow' | 'autumn-ember'
   notifications: boolean
   soundEffects: boolean
   privateProfile: boolean
@@ -171,7 +170,7 @@ const StudentSettingsPage = () => {
   })
   
   const [settings, setSettings] = useState<SettingsState>({
-    theme: 'system',
+    theme: 'fiery-rose',
     notifications: true,
     soundEffects: true,
     privateProfile: false,
@@ -438,10 +437,40 @@ const StudentSettingsPage = () => {
       requestAnimationFrame(() => {
         // Apply theme changes immediately with cross-account persistence
         if (key === 'theme') {
-          const isDark = value === 'dark' || (value === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-          document.documentElement.classList.toggle('dark', isDark)
+          // Apply custom theme colors using CSS variables
+          const root = document.documentElement
+          
+          if (value === 'fiery-rose') {
+            root.style.setProperty('--theme-primary', '#F08080')
+            root.style.setProperty('--theme-secondary', '#F4978E')
+            root.style.setProperty('--theme-tertiary', '#FBC4AB')
+            root.style.setProperty('--theme-accent', '#F8AD9D')
+            root.style.setProperty('--theme-highlight', '#FFF5EE')
+          } else if (value === 'ocean-sunset') {
+            root.style.setProperty('--theme-primary', '#000814')
+            root.style.setProperty('--theme-secondary', '#001d3d')
+            root.style.setProperty('--theme-tertiary', '#003566')
+            root.style.setProperty('--theme-accent', '#ffc300')
+            root.style.setProperty('--theme-highlight', '#ffd60a')
+          } else if (value === 'fresh-meadow') {
+            root.style.setProperty('--theme-primary', '#22577a')
+            root.style.setProperty('--theme-secondary', '#38a3a5')
+            root.style.setProperty('--theme-tertiary', '#57cc99')
+            root.style.setProperty('--theme-accent', '#80ed99')
+            root.style.setProperty('--theme-highlight', '#c7f9cc')
+          } else if (value === 'autumn-ember') {
+            root.style.setProperty('--theme-primary', '#ea8c55')
+            root.style.setProperty('--theme-secondary', '#c75146')
+            root.style.setProperty('--theme-tertiary', '#ad2e24')
+            root.style.setProperty('--theme-accent', '#81171b')
+            root.style.setProperty('--theme-highlight', '#540804')
+          }
+          
           // Store theme preference globally for cross-account consistency
           localStorage.setItem('catalyst-theme-preference', value)
+          
+          // Dispatch custom event for same-window theme changes
+          window.dispatchEvent(new CustomEvent('themeChange', { detail: { theme: value } }))
         }
         
         // Apply font size changes immediately with accessibility persistence
@@ -502,13 +531,40 @@ const StudentSettingsPage = () => {
   // Initialize cross-account settings on load
   useEffect(() => {
     // Apply stored global preferences
-    const storedTheme = localStorage.getItem('catalyst-theme-preference')
+    const storedTheme = localStorage.getItem('catalyst-theme-preference') as 'fiery-rose' | 'ocean-sunset' | 'fresh-meadow' | 'autumn-ember' | null
     const storedFontSize = localStorage.getItem('catalyst-font-size')
     const storedLanguage = localStorage.getItem('catalyst-language')
     
-    if (storedTheme && ['light', 'dark', 'system'].includes(storedTheme)) {
-      const isDark = storedTheme === 'dark' || (storedTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-      document.documentElement.classList.toggle('dark', isDark)
+    if (storedTheme && ['fiery-rose', 'ocean-sunset', 'fresh-meadow', 'autumn-ember'].includes(storedTheme)) {
+      const root = document.documentElement
+      
+      if (storedTheme === 'fiery-rose') {
+        root.style.setProperty('--theme-primary', '#F08080')
+        root.style.setProperty('--theme-secondary', '#F4978E')
+        root.style.setProperty('--theme-tertiary', '#FBC4AB')
+        root.style.setProperty('--theme-accent', '#F8AD9D')
+        root.style.setProperty('--theme-highlight', '#FFF5EE')
+      } else if (storedTheme === 'ocean-sunset') {
+        root.style.setProperty('--theme-primary', '#000814')
+        root.style.setProperty('--theme-secondary', '#001d3d')
+        root.style.setProperty('--theme-tertiary', '#003566')
+        root.style.setProperty('--theme-accent', '#ffc300')
+        root.style.setProperty('--theme-highlight', '#ffd60a')
+      } else if (storedTheme === 'fresh-meadow') {
+        root.style.setProperty('--theme-primary', '#22577a')
+        root.style.setProperty('--theme-secondary', '#38a3a5')
+        root.style.setProperty('--theme-tertiary', '#57cc99')
+        root.style.setProperty('--theme-accent', '#80ed99')
+        root.style.setProperty('--theme-highlight', '#c7f9cc')
+      } else if (storedTheme === 'autumn-ember') {
+        root.style.setProperty('--theme-primary', '#ea8c55')
+        root.style.setProperty('--theme-secondary', '#c75146')
+        root.style.setProperty('--theme-tertiary', '#ad2e24')
+        root.style.setProperty('--theme-accent', '#81171b')
+        root.style.setProperty('--theme-highlight', '#540804')
+      }
+      
+      setSettings(prev => ({ ...prev, theme: storedTheme }))
     }
     
     if (storedFontSize) {
@@ -540,10 +596,13 @@ const StudentSettingsPage = () => {
 
   return (
     <UnifiedAuthGuard requiredRole="student">
-      <div className="min-h-screen bg-gradient-to-br from-[#FFF5EE] via-[#FFE4E1] to-[#FFDAB9] relative overflow-hidden">
+      <div className="min-h-screen relative overflow-hidden" style={{ background: 'linear-gradient(to bottom right, var(--theme-highlight), color-mix(in srgb, var(--theme-secondary) 20%, white), var(--theme-tertiary))' }}>
+        {/* Theme Loader */}
+        <ThemeLoader />
+        
         {/* Premium Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#F08080]/10 via-[#F4978E]/10 to-[#FBC4AB]/10" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_2px_2px,rgba(240,128,128,0.08)_1px,transparent_0)] bg-[length:32px_32px]" />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-primary) 10%, transparent), color-mix(in srgb, var(--theme-secondary) 10%, transparent), color-mix(in srgb, var(--theme-tertiary) 10%, transparent))' }} />
+        <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, color-mix(in srgb, var(--theme-primary) 8%, transparent) 1px, transparent 0)', backgroundSize: '32px 32px' }} />
         
         <div className="relative z-10 px-3 py-4 sm:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto">
@@ -564,7 +623,10 @@ const StudentSettingsPage = () => {
                       onClick={() => router.back()}
                       variant="ghost"
                       size="sm"
-                      className="text-slate-600 hover:text-slate-800 hover:bg-[#FBC4AB]/30 rounded-xl p-2"
+                      className="text-slate-600 hover:text-slate-800 rounded-xl p-2"
+                      style={{ ['--hover-bg' as any]: 'color-mix(in srgb, var(--theme-tertiary) 30%, transparent)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--hover-bg)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                       <ArrowLeft className="h-5 w-5" />
                     </Button>
@@ -572,11 +634,14 @@ const StudentSettingsPage = () => {
                       onClick={() => saveSettings()}
                       disabled={saving || !hasUnsavedChanges}
                       size="sm"
-                      className={`border-0 rounded-xl px-4 py-2 font-semibold transition-all ${
-                        hasUnsavedChanges 
-                          ? 'bg-gradient-to-r from-[#F08080] to-[#F4978E] hover:from-[#F4978E] hover:to-[#F8AD9D] text-white shadow-md' 
-                          : 'bg-gray-300/50 text-gray-500 cursor-not-allowed'
-                      }`}
+                      className="border-0 rounded-xl px-4 py-2 font-semibold transition-all text-white shadow-md"
+                      style={{
+                        background: hasUnsavedChanges 
+                          ? 'linear-gradient(to right, var(--theme-primary), var(--theme-secondary))'
+                          : 'rgba(209, 213, 219, 0.5)',
+                        color: hasUnsavedChanges ? 'white' : 'rgb(107, 114, 128)',
+                        cursor: hasUnsavedChanges ? 'pointer' : 'not-allowed'
+                      }}
                     >
                       {saving ? (
                         <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
@@ -591,11 +656,11 @@ const StudentSettingsPage = () => {
                   
                   {/* Title Row */}
                   <div className="flex items-center space-x-3">
-                    <div className="p-3 bg-gradient-to-br from-[#F08080] via-[#F4978E] to-[#F8AD9D] rounded-xl shadow-lg">
+                    <div className="p-3 rounded-xl shadow-lg" style={{ background: 'linear-gradient(to bottom right, var(--theme-primary), var(--theme-secondary), var(--theme-accent))' }}>
                       <Settings className="h-6 w-6 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h1 className="text-xl font-black bg-gradient-to-r from-[#F08080] via-[#F4978E] to-[#F8AD9D] bg-clip-text text-transparent truncate">
+                      <h1 className="text-xl font-black bg-clip-text text-transparent truncate" style={{ backgroundImage: 'linear-gradient(to right, var(--theme-primary), var(--theme-secondary), var(--theme-accent))' }}>
                         Settings Studio
                       </h1>
                       <p className="text-slate-600 text-sm font-medium">Customize your experience</p>
@@ -610,16 +675,19 @@ const StudentSettingsPage = () => {
                       onClick={() => router.back()}
                       variant="ghost"
                       size="sm"
-                      className="text-slate-600 hover:text-slate-800 hover:bg-[#FBC4AB]/30 rounded-2xl p-3"
+                      className="text-slate-600 hover:text-slate-800 rounded-2xl p-3"
+                      style={{ ['--hover-bg' as any]: 'color-mix(in srgb, var(--theme-tertiary) 30%, transparent)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--hover-bg)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                       <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div className="flex items-center space-x-4">
-                      <div className="p-4 bg-gradient-to-br from-[#F08080] via-[#F4978E] to-[#F8AD9D] rounded-2xl shadow-2xl">
+                      <div className="p-4 rounded-2xl shadow-2xl" style={{ background: 'linear-gradient(to bottom right, var(--theme-primary), var(--theme-secondary), var(--theme-accent))' }}>
                         <Settings className="h-8 w-8 text-white" />
                       </div>
                       <div>
-                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black bg-gradient-to-r from-[#F08080] via-[#F4978E] to-[#F8AD9D] bg-clip-text text-transparent">
+                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(to right, var(--theme-primary), var(--theme-secondary), var(--theme-accent))' }}>
                           Settings Studio
                         </h1>
                         <p className="text-slate-600 text-base lg:text-lg font-medium">Customize your experience</p>
@@ -630,11 +698,14 @@ const StudentSettingsPage = () => {
                   <Button
                     onClick={() => saveSettings()}
                     disabled={saving || !hasUnsavedChanges}
-                    className={`border-0 rounded-2xl px-6 py-3 font-bold transition-all shadow-lg ${
-                      hasUnsavedChanges 
-                        ? 'bg-gradient-to-r from-[#F08080] to-[#F4978E] hover:from-[#F4978E] hover:to-[#F8AD9D] text-white' 
-                        : 'bg-gray-300/50 text-gray-500 cursor-not-allowed'
-                    }`}
+                    className="border-0 rounded-2xl px-6 py-3 font-bold transition-all shadow-lg text-white"
+                    style={{
+                      background: hasUnsavedChanges 
+                        ? 'linear-gradient(to right, var(--theme-primary), var(--theme-secondary))'
+                        : 'rgba(209, 213, 219, 0.5)',
+                      color: hasUnsavedChanges ? 'white' : 'rgb(107, 114, 128)',
+                      cursor: hasUnsavedChanges ? 'pointer' : 'not-allowed'
+                    }}
                   >
                     {saving ? (
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -779,11 +850,157 @@ const StudentSettingsPage = () => {
               </motion.div>
 
 
-              {/* Privacy & Security */}
+              {/* Appearance & Theme */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
+              >
+                <Card className="bg-white/95 backdrop-blur-xl shadow-xl border border-[#F8AD9D]/30 rounded-xl sm:rounded-2xl h-full">
+                  <CardHeader className="p-3 pb-2 sm:p-6 sm:pb-4">
+                    <CardTitle className="flex items-center space-x-2 sm:space-x-3 text-base sm:text-lg text-slate-800">
+                      <Palette className="h-4 w-4 sm:h-5 sm:w-5 text-[#F08080]" />
+                      <span className="truncate">Appearance & Theme</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 sm:space-y-4 p-3 sm:px-6 sm:pb-6">
+                    <div className="p-3 sm:p-4 bg-[#FFF5EE]/50 rounded-xl sm:rounded-2xl border border-[#F8AD9D]/20">
+                      <div className="mb-3 sm:mb-4">
+                        <p className="text-slate-800 font-medium text-sm sm:text-base mb-1">Theme Preference</p>
+                        <p className="text-slate-600 text-xs sm:text-sm">Choose your preferred color scheme</p>
+                      </div>
+                      
+                      {/* Theme Options */}
+                      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                        {/* Fiery Rose Theme - Default */}
+                        <button
+                          onClick={() => handleSettingChange('theme', 'fiery-rose')}
+                          className={`relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 ${
+                            settings.theme === 'fiery-rose'
+                              ? 'border-[#F08080] bg-[#F08080]/10 shadow-lg shadow-[#F08080]/20'
+                              : 'border-slate-200 hover:border-[#F08080]/50 hover:bg-[#FBC4AB]/5'
+                          }`}
+                        >
+                          <div className="flex flex-col items-center space-y-2">
+                            <div className="p-2 sm:p-2.5 rounded-lg" style={{ background: 'linear-gradient(135deg, #F08080, #F4978E, #FBC4AB, #FFF5EE)' }}>
+                              <Star className="h-4 w-4 sm:h-5 sm:w-5 text-[#F08080]" />
+                            </div>
+                            <div className="text-center">
+                              <p className={`text-xs sm:text-sm font-medium ${
+                                settings.theme === 'fiery-rose' ? 'text-[#F08080]' : 'text-slate-700'
+                              }`}>Fiery Rose</p>
+                            </div>
+                          </div>
+                          {settings.theme === 'fiery-rose' && (
+                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-[#F08080] rounded-full flex items-center justify-center">
+                              <Check className="h-3 w-3 text-white" />
+                            </div>
+                          )}
+                        </button>
+
+                        {/* Ocean Sunset Theme */}
+                        <button
+                          onClick={() => handleSettingChange('theme', 'ocean-sunset')}
+                          className={`relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 ${
+                            settings.theme === 'ocean-sunset'
+                              ? 'border-[#ffc300] bg-[#ffc300]/10 shadow-lg shadow-[#ffc300]/20'
+                              : 'border-slate-200 hover:border-[#ffc300]/50 hover:bg-[#ffd60a]/5'
+                          }`}
+                        >
+                          <div className="flex flex-col items-center space-y-2">
+                            <div className="p-2 sm:p-2.5 rounded-lg" style={{ background: 'linear-gradient(135deg, #000814, #001d3d, #003566, #ffc300)' }}>
+                              <Sun className="h-4 w-4 sm:h-5 sm:w-5 text-[#ffd60a]" />
+                            </div>
+                            <div className="text-center">
+                              <p className={`text-xs sm:text-sm font-medium ${
+                                settings.theme === 'ocean-sunset' ? 'text-[#ffc300]' : 'text-slate-700'
+                              }`}>Ocean Sunset</p>
+                            </div>
+                          </div>
+                          {settings.theme === 'ocean-sunset' && (
+                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-[#ffc300] rounded-full flex items-center justify-center">
+                              <Check className="h-3 w-3 text-[#000814]" />
+                            </div>
+                          )}
+                        </button>
+
+                        {/* Fresh Meadow Theme */}
+                        <button
+                          onClick={() => handleSettingChange('theme', 'fresh-meadow')}
+                          className={`relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 ${
+                            settings.theme === 'fresh-meadow'
+                              ? 'border-[#38a3a5] bg-[#38a3a5]/10 shadow-lg shadow-[#38a3a5]/20'
+                              : 'border-slate-200 hover:border-[#38a3a5]/50 hover:bg-[#57cc99]/5'
+                          }`}
+                        >
+                          <div className="flex flex-col items-center space-y-2">
+                            <div className="p-2 sm:p-2.5 rounded-lg" style={{ background: 'linear-gradient(135deg, #22577a, #38a3a5, #57cc99, #c7f9cc)' }}>
+                              <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-[#c7f9cc]" />
+                            </div>
+                            <div className="text-center">
+                              <p className={`text-xs sm:text-sm font-medium ${
+                                settings.theme === 'fresh-meadow' ? 'text-[#38a3a5]' : 'text-slate-700'
+                              }`}>Fresh Meadow</p>
+                            </div>
+                          </div>
+                          {settings.theme === 'fresh-meadow' && (
+                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-[#38a3a5] rounded-full flex items-center justify-center">
+                              <Check className="h-3 w-3 text-white" />
+                            </div>
+                          )}
+                        </button>
+
+                        {/* Autumn Ember Theme */}
+                        <button
+                          onClick={() => handleSettingChange('theme', 'autumn-ember')}
+                          className={`relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 ${
+                            settings.theme === 'autumn-ember'
+                              ? 'border-[#ea8c55] bg-[#ea8c55]/10 shadow-lg shadow-[#ea8c55]/20'
+                              : 'border-slate-200 hover:border-[#ea8c55]/50 hover:bg-[#c75146]/5'
+                          }`}
+                        >
+                          <div className="flex flex-col items-center space-y-2">
+                            <div className="p-2 sm:p-2.5 rounded-lg" style={{ background: 'linear-gradient(135deg, #ea8c55, #c75146, #ad2e24, #540804)' }}>
+                              <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-[#ea8c55]" />
+                            </div>
+                            <div className="text-center">
+                              <p className={`text-xs sm:text-sm font-medium ${
+                                settings.theme === 'autumn-ember' ? 'text-[#ea8c55]' : 'text-slate-700'
+                              }`}>Autumn Ember</p>
+                            </div>
+                          </div>
+                          {settings.theme === 'autumn-ember' && (
+                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-[#ea8c55] rounded-full flex items-center justify-center">
+                              <Check className="h-3 w-3 text-white" />
+                            </div>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Current Theme Info */}
+                      <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-[#F4978E]/10 rounded-lg border border-[#F8AD9D]/30">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-2 h-2 rounded-full animate-pulse" style={{
+                            backgroundColor: settings.theme === 'fiery-rose' ? '#F08080' : settings.theme === 'ocean-sunset' ? '#ffc300' : settings.theme === 'fresh-meadow' ? '#38a3a5' : '#ea8c55'
+                          }}></div>
+                          <p className="text-xs sm:text-sm text-slate-700">
+                            {settings.theme === 'fiery-rose' && 'Using Fiery Rose theme - Soft coral and peachy tones (Default)'}
+                            {settings.theme === 'ocean-sunset' && 'Using Ocean Sunset theme - Deep blues with golden accents'}
+                            {settings.theme === 'fresh-meadow' && 'Using Fresh Meadow theme - Natural teal and green tones'}
+                            {settings.theme === 'autumn-ember' && 'Using Autumn Ember theme - Warm orange to crimson red'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Privacy & Security */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
               >
                 <Card className="bg-white/95 backdrop-blur-xl shadow-xl border border-[#F8AD9D]/30 rounded-xl sm:rounded-2xl h-full">
                   <CardHeader className="p-3 pb-2 sm:p-6 sm:pb-4">
@@ -813,7 +1030,7 @@ const StudentSettingsPage = () => {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.3 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
               >
                 <Card className="bg-white/95 backdrop-blur-xl shadow-xl border border-[#F8AD9D]/30 rounded-xl sm:rounded-2xl h-full">
                   <CardHeader className="p-3 pb-2 sm:p-6 sm:pb-4">
@@ -843,7 +1060,7 @@ const StudentSettingsPage = () => {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.4 }}
+                transition={{ duration: 0.6, delay: 0.5 }}
                 className="lg:col-span-2 xl:col-span-3"
               >
                 <Card className="bg-white/95 backdrop-blur-xl shadow-xl border border-[#F8AD9D]/30 rounded-xl sm:rounded-2xl h-full">

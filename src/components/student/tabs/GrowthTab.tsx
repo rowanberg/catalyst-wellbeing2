@@ -60,7 +60,7 @@ export function GrowthTab({ data, loading, error, onRefresh, profile }: GrowthTa
   if (loading && !data) {
     return (
       <div className="space-y-6 pb-8">
-        <div className="h-32 bg-gradient-to-r from-[#F4978E] to-[#F8AD9D] rounded-3xl animate-pulse" />
+        <div className="h-32 rounded-3xl animate-pulse" style={{ background: 'linear-gradient(to right, var(--theme-secondary), var(--theme-accent))' }} />
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="h-24 bg-slate-200 rounded-2xl animate-pulse" />
@@ -95,7 +95,8 @@ export function GrowthTab({ data, loading, error, onRefresh, profile }: GrowthTa
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-[#F4978E] to-[#F8AD9D] rounded-2xl sm:rounded-3xl p-4 sm:p-6 text-white shadow-xl"
+        className="rounded-2xl sm:rounded-3xl p-4 sm:p-6 text-white shadow-xl"
+        style={{ background: 'linear-gradient(to right, var(--theme-secondary), var(--theme-accent))' }}
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Academic Growth</h1>
@@ -229,10 +230,10 @@ export function GrowthTab({ data, loading, error, onRefresh, profile }: GrowthTa
         transition={{ delay: 0.35 }}
       >
         <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow rounded-xl sm:rounded-2xl bg-white">
-          <CardHeader className="bg-gradient-to-r from-[#FFDAB9]/30 to-[#FBC4AB]/30 rounded-t-xl sm:rounded-t-2xl px-4 sm:px-6 py-4">
+          <CardHeader className="rounded-t-xl sm:rounded-t-2xl px-4 sm:px-6 py-4" style={{ background: 'linear-gradient(to right, color-mix(in srgb, var(--theme-highlight) 30%, transparent), color-mix(in srgb, var(--theme-tertiary) 30%, transparent))' }}>
             <div className="flex items-start sm:items-center justify-between gap-3">
               <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
-                <div className="p-1.5 sm:p-2 bg-gradient-to-br from-[#F08080] to-[#F4978E] rounded-lg sm:rounded-xl shadow-sm flex-shrink-0">
+                <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl shadow-sm flex-shrink-0" style={{ background: 'linear-gradient(to bottom right, var(--theme-primary), var(--theme-secondary))' }}>
                   <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                 </div>
                 <div className="min-w-0">
@@ -246,7 +247,10 @@ export function GrowthTab({ data, loading, error, onRefresh, profile }: GrowthTa
                 variant="ghost"
                 size="sm"
                 onClick={() => router.push('/student/analytics')}
-                className="text-[#F08080] hover:text-[#F4978E] text-xs sm:text-sm px-2 sm:px-3 flex-shrink-0"
+                className="text-xs sm:text-sm px-2 sm:px-3 flex-shrink-0"
+                style={{ color: 'var(--theme-primary)' }}
+                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--theme-secondary)'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--theme-primary)'}
               >
                 <span className="hidden sm:inline">Full Analytics</span>
                 <span className="sm:hidden">View</span>
@@ -270,24 +274,29 @@ export function GrowthTab({ data, loading, error, onRefresh, profile }: GrowthTa
                     className={cn(
                       "p-3 sm:p-4 rounded-xl sm:rounded-2xl border-2 cursor-pointer transition-all shadow-sm hover:shadow-md active:shadow-lg",
                       selectedSubject === subject.name
-                        ? "bg-gradient-to-br from-[#FFDAB9]/40 to-[#FBC4AB]/40 border-[#F8AD9D] shadow-lg"
-                        : "bg-white border-slate-200 hover:border-[#F8AD9D] hover:shadow-md"
+                        ? "shadow-lg"
+                        : "bg-white border-slate-200 hover:shadow-md"
                     )}
+                    style={selectedSubject === subject.name ? {
+                      background: 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 40%, transparent), color-mix(in srgb, var(--theme-tertiary) 40%, transparent))',
+                      borderColor: 'var(--theme-accent)'
+                    } : {}}
+                    onMouseEnter={(e) => selectedSubject !== subject.name && (e.currentTarget.style.borderColor = 'var(--theme-accent)')}
+                    onMouseLeave={(e) => selectedSubject !== subject.name && (e.currentTarget.style.borderColor = 'rgb(226, 232, 240)')}
                   >
                     <div className="flex items-center justify-between mb-2 sm:mb-3">
                       <h4 className="font-semibold text-slate-800">
                         {subject.name}
                       </h4>
-                      <div className={cn(
-                        "p-1 rounded-full",
-                        subject.trend === 'up' ? "bg-[#FFDAB9]" :
-                        subject.trend === 'down' ? "bg-[#FBC4AB]" :
-                        "bg-gray-100"
-                      )}>
+                      <div className="p-1 rounded-full" style={{
+                        backgroundColor: subject.trend === 'up' ? 'var(--theme-highlight)' :
+                        subject.trend === 'down' ? 'var(--theme-tertiary)' :
+                        'rgb(243, 244, 246)'
+                      }}>
                         {subject.trend === 'up' ? (
-                          <ArrowUp className="w-4 h-4 text-[#F08080]" />
+                          <ArrowUp className="w-4 h-4" style={{ color: 'var(--theme-primary)' }} />
                         ) : subject.trend === 'down' ? (
-                          <ArrowDown className="w-4 h-4 text-[#F4978E]" />
+                          <ArrowDown className="w-4 h-4" style={{ color: 'var(--theme-secondary)' }} />
                         ) : (
                           <Minus className="w-4 h-4 text-gray-600" />
                         )}
@@ -304,7 +313,8 @@ export function GrowthTab({ data, loading, error, onRefresh, profile }: GrowthTa
                         initial={{ width: 0 }}
                         animate={{ width: `${subject.average}%` }}
                         transition={{ duration: 1, delay: 0.5 }}
-                        className="absolute top-0 left-0 h-2 bg-gradient-to-r from-[#F08080] to-[#F4978E] rounded-full shadow-sm"
+                        className="absolute top-0 left-0 h-2 rounded-full shadow-sm"
+                        style={{ background: 'linear-gradient(to right, var(--theme-primary), var(--theme-secondary))' }}
                       />
                     </div>
 

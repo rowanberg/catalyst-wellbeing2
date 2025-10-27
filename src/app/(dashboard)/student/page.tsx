@@ -23,6 +23,7 @@ import { ProfileTab } from '@/components/student/tabs/ProfileTab'
 // Responsive Components
 import { Sidebar } from '@/components/student/Sidebar'
 import { TabDataCache } from '@/lib/utils/tabCache'
+import { ThemeLoader } from '@/components/student/ThemeLoader'
 
 // Types
 interface TabData {
@@ -34,31 +35,31 @@ interface TabData {
   bgGradient: string
 }
 
-// Premium icon tabs with warm coral/peach color scheme - Modern unique icons
+// Premium icon tabs with dynamic theme colors using CSS variables
 const tabs: TabData[] = [
   { 
     id: 'today', 
     label: 'Dashboard', 
     icon: Compass,
     color: 'text-slate-400',
-    activeColor: 'text-[#F08080]',
-    bgGradient: 'from-[#FFDAB9] to-[#FBC4AB]'
+    activeColor: '', // Will use CSS variable
+    bgGradient: '' // Will use CSS variable
   },
   { 
     id: 'growth', 
     label: 'Growth', 
     icon: Rocket,
     color: 'text-slate-400',
-    activeColor: 'text-[#F4978E]',
-    bgGradient: 'from-[#FBC4AB] to-[#F8AD9D]'
+    activeColor: '', // Will use CSS variable
+    bgGradient: '' // Will use CSS variable
   },
   { 
     id: 'wellbeing', 
     label: 'Well-being', 
     icon: Flower2, 
     color: 'text-slate-400',
-    activeColor: 'text-[#F08080]',
-    bgGradient: 'from-[#F8AD9D] to-[#F4978E]'
+    activeColor: '', // Will use CSS variable
+    bgGradient: '' // Will use CSS variable
   },
   { 
     id: 'profile', 
@@ -176,19 +177,25 @@ const TabButton = memo(({ tab, isActive, isLoading, onClick }: any) => {
       whileTap={{ scale: 0.95 }}
       transition={{ duration: 0.15 }}
       className={cn(
-        "flex flex-col items-center justify-center flex-1 py-2.5 px-3 rounded-2xl transition-all duration-250 relative",
-        isActive && "bg-[#FFDAB9]/15"
+        "flex flex-col items-center justify-center flex-1 py-2.5 px-3 rounded-2xl transition-all duration-250 relative"
       )}
+      style={{
+        backgroundColor: isActive ? 'color-mix(in srgb, var(--theme-highlight) 15%, transparent)' : 'transparent'
+      }}
     >
       {isActive && (
         <motion.div
-          layoutId="activeTabIndicator"
-          className="absolute top-1 left-1/2 -translate-x-1/2 w-12 h-1 bg-gradient-to-r from-[#F08080] to-[#F4978E] rounded-full shadow-sm"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          className="absolute top-1 left-1/2 w-12 h-1 rounded-full shadow-sm"
+          style={{
+            background: 'linear-gradient(to right, var(--theme-primary), var(--theme-secondary))',
+            transform: 'translateX(-50%)'
+          }}
           transition={{ 
-            type: 'spring', 
-            damping: 30, 
-            stiffness: 400,
-            mass: 0.8
+            duration: 0.2,
+            ease: [0.4, 0, 0.2, 1]
           }}
         />
       )}
@@ -196,21 +203,29 @@ const TabButton = memo(({ tab, isActive, isLoading, onClick }: any) => {
       <Icon 
         className={cn(
           "w-5 h-5 transition-all duration-250",
-          isActive ? tab.activeColor : tab.color
+          isActive ? '' : tab.color
         )}
+        style={{
+          color: isActive ? 'var(--theme-primary)' : undefined
+        }}
         strokeWidth={isActive ? 2.5 : 2}
       />
       
-      <span className={cn(
-        "text-[10px] font-medium mt-1 transition-colors duration-250",
-        isActive ? tab.activeColor : tab.color
-      )}>
+      <span 
+        className={cn(
+          "text-[10px] font-medium mt-1 transition-colors duration-250",
+          isActive ? '' : tab.color
+        )}
+        style={{
+          color: isActive ? 'var(--theme-primary)' : undefined
+        }}
+      >
         {tab.label}
       </span>
       
       {isLoading && (
         <div className="absolute top-1 right-1">
-          <div className="w-1 h-1 bg-[#F08080] rounded-full animate-pulse" />
+          <div className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: 'var(--theme-primary)' }} />
         </div>
       )}
     </motion.button>
@@ -427,7 +442,10 @@ export default function EnhancedStudentDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#FFDAB9]/30 via-white to-[#FBC4AB]/20">
+    <div className="min-h-screen" style={{ background: 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 30%, transparent), white, color-mix(in srgb, var(--theme-tertiary) 20%, transparent))' }}>
+      {/* Theme Loader - Applies theme CSS variables */}
+      <ThemeLoader />
+      
       {/* Desktop Sidebar */}
       {isDesktop && (
         <Sidebar 
@@ -637,11 +655,11 @@ export default function EnhancedStudentDashboard() {
 // Enhanced Loading Skeleton with shimmer effect
 function LoadingSkeleton() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#FFDAB9] via-white to-[#FBC4AB] flex items-center justify-center" suppressHydrationWarning>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight, #FFF5EE) 30%, transparent), white, color-mix(in srgb, var(--theme-tertiary, #FBC4AB) 20%, transparent))' }} suppressHydrationWarning>
       <div className="text-center">
         <div className="relative w-20 h-20 mx-auto mb-8">
-          <div className="absolute inset-0 border-4 border-[#FBC4AB] rounded-full" />
-          <div className="absolute inset-0 border-4 border-transparent border-t-[#F08080] rounded-full animate-spin" />
+          <div className="absolute inset-0 border-4 rounded-full" style={{ borderColor: 'var(--theme-tertiary, #FBC4AB)' }} />
+          <div className="absolute inset-0 border-4 border-transparent rounded-full animate-spin" style={{ borderTopColor: 'var(--theme-primary, #F08080)' }} />
         </div>
         <h2 className="text-2xl font-semibold text-slate-800 mb-2">
           Loading Dashboard

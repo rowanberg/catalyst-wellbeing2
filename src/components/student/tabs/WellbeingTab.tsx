@@ -119,7 +119,7 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
   if (loading && !data) {
     return (
       <div className="space-y-6 pb-8">
-        <div className="h-32 bg-gradient-to-r from-[#F08080] to-[#F4978E] rounded-3xl animate-pulse" />
+        <div className="h-32 rounded-3xl animate-pulse" style={{ background: 'linear-gradient(to right, var(--theme-primary), var(--theme-secondary))' }} />
         <div className="h-48 bg-slate-200 rounded-2xl animate-pulse" />
       </div>
     )
@@ -144,7 +144,8 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-[#F08080] to-[#F4978E] rounded-2xl p-6 text-white shadow-xl"
+        className="rounded-2xl p-6 text-white shadow-xl"
+        style={{ background: 'linear-gradient(to right, var(--theme-primary), var(--theme-secondary))' }}
       >
         <h1 className="text-2xl sm:text-3xl font-bold mb-2">
           Well-being Center
@@ -164,9 +165,9 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
           transition={{ delay: 0.1 }}
         >
           <Card className="border-0 shadow-lg overflow-hidden h-full">
-            <CardHeader className="bg-gradient-to-r from-[#FFDAB9]/30 to-[#FBC4AB]/30">
+            <CardHeader style={{ background: 'linear-gradient(to right, color-mix(in srgb, var(--theme-highlight) 30%, transparent), color-mix(in srgb, var(--theme-tertiary) 30%, transparent))' }}>
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-gradient-to-br from-[#F08080] to-[#F4978E] rounded-lg shadow-md">
+                <div className="p-2 rounded-lg shadow-md" style={{ background: 'linear-gradient(to bottom right, var(--theme-primary), var(--theme-secondary))' }}>
                   <Heart className="h-5 w-5 text-white" />
                 </div>
                 <div>
@@ -199,11 +200,18 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
                       className={cn(
                         "p-4 rounded-xl text-center transition-all min-h-[100px] flex flex-col justify-center",
                         isSelected
-                          ? `bg-gradient-to-br ${mood.color} border-2 border-[#F8AD9D] shadow-lg`
+                          ? "shadow-lg"
                           : isLocked
                           ? "bg-slate-100 opacity-50 cursor-not-allowed"
-                          : "bg-white border-2 border-slate-200 hover:border-[#F8AD9D] hover:shadow-md active:shadow-sm"
+                          : "bg-white border-2 border-slate-200 hover:shadow-md active:shadow-sm"
                       )}
+                      style={isSelected ? {
+                        background: `linear-gradient(to bottom right, ${mood.color})`,
+                        borderWidth: '2px',
+                        borderColor: 'var(--theme-accent)'
+                      } : {}}
+                      onMouseEnter={(e) => !isSelected && !isLocked && (e.currentTarget.style.borderColor = 'var(--theme-accent)')}
+                      onMouseLeave={(e) => !isSelected && !isLocked && (e.currentTarget.style.borderColor = 'rgb(226, 232, 240)')}
                     >
                       <motion.div 
                         className="text-4xl mb-2"
@@ -251,10 +259,10 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
           transition={{ delay: 0.15 }}
         >
           <Card className="border-0 shadow-lg overflow-hidden h-full">
-            <CardHeader className="bg-gradient-to-r from-[#FBC4AB]/30 to-[#F8AD9D]/30">
+            <CardHeader style={{ background: 'linear-gradient(to right, color-mix(in srgb, var(--theme-tertiary) 30%, transparent), color-mix(in srgb, var(--theme-accent) 30%, transparent))' }}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-gradient-to-br from-[#F4978E] to-[#F8AD9D] rounded-lg shadow-md">
+                  <div className="p-2 rounded-lg shadow-md" style={{ background: 'linear-gradient(to bottom right, var(--theme-secondary), var(--theme-accent))' }}>
                     <Heart className="h-5 w-5 text-white" />
                   </div>
                   <div>
@@ -268,7 +276,10 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
                   variant="outline"
                   size="sm"
                   onClick={() => router.push('/student/pet')}
-                  className="bg-[#FFDAB9] hover:bg-[#FBC4AB] border-[#F8AD9D] text-[#F08080] hidden sm:flex"
+                  className="hidden sm:flex"
+                  style={{ backgroundColor: 'var(--theme-highlight)', borderColor: 'var(--theme-accent)', color: 'var(--theme-primary)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--theme-tertiary)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--theme-highlight)'}
                 >
                   Care
                 </Button>

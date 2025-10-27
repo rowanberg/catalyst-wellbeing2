@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export async function GET(request: NextRequest) {
   try {
@@ -61,8 +62,8 @@ export async function GET(request: NextRequest) {
         .eq('student_id', profile.id)
         .single(),
       
-      // Polls - EXACT same query as dashboard-data API
-      supabase
+      // Polls - Using supabaseAdmin for consistency
+      supabaseAdmin
         .from('polls')
         .select(`
           id,
@@ -96,8 +97,8 @@ export async function GET(request: NextRequest) {
         .order('created_at', { ascending: false })
         .limit(2),
       
-      // Announcements - EXACT same query as dashboard-data API
-      supabase
+      // Announcements - Using supabaseAdmin (same as working announcements page API)
+      supabaseAdmin
         .from('school_announcements')
         .select(`
           id,
@@ -117,7 +118,7 @@ export async function GET(request: NextRequest) {
         .eq('school_id', profile.school_id)
         .eq('is_active', true)
         .in('target_audience', ['all', 'students'])
-        .or(`expires_at.is.null,expires_at.gte.now()`)
+        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
         .order('created_at', { ascending: false })
         .limit(2)
     ])

@@ -33,7 +33,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ### Step 2: Set Environment Variables
 ```bash
 # In Firebase Functions
-firebase functions:config:set gemini.encryption_key="YOUR_32_BYTE_HEX_KEY"
+firebase functions:config:set gemini.encryption_key="49ed34f4bdcfc4195d35270a372e8884cd155cfc7cc7ede2f1adf8aa1f8358c0"
 ```
 
 ### Step 3: Deploy Firestore Rules & Indexes

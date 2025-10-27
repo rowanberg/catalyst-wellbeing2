@@ -148,7 +148,9 @@ export async function getAvailableGemmaKey(): Promise<GemmaApiKey | null> {
     try {
       // Use the existing Edge Function which handles decryption and cooldown
       const { getAvailableGeminiKey } = await import('@/lib/supabase/geminiKeyRouter')
-      const keyData = await getAvailableGeminiKey()
+      // Strip the '-it' suffix to match database model names (gemma-3-27b-it -> gemma-3-27b)
+      const modelParam = model.name.replace('-it', '')
+      const keyData = await getAvailableGeminiKey(modelParam)
       
       if (keyData && keyData.remainingDaily > 0) {
         console.log(`[Cooldown System] Using key for ${model.name}: ${keyData.remainingDaily} daily, ${keyData.remainingMinute}/min remaining`)
@@ -175,13 +177,15 @@ export async function getAvailableGemmaKey(): Promise<GemmaApiKey | null> {
 
 /**
  * Put a key in 60-second cooldown after hitting rate limits (429 error)
+ * Now supports per-model cooldowns
  */
-export async function setKeyCooldown(keyId: string): Promise<boolean> {
+export async function setKeyCooldown(keyId: string, model: string = 'flash2'): Promise<boolean> {
   try {
-    console.log(`[Cooldown System] Placing key ${keyId} in 60s cooldown`)
+    console.log(`[Cooldown System] Placing key ${keyId} in 60s cooldown for model: ${model}`)
     
-    const { data, error } = await supabase.rpc('set_key_cooldown', {
-      input_key_id: keyId
+    const { data, error } = await supabase.rpc('set_model_cooldown', {
+      p_key_id: keyId,
+      p_model: model
     })
     
     if (error) {

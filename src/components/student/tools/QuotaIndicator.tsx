@@ -145,118 +145,150 @@ export function QuotaIndicator() {
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white/[0.02] backdrop-blur-sm rounded-xl p-4 border border-white/[0.05] hover:border-white/[0.08] transition-colors"
+      className="relative overflow-hidden bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-xl rounded-2xl p-5 border border-slate-700/50 shadow-2xl hover:shadow-emerald-500/10 transition-all duration-300"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Zap className={`w-4 h-4 ${
-            allExhausted ? 'text-red-400' : 
-            isUsingExtra ? 'text-amber-400' : 
-            'text-emerald-400'
-          }`} />
-          <span className="text-[11px] font-medium text-gray-400 uppercase tracking-wide">AI Quota</span>
-        </div>
-        <div className="flex items-center gap-1 text-[10px] text-gray-500">
-          <Clock className="w-3 h-3" />
-          <span>{timeUntilReset}</span>
-        </div>
-      </div>
-
-      {/* Total Remaining */}
-      <div className="mb-4">
-        <div className="text-3xl font-bold text-white mb-1">{totalRemaining}</div>
-        <div className="text-[11px] text-gray-400">requests remaining today</div>
-      </div>
-
-      {/* Standard Quota */}
-      <div className="mb-3">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            <span className="text-[11px] font-medium text-gray-300">Standard</span>
-          </div>
-          <span className="text-[11px] text-gray-400">{remainingNormal} / {quotaStatus.normalTotal}</span>
-        </div>
-        <div className="h-1.5 bg-white/[0.03] rounded-full overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${100 - normalPercentage}%` }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-            className="h-full bg-emerald-500/80"
-          />
-        </div>
-        <div className="text-[10px] text-gray-500 mt-1">Gemini 2.0 Flash</div>
-      </div>
-
-      {/* Extra Quota - Only show if standard is exhausted or extra is being used */}
-      {(isUsingExtra || quotaStatus.extraUsed > 0) && (
-        <AnimatePresence>
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mb-3"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-                <span className="text-[11px] font-medium text-gray-300">Extra</span>
+      {/* Ambient Background Glow */}
+      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-purple-500/5 to-pink-500/5 opacity-50" />
+      
+      {/* Content */}
+      <div className="relative z-10">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2.5">
+            <div className={`p-2 rounded-xl ${
+              allExhausted ? 'bg-red-500/20' : 
+              isUsingExtra ? 'bg-amber-500/20' : 
+              'bg-emerald-500/20'
+            } backdrop-blur-sm`}>
+              <Zap className={`w-4 h-4 ${
+                allExhausted ? 'text-red-400' : 
+                isUsingExtra ? 'text-amber-400' : 
+                'text-emerald-400'
+              }`} />
+            </div>
+            <div>
+              <span className="text-xs font-semibold text-white tracking-wide">AI Quota</span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <Clock className="w-3 h-3 text-slate-400" />
+                <span className="text-[10px] text-slate-400 font-medium">Resets in {timeUntilReset}</span>
               </div>
-              <span className="text-[11px] text-gray-400">{remainingExtra} / {quotaStatus.extraTotal}</span>
             </div>
-            <div className="h-1.5 bg-white/[0.03] rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${100 - extraPercentage}%` }}
-                transition={{ duration: 0.5, ease: 'easeOut' }}
-                className="h-full bg-purple-500/80"
-              />
+          </div>
+        </div>
+
+        {/* Total Remaining - Enhanced */}
+        <div className="mb-6">
+          <div className="flex items-baseline gap-2 mb-1">
+            <span className="text-4xl font-bold bg-gradient-to-br from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
+              {totalRemaining}
+            </span>
+            <span className="text-sm text-slate-400 font-medium">left</span>
+          </div>
+          <div className="text-xs text-slate-500 font-medium">AI requests remaining today</div>
+        </div>
+
+        {/* Standard Quota - Enhanced */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2.5">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-500 shadow-lg shadow-emerald-500/50" />
+              <span className="text-xs font-semibold text-slate-200">Standard Tier</span>
             </div>
-            <div className="text-[10px] text-gray-500 mt-1">Gemma-3 Models</div>
+            <span className="text-xs font-bold text-slate-300">{remainingNormal}<span className="text-slate-500 font-normal">/{quotaStatus.normalTotal}</span></span>
+          </div>
+          <div className="relative h-2 bg-slate-800/50 rounded-full overflow-hidden border border-slate-700/30">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${100 - normalPercentage}%` }}
+              transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
+              className="h-full bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/50"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
+          </div>
+          <div className="flex items-center gap-1.5 mt-2">
+            <div className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20">
+              <span className="text-[10px] font-semibold text-emerald-400">Luminex Pro</span>
+            </div>
+            <span className="text-[9px] text-slate-500">Premium AI Model</span>
+          </div>
+        </div>
+
+        {/* Extra Quota - Enhanced */}
+        {(isUsingExtra || quotaStatus.extraUsed > 0) && (
+          <AnimatePresence>
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+              className="mb-4"
+            >
+              <div className="flex items-center justify-between mb-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-gradient-to-br from-purple-400 to-purple-500 shadow-lg shadow-purple-500/50" />
+                  <span className="text-xs font-semibold text-slate-200">Extra Tier</span>
+                </div>
+                <span className="text-xs font-bold text-slate-300">{remainingExtra}<span className="text-slate-500 font-normal">/{quotaStatus.extraTotal}</span></span>
+              </div>
+              <div className="relative h-2 bg-slate-800/50 rounded-full overflow-hidden border border-slate-700/30">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${100 - extraPercentage}%` }}
+                  transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
+                  className="h-full bg-gradient-to-r from-purple-400 via-purple-500 to-purple-600 shadow-lg shadow-purple-500/50"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
+              </div>
+              <div className="flex items-center gap-1.5 mt-2">
+                <div className="px-2 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/20">
+                  <span className="text-[10px] font-semibold text-purple-400">Luminex Lite</span>
+                </div>
+                <span className="text-[9px] text-slate-500">Backup AI Model</span>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        )}
+
+        {/* Status Badge - Enhanced */}
+        {allExhausted && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-4 pt-4 border-t border-slate-700/50"
+          >
+            <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20">
+              <AlertCircle className="w-4 h-4 text-red-400" />
+              <span className="text-xs font-medium text-red-300">Quota exhausted • Resets at midnight</span>
+            </div>
           </motion.div>
-        </AnimatePresence>
-      )}
+        )}
 
-      {/* Status Badge */}
-      {allExhausted && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="mt-3 pt-3 border-t border-white/[0.05]"
-        >
-          <div className="flex items-center gap-2 text-red-400">
-            <AlertCircle className="w-3.5 h-3.5" />
-            <span className="text-[11px]">Quota exhausted • Resets at midnight</span>
-          </div>
-        </motion.div>
-      )}
+        {isUsingExtra && !allExhausted && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-4 pt-4 border-t border-slate-700/50"
+          >
+            <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-purple-500/10 border border-purple-500/20">
+              <Zap className="w-4 h-4 text-purple-400" />
+              <span className="text-xs font-medium text-purple-300">Using backup models</span>
+            </div>
+          </motion.div>
+        )}
 
-      {isUsingExtra && !allExhausted && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="mt-3 pt-3 border-t border-white/[0.05]"
-        >
-          <div className="flex items-center gap-2 text-purple-400">
-            <Zap className="w-3.5 h-3.5" />
-            <span className="text-[11px]">Using backup models</span>
-          </div>
-        </motion.div>
-      )}
-
-      {!isUsingExtra && !allExhausted && remainingNormal <= 5 && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="mt-3 pt-3 border-t border-white/[0.05]"
-        >
-          <div className="flex items-center gap-2 text-amber-400">
-            <AlertCircle className="w-3.5 h-3.5" />
-            <span className="text-[11px]">{remainingNormal} standard remaining • 500 extra available</span>
-          </div>
-        </motion.div>
-      )}
+        {!isUsingExtra && !allExhausted && remainingNormal <= 5 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-4 pt-4 border-t border-slate-700/50"
+          >
+            <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+              <AlertCircle className="w-4 h-4 text-amber-400" />
+              <span className="text-xs font-medium text-amber-300">{remainingNormal} standard remaining • 500 extra available</span>
+            </div>
+          </motion.div>
+        )}
+      </div>
     </motion.div>
   )
 }

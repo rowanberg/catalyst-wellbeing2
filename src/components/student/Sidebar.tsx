@@ -30,38 +30,38 @@ interface NavItem {
   description: string
 }
 
-// Premium navigation items with coral/peach palette
+// Premium navigation items - using CSS variables for dynamic themes
 const navItems: NavItem[] = [
   {
     id: 'today',
     label: 'Dashboard',
     icon: LayoutDashboard,
-    color: 'text-[#F08080]',
-    bgColor: 'bg-[#FFDAB9]/30',
+    color: '', // Will use CSS variable
+    bgColor: '', // Will use CSS variable
     description: 'Overview & tasks'
   },
   {
     id: 'growth',
     label: 'Growth',
     icon: Sparkles,
-    color: 'text-[#F4978E]',
-    bgColor: 'bg-[#FBC4AB]/30',
+    color: '', // Will use CSS variable
+    bgColor: '', // Will use CSS variable
     description: 'Your progress'
   },
   {
     id: 'wellbeing',
     label: 'Well-being',
     icon: Heart,
-    color: 'text-[#F08080]',
-    bgColor: 'bg-[#F8AD9D]/30',
+    color: '', // Will use CSS variable
+    bgColor: '', // Will use CSS variable
     description: 'Health & mindfulness'
   },
   {
     id: 'profile',
     label: 'Profile',
     icon: UserCircle2,
-    color: 'text-[#F4978E]',
-    bgColor: 'bg-[#FFDAB9]/30',
+    color: '', // Will use CSS variable
+    bgColor: '', // Will use CSS variable
     description: 'Settings & achievements'
   }
 ]
@@ -131,7 +131,7 @@ export function Sidebar({ activeTab, onTabChange, profile }: SidebarProps) {
                   }}
                   className="flex items-center gap-3"
                 >
-                  <div className="w-9 h-9 bg-gradient-to-br from-[#F08080] to-[#F4978E] rounded-lg flex items-center justify-center shadow-sm">
+                  <div className="w-9 h-9 rounded-lg flex items-center justify-center shadow-sm" style={{ background: 'linear-gradient(to bottom right, var(--theme-primary), var(--theme-secondary))' }}>
                     <span className="text-white font-bold text-base">C</span>
                   </div>
                   <div>
@@ -191,9 +191,9 @@ export function Sidebar({ activeTab, onTabChange, profile }: SidebarProps) {
           )}>
             <div className="relative shrink-0">
               <div className={cn(
-                "bg-gradient-to-br from-[#F08080] to-[#F4978E] rounded-full flex items-center justify-center text-white font-semibold shadow-sm overflow-hidden",
+                "rounded-full flex items-center justify-center text-white font-semibold shadow-sm overflow-hidden",
                 isCollapsed ? "w-10 h-10 text-sm" : "w-11 h-11 text-base"
-              )}>
+              )} style={{ background: 'linear-gradient(to bottom right, var(--theme-primary), var(--theme-secondary))' }}>
                 {profile?.profilePicture || profile?.avatar_url ? (
                   <Image
                     src={profile?.profilePicture || profile?.avatar_url}
@@ -207,7 +207,7 @@ export function Sidebar({ activeTab, onTabChange, profile }: SidebarProps) {
                   <span>{profile?.first_name?.charAt(0) || 'S'}</span>
                 )}
               </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#F4978E] rounded-full border-2 border-white" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white" style={{ backgroundColor: 'var(--theme-secondary)' }} />
             </div>
             
             {!isCollapsed && (
@@ -267,11 +267,12 @@ export function Sidebar({ activeTab, onTabChange, profile }: SidebarProps) {
                 className={cn(
                   "w-full flex items-center rounded-lg transition-all duration-250",
                   "relative group",
-                  isActive ? [
-                    "bg-gradient-to-r from-[#FFDAB9]/20 to-[#FBC4AB]/20",
-                  ] : "hover:bg-slate-50",
+                  isActive ? "" : "hover:bg-slate-50",
                   isCollapsed ? "p-3 justify-center" : "px-3 py-2.5"
                 )}
+                style={isActive ? {
+                  background: 'linear-gradient(to right, color-mix(in srgb, var(--theme-highlight) 20%, transparent), color-mix(in srgb, var(--theme-tertiary) 20%, transparent))'
+                } : {}}
                 aria-label={item.label}
                 aria-current={isActive ? 'page' : undefined}
               >
@@ -279,7 +280,8 @@ export function Sidebar({ activeTab, onTabChange, profile }: SidebarProps) {
                 {isActive && (
                   <motion.div
                     layoutId="sidebarActiveIndicator"
-                    className="absolute left-0 top-1 bottom-1 w-1 bg-gradient-to-b from-[#F08080] to-[#F4978E] rounded-r shadow-sm"
+                    className="absolute left-0 top-1 bottom-1 w-1 rounded-r shadow-sm"
+                    style={{ background: 'linear-gradient(to bottom, var(--theme-primary), var(--theme-secondary))' }}
                     transition={{ type: 'spring', damping: 30, stiffness: 300 }}
                   />
                 )}
@@ -290,8 +292,9 @@ export function Sidebar({ activeTab, onTabChange, profile }: SidebarProps) {
                 )}>
                   <Icon className={cn(
                     "w-5 h-5 transition-colors duration-250 shrink-0",
-                    isActive ? item.color : "text-slate-500 group-hover:text-slate-700"
+                    isActive ? "" : "text-slate-500 group-hover:text-slate-700"
                   )} 
+                  style={isActive ? { color: 'var(--theme-primary)' } : {}}
                   strokeWidth={isActive ? 2.5 : 2}
                   />
                   
