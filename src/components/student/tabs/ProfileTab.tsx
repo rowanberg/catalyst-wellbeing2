@@ -15,6 +15,8 @@ import {
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { RankCard, RankCardSkeleton } from '@/components/student/RankCard'
+import { useStudentRank } from '@/hooks/useStudentRank'
 
 interface ProfileTabProps {
   data: any
@@ -217,6 +219,9 @@ export function ProfileTab({ data, loading, error, onRefresh, profile }: Profile
   const [errors, setErrors] = useState(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // Fetch student rank data for grade rank display
+  const { rankData, loading: rankLoading } = useStudentRank(profile?.id)
 
   const handleVibrate = useCallback(() => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10)
@@ -501,6 +506,27 @@ export function ProfileTab({ data, loading, error, onRefresh, profile }: Profile
 
       {/* Quick Actions */}
       <QuickActionsCard router={router} />
+
+      {/* Grade Rank Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+      >
+        {rankLoading ? (
+          <RankCardSkeleton type="grade" />
+        ) : rankData ? (
+          <RankCard rankData={rankData} type="grade" />
+        ) : (
+          <Card className="border-0 shadow-lg rounded-2xl bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
+            <CardContent className="p-6 text-center">
+              <Trophy className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <h3 className="text-lg font-semibold text-gray-700 mb-2">No Rank Data Yet</h3>
+              <p className="text-sm text-gray-600">Complete assessments to see your grade rank and performance</p>
+            </CardContent>
+          </Card>
+        )}
+      </motion.div>
     </div>
   )
 }

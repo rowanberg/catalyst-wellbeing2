@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { motion } from 'framer-motion'
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { useAppSelector } from '@/lib/redux/hooks'
+import { usePerformanceOptimizer } from '@/hooks/usePerformanceOptimizer'
 import { 
   Brain, Send, Lightbulb, Target, CheckCircle2, Clock, Sparkles,
   Paperclip, Plus, MessageCircle, Copy, Check, X, Menu, History
@@ -240,7 +241,7 @@ function DataTable({ data }: { data: any[] }) {
 }
 
 // Code block component with syntax highlighting
-function CodeBlock({ code, onCopy }: { code: string; onCopy?: (code: string) => void }) {
+function CodeBlock({ code, onCopy, enableHighlighting = true }: { code: string; onCopy?: (code: string) => void; enableHighlighting?: boolean }) {
   const [copied, setCopied] = React.useState(false)
   
   // Extract language from code block (e.g., "python\ncode here")
@@ -324,7 +325,11 @@ function CodeBlock({ code, onCopy }: { code: string; onCopy?: (code: string) => 
       {/* Code content with syntax highlighting colors */}
       <pre className="bg-slate-900 p-4 overflow-x-auto">
         <code className="text-sm font-mono leading-relaxed block">
-          <SyntaxHighlight code={actualCode} language={language} />
+          {enableHighlighting ? (
+            <SyntaxHighlight code={actualCode} language={language} />
+          ) : (
+            <span className="text-slate-100">{actualCode}</span>
+          )}
         </code>
       </pre>
     </div>
@@ -575,6 +580,7 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
     return parts.map((part, partIndex) => {
       if (part.startsWith('```') && part.endsWith('```')) {
         const code = part.slice(3, -3).trim()
+        // Performance optimization will be passed from parent component
         return <CodeBlock key={partIndex} code={code} onCopy={onCopy} />
       }
       
@@ -868,11 +874,22 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
+  // Performance optimization for mobile
+  const { capabilities, settings, isOptimized } = usePerformanceOptimizer()
+  
+  // Apply message limit based on device capabilities
+  const maxVisibleMessages = useMemo(() => {
+    return settings.maxMessagesInView
+  }, [settings.maxMessagesInView])
+  
   // Debug profile data
   useEffect(() => {
     console.log('[AI Helper] Profile data:', profile)
     console.log('[AI Helper] Full name:', profile?.full_name)
-  }, [profile])
+    if (isOptimized) {
+      console.log('[Performance] Optimizations active:', capabilities)
+    }
+  }, [profile, isOptimized, capabilities])
 
 // ...
   // Load sessions from localStorage on mount (wait for profile to be loaded)
@@ -950,9 +967,11 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
   }, [messages, currentSessionId])
 
   useEffect(() => {
-    const start = Math.max(0, messages.length - messageLoadCount)
+    // Use optimized message count for mobile devices
+    const effectiveLoadCount = Math.min(messageLoadCount, maxVisibleMessages)
+    const start = Math.max(0, messages.length - effectiveLoadCount)
     setDisplayedMessages(messages.slice(start))
-  }, [messages, messageLoadCount])
+  }, [messages, messageLoadCount, maxVisibleMessages])
 
   // Scroll handler
   const handleScroll = useCallback(() => {

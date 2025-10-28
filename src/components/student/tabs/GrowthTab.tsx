@@ -367,10 +367,10 @@ export function GrowthTab({ data, loading, error, onRefresh, profile }: GrowthTa
           transition={{ delay: 0.4 }}
         >
           <Card className="border-0 shadow-lg h-full">
-            <CardHeader className="bg-gradient-to-r from-green-50/50 to-emerald-50/50 rounded-t-2xl">
+            <CardHeader className="rounded-t-2xl" style={{ background: 'linear-gradient(to right, color-mix(in srgb, var(--theme-highlight) 20%, transparent), color-mix(in srgb, var(--theme-tertiary) 20%, transparent))' }}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl">
+                  <div className="p-2 rounded-xl" style={{ background: 'linear-gradient(to bottom right, var(--theme-primary), var(--theme-secondary))' }}>
                     <BookOpen className="h-5 w-5 text-white" />
                   </div>
                   <CardTitle className="text-lg">Recent Tests</CardTitle>
@@ -379,7 +379,9 @@ export function GrowthTab({ data, loading, error, onRefresh, profile }: GrowthTa
                   variant="ghost"
                   size="sm"
                   onClick={() => router.push('/student/grades')}
-                  className="text-green-600 hover:text-green-700"
+                  style={{ color: 'var(--theme-primary)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = 'var(--theme-secondary)'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = 'var(--theme-primary)'}
                 >
                   View All
                   <ChevronRight className="h-4 w-4 ml-1" />
@@ -446,10 +448,10 @@ export function GrowthTab({ data, loading, error, onRefresh, profile }: GrowthTa
           transition={{ delay: 0.45 }}
         >
           <Card className="border-0 shadow-lg h-full">
-            <CardHeader className="bg-gradient-to-r from-purple-50/50 to-violet-50/50 rounded-t-2xl">
+            <CardHeader className="rounded-t-2xl" style={{ background: 'linear-gradient(to right, color-mix(in srgb, var(--theme-highlight) 20%, transparent), color-mix(in srgb, var(--theme-tertiary) 20%, transparent))' }}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-gradient-to-br from-purple-500 to-violet-500 rounded-xl">
+                  <div className="p-2 rounded-xl" style={{ background: 'linear-gradient(to bottom right, var(--theme-primary), var(--theme-secondary))' }}>
                     <TrendingUp className="h-5 w-5 text-white" />
                   </div>
                   <CardTitle className="text-lg">Analytics</CardTitle>
@@ -459,7 +461,17 @@ export function GrowthTab({ data, loading, error, onRefresh, profile }: GrowthTa
                     size="sm"
                     variant="outline"
                     onClick={() => router.push('/student/study-plan/dashboard')}
-                    className="bg-purple-100 hover:bg-purple-200 border-purple-300 text-purple-700"
+                    style={{ 
+                      backgroundColor: 'color-mix(in srgb, var(--theme-highlight) 40%, transparent)',
+                      borderColor: 'var(--theme-accent)',
+                      color: 'var(--theme-primary)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--theme-highlight) 60%, transparent)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--theme-highlight) 40%, transparent)'
+                    }}
                   >
                     Study Plan
                   </Button>
@@ -470,7 +482,7 @@ export function GrowthTab({ data, loading, error, onRefresh, profile }: GrowthTa
               {/* Grade Distribution */}
               <div>
                 <h4 className="font-semibold text-slate-800 mb-3 flex items-center">
-                  <Award className="h-4 w-4 mr-2 text-purple-600" />
+                  <Award className="h-4 w-4 mr-2" style={{ color: 'var(--theme-primary)' }} />
                   Grade Distribution
                 </h4>
                 <div className="space-y-2">
@@ -503,15 +515,16 @@ export function GrowthTab({ data, loading, error, onRefresh, profile }: GrowthTa
               {/* Study Consistency */}
               <div>
                 <h4 className="font-semibold text-slate-800 mb-3 flex items-center">
-                  <Target className="h-4 w-4 mr-2 text-purple-600" />
+                  <Target className="h-4 w-4 mr-2" style={{ color: 'var(--theme-primary)' }} />
                   Study Consistency
                 </h4>
-                <div className="text-center p-4 bg-gradient-to-br from-purple-50/50 to-violet-50/50 rounded-2xl shadow-sm">
+                <div className="text-center p-4 rounded-2xl shadow-sm" style={{ background: 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 30%, transparent), color-mix(in srgb, var(--theme-tertiary) 30%, transparent))' }}>
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ duration: 0.5, delay: 0.3 }}
-                    className="text-4xl font-bold text-purple-600 mb-2"
+                    className="text-4xl font-bold mb-2"
+                    style={{ color: 'var(--theme-primary)' }}
                   >
                     {growthData.analytics?.studyStreak || 0}
                   </motion.div>
@@ -523,12 +536,12 @@ export function GrowthTab({ data, loading, error, onRefresh, profile }: GrowthTa
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={{ delay: i * 0.02 }}
-                        className={cn(
-                          "w-4 h-4 rounded-sm",
-                          i < (growthData.analytics?.studyStreak || 0)
-                            ? "bg-purple-400"
-                            : "bg-slate-200"
-                        )}
+                        className="w-4 h-4 rounded-sm"
+                        style={{
+                          backgroundColor: i < (growthData.analytics?.studyStreak || 0)
+                            ? 'var(--theme-accent)'
+                            : 'rgb(226, 232, 240)'
+                        }}
                       />
                     ))}
                   </div>
@@ -551,13 +564,13 @@ export function GrowthTab({ data, loading, error, onRefresh, profile }: GrowthTa
           whileTap={{ scale: 0.95 }}
           onClick={() => router.push('/student/achievements')}
         >
-          <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200 cursor-pointer hover:shadow-lg transition-all active:scale-95">
+          <Card className="cursor-pointer hover:shadow-lg transition-all active:scale-95" style={{ background: 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 30%, transparent), color-mix(in srgb, var(--theme-tertiary) 30%, transparent))', borderColor: 'var(--theme-accent)' }}>
             <CardContent className="p-3 sm:p-4 text-center">
-              <Star className="h-6 w-6 text-amber-600 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-amber-600">
+              <Star className="h-6 w-6 mx-auto mb-2" style={{ color: 'var(--theme-primary)' }} />
+              <div className="text-2xl font-bold" style={{ color: 'var(--theme-primary)' }}>
                 {growthData.achievements?.xp || 0}
               </div>
-              <p className="text-xs text-amber-700">Total XP</p>
+              <p className="text-xs" style={{ color: 'var(--theme-secondary)' }}>Total XP</p>
             </CardContent>
           </Card>
         </motion.div>
@@ -567,13 +580,13 @@ export function GrowthTab({ data, loading, error, onRefresh, profile }: GrowthTa
           whileTap={{ scale: 0.95 }}
           onClick={() => router.push('/student/wallet')}
         >
-          <Card className="bg-gradient-to-br from-pink-50 to-rose-50 border-pink-200 cursor-pointer hover:shadow-lg transition-all">
+          <Card className="cursor-pointer hover:shadow-lg transition-all" style={{ background: 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 30%, transparent), color-mix(in srgb, var(--theme-tertiary) 30%, transparent))', borderColor: 'var(--theme-accent)' }}>
             <CardContent className="p-4 text-center">
               <span className="text-2xl mb-2 block">💎</span>
-              <div className="text-2xl font-bold text-pink-600">
+              <div className="text-2xl font-bold" style={{ color: 'var(--theme-primary)' }}>
                 {growthData.achievements?.gems || 0}
               </div>
-              <p className="text-xs text-pink-700">Mind Gems</p>
+              <p className="text-xs" style={{ color: 'var(--theme-secondary)' }}>Mind Gems</p>
             </CardContent>
           </Card>
         </motion.div>
@@ -582,13 +595,13 @@ export function GrowthTab({ data, loading, error, onRefresh, profile }: GrowthTa
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
-          <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200">
+          <Card style={{ background: 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 30%, transparent), color-mix(in srgb, var(--theme-tertiary) 30%, transparent))', borderColor: 'var(--theme-accent)' }}>
             <CardContent className="p-4 text-center">
-              <Trophy className="h-6 w-6 text-emerald-600 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-emerald-600">
+              <Trophy className="h-6 w-6 mx-auto mb-2" style={{ color: 'var(--theme-primary)' }} />
+              <div className="text-2xl font-bold" style={{ color: 'var(--theme-primary)' }}>
                 Level {growthData.achievements?.level || 1}
               </div>
-              <p className="text-xs text-emerald-700">Current</p>
+              <p className="text-xs" style={{ color: 'var(--theme-secondary)' }}>Current</p>
             </CardContent>
           </Card>
         </motion.div>
@@ -597,13 +610,13 @@ export function GrowthTab({ data, loading, error, onRefresh, profile }: GrowthTa
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
-          <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+          <Card style={{ background: 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 30%, transparent), color-mix(in srgb, var(--theme-tertiary) 30%, transparent))', borderColor: 'var(--theme-accent)' }}>
             <CardContent className="p-4 text-center">
-              <Target className="h-6 w-6 text-blue-600 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-blue-600">
+              <Target className="h-6 w-6 mx-auto mb-2" style={{ color: 'var(--theme-primary)' }} />
+              <div className="text-2xl font-bold" style={{ color: 'var(--theme-primary)' }}>
                 {growthData.achievements?.quests || 0}
               </div>
-              <p className="text-xs text-blue-700">Quests</p>
+              <p className="text-xs" style={{ color: 'var(--theme-secondary)' }}>Quests</p>
             </CardContent>
           </Card>
         </motion.div>

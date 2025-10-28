@@ -78,6 +78,7 @@ interface Assessment {
   created_at: string
   class_id: string
   due_date?: string
+  assessment_date?: string
   rubric?: RubricCriteria[]
 }
 
@@ -141,13 +142,17 @@ export default function UpdateResultsSystem() {
   const [showAssessmentDetails, setShowAssessmentDetails] = useState(false)
   const [teacherClasses, setTeacherClasses] = useState<TeacherClass[]>([])
   const [loadingClasses, setLoadingClasses] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [assessmentToDelete, setAssessmentToDelete] = useState<Assessment | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [newAssessment, setNewAssessment] = useState({
     title: '',
     type: 'quiz' as 'quiz' | 'test' | 'assignment' | 'project' | 'exam',
     max_score: 100,
     pass_mark: 50,
     class_id: '',
-    due_date: ''
+    due_date: '',
+    assessment_date: ''
   })
 
   // Quick feedback templates
@@ -234,6 +239,35 @@ export default function UpdateResultsSystem() {
     }
   }
 
+  const handleDeleteAssessment = async () => {
+    if (!assessmentToDelete) return
+
+    try {
+      setDeleting(true)
+      const response = await fetch(`/api/teacher/assessments?id=${assessmentToDelete.id}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        setAssessments(assessments.filter(a => a.id !== assessmentToDelete.id))
+        if (selectedAssessment?.id === assessmentToDelete.id) {
+          setSelectedAssessment(null)
+        }
+        toast.success('Assessment deleted successfully')
+        setShowDeleteDialog(false)
+        setAssessmentToDelete(null)
+      } else {
+        const error = await response.json()
+        toast.error('Failed to delete assessment: ' + (error.error || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('Error deleting assessment:', error)
+      toast.error('Failed to delete assessment. Please try again.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   // Fetch teacher's assigned classes
   const fetchTeacherClasses = useCallback(async () => {
     try {
@@ -302,16 +336,40 @@ export default function UpdateResultsSystem() {
     }
   }, [user, fetchTeacherClasses])
 
-  // Fetch students when an assessment is selected
+  // Fetch existing grades for selected assessment
+  const fetchExistingGrades = useCallback(async (assessmentId: string) => {
+    try {
+      const response = await fetch(`/api/teacher/assessment-grades?assessment_id=${assessmentId}`)
+      if (response.ok) {
+        const data = await response.json()
+        console.log('✅ Existing grades loaded:', data.grades?.length || 0)
+        
+        // Convert grades array to object keyed by student_id
+        const gradesMap: { [studentId: string]: Grade } = {}
+        data.grades?.forEach((grade: any) => {
+          gradesMap[grade.student_id] = grade
+        })
+        
+        setGrades(gradesMap)
+      }
+    } catch (error) {
+      console.error('Error fetching existing grades:', error)
+    }
+  }, [])
+
+  // Fetch students and grades when an assessment is selected
   useEffect(() => {
     if (selectedAssessment && selectedAssessment.class_id) {
       console.log('📚 Assessment selected, fetching students for class:', selectedAssessment.class_id)
       fetchStudents(selectedAssessment.class_id)
+      // Fetch existing grades for this assessment
+      fetchExistingGrades(selectedAssessment.id)
     } else {
-      // Clear students when no assessment is selected
+      // Clear students and grades when no assessment is selected
       setStudents([])
+      setGrades({})
     }
-  }, [selectedAssessment, fetchStudents])
+  }, [selectedAssessment, fetchStudents, fetchExistingGrades])
 
   const handleGradeChange = useCallback((studentId: string, grade: Grade) => {
     setGrades(prev => ({ ...prev, [studentId]: grade }))
@@ -437,32 +495,49 @@ export default function UpdateResultsSystem() {
           ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-2.5 sm:gap-3 lg:gap-4">
             {assessments.map(assessment => (
-              <motion.button
+              <motion.div
                 key={assessment.id}
-                onClick={() => setSelectedAssessment(assessment)}
                 whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="group text-left p-3 sm:p-4 lg:p-5 rounded-xl sm:rounded-2xl bg-gradient-to-br from-white to-slate-50 hover:from-emerald-50 hover:to-teal-50 border border-slate-200 hover:border-emerald-300 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+                className="group relative p-3 sm:p-4 lg:p-5 rounded-xl sm:rounded-2xl bg-gradient-to-br from-white to-slate-50 hover:from-emerald-50 hover:to-teal-50 border border-slate-200 hover:border-emerald-300 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
               >
-                <div className="flex items-start justify-between mb-2 sm:mb-3 gap-2">
-                  <h3 className="font-bold text-sm sm:text-base lg:text-lg text-slate-800 group-hover:text-emerald-700 flex-1 line-clamp-2 transition-colors">{assessment.title}</h3>
-                  <Badge className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0 text-xs font-medium px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md sm:rounded-lg">
-                    {assessment.type.toUpperCase()}
-                  </Badge>
-                </div>
-                <div className="space-y-1 sm:space-y-1.5">
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-emerald-500 rounded-full"></div>
-                    <p className="text-xs sm:text-sm lg:text-base text-slate-600 font-medium">Max: {assessment.max_score} pts</p>
+                {/* Delete Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setAssessmentToDelete(assessment)
+                    setShowDeleteDialog(true)
+                  }}
+                  className="absolute top-2 right-2 p-1.5 sm:p-2 rounded-lg bg-white hover:bg-red-50 border border-slate-200 hover:border-red-300 opacity-0 group-hover:opacity-100 transition-all z-10 shadow-sm hover:shadow-md"
+                  title="Delete assessment"
+                >
+                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-slate-400 hover:text-red-600 transition-colors" />
+                </button>
+
+                {/* Assessment Card Content */}
+                <button
+                  onClick={() => setSelectedAssessment(assessment)}
+                  className="w-full text-left"
+                >
+                  <div className="flex items-start justify-between mb-2 sm:mb-3 gap-2 pr-8">
+                    <h3 className="font-bold text-sm sm:text-base lg:text-lg text-slate-800 group-hover:text-emerald-700 flex-1 line-clamp-2 transition-colors">{assessment.title}</h3>
+                    <Badge className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0 text-xs font-medium px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md sm:rounded-lg">
+                      {assessment.type.toUpperCase()}
+                    </Badge>
                   </div>
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full"></div>
-                    <p className="text-xs sm:text-sm text-slate-500">
-                      Created {new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(assessment.created_at))}
-                    </p>
+                  <div className="space-y-1 sm:space-y-1.5">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-emerald-500 rounded-full"></div>
+                      <p className="text-xs sm:text-sm lg:text-base text-slate-600 font-medium">Max: {assessment.max_score} pts</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full"></div>
+                      <p className="text-xs sm:text-sm text-slate-500">
+                        Created {new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(assessment.created_at))}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </motion.button>
+                </button>
+              </motion.div>
             ))}
             
             {/* Create New Assessment Button */}
@@ -1544,8 +1619,9 @@ export default function UpdateResultsSystem() {
 
                 <div>
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
-                    Due Date & Time (Optional)
+                    Assessment Date & Time <span className="text-red-500">*</span>
                   </label>
+                  <p className="text-xs text-gray-500 mb-2">When will this assessment take place?</p>
                   
                   {/* Quick Preset Buttons */}
                   <div className="flex flex-wrap gap-2 mb-2">
@@ -1556,8 +1632,8 @@ export default function UpdateResultsSystem() {
                       onClick={() => {
                         const tomorrow = new Date()
                         tomorrow.setDate(tomorrow.getDate() + 1)
-                        tomorrow.setHours(23, 59, 0, 0)
-                        setNewAssessment({ ...newAssessment, due_date: tomorrow.toISOString().slice(0, 16) })
+                        tomorrow.setHours(9, 0, 0, 0)
+                        setNewAssessment({ ...newAssessment, assessment_date: tomorrow.toISOString().slice(0, 16) })
                       }}
                       className="text-xs h-7 px-2"
                     >
@@ -1571,35 +1647,20 @@ export default function UpdateResultsSystem() {
                       onClick={() => {
                         const nextWeek = new Date()
                         nextWeek.setDate(nextWeek.getDate() + 7)
-                        nextWeek.setHours(23, 59, 0, 0)
-                        setNewAssessment({ ...newAssessment, due_date: nextWeek.toISOString().slice(0, 16) })
+                        nextWeek.setHours(9, 0, 0, 0)
+                        setNewAssessment({ ...newAssessment, assessment_date: nextWeek.toISOString().slice(0, 16) })
                       }}
                       className="text-xs h-7 px-2"
                     >
                       <Calendar className="h-3 w-3 mr-1" />
                       Next Week
                     </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        const twoWeeks = new Date()
-                        twoWeeks.setDate(twoWeeks.getDate() + 14)
-                        twoWeeks.setHours(23, 59, 0, 0)
-                        setNewAssessment({ ...newAssessment, due_date: twoWeeks.toISOString().slice(0, 16) })
-                      }}
-                      className="text-xs h-7 px-2"
-                    >
-                      <Calendar className="h-3 w-3 mr-1" />
-                      2 Weeks
-                    </Button>
-                    {newAssessment.due_date && (
+                    {newAssessment.assessment_date && (
                       <Button
                         type="button"
                         size="sm"
                         variant="outline"
-                        onClick={() => setNewAssessment({ ...newAssessment, due_date: '' })}
+                        onClick={() => setNewAssessment({ ...newAssessment, assessment_date: '' })}
                         className="text-xs h-7 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
                       >
                         <X className="h-3 w-3 mr-1" />
@@ -1607,6 +1668,60 @@ export default function UpdateResultsSystem() {
                       </Button>
                     )}
                   </div>
+                  
+                  {/* Date & Time Input */}
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Input
+                        type="date"
+                        value={newAssessment.assessment_date ? newAssessment.assessment_date.split('T')[0] : ''}
+                        onChange={(e) => {
+                          const time = newAssessment.assessment_date?.split('T')[1] || '09:00'
+                          setNewAssessment({ ...newAssessment, assessment_date: e.target.value ? `${e.target.value}T${time}` : '' })
+                        }}
+                        className="w-full"
+                        min={new Date().toISOString().split('T')[0]}
+                        required
+                      />
+                    </div>
+                    <div className="w-28">
+                      <Input
+                        type="time"
+                        value={newAssessment.assessment_date ? newAssessment.assessment_date.split('T')[1] : '09:00'}
+                        onChange={(e) => {
+                          const date = newAssessment.assessment_date?.split('T')[0] || new Date().toISOString().split('T')[0]
+                          setNewAssessment({ ...newAssessment, assessment_date: `${date}T${e.target.value}` })
+                        }}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Preview */}
+                  {newAssessment.assessment_date && (
+                    <div className="mt-2 text-xs text-gray-600 bg-emerald-50 border border-emerald-200 rounded-md p-2 flex items-center gap-2">
+                      <Calendar className="h-3 w-3 text-emerald-600" />
+                      <span>
+                        Assessment: {new Date(newAssessment.assessment_date).toLocaleDateString('en-US', { 
+                          weekday: 'short',
+                          month: 'short', 
+                          day: 'numeric',
+                          year: 'numeric'
+                        })} at {new Date(newAssessment.assessment_date).toLocaleTimeString('en-US', {
+                          hour: 'numeric',
+                          minute: '2-digit',
+                          hour12: true
+                        })}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
+                    Submission Due Date (Optional)
+                  </label>
+                  <p className="text-xs text-gray-500 mb-2">For assignments/projects with submission deadlines</p>
                   
                   {/* Date & Time Input */}
                   <div className="flex gap-2">
@@ -1635,10 +1750,9 @@ export default function UpdateResultsSystem() {
                     </div>
                   </div>
                   
-                  {/* Preview */}
                   {newAssessment.due_date && (
                     <div className="mt-2 text-xs text-gray-600 bg-blue-50 border border-blue-200 rounded-md p-2 flex items-center gap-2">
-                      <Calendar className="h-3 w-3 text-blue-600" />
+                      <Clock className="h-3 w-3 text-blue-600" />
                       <span>
                         Due: {new Date(newAssessment.due_date).toLocaleDateString('en-US', { 
                           weekday: 'short',
@@ -1706,6 +1820,11 @@ export default function UpdateResultsSystem() {
                         return
                       }
                       
+                      if (!newAssessment.assessment_date) {
+                        toast.error('Please set an assessment date')
+                        return
+                      }
+                      
                       try {
                         setLoading(true)
                         const response = await fetch('/api/teacher/assessments', {
@@ -1718,7 +1837,7 @@ export default function UpdateResultsSystem() {
                           const data = await response.json()
                           setAssessments([...assessments, data.assessment])
                           setShowCreateModal(false)
-                          setNewAssessment({ title: '', type: 'quiz', max_score: 100, pass_mark: 50, class_id: '', due_date: '' })
+                          setNewAssessment({ title: '', type: 'quiz', max_score: 100, pass_mark: 50, class_id: '', due_date: '', assessment_date: '' })
                           toast.success('Assessment created successfully!')
                         } else {
                           const error = await response.json()
@@ -1740,7 +1859,7 @@ export default function UpdateResultsSystem() {
                   <Button
                     onClick={() => {
                       setShowCreateModal(false)
-                      setNewAssessment({ title: '', type: 'quiz', max_score: 100, pass_mark: 50, class_id: '', due_date: '' })
+                      setNewAssessment({ title: '', type: 'quiz', max_score: 100, pass_mark: 50, class_id: '', due_date: '', assessment_date: '' })
                     }}
                     variant="outline"
                     className="flex-1"
@@ -1748,6 +1867,64 @@ export default function UpdateResultsSystem() {
                     Cancel
                   </Button>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Dialog */}
+      <AnimatePresence>
+        {showDeleteDialog && assessmentToDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => !deleting && setShowDeleteDialog(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start gap-4 mb-4">
+                <div className="p-3 bg-red-100 rounded-full">
+                  <AlertCircle className="h-6 w-6 text-red-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-slate-800 mb-2">Delete Assessment?</h3>
+                  <p className="text-sm text-slate-600 mb-2">
+                    Are you sure you want to delete <span className="font-semibold">"{assessmentToDelete.title}"</span>?
+                  </p>
+                  <p className="text-sm text-red-600">
+                    This action cannot be undone. All associated grades and student data will be permanently removed.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleDeleteAssessment}
+                  disabled={deleting}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {deleting ? 'Deleting...' : 'Delete'}
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowDeleteDialog(false)
+                    setAssessmentToDelete(null)
+                  }}
+                  disabled={deleting}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
               </div>
             </motion.div>
           </motion.div>

@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
         created_at,
         class_id,
         due_date,
+        assessment_date,
         rubric_criteria
       `)
       .eq('teacher_id', user.id)
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
     console.log('✅ POST /assessments - Teacher verified:', { role: profile.role, school_id: profile.school_id })
 
     const body = await request.json()
-    const { title, type, max_score, pass_mark, class_id, due_date, rubric_criteria } = body
+    const { title, type, max_score, pass_mark, class_id, due_date, assessment_date, rubric_criteria } = body
 
     console.log('📝 Creating assessment with data:', {
       title,
@@ -108,6 +109,7 @@ export async function POST(request: NextRequest) {
         pass_mark: pass_mark || 50,
         class_id,
         due_date: due_date || null,
+        assessment_date: assessment_date || null,
         teacher_id: user.id,
         school_id: profile.school_id,
         rubric_criteria: rubric_criteria || null
@@ -130,6 +132,79 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error in create assessment API:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const supabase = await createSupabaseServerClient()
+    
+    // Get authenticated user
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Verify teacher role
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role, school_id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (profileError || !profile || profile.role !== 'teacher') {
+      console.error('❌ DELETE /assessments - Profile check failed:', { profileError, profile })
+      return NextResponse.json({ error: 'Teacher access required' }, { status: 403 })
+    }
+
+    // Get assessment ID from query params
+    const { searchParams } = new URL(request.url)
+    const assessmentId = searchParams.get('id')
+
+    if (!assessmentId) {
+      return NextResponse.json({ error: 'Assessment ID is required' }, { status: 400 })
+    }
+
+    console.log('🗑️ DELETE /assessments - Deleting assessment:', { assessmentId, teacher_id: user.id })
+
+    // Verify the assessment belongs to this teacher
+    const { data: assessment, error: fetchError } = await supabase
+      .from('assessments')
+      .select('id, teacher_id, title')
+      .eq('id', assessmentId)
+      .eq('teacher_id', user.id)
+      .eq('school_id', profile.school_id)
+      .single()
+
+    if (fetchError || !assessment) {
+      console.error('❌ Assessment not found or unauthorized:', { fetchError, assessment })
+      return NextResponse.json({ error: 'Assessment not found or unauthorized' }, { status: 404 })
+    }
+
+    // Delete the assessment (this will cascade delete related grades due to foreign key constraints)
+    const { error: deleteError } = await supabase
+      .from('assessments')
+      .delete()
+      .eq('id', assessmentId)
+
+    if (deleteError) {
+      console.error('❌ Error deleting assessment:', deleteError)
+      return NextResponse.json({ error: 'Failed to delete assessment', details: deleteError.message }, { status: 500 })
+    }
+
+    console.log('✅ Assessment deleted successfully:', {
+      id: assessmentId,
+      title: assessment.title
+    })
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Assessment deleted successfully' 
+    })
+
+  } catch (error) {
+    console.error('Error in delete assessment API:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

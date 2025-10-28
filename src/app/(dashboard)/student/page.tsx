@@ -84,7 +84,11 @@ const MobileHeader = memo(({
     initial={{ y: -60 }}
     animate={{ y: 0 }}
     transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}  // 250ms standard
-    className="fixed top-0 left-0 right-0 z-40 bg-gradient-to-r from-[#FFDAB9] to-[#FBC4AB] border-b border-[#F8AD9D]/30 shadow-sm"
+    className="fixed top-0 left-0 right-0 z-40 shadow-sm"
+    style={{ 
+      background: 'linear-gradient(to right, var(--theme-highlight), var(--theme-tertiary))',
+      borderBottom: '1px solid color-mix(in srgb, var(--theme-accent) 30%, transparent)'
+    }}
   >
     {isPullRefreshing && (
       <motion.div 
@@ -93,7 +97,7 @@ const MobileHeader = memo(({
         transition={{ duration: 0.15 }}
         className="absolute top-full left-0 right-0 flex justify-center py-2 bg-white"
       >
-        <RefreshCcw className="w-4 h-4 text-[#F08080] animate-spin" strokeWidth={2} />
+        <RefreshCcw className="w-4 h-4 animate-spin" strokeWidth={2} style={{ color: 'var(--theme-primary)' }} />
       </motion.div>
     )}
     
@@ -101,7 +105,7 @@ const MobileHeader = memo(({
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <div className="relative shrink-0">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#F08080] to-[#F4978E] flex items-center justify-center shadow-md overflow-hidden">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center shadow-md overflow-hidden" style={{ background: 'linear-gradient(to bottom right, var(--theme-primary), var(--theme-secondary))' }}>
               {profile?.profilePicture || profile?.avatar_url ? (
                 <img src={profile.profilePicture || profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
               ) : (
@@ -110,7 +114,7 @@ const MobileHeader = memo(({
                 </span>
               )}
             </div>
-            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#F4978E] rounded-full border-2 border-[#FFDAB9]" />
+            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2" style={{ backgroundColor: 'var(--theme-secondary)', borderColor: 'var(--theme-highlight)' }} />
           </div>
 
           <div className="flex-1 min-w-0">
@@ -127,7 +131,10 @@ const MobileHeader = memo(({
           <motion.button 
             whileTap={{ scale: 0.9 }}
             transition={{ duration: 0.15 }}
-            className="relative p-2 hover:bg-[#FFDAB9]/50 rounded-lg transition-colors duration-250"
+            className="relative p-2 rounded-lg transition-colors duration-250"
+            style={{ backgroundColor: 'transparent' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--theme-highlight) 50%, transparent)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
             <BellDot className="w-5 h-5 text-slate-600" strokeWidth={2} />
           </motion.button>
@@ -136,7 +143,10 @@ const MobileHeader = memo(({
             onClick={onMenuToggle}
             whileTap={{ scale: 0.9 }}
             transition={{ duration: 0.15 }}
-            className="p-2 hover:bg-[#FFDAB9]/50 rounded-lg transition-colors duration-250"
+            className="p-2 rounded-lg transition-colors duration-250"
+            style={{ backgroundColor: 'transparent' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--theme-highlight) 50%, transparent)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
             {showMobileMenu ? (
               <X className="w-5 h-5 text-slate-700" strokeWidth={2} />
@@ -150,13 +160,8 @@ const MobileHeader = memo(({
       <div className="flex items-center gap-2">
         <motion.div
           layoutId="mobileTabIndicator"
-          className={cn(
-            "h-1 w-12 rounded-full",
-            activeTab === 'today' && "bg-[#F08080]",
-            activeTab === 'growth' && "bg-[#F4978E]",
-            activeTab === 'wellbeing' && "bg-[#F08080]",
-            activeTab === 'profile' && "bg-[#F4978E]"
-          )}
+          className="h-1 w-12 rounded-full"
+          style={{ background: 'linear-gradient(to right, var(--theme-primary), var(--theme-secondary))' }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
         />
         <span className="text-xs font-medium text-slate-600">

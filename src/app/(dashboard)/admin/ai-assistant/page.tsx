@@ -2,167 +2,233 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
-  Send,
-  Bot,
-  User,
-  Sparkles,
-  TrendingUp,
-  TrendingDown,
-  Users,
-  GraduationCap,
-  Calendar,
-  Award,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
-  BarChart3,
-  PieChart,
-  Activity,
-  Brain,
-  Loader2,
-  BookOpen,
-  Heart,
-  Target,
-  Clock
+  Send, Bot, User, Sparkles, TrendingUp, Users, GraduationCap,
+  Calendar, Activity, BarChart3, Brain, Loader2, Copy, Check,
+  Plus, History, Menu, X, Shield, TrendingDown, AlertCircle,
+  Building2, ChevronRight, Clock
 } from 'lucide-react'
-import Link from 'next/link'
-import ReactMarkdown from 'react-markdown'
-import { ClientWrapper } from '@/components/providers/ClientWrapper'
+import { cn } from '@/lib/utils'
+import { AIMessageRenderer } from '@/components/shared/AIMessageRenderer'
 
 interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
-  timestamp: Date
-  metadata?: {
-    dataType?: string[]
-    metrics?: any
-  }
+  timestamp: string
+}
+
+interface ChatSession {
+  id: string
+  title: string
+  messages: Message[]
+  createdAt: string
+  updatedAt: string
 }
 
 interface QuickPrompt {
   icon: React.ElementType
   label: string
   prompt: string
-  color: string
+  category: 'performance' | 'wellbeing' | 'operations'
+}
+
+// LocalStorage helpers
+const SESSIONS_KEY = 'catalyst_admin_chat_sessions'
+const RETENTION_MONTHS = 12
+
+const loadSessions = (): ChatSession[] => {
+  if (typeof window === 'undefined') return []
+  try {
+    const stored = localStorage.getItem(SESSIONS_KEY)
+    if (!stored) return []
+    
+    const sessions: ChatSession[] = JSON.parse(stored)
+    const retentionDate = new Date()
+    retentionDate.setMonth(retentionDate.getMonth() - RETENTION_MONTHS)
+    
+    const validSessions = sessions.filter(session => {
+      const sessionDate = new Date(session.createdAt)
+      return sessionDate > retentionDate
+    })
+    
+    if (validSessions.length !== sessions.length) {
+      localStorage.setItem(SESSIONS_KEY, JSON.stringify(validSessions))
+    }
+    
+    return validSessions
+  } catch (error) {
+    console.error('Failed to load sessions:', error)
+    return []
+  }
+}
+
+const saveSessions = (sessions: ChatSession[]) => {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions))
+  } catch (error) {
+    console.error('Failed to save sessions:', error)
+  }
+}
+
+const generateSessionTitle = (firstMessage: string): string => {
+  const cleaned = firstMessage.trim().split(/[.!?\n]/)[0]
+  return cleaned.length > 50 ? cleaned.substring(0, 50) + '...' : cleaned || 'New Analysis'
 }
 
 export default function AIAssistantPage() {
+  const [sessions, setSessions] = useState<ChatSession[]>([])
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [isTyping, setIsTyping] = useState(false)
-  const [loadingStatus, setLoadingStatus] = useState('Initializing...')
-  const [revealedMessages, setRevealedMessages] = useState<Set<string>>(new Set())
+  const [copiedMessage, setCopiedMessage] = useState<string | null>(null)
+  const [showHistory, setShowHistory] = useState(false)
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+  const [analysisContext, setAnalysisContext] = useState<'performance' | 'wellbeing' | 'operations' | 'general'>('general')
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
 
   const quickPrompts: QuickPrompt[] = [
     {
       icon: TrendingUp,
-      label: 'Performance Analysis',
+      label: 'Performance Trends',
       prompt: 'Analyze overall school performance trends for the current semester',
-      color: 'bg-blue-600'
+      category: 'performance'
     },
     {
       icon: Activity,
-      label: 'Student Wellbeing',
+      label: 'Wellbeing Analysis',
       prompt: 'Show me student wellbeing and mood patterns this month',
-      color: 'bg-slate-600'
+      category: 'wellbeing'
     },
     {
       icon: GraduationCap,
       label: 'Academic Insights',
       prompt: 'What are the top performing subjects and areas needing improvement?',
-      color: 'bg-blue-700'
+      category: 'performance'
     },
     {
       icon: Users,
-      label: 'Teacher Performance',
+      label: 'Teacher Metrics',
       prompt: 'Provide teacher performance metrics and engagement analysis',
-      color: 'bg-slate-700'
+      category: 'operations'
     },
     {
       icon: Calendar,
       label: 'Attendance Patterns',
       prompt: 'Analyze attendance patterns and identify concerning trends',
-      color: 'bg-blue-600'
+      category: 'operations'
     },
     {
       icon: BarChart3,
       label: 'Action Items',
       prompt: 'What are the most critical action items for school improvement?',
-      color: 'bg-slate-600'
+      category: 'operations'
+    },
+    {
+      icon: AlertCircle,
+      label: 'Risk Assessment',
+      prompt: 'Identify students at risk and recommend intervention strategies',
+      category: 'wellbeing'
+    },
+    {
+      icon: TrendingDown,
+      label: 'Declining Performance',
+      prompt: 'Show classes or students with declining academic performance',
+      category: 'performance'
     }
   ]
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  }, [])
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages])
+  }, [messages, scrollToBottom])
 
-  // Mark message as revealed with smooth liquid effect
-  const revealMessage = (messageId: string) => {
-    setTimeout(() => {
-      setRevealedMessages(prev => new Set(prev).add(messageId))
-    }, 100)
-  }
-
+  // Load sessions from localStorage
   useEffect(() => {
-    // Add welcome message
-    const welcomeMessage = {
-      id: '1',
-      role: 'assistant' as const,
-      content: `# School Intelligence Assistant
+    const loadedSessions = loadSessions()
+    setSessions(loadedSessions)
+    
+    if (loadedSessions.length === 0) {
+      const welcomeSession: ChatSession = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        title: 'Welcome',
+        messages: [{
+          id: '1',
+          role: 'assistant',
+          content: `# School Intelligence Assistant
 
-An enterprise analytics platform providing real-time insights from your institution's comprehensive data ecosystem.
+Welcome to Catalyst's AI-powered analytics platform. I can help you analyze and optimize every aspect of your school's performance.
 
-## Analytical Capabilities
+## Quick Analysis Options
 
-### Academic Performance
-- Grade distributions and trend analysis across subjects
-- Assessment performance patterns and benchmarking
-- Subject-specific strengths and improvement areas
-- Student progress tracking and predictive analytics
+**📈 Academic Performance**
+- Grade distributions and trends
+- Subject-specific insights
+- Student progress tracking
 
-### Student Wellbeing
-- Emotional health metrics and behavioral patterns
-- Engagement and motivation indicators
-- Early intervention identification for at-risk students
-- Wellness trend analysis
+**💙 Student Wellbeing**
+- Behavioral patterns
+- Engagement metrics
+- Risk identification
 
-### Operational Intelligence
-- Attendance patterns and absenteeism trends
-- Teacher performance metrics and effectiveness analysis
-- Class-level and institution-wide performance indicators
-- Resource allocation recommendations
+**⚙️ Operations**
+- Attendance analysis
+- Teacher performance
+- Resource optimization
 
----
-
-**Getting Started:** Select a quick analysis option below or enter a specific query about your school's performance metrics.
-
-*For optimal results, provide specific parameters in your queries. Examples: "Analyze Mathematics performance trends for Grade 10" or "Identify students requiring wellbeing intervention support."*`,
-      timestamp: new Date(),
-      metadata: {
-        dataType: ['welcome']
+Select a quick prompt or ask me anything about your school data.`,
+          timestamp: new Date().toISOString()
+        }],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       }
+      setSessions([welcomeSession])
+      setCurrentSessionId(welcomeSession.id)
+      setMessages(welcomeSession.messages)
+    } else {
+      const mostRecent = loadedSessions[0]
+      setCurrentSessionId(mostRecent.id)
+      setMessages(mostRecent.messages)
     }
-    setMessages([welcomeMessage])
-    // Trigger reveal for welcome message
-    revealMessage('1')
   }, [])
+
+  // Save sessions whenever they change
+  useEffect(() => {
+    if (sessions.length > 0) {
+      saveSessions(sessions)
+    }
+  }, [sessions])
+
+  // Update current session when messages change
+  useEffect(() => {
+    if (currentSessionId && messages.length > 0) {
+      setSessions(prev => prev.map(session => {
+        if (session.id === currentSessionId) {
+          return {
+            ...session,
+            messages: messages,
+            updatedAt: new Date().toISOString(),
+            title: session.title === 'New Analysis' && messages[0]?.role === 'user'
+              ? generateSessionTitle(messages[0].content)
+              : session.title
+          }
+        }
+        return session
+      }))
+    }
+  }, [messages, currentSessionId])
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return
@@ -171,34 +237,32 @@ An enterprise analytics platform providing real-time insights from your institut
       id: Date.now().toString(),
       role: 'user',
       content: input,
-      timestamp: new Date()
+      timestamp: new Date().toISOString()
     }
 
     setMessages(prev => [...prev, userMessage])
-    setRevealedMessages(prev => new Set(prev).add(userMessage.id))
     setInput('')
     setIsLoading(true)
-    setIsTyping(true)
-    
-    // Dynamic loading status updates
-    setLoadingStatus('Authenticating request...')
-    await new Promise(resolve => setTimeout(resolve, 300))
-    
-    setLoadingStatus('Fetching school data...')
-    await new Promise(resolve => setTimeout(resolve, 400))
-    
-    setLoadingStatus('Analyzing performance metrics...')
+
+    // Create assistant message placeholder
+    const assistantMessageId = (Date.now() + 1).toString()
+    const assistantMessage: Message = {
+      id: assistantMessageId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date().toISOString()
+    }
+    setMessages(prev => [...prev, assistantMessage])
 
     try {
       const response = await fetch('/api/admin/ai-chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
           message: input,
-          context: 'school_analytics'
+          context: analysisContext,
+          stream: true
         }),
       })
 
@@ -207,373 +271,458 @@ An enterprise analytics platform providing real-time insights from your institut
         throw new Error(errorData.error || `API Error: ${response.status}`)
       }
 
-      setLoadingStatus('Generating insights...')
-      const data = await response.json()
-      
-      setLoadingStatus('Formatting response...')
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      let accumulatedContent = ''
 
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: data.response,
-        timestamp: new Date(),
-        metadata: data.metadata
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          const chunk = decoder.decode(value)
+          const lines = chunk.split('\n')
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6)
+              if (data === '[DONE]') continue
+              
+              try {
+                const parsed = JSON.parse(data)
+                if (parsed.content) {
+                  accumulatedContent += parsed.content
+                  setMessages(prev => prev.map(msg => 
+                    msg.id === assistantMessageId 
+                      ? { ...msg, content: accumulatedContent }
+                      : msg
+                  ))
+                }
+              } catch (e) {
+                // Skip invalid JSON
+              }
+            }
+          }
+        }
       }
 
-      setMessages(prev => [...prev, assistantMessage])
-      
-      // Trigger smooth reveal for the new message
-      revealMessage(assistantMessage.id)
+      setIsLoading(false)
     } catch (error) {
       console.error('Error:', error)
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: `❌ I apologize, but I encountered an error while processing your request.
+      const errorMessage = `❌ I apologize, but I encountered an error while processing your request.
 
-**Error Details**: ${error instanceof Error ? error.message : 'Unknown error'}
+**Error**: ${error instanceof Error ? error.message : 'Unknown error'}
 
 Please ensure:
 - You have admin access
-- The Gemini API key is configured in the environment
+- The Gemini API key is configured
 - Your school data is properly set up
 
-Try again or contact support if the issue persists.`,
-        timestamp: new Date()
-      }
-      setMessages(prev => [...prev, errorMessage])
-    } finally {
+Try again or contact support if the issue persists.`
+      
+      setMessages(prev => prev.map(msg => 
+        msg.id === assistantMessageId 
+          ? { ...msg, content: errorMessage }
+          : msg
+      ))
       setIsLoading(false)
-      setIsTyping(false)
+    } finally {
       inputRef.current?.focus()
     }
   }
 
-  const handleQuickPrompt = (prompt: string) => {
+  const handleQuickPrompt = (prompt: string, category: 'performance' | 'wellbeing' | 'operations') => {
     setInput(prompt)
+    setAnalysisContext(category)
     inputRef.current?.focus()
   }
 
-  const formatContent = (content: string) => {
-    // Custom markdown renderer for professional formatting
-    return (
-      <div className="prose prose-sm md:prose-base max-w-none">
-        <ReactMarkdown
-          components={{
-            h1: ({ children }) => (
-              <h1 className="text-2xl md:text-3xl font-bold mb-4 text-slate-900 leading-tight border-l-4 border-blue-600 pl-4">
-                {children}
-              </h1>
-            ),
-            h2: ({ children }) => (
-              <h2 className="text-xl md:text-2xl font-semibold mb-3 text-slate-800 border-b border-slate-200 pb-2">
-                {children}
-              </h2>
-            ),
-            h3: ({ children }) => (
-              <h3 className="text-lg md:text-xl font-semibold mb-2 text-slate-700 flex items-center">
-                <span className="w-1 h-5 bg-blue-600 mr-3 rounded"></span>
-                {children}
-              </h3>
-            ),
-            p: ({ children }) => (
-              <p className="mb-4 text-slate-600 leading-relaxed text-base">{children}</p>
-            ),
-            ul: ({ children }) => (
-              <ul className="mb-4 ml-1 space-y-2">{children}</ul>
-            ),
-            ol: ({ children }) => (
-              <ol className="mb-4 ml-1 space-y-2 list-decimal list-inside">{children}</ol>
-            ),
-            li: ({ children }) => (
-              <li className="text-slate-600 flex items-start text-base">
-                <span className="text-blue-600 mr-3 text-sm">•</span>
-                <span className="flex-1">{children}</span>
-              </li>
-            ),
-            strong: ({ children }) => (
-              <strong className="font-semibold text-slate-900">{children}</strong>
-            ),
-            em: ({ children }) => (
-              <em className="italic text-slate-600">{children}</em>
-            ),
-            blockquote: ({ children }) => (
-              <blockquote className="border-l-4 border-blue-600 pl-4 py-3 my-4 bg-slate-100 rounded-r">
-                <div className="text-slate-700 font-medium">{children}</div>
-              </blockquote>
-            ),
-            code: ({ node, className, children, ...props }) => {
-              const isInline = !className
-              return isInline ? (
-                <code className="bg-slate-100 text-slate-800 text-sm px-2 py-0.5 rounded font-mono" {...props}>{children}</code>
-              ) : (
-                <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto my-4 border border-slate-700">
-                  <code className="text-sm font-mono" {...props}>{children}</code>
-                </pre>
-              )
-            },
-            table: ({ children }) => (
-              <div className="overflow-x-auto my-6">
-                <table className="min-w-full border-collapse bg-white shadow-sm rounded-lg overflow-hidden border border-slate-200">{children}</table>
-              </div>
-            ),
-            thead: ({ children }) => (
-              <thead className="bg-slate-100 border-b-2 border-slate-300">{children}</thead>
-            ),
-            tbody: ({ children }) => (
-              <tbody className="divide-y divide-slate-200">{children}</tbody>
-            ),
-            th: ({ children }) => (
-              <th className="px-6 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wider bg-slate-100">{children}</th>
-            ),
-            td: ({ children }) => (
-              <td className="px-6 py-4 text-sm text-slate-700 whitespace-nowrap">{children}</td>
-            ),
-            tr: ({ children }) => (
-              <tr className="hover:bg-slate-50 transition-colors">{children}</tr>
-            ),
-            hr: () => (
-              <hr className="my-6 border-t border-slate-200" />
-            ),
-          }}
-        >
-          {content}
-        </ReactMarkdown>
-      </div>
-    )
+  const createNewSession = () => {
+    const newSession: ChatSession = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      title: 'New Analysis',
+      messages: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+    setSessions(prev => [newSession, ...prev])
+    setCurrentSessionId(newSession.id)
+    setMessages([])
+    setShowHistory(false)
+    setIsMobileSidebarOpen(false)
+  }
+
+  const switchSession = (sessionId: string) => {
+    const session = sessions.find(s => s.id === sessionId)
+    if (session) {
+      setCurrentSessionId(sessionId)
+      setMessages(session.messages)
+      setShowHistory(false)
+      setIsMobileSidebarOpen(false)
+    }
+  }
+
+  const copyMessage = useCallback((messageId: string, content: string) => {
+    navigator.clipboard.writeText(content)
+    setCopiedMessage(messageId)
+    setTimeout(() => setCopiedMessage(null), 2000)
+  }, [])
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
+    }
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 overflow-hidden">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
-        <div className="px-3 md:px-6 py-3 md:py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3 md:space-x-4">
-              <div className="p-2.5 md:p-3 bg-blue-600 rounded-lg shadow-sm">
-                <Brain className="w-5 h-5 md:w-6 md:h-6 text-white" />
+      <div className="flex-shrink-0 bg-white border-b border-slate-200 shadow-sm">
+        <div className="px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="lg:hidden"
+              onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl">
+                <Brain className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-lg md:text-2xl font-semibold text-slate-900">
-                  School Intelligence Assistant
-                </h1>
-                <p className="text-xs md:text-sm text-slate-600 font-normal hidden md:block">
-                  Enterprise Analytics Platform
-                </p>
+                <h1 className="text-lg font-bold text-slate-800">School Intelligence Assistant</h1>
+                <p className="text-xs text-slate-500">AI-powered analytics platform</p>
               </div>
             </div>
-            <Link href="/admin">
-              <Button variant="outline" size="sm" className="h-8 md:h-9 border-slate-300 text-slate-700 hover:bg-slate-50 font-medium">
-                Back
-              </Button>
-            </Link>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowHistory(!showHistory)}
+              className="hidden lg:flex"
+            >
+              <History className="h-4 w-4 mr-2" />
+              History
+            </Button>
+            <Button
+              onClick={createNewSession}
+              size="sm"
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Analysis
+            </Button>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-col h-[calc(100vh-60px)] md:h-[calc(100vh-72px)]">
-        {/* Messages Area */}
-        <ScrollArea className="flex-1 p-3 md:p-6">
-          <div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
-            <AnimatePresence>
-              {messages.map((message) => {
-                const isRevealed = revealedMessages.has(message.id)
-                return (
-                <motion.div
-                  key={message.id}
-                  initial={false}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className={`flex ${
-                    message.role === 'user' ? 'justify-end' : 'justify-start'
-                  }`}
-                >
-                  <div
-                    className={`flex gap-2 md:gap-3 max-w-[90%] md:max-w-[80%] ${
-                      message.role === 'user' ? 'flex-row-reverse' : 'flex-row'
-                    }`}
-                  >
-                    <Avatar className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0">
-                      <AvatarFallback
-                        className={
-                          message.role === 'user'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-slate-700 text-white'
-                        }
-                      >
-                        {message.role === 'user' ? <User className="w-4 h-4 md:w-5 md:h-5" /> : <Bot className="w-4 h-4 md:w-5 md:h-5" />}
-                      </AvatarFallback>
-                    </Avatar>
-                    <Card
-                      className={`transition-all duration-300 ${
-                        message.role === 'user'
-                          ? 'bg-blue-600 text-white border-0 shadow-sm hover:shadow-md'
-                          : 'bg-white border border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300'
-                      }`}
+      {/* Main Content */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Sidebar - Chat History (Desktop) */}
+        <AnimatePresence>
+          {showHistory && (
+            <motion.div
+              initial={{ x: -300, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -300, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="hidden lg:block w-72 bg-white border-r border-slate-200 flex-shrink-0"
+            >
+              <div className="p-4 border-b border-slate-200">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold text-slate-800">Analysis History</h3>
+                  <Button variant="ghost" size="sm" onClick={() => setShowHistory(false)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-slate-500">{sessions.length} sessions</p>
+              </div>
+              <ScrollArea className="h-[calc(100vh-140px)]">
+                <div className="p-2 space-y-1">
+                  {sessions.map((session) => (
+                    <button
+                      key={session.id}
+                      onClick={() => switchSession(session.id)}
+                      className={cn(
+                        "w-full text-left p-3 rounded-lg transition-all",
+                        currentSessionId === session.id
+                          ? "bg-blue-50 border border-blue-200"
+                          : "hover:bg-slate-50 border border-transparent"
+                      )}
                     >
-                      <CardContent className="p-4 md:p-5">
-                        {message.role === 'assistant' ? (
-                          <div className="space-y-3">
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ 
-                                opacity: isRevealed ? 1 : 0,
-                                height: isRevealed ? 'auto' : 0
-                              }}
-                              transition={{ 
-                                opacity: { duration: 0.6, ease: 'easeOut' },
-                                height: { duration: 0.8, ease: [0.4, 0.0, 0.2, 1] }
-                              }}
-                              style={{ overflow: 'hidden' }}
-                            >
-                              {formatContent(message.content)}
-                            </motion.div>
-                            {isRevealed && message.metadata?.dataType && message.metadata.dataType.length > 0 && (
-                              <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.4, delay: 0.4 }}
-                                className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-slate-100"
-                              >
-                                <span className="text-xs text-slate-500 font-medium">Data Sources:</span>
-                                {message.metadata.dataType.map((type) => (
-                                  <Badge
-                                    key={type}
-                                    variant="outline"
-                                    className="text-[10px] md:text-xs bg-slate-50 border-slate-300 text-slate-700 font-normal"
-                                  >
-                                    {type}
-                                  </Badge>
-                                ))}
-                              </motion.div>
-                            )}
-                          </div>
-                        ) : (
-                          <motion.div
-                            initial={false}
-                            animate={{ opacity: 1 }}
-                          >
-                            <p className="text-sm md:text-base font-medium leading-relaxed">{message.content}</p>
-                          </motion.div>
-                        )}
-                        <p
-                          className={`text-[10px] md:text-xs mt-3 flex items-center gap-1 ${
-                            message.role === 'user'
-                              ? 'text-blue-100'
-                              : 'text-slate-400'
-                          }`}
-                        >
-                          <Clock className="w-3 h-3" />
-                          {message.timestamp.toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </motion.div>
-              )
-              })}
-            </AnimatePresence>
+                      <div className="font-medium text-sm text-slate-800 truncate">
+                        {session.title}
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1">
+                        {new Date(session.updatedAt).toLocaleDateString()}
+                      </div>
+                      <div className="text-xs text-slate-400 mt-0.5">
+                        {session.messages.length} messages
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </ScrollArea>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-            {isTyping && (
+        {/* Mobile Sidebar */}
+        <AnimatePresence>
+          {isMobileSidebarOpen && (
+            <>
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex justify-start"
+                exit={{ opacity: 0 }}
+                className="lg:hidden fixed inset-0 bg-black/50 z-40"
+                onClick={() => setIsMobileSidebarOpen(false)}
+              />
+              <motion.div
+                initial={{ x: -300 }}
+                animate={{ x: 0 }}
+                exit={{ x: -300 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                className="lg:hidden fixed left-0 top-0 bottom-0 w-72 bg-white z-50 shadow-xl"
               >
-                <div className="flex gap-2 md:gap-3">
-                  <Avatar className="w-8 h-8 md:w-10 md:h-10">
-                    <AvatarFallback className="bg-slate-700 text-white">
-                      <Bot className="w-4 h-4 md:w-5 md:h-5" />
+                <div className="p-4 border-b border-slate-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold text-slate-800">Analysis History</h3>
+                    <Button variant="ghost" size="sm" onClick={() => setIsMobileSidebarOpen(false)}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-slate-500">{sessions.length} sessions</p>
+                </div>
+                <ScrollArea className="h-[calc(100vh-80px)]">
+                  <div className="p-2 space-y-1">
+                    {sessions.map((session) => (
+                      <button
+                        key={session.id}
+                        onClick={() => switchSession(session.id)}
+                        className={cn(
+                          "w-full text-left p-3 rounded-lg transition-all",
+                          currentSessionId === session.id
+                            ? "bg-blue-50 border border-blue-200"
+                            : "hover:bg-slate-50 border border-transparent"
+                        )}
+                      >
+                        <div className="font-medium text-sm text-slate-800 truncate">
+                          {session.title}
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1">
+                          {new Date(session.updatedAt).toLocaleDateString()}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
+        {/* Center - Chat Area */}
+        <div className="flex-1 flex flex-col">
+          {/* Messages */}
+          <ScrollArea className="flex-1 p-4" ref={messagesContainerRef}>
+            <div className="max-w-4xl mx-auto space-y-6">
+              {messages.map((message) => (
+                <motion.div
+                  key={message.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={cn(
+                    "flex gap-3",
+                    message.role === 'user' ? "justify-end" : "justify-start"
+                  )}
+                >
+                  {message.role === 'assistant' && (
+                    <Avatar className="h-8 w-8 flex-shrink-0">
+                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600">
+                        <Bot className="h-4 w-4 text-white" />
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                  
+                  <div className={cn(
+                    "flex-1 max-w-2xl",
+                    message.role === 'user' && "flex justify-end"
+                  )}>
+                    <div className={cn(
+                      "rounded-2xl p-4",
+                      message.role === 'user'
+                        ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white"
+                        : "bg-white border border-slate-200 shadow-sm"
+                    )}>
+                      {message.role === 'assistant' ? (
+                        <AIMessageRenderer
+                          content={message.content}
+                          accentColor="blue"
+                          theme="light"
+                          showCopyButton={true}
+                        />
+                      ) : (
+                        <p className="text-white whitespace-pre-wrap">{message.content}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {message.role === 'user' && (
+                    <Avatar className="h-8 w-8 flex-shrink-0">
+                      <AvatarFallback className="bg-gradient-to-br from-slate-600 to-slate-700">
+                        <User className="h-4 w-4 text-white" />
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                </motion.div>
+              ))}
+              
+              {isLoading && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex gap-3"
+                >
+                  <Avatar className="h-8 w-8 flex-shrink-0">
+                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600">
+                      <Bot className="h-4 w-4 text-white" />
                     </AvatarFallback>
                   </Avatar>
-                  <Card className="bg-white border border-slate-200 shadow-sm">
-                    <CardContent className="p-3 md:p-4">
-                      <div className="flex items-center space-x-3">
-                        <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                  <div className="flex-1 max-w-2xl">
+                    <div className="bg-gradient-to-br from-blue-50 to-slate-50 border border-blue-100 rounded-2xl p-5 shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <div className="w-8 h-8 rounded-full bg-blue-100 animate-pulse"></div>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
+                          </div>
+                        </div>
                         <div>
-                          <span className="text-sm font-medium text-slate-700">{loadingStatus}</span>
-                          <div className="text-xs text-slate-500 mt-0.5">Please wait</div>
+                          <div className="text-sm font-semibold text-slate-800 mb-1">
+                            Analyzing School Data
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex gap-1">
+                              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                            </div>
+                            <span className="text-xs text-slate-600">Processing insights</span>
+                          </div>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </motion.div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-        </ScrollArea>
-
-        {/* Quick Prompts - Only show when no messages or just welcome */}
-        {messages.length <= 1 && (
-          <div className="px-3 md:px-6 py-3 md:py-4 border-t border-slate-200 bg-slate-50">
-            <div className="max-w-4xl mx-auto">
-              <p className="text-xs md:text-sm text-slate-700 font-medium mb-3">Quick Analysis Options</p>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
-                {quickPrompts.map((prompt) => (
-                  <ClientWrapper key={prompt.label}>
-                    <Button
-                      variant="outline"
-                      onClick={() => handleQuickPrompt(prompt.prompt)}
-                      className="h-auto p-2 md:p-3 flex flex-col items-center justify-center gap-1.5 md:gap-2 border-slate-300 hover:bg-white hover:border-blue-600 transition-all"
-                    >
-                      <div className={`p-1.5 md:p-2 rounded ${prompt.color}`}>
-                        <prompt.icon className="w-4 h-4 md:w-5 md:h-5 text-white" />
-                      </div>
-                      <span className="text-[10px] md:text-xs text-center line-clamp-2 text-slate-700 font-medium">
-                        {prompt.label}
-                      </span>
-                    </Button>
-                  </ClientWrapper>
-                ))}
-              </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+              
+              <div ref={messagesEndRef} />
             </div>
-          </div>
-        )}
+          </ScrollArea>
 
-        {/* Input Area */}
-        <div className="border-t border-slate-200 bg-white p-3 md:p-4">
-          <div className="max-w-4xl mx-auto">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                handleSend()
-              }}
-              className="flex gap-2 md:gap-3"
-            >
-              <div className="flex-1 relative">
-                <Input
+          {/* Input Area */}
+          <div className="flex-shrink-0 border-t border-slate-200 bg-white p-4">
+            <div className="max-w-4xl mx-auto">
+              <div className="flex gap-2">
+                <textarea
                   ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ask about student performance, attendance, wellbeing, or any school metrics..."
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask about school performance, student wellbeing, or operational insights..."
+                  className="flex-1 resize-none border border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[52px] max-h-32"
+                  rows={1}
                   disabled={isLoading}
-                  className="h-10 md:h-11 text-sm md:text-base border-slate-300 focus:border-blue-600 focus:ring-blue-600 bg-white pl-4 pr-4"
                 />
-              </div>
-              <ClientWrapper>
                 <Button
-                  type="submit"
+                  onClick={handleSend}
                   disabled={!input.trim() || isLoading}
-                  className="bg-blue-600 hover:bg-blue-700 h-10 md:h-11 px-4 md:px-6 font-medium"
+                  className="h-[52px] px-6 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
                 >
                   {isLoading ? (
-                    <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
+                    <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
-                    <>
-                      <Send className="w-4 h-4 md:w-5 md:h-5" />
-                      <span className="hidden md:inline ml-2">Send</span>
-                    </>
+                    <Send className="h-5 w-5" />
                   )}
                 </Button>
-              </ClientWrapper>
-            </form>
-            <p className="text-[10px] md:text-xs text-slate-500 mt-2 text-center">
-              Powered by Gemini 2.5 Flash | Real-time school data analysis
-            </p>
+              </div>
+              <p className="text-xs text-slate-500 mt-2">
+                Press Enter to send, Shift+Enter for new line
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Sidebar - Quick Prompts */}
+        <div className="hidden xl:block w-80 bg-white border-l border-slate-200 flex-shrink-0 overflow-y-auto">
+          <div className="p-4">
+            <h3 className="font-semibold text-slate-800 mb-4">Quick Analysis</h3>
+            
+            <div className="space-y-6">
+              {['performance', 'wellbeing', 'operations'].map((category) => (
+                <div key={category}>
+                  <h4 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">
+                    {category}
+                  </h4>
+                  <div className="space-y-2">
+                    {quickPrompts
+                      .filter(p => p.category === category)
+                      .map((prompt, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleQuickPrompt(prompt.prompt, prompt.category)}
+                          className="w-full text-left p-3 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-all group"
+                        >
+                          <div className="flex items-start gap-2">
+                            <div className={cn(
+                              "p-1.5 rounded-lg flex-shrink-0",
+                              category === 'performance' && "bg-blue-100 text-blue-600",
+                              category === 'wellbeing' && "bg-purple-100 text-purple-600",
+                              category === 'operations' && "bg-slate-100 text-slate-600"
+                            )}>
+                              <prompt.icon className="h-4 w-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-sm text-slate-800 group-hover:text-blue-700">
+                                {prompt.label}
+                              </div>
+                              <div className="text-xs text-slate-500 mt-1 line-clamp-2">
+                                {prompt.prompt}
+                              </div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-slate-400 flex-shrink-0 mt-0.5" />
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Stats Card */}
+            <div className="mt-6 p-4 bg-gradient-to-br from-blue-50 to-slate-50 rounded-xl border border-blue-100">
+              <div className="flex items-center gap-2 mb-2">
+                <Shield className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-semibold text-slate-800">Session Info</span>
+              </div>
+              <div className="space-y-2 text-xs text-slate-600">
+                <div className="flex justify-between">
+                  <span>Messages:</span>
+                  <span className="font-medium">{messages.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Total Sessions:</span>
+                  <span className="font-medium">{sessions.length}</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

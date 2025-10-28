@@ -63,6 +63,8 @@
     "firebase-admin": "^13.5.0",
     "firebase-functions": "^6.6.0",
     "framer-motion": "^12.23.22",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.3",
     "jsqr": "^1.4.0",
     "lottie-react": "^2.4.0",
     "lru-cache": "^11.2.2",

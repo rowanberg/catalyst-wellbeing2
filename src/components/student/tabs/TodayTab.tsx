@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { useStudentRank } from '@/hooks/useStudentRank'
 
 interface TodayTabProps {
   data: any
@@ -27,6 +28,39 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
   const [greeting, setGreeting] = useState('')
   const [timeContext, setTimeContext] = useState('')
   const [questsExpanded, setQuestsExpanded] = useState(true)
+  const [upcomingAssessments, setUpcomingAssessments] = useState<any[]>([])
+  const [assessmentsLoading, setAssessmentsLoading] = useState(true)
+  
+  // Fetch student rank data
+  const { rankData, loading: rankLoading } = useStudentRank(profile?.id)
+
+  // Fetch upcoming assessments
+  useEffect(() => {
+    const fetchUpcomingAssessments = async () => {
+      if (!profile?.id) return
+      
+      try {
+        setAssessmentsLoading(true)
+        const response = await fetch('/api/student/upcoming-assessments')
+        if (response.ok) {
+          const data = await response.json()
+          console.log('📅 Upcoming assessments received:', {
+            count: data.count,
+            assessments: data.assessments
+          })
+          setUpcomingAssessments(data.assessments || [])
+        } else {
+          console.error('❌ Failed to fetch assessments:', response.status, response.statusText)
+        }
+      } catch (error) {
+        console.error('Error fetching upcoming assessments:', error)
+      } finally {
+        setAssessmentsLoading(false)
+      }
+    }
+
+    fetchUpcomingAssessments()
+  }, [profile?.id])
 
   // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
   // Dynamic greeting based on time of day - memoized
@@ -107,7 +141,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
         <p className="text-white/90 text-sm sm:text-base mb-4">{timeContext}</p>
         
         {/* Contextual prompt */}
-        {todayData.upcomingExams?.length > 0 && (
+        {upcomingAssessments.length > 0 && upcomingAssessments[0].daysUntil <= 3 && (
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -119,7 +153,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
               </div>
               <div>
                 <p className="font-medium text-sm">
-                  {todayData.upcomingExams[0].subject} exam tomorrow
+                  {upcomingAssessments[0].subject} {upcomingAssessments[0].type} in {upcomingAssessments[0].daysUntil} {upcomingAssessments[0].daysUntil === 1 ? 'day' : 'days'}
                 </p>
                 <p className="text-xs text-white/90">Time to prepare!</p>
               </div>
@@ -128,7 +162,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
               size="sm"
               variant="secondary"
               className="bg-white/30 hover:bg-white/40 text-white border-0"
-              onClick={() => router.push(`/student/exam-prep/${todayData.upcomingExams[0].id}`)}
+              onClick={() => router.push('/student/examinations')}
             >
               Prepare
               <ArrowRight className="w-4 h-4 ml-1" />
@@ -167,7 +201,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
               <div className="flex items-center justify-between mb-2">
                 <Trophy className="w-5 h-5" style={{ color: 'var(--theme-secondary)' }} />
                 <span className="text-2xl font-bold" style={{ color: 'var(--theme-secondary)' }}>
-                  #{todayData.weeklyProgress?.rank || 0}
+                  {rankData ? `#${rankData.class_rank}` : '#0'}
                 </span>
               </div>
               <p className="text-xs text-slate-600">Class Rank</p>
@@ -405,37 +439,67 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
               </div>
             </CardHeader>
             <CardContent className="pt-6">
-              {todayData.upcomingExams?.length > 0 ? (
+              {assessmentsLoading ? (
                 <div className="space-y-3">
-                  {todayData.upcomingExams.slice(0, 3).map((exam: any) => (
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-2xl bg-slate-100 animate-pulse">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-slate-200 rounded-xl" />
+                        <div>
+                          <div className="h-4 w-24 bg-slate-200 rounded mb-1" />
+                          <div className="h-3 w-32 bg-slate-200 rounded" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : upcomingAssessments.length > 0 ? (
+                <div className="space-y-3">
+                  {upcomingAssessments.slice(0, 5).map((assessment: any) => (
                     <motion.div
-                      key={exam.id}
+                      key={assessment.id}
                       whileHover={{ x: 4 }}
                       className="flex items-center justify-between p-3 rounded-2xl cursor-pointer shadow-sm hover:shadow-md transition-shadow"
                       style={{ backgroundColor: 'color-mix(in srgb, var(--theme-highlight) 30%, transparent)', borderWidth: '1px', borderStyle: 'solid', borderColor: 'var(--theme-tertiary)' }}
-                      onClick={() => handleExamPrepClick(exam.id)}
+                      onClick={() => router.push('/student/examinations')}
                     >
-                      <div className="flex items-center space-x-3">
-                        <div className="p-2 rounded-xl" style={{ backgroundColor: 'color-mix(in srgb, var(--theme-tertiary) 50%, transparent)' }}>
+                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                        <div className="p-2 rounded-xl flex-shrink-0" style={{ backgroundColor: 'color-mix(in srgb, var(--theme-tertiary) 50%, transparent)' }}>
                           <Clock className="h-4 w-4" style={{ color: 'var(--theme-primary)' }} />
                         </div>
-                        <div>
-                          <p className="font-medium text-sm text-slate-800">
-                            {exam.subject}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm text-slate-800 truncate">
+                            {assessment.title}
                           </p>
                           <p className="text-xs text-slate-500">
-                            {new Date(exam.date).toLocaleDateString()} • {exam.type}
+                            {assessment.subject} • {new Date(assessment.assessmentDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                           </p>
                         </div>
                       </div>
-                      <ChevronRight className="w-5 h-5" style={{ color: 'var(--theme-accent)' }} />
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span 
+                          className={cn(
+                            "text-xs font-medium px-2 py-0.5 rounded-md",
+                            assessment.daysUntil <= 1 ? 'bg-red-600 text-white' :
+                            assessment.daysUntil <= 3 ? 'bg-amber-500 text-white' :
+                            'text-white'
+                          )}
+                          style={{ 
+                            backgroundColor: assessment.daysUntil > 3 ? 'color-mix(in srgb, var(--theme-primary) 20%, transparent)' : undefined,
+                            color: assessment.daysUntil > 3 ? 'var(--theme-primary)' : undefined
+                          }}
+                        >
+                          {assessment.daysUntil === 0 ? 'Today' : assessment.daysUntil === 1 ? 'Tomorrow' : `${assessment.daysUntil}d`}
+                        </span>
+                        <ChevronRight className="w-5 h-5" style={{ color: 'var(--theme-accent)' }} />
+                      </div>
                     </motion.div>
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-8 text-slate-500">
                   <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No upcoming exams</p>
+                  <p className="text-sm">No upcoming assessments</p>
                   <p className="text-xs mt-1">Enjoy your free time!</p>
                 </div>
               )}

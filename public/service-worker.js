@@ -3,7 +3,7 @@
  * Implements caching strategies, offline support, and background sync
  */
 
-const CACHE_VERSION = 'catalyst-v1.0.0';
+const CACHE_VERSION = 'catalyst-v1.0.1';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const API_CACHE = `api-${CACHE_VERSION}`;
 const IMAGE_CACHE = `images-${CACHE_VERSION}`;
@@ -87,13 +87,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // Skip auth, session, and registration endpoints - let them go directly to network
+  // Skip auth, session, registration, and admin analytics endpoints - let them go directly to network
   if (url.pathname.startsWith('/api/auth/') || 
       url.pathname.startsWith('/api/verify-student') ||
       url.pathname.startsWith('/api/create-profile') ||
       url.pathname.startsWith('/api/fix-orphaned-student') ||
       url.pathname.startsWith('/api/register') ||
-      url.pathname.startsWith('/api/reset-password')) {
+      url.pathname.startsWith('/api/reset-password') ||
+      url.pathname.startsWith('/api/admin/wellbeing') ||
+      url.pathname.startsWith('/api/admin/ai-chat')) {
     return; // Let browser handle these directly - no caching
   }
   
