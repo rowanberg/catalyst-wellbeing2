@@ -85,17 +85,7 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Debug: Check session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    console.log('POST Session debug:', { 
-      hasSession: !!session, 
-      sessionError, 
-      userId: session?.user?.id,
-      hasAuthHeader: !!authHeader,
-      cookies: request.headers.get('cookie')?.substring(0, 100) + '...' // Log first 100 chars of cookies
-    })
-    
-    // Get the current user
+    // Get the current user - Using getUser() for secure server-side validation
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     const examData = await request.json()

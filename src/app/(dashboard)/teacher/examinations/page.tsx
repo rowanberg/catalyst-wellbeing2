@@ -21,7 +21,23 @@ import {
   Brain,
   Sparkles,
   Filter,
-  Search
+  Search,
+  GraduationCap,
+  CheckCircle,
+  TrendingUp,
+  FileText,
+  Copy,
+  Share2,
+  MoreVertical,
+  Archive,
+  PieChart,
+  LineChart,
+  Activity,
+  Zap,
+  RefreshCw,
+  Upload,
+  FileSpreadsheet,
+  Database
 } from 'lucide-react'
 import { useAppSelector } from '@/lib/redux/hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -57,7 +73,7 @@ interface Exam {
 
 export default function TeacherExaminations() {
   const router = useRouter()
-  const { user, profile } = useAppSelector((state) => state.auth)
+  const { user, profile, isLoading: authLoading } = useAppSelector((state) => state.auth)
   const [exams, setExams] = useState<Exam[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -75,12 +91,21 @@ export default function TeacherExaminations() {
   })
 
   useEffect(() => {
-    if (!user) {
+    // Wait for auth to finish loading before checking
+    if (authLoading) {
+      console.log('Auth still loading, waiting...')
+      return
+    }
+
+    // Now check authentication after loading is complete
+    if (!user || !profile) {
+      console.log('No user/profile found, redirecting to login')
       router.push('/login')
       return
     }
     
-    if (user.role !== 'teacher') {
+    if (profile.role !== 'teacher') {
+      console.log('User is not a teacher, redirecting')
       router.push('/login')
       return
     }
@@ -88,7 +113,7 @@ export default function TeacherExaminations() {
     console.log('Teacher examinations page loaded for user:', user.id)
     fetchExams()
     fetchTeacherStats()
-  }, [user, router])
+  }, [user, profile, authLoading, router])
   
   // Add a separate effect to refetch when user changes
   useEffect(() => {
@@ -247,17 +272,34 @@ export default function TeacherExaminations() {
     return subjects.filter(Boolean)
   }
 
-  if (loading) {
+  const [activeTab, setActiveTab] = useState('overview')
+
+  // Show loading while auth is being checked
+  if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-purple-900 flex items-center justify-center">
-        <div className="text-center text-white">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <motion.div className="text-center">
           <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full mx-auto mb-4"
-          />
-          <p className="text-xl">Loading examination dashboard...</p>
-        </div>
+            className="relative w-16 h-16 mb-6"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <motion.div
+              className="absolute inset-0 border-4 border-blue-200 rounded-full"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+            />
+            <motion.div
+              className="absolute inset-2 border-4 border-transparent border-t-blue-500 border-r-indigo-500 rounded-full"
+              animate={{ rotate: -360 }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+            />
+            <motion.div className="absolute inset-0 flex items-center justify-center">
+              <GraduationCap className="w-6 h-6 text-blue-600" />
+            </motion.div>
+          </motion.div>
+          <p className="text-gray-600 font-medium">Loading examination system...</p>
+        </motion.div>
       </div>
     )
   }
@@ -273,259 +315,346 @@ export default function TeacherExaminations() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-purple-900 relative overflow-hidden">
-      {/* Animated background particles */}
-      <div className="absolute inset-0 pointer-events-none">
-        {[...Array(15)].map((_, i) => (
-          <motion.div
-            key={i}
-            initial={{ 
-              opacity: 0, 
-              x: Math.random() * window.innerWidth, 
-              y: Math.random() * window.innerHeight 
-            }}
-            animate={{ 
-              opacity: [0, 0.6, 0], 
-              y: [null, -50],
-              scale: [0, 1, 0]
-            }}
-            transition={{ 
-              duration: Math.random() * 4 + 3, 
-              repeat: Infinity,
-              delay: Math.random() * 2
-            }}
-            className="absolute w-1 h-1 bg-indigo-400 rounded-full"
-          />
-        ))}
-      </div>
-
-      {/* Header */}
-      <header className="bg-slate-800/90 backdrop-blur-xl border-b border-slate-700/50 shadow-2xl relative z-10">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.back()}
-                className="text-white hover:bg-slate-700/50"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
-              </Button>
-              
-              <div>
-                <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-                  <motion.div
-                    animate={{ rotate: [0, 360] }}
-                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                    className="p-3 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl"
-                  >
-                    <BookOpen className="w-8 h-8 text-white" />
-                  </motion.div>
-                  Examination Center
-                </h1>
-                <p className="text-slate-400 mt-1">Create, manage, and analyze student assessments</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Sticky Professional Header */}
+      <div className="sticky top-0 z-40 backdrop-blur-xl bg-white/80 border-b border-white/20 shadow-lg">
+        <div className="px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <motion.div 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-center space-x-3 sm:space-x-4"
+            >
+              <div className="p-2 sm:p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+                <GraduationCap className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
               </div>
-            </div>
-
-            <div className="flex gap-3">
-              <Button
+              <div>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                  Examination System
+                </h1>
+                <p className="text-sm sm:text-base text-gray-600 mt-1 hidden sm:block">Comprehensive assessment management and analytics</p>
+              </div>
+            </motion.div>
+            
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Button 
                 onClick={() => {
-                  console.log('Manual refresh triggered')
                   setLoading(true)
                   fetchExams()
                   fetchTeacherStats()
                 }}
-                variant="outline"
-                className="bg-slate-700/50 border-slate-600 text-white hover:bg-slate-600/50"
+                variant="outline" 
+                size="sm" 
+                className="bg-white/50 backdrop-blur-sm hover:bg-white/80 text-xs sm:text-sm"
               >
-                <Eye className="w-4 h-4 mr-2" />
-                Refresh
+                <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Refresh</span>
               </Button>
-              <Button
-                onClick={() => setShowCreateModal(true)}
-                className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white"
+              <Button 
+                onClick={() => setShowCreateModal(true)} 
+                size="sm"
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-xs sm:text-sm"
               >
-                <Plus className="w-4 h-4 mr-2" />
-                Create Exam
+                <Plus className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                <span className="hidden xs:inline">Create Exam</span>
               </Button>
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
-      <main className="max-w-7xl mx-auto px-6 py-8 relative z-10">
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6 mb-8">
-          <Card className="bg-slate-800/90 backdrop-blur-xl border-slate-700/50">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-slate-400 text-xs">Total Exams</p>
-                  <p className="text-xl font-bold text-white">{teacherStats.total_exams}</p>
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+        {/* Enhanced Statistics - Gradient Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+            <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-xl">
+              <CardContent className="p-3 sm:p-4 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-blue-100 text-xs sm:text-sm font-medium">Total Exams</p>
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold">{teacherStats.total_exams}</p>
+                  </div>
+                  <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-blue-200" />
                 </div>
-                <BookOpen className="w-6 h-6 text-indigo-400" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-slate-800/90 backdrop-blur-xl border-slate-700/50">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-slate-400 text-xs">Active</p>
-                  <p className="text-xl font-bold text-green-400">{teacherStats.active_exams}</p>
-                </div>
-                <Target className="w-6 h-6 text-green-400" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-slate-800/90 backdrop-blur-xl border-slate-700/50">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-slate-400 text-xs">Students</p>
-                  <p className="text-xl font-bold text-blue-400">{teacherStats.total_students}</p>
-                </div>
-                <Users className="w-6 h-6 text-blue-400" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-slate-800/90 backdrop-blur-xl border-slate-700/50">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-slate-400 text-xs">Completion</p>
-                  <p className="text-xl font-bold text-yellow-400">{teacherStats.average_completion_rate.toFixed(0)}%</p>
-                </div>
-                <Award className="w-6 h-6 text-yellow-400" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-slate-800/90 backdrop-blur-xl border-slate-700/50">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-slate-400 text-xs">Questions</p>
-                  <p className="text-xl font-bold text-purple-400">{teacherStats.total_questions_created}</p>
-                </div>
-                <Brain className="w-6 h-6 text-purple-400" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-slate-800/90 backdrop-blur-xl border-slate-700/50">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-slate-400 text-xs">AI Generated</p>
-                  <p className="text-xl font-bold text-pink-400">{teacherStats.ai_questions_generated}</p>
-                </div>
-                <Sparkles className="w-6 h-6 text-pink-400" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters and Search */}
-        <div className="flex flex-wrap gap-4 mb-8">
-          <div className="flex-1 min-w-64">
-            <Input
-              placeholder="Search exams..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-slate-800/50 border-slate-600 text-white placeholder-slate-400"
-            />
-          </div>
-          
-          <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-            <SelectTrigger className="w-48 bg-slate-800/50 border-slate-600 text-white">
-              <SelectValue placeholder="All Subjects" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Subjects</SelectItem>
-              {getUniqueSubjects().map(subject => (
-                <SelectItem key={subject} value={subject}>{subject}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-            <SelectTrigger className="w-40 bg-slate-800/50 border-slate-600 text-white">
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="published">Published</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Exams Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <AnimatePresence>
-            {getFilteredExams().map((exam) => (
-              <motion.div
-                key={exam.id}
-                layout
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.3 }}
-              >
-                <ExamCard
-                  exam={exam}
-                  userRole="teacher"
-                  onEdit={() => handleEditExam(exam.id)}
-                  onAnalytics={() => handleViewAnalytics(exam.id)}
-                />
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-
-        {/* Debug Info */}
-        {!loading && (
-          <div className="mb-4 p-4 bg-slate-800/50 rounded-lg text-xs text-slate-400">
-            <p>Debug: Total exams: {exams.length}, User ID: {user?.id}, Loading: {loading ? 'Yes' : 'No'}</p>
-          </div>
-        )}
-
-        {/* Empty state */}
-        {getFilteredExams().length === 0 && !loading && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center py-16"
-          >
-            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-slate-800/50 flex items-center justify-center">
-              <BookOpen className="w-12 h-12 text-slate-400" />
-            </div>
-            <h3 className="text-xl font-semibold text-white mb-2">
-              {searchTerm || selectedSubject !== 'all' || selectedStatus !== 'all' 
-                ? 'No exams match your filters' 
-                : 'No exams created yet'}
-            </h3>
-            <p className="text-slate-400 mb-6">
-              {searchTerm || selectedSubject !== 'all' || selectedStatus !== 'all'
-                ? 'Try adjusting your search criteria'
-                : 'Create your first examination to get started. Click the Refresh button to check for new exams.'}
-            </p>
-            <Button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Create Your First Exam
-            </Button>
+              </CardContent>
+            </Card>
           </motion.div>
-        )}
-      </main>
+
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+            <Card className="bg-gradient-to-br from-green-500 to-emerald-600 text-white border-0 shadow-xl">
+              <CardContent className="p-3 sm:p-4 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-green-100 text-xs sm:text-sm font-medium">Active</p>
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold">{teacherStats.active_exams}</p>
+                  </div>
+                  <Target className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-green-200" />
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+            <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0 shadow-xl">
+              <CardContent className="p-3 sm:p-4 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-purple-100 text-xs sm:text-sm font-medium">Students</p>
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold">{teacherStats.total_students}</p>
+                  </div>
+                  <Users className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-purple-200" />
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+            <Card className="bg-gradient-to-br from-orange-500 to-red-600 text-white border-0 shadow-xl">
+              <CardContent className="p-3 sm:p-4 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-orange-100 text-xs sm:text-sm font-medium">Completion</p>
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold">{teacherStats.average_completion_rate.toFixed(0)}%</p>
+                  </div>
+                  <Award className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-orange-200" />
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
+            <Card className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white border-0 shadow-xl">
+              <CardContent className="p-3 sm:p-4 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-indigo-100 text-xs sm:text-sm font-medium">Questions</p>
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold">{teacherStats.total_questions_created}</p>
+                  </div>
+                  <Brain className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-indigo-200" />
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
+            <Card className="bg-gradient-to-br from-pink-500 to-rose-600 text-white border-0 shadow-xl">
+              <CardContent className="p-3 sm:p-4 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-pink-100 text-xs sm:text-sm font-medium">AI Generated</p>
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-bold">{teacherStats.ai_questions_generated}</p>
+                  </div>
+                  <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-pink-200" />
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+
+        {/* Professional Tab Navigation */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 bg-white border border-gray-200 shadow-lg rounded-xl p-2 mb-6 h-auto min-h-[48px] sm:min-h-[56px]">
+            <TabsTrigger 
+              value="overview" 
+              className="text-xs sm:text-sm font-medium px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-all duration-200 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-blue-600 flex items-center justify-center whitespace-nowrap"
+            >
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger 
+              value="exams"
+              className="text-xs sm:text-sm font-medium px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-all duration-200 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-blue-600 flex items-center justify-center whitespace-nowrap"
+            >
+              <BookOpen className="w-4 h-4 mr-2" />
+              Exams
+            </TabsTrigger>
+            <TabsTrigger 
+              value="questions"
+              className="text-xs sm:text-sm font-medium px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-all duration-200 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-blue-600 flex items-center justify-center whitespace-nowrap"
+            >
+              <Database className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Question Bank</span>
+              <span className="sm:hidden">Questions</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="analytics"
+              className="text-xs sm:text-sm font-medium px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-all duration-200 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-blue-600 flex items-center justify-center whitespace-nowrap"
+            >
+              <PieChart className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Analytics</span>
+              <span className="sm:hidden">Stats</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="settings"
+              className="text-xs sm:text-sm font-medium px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-all duration-200 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-blue-600 flex items-center justify-center whitespace-nowrap"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Settings</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-4 sm:space-y-6">
+            <Card className="bg-white/80 backdrop-blur-sm border border-gray-200 shadow-xl">
+              <CardContent className="p-8 sm:p-12 text-center">
+                <Activity className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg sm:text-xl font-medium text-gray-900 mb-2">
+                  Dashboard Overview
+                </h3>
+                <p className="text-gray-600 text-sm sm:text-base mb-6">
+                  Comprehensive examination statistics and recent activity.
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="exams" className="space-y-4 sm:space-y-6">
+            {/* Filters and Search */}
+            <Card className="bg-white/80 backdrop-blur-sm border border-gray-200 shadow-lg">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex flex-wrap gap-3 sm:gap-4">
+                  <div className="flex-1 min-w-[200px]">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Search exams..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                  
+                  <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                    <SelectTrigger className="w-[180px] bg-white border-gray-300">
+                      <SelectValue placeholder="All Subjects" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Subjects</SelectItem>
+                      {getUniqueSubjects().map(subject => (
+                        <SelectItem key={subject} value={subject}>{subject}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                    <SelectTrigger className="w-[140px] bg-white border-gray-300">
+                      <SelectValue placeholder="All Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="published">Published</SelectItem>
+                      <SelectItem value="draft">Draft</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Exams Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              <AnimatePresence>
+                {getFilteredExams().map((exam) => (
+                  <motion.div
+                    key={exam.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <ExamCard
+                      exam={exam}
+                      userRole="teacher"
+                      onEdit={() => handleEditExam(exam.id)}
+                      onAnalytics={() => handleViewAnalytics(exam.id)}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+
+            {/* Empty state */}
+            {getFilteredExams().length === 0 && !loading && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-center py-12"
+              >
+                <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200">
+                  <CardContent className="p-8 sm:p-12">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-200 flex items-center justify-center">
+                      <BookOpen className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg sm:text-xl font-medium text-gray-900 mb-2">
+                      {searchTerm || selectedSubject !== 'all' || selectedStatus !== 'all' 
+                        ? 'No exams match your filters' 
+                        : 'No exams created yet'}
+                    </h3>
+                    <p className="text-gray-600 text-sm sm:text-base mb-6">
+                      {searchTerm || selectedSubject !== 'all' || selectedStatus !== 'all'
+                        ? 'Try adjusting your search criteria'
+                        : 'Create your first examination to get started'}
+                    </p>
+                    <Button
+                      onClick={() => setShowCreateModal(true)}
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Your First Exam
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="questions" className="space-y-4 sm:space-y-6">
+            <Card className="bg-white/80 backdrop-blur-sm border border-gray-200 shadow-xl">
+              <CardContent className="p-8 sm:p-12 text-center">
+                <Database className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg sm:text-xl font-medium text-gray-900 mb-2">
+                  Question Bank
+                </h3>
+                <p className="text-gray-600 text-sm sm:text-base mb-6">
+                  Manage reusable questions and create question templates.
+                </p>
+                <Button className="bg-gradient-to-r from-blue-600 to-indigo-600">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Questions
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-4 sm:space-y-6">
+            <Card className="bg-white/80 backdrop-blur-sm border border-gray-200 shadow-xl">
+              <CardContent className="p-8 sm:p-12 text-center">
+                <PieChart className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg sm:text-xl font-medium text-gray-900 mb-2">
+                  Performance Analytics
+                </h3>
+                <p className="text-gray-600 text-sm sm:text-base">
+                  Detailed insights into exam performance and student progress.
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="settings" className="space-y-4 sm:space-y-6">
+            <Card className="bg-white/80 backdrop-blur-sm border border-gray-200 shadow-xl">
+              <CardContent className="p-8 sm:p-12 text-center">
+                <Settings className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg sm:text-xl font-medium text-gray-900 mb-2">
+                  Examination Settings
+                </h3>
+                <p className="text-gray-600 text-sm sm:text-base">
+                  Configure default exam settings and preferences.
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
 
       {/* Create Exam Modal */}
       <AnimatePresence>

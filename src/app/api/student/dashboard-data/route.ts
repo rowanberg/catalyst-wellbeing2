@@ -10,8 +10,8 @@ export async function GET(request: NextRequest) {
     try {
       // Get pagination parameters
       const { searchParams } = new URL(request.url)
-      const announcementsLimit = Math.min(parseInt(searchParams.get('announcements_limit') || '5'), 20)
-      const pollsLimit = Math.min(parseInt(searchParams.get('polls_limit') || '5'), 20)
+      const announcementsLimit = Math.min(parseInt(searchParams.get('announcements_limit') || '5', 10), 20)
+      const pollsLimit = Math.min(parseInt(searchParams.get('polls_limit') || '5', 10), 20)
       const forceRefresh = searchParams.get('force_refresh') === 'true'
     
     // Enhanced authentication

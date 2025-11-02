@@ -148,13 +148,13 @@ function ParentDashboardContent() {
 
   if (loadingChildren) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
         {/* Desktop Navigation Skeleton */}
-        <div className="hidden md:block fixed left-0 top-0 h-screen w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
+        <div className="hidden md:block fixed left-0 top-0 h-screen w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 shadow-xl">
           <div className="p-6">
             {/* Logo Skeleton */}
             <div className="flex items-center gap-3 mb-8">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl animate-pulse" />
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl animate-pulse shadow-lg" />
               <div className="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
             </div>
             
@@ -172,7 +172,29 @@ function ParentDashboardContent() {
 
         {/* Main Content Skeleton */}
         <div className="md:ml-64 min-h-screen pb-20 md:pb-0">
-          <div className="max-w-4xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+          {/* Professional Header Skeleton */}
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+            <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="flex-1">
+                  <div className="h-4 w-24 bg-blue-400 rounded mb-2 animate-pulse" />
+                  <div className="h-8 w-64 bg-blue-500 rounded animate-pulse" />
+                </div>
+                <div className="flex gap-3">
+                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 flex-1 md:w-32">
+                    <div className="h-3 w-12 bg-blue-300 rounded mb-2 animate-pulse" />
+                    <div className="h-6 w-16 bg-blue-200 rounded animate-pulse" />
+                  </div>
+                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 flex-1 md:w-32">
+                    <div className="h-3 w-12 bg-blue-300 rounded mb-2 animate-pulse" />
+                    <div className="h-6 w-16 bg-blue-200 rounded animate-pulse" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 -mt-4">
             {/* Action Center Skeleton */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 mb-6 animate-pulse">
               <div className="flex items-center gap-3 mb-4">
@@ -242,7 +264,7 @@ function ParentDashboardContent() {
   // Allow dashboard to show even with no children - they can link from Profile tab
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       {/* Desktop Navigation */}
       <DesktopNavigation 
         activeTab={activeTab}
@@ -250,9 +272,107 @@ function ParentDashboardContent() {
         hasNotifications={hasNotifications}
       />
       
+      {/* Enterprise Header - Only on Home Tab */}
+      {activeTab === 'home' && (
+        <div className="md:ml-64 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+          <div className="max-w-[1600px] mx-auto px-6 lg:px-8">
+            {/* Top Bar */}
+            <div className="flex items-center justify-between h-16 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-4">
+                <h1 className="text-xl font-semibold text-slate-900 dark:text-white">Parent Portal</h1>
+                <div className="hidden md:flex items-center gap-2 text-sm text-slate-500">
+                  <span>/</span>
+                  <span className="text-slate-700 dark:text-slate-300">Home</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {hasNotifications && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                    <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                    <span className="text-xs font-medium text-amber-700 dark:text-amber-400">Action Required</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Child Selector & Metrics */}
+            {children.length > 0 && (
+            <div className="py-5">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Child Selector */}
+                <div className="lg:col-span-4">
+                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Active Child</label>
+                  <select
+                    value={selectedChild || ''}
+                    onChange={(e) => {
+                      setSelectedChild(e.target.value)
+                      const child = children.find(c => c.id === e.target.value)
+                      setSelectedChildDetails(child)
+                    }}
+                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  >
+                    {children.map((child) => (
+                      <option key={child.id} value={child.id}>
+                        {child.name} • {child.grade}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                {/* Key Metrics */}
+                <div className="lg:col-span-8">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wider">Linked Children</span>
+                        <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                      </div>
+                      <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{children.length}</div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900 rounded-lg p-4 border border-emerald-200 dark:border-emerald-800">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Avg Performance</span>
+                        <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                        </svg>
+                      </div>
+                      <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">--</div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-violet-50 to-violet-100 dark:from-violet-950 dark:to-violet-900 rounded-lg p-4 border border-violet-200 dark:border-violet-800">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-violet-600 dark:text-violet-400 uppercase tracking-wider">Attendance</span>
+                        <svg className="w-4 h-4 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div className="text-2xl font-bold text-violet-900 dark:text-violet-100">--</div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 rounded-lg p-4 border border-amber-200 dark:border-amber-800">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wider">Wellbeing</span>
+                        <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                        </svg>
+                      </div>
+                      <div className="text-2xl font-bold text-amber-900 dark:text-amber-100">--</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          </div>
+        </div>
+      )}
+      
       {/* Main Content */}
-      <div className="md:ml-64 min-h-screen pb-20 md:pb-0">
-        <div className={`${activeTab === 'profile' ? 'w-full px-4 py-6 sm:px-6 lg:px-8' : 'max-w-4xl mx-auto px-4 py-6 sm:px-6 lg:px-8'}`}>
+      <div className="md:ml-64 min-h-screen pb-20 md:pb-0 bg-slate-50 dark:bg-slate-950">
+        <div className={`${activeTab === 'profile' ? 'w-full' : 'max-w-[1600px] mx-auto'} px-6 lg:px-8 py-8`}>
           {/* Tab Content */}
           <AnimatePresence mode="wait">
             <motion.div
@@ -266,16 +386,41 @@ function ParentDashboardContent() {
                 selectedChild ? (
                   <HomeTab studentId={selectedChild} />
                 ) : (
-                  <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                    <Users className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">No Children Linked</h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-4">Link a child to view their dashboard</p>
-                    <button
-                      onClick={() => setActiveTab('profile')}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      Go to Profile to Link Child
-                    </button>
+                  <div className="max-w-4xl mx-auto">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                      <div className="p-12 text-center">
+                        <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full mb-6">
+                          <Users className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <h3 className="text-2xl font-semibold text-slate-900 dark:text-white mb-3">Get Started</h3>
+                        <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-md mx-auto">Link your child's account to access their academic progress, wellbeing insights, and stay connected with their educational journey.</p>
+                        <button
+                          onClick={() => setActiveTab('profile')}
+                          className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                        >
+                          <span>Link Child Account</span>
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                          </svg>
+                        </button>
+                      </div>
+                      <div className="bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 px-12 py-6">
+                        <div className="grid grid-cols-3 gap-8 text-center">
+                          <div>
+                            <div className="text-2xl font-semibold text-slate-900 dark:text-white mb-1">Real-time</div>
+                            <div className="text-sm text-slate-600 dark:text-slate-400">Progress Tracking</div>
+                          </div>
+                          <div>
+                            <div className="text-2xl font-semibold text-slate-900 dark:text-white mb-1">Insights</div>
+                            <div className="text-sm text-slate-600 dark:text-slate-400">Performance Analytics</div>
+                          </div>
+                          <div>
+                            <div className="text-2xl font-semibold text-slate-900 dark:text-white mb-1">Connect</div>
+                            <div className="text-sm text-slate-600 dark:text-slate-400">School Community</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )
               )}
@@ -284,16 +429,23 @@ function ParentDashboardContent() {
                 selectedChild && profile?.id ? (
                   <CommunityTab studentId={selectedChild} parentId={profile.id} />
                 ) : (
-                  <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                    <Users className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">No Children Linked</h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-4">Link a child to view community posts</p>
-                    <button
-                      onClick={() => setActiveTab('profile')}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      Go to Profile to Link Child
-                    </button>
+                  <div className="max-w-4xl mx-auto">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-12 text-center">
+                      <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full mb-6">
+                        <Users className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <h3 className="text-2xl font-semibold text-slate-900 dark:text-white mb-3">Community Access Required</h3>
+                      <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-md mx-auto">Link your child to access community updates and school announcements.</p>
+                      <button
+                        onClick={() => setActiveTab('profile')}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors"
+                      >
+                        <span>Link Child Account</span>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 )
               )}
@@ -302,16 +454,23 @@ function ParentDashboardContent() {
                 selectedChild ? (
                   <AnalyticsTab studentId={selectedChild} studentName={selectedChildDetails?.name} />
                 ) : (
-                  <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                    <Users className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">No Children Linked</h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-4">Link a child to view analytics</p>
-                    <button
-                      onClick={() => setActiveTab('profile')}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      Go to Profile to Link Child
-                    </button>
+                  <div className="max-w-4xl mx-auto">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-12 text-center">
+                      <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full mb-6">
+                        <Users className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <h3 className="text-2xl font-semibold text-slate-900 dark:text-white mb-3">Analytics Dashboard</h3>
+                      <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-md mx-auto">Link your child to view detailed analytics and performance metrics.</p>
+                      <button
+                        onClick={() => setActiveTab('profile')}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors"
+                      >
+                        <span>Link Child Account</span>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 )
               )}

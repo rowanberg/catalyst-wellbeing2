@@ -263,23 +263,32 @@ export function GameLauncher({ hideBackButton = false, onBackToLauncher, onGameL
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ delay: index * 0.05, duration: 0.3 }}
                 layout
-                whileHover={{ y: -4, scale: 1.02 }}
+                whileHover={{ y: -8, scale: 1.05 }}
                 className="group"
               >
-                <Card className="bg-gray-800/60 border-gray-600/40 hover:border-gray-500/60 transition-all duration-300 cursor-pointer group-hover:shadow-lg h-full backdrop-blur-sm">
-                  <CardContent className="p-4 h-full flex flex-col">
-                    {/* Compact Game Header */}
+                <Card className="bg-gradient-to-br from-gray-900/80 to-gray-800/80 border-2 border-gray-600/50 hover:border-purple-500/80 transition-all duration-300 cursor-pointer hover:shadow-2xl hover:shadow-purple-500/20 h-full backdrop-blur-xl relative overflow-hidden">
+                  {/* Hover Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-blue-500/0 group-hover:from-purple-500/10 group-hover:to-blue-500/10 transition-all duration-300 pointer-events-none" />
+                  
+                  <CardContent className="p-5 h-full flex flex-col relative z-10">
+                    {/* Game Header */}
                     <div className="text-center mb-4">
                       <motion.div 
-                        className="text-4xl mb-2 group-hover:scale-110 transition-transform duration-300"
+                        className="text-5xl mb-3 inline-block filter drop-shadow-lg"
+                        whileHover={{ 
+                          scale: 1.3, 
+                          rotate: [0, -10, 10, -10, 0],
+                          filter: "drop-shadow(0 0 8px rgba(168, 85, 247, 0.6))"
+                        }}
+                        transition={{ duration: 0.5 }}
                       >
                         {game.emoji}
                       </motion.div>
-                      <h3 className="text-lg font-bold text-white mb-2 truncate">
+                      <h3 className="text-lg font-bold text-white mb-2 group-hover:text-purple-200 transition-colors duration-300">
                         {game.name}
                       </h3>
-                      <p className="text-sm text-gray-300 mb-3 leading-relaxed h-10 overflow-hidden">{game.description}</p>
-                      <Badge variant="secondary" className="text-xs bg-gray-700/50 text-gray-200 border-gray-600">
+                      <p className="text-sm text-gray-300 mb-3 leading-relaxed h-10 overflow-hidden group-hover:text-gray-200">{game.description}</p>
+                      <Badge variant="secondary" className="text-xs bg-gradient-to-r from-purple-600/30 to-blue-600/30 text-purple-200 border border-purple-500/30 shadow-lg">
                         {game.category}
                       </Badge>
                     </div>
@@ -328,15 +337,28 @@ export function GameLauncher({ hideBackButton = false, onBackToLauncher, onGameL
                       </div>
                     </div>
 
-                    {/* Compact Launch Button */}
+                    {/* Launch Button */}
                     <div className="mt-4">
-                      <Button 
-                        className={`w-full h-10 bg-gradient-to-r ${game.color} hover:opacity-90 transition-all duration-300 text-sm font-semibold shadow-md hover:shadow-lg relative overflow-hidden`}
-                        onClick={() => launchGame(game.id)}
+                      <motion.div
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                       >
-                        <Play className="h-4 w-4 mr-2" />
-                        <span>Play Game</span>
-                      </Button>
+                        <Button 
+                          className={`w-full h-11 bg-gradient-to-r ${game.color} hover:opacity-90 transition-all duration-300 text-sm font-bold shadow-xl hover:shadow-2xl relative overflow-hidden border-2 border-white/20`}
+                          onClick={() => launchGame(game.id)}
+                        >
+                          {/* Button Shine Effect */}
+                          <motion.div
+                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                            initial={{ x: '-100%' }}
+                            whileHover={{ x: '100%' }}
+                            transition={{ duration: 0.6 }}
+                          />
+                          <Play className="h-4 w-4 mr-2 relative z-10" />
+                          <span className="relative z-10">Play Now</span>
+                          <Sparkles className="h-4 w-4 ml-2 relative z-10" />
+                        </Button>
+                      </motion.div>
                     </div>
                   </CardContent>
                 </Card>

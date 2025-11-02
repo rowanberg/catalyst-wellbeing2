@@ -10,6 +10,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
+import { useAppDispatch } from '@/lib/redux/hooks'
+import { signOut } from '@/lib/redux/slices/authSlice'
 import {
   LayoutDashboard, Sparkles, Heart, UserCircle2,
   PanelLeftClose, PanelLeftOpen, LogOut, Settings2, HelpCircle, Zap
@@ -69,13 +71,33 @@ const navItems: NavItem[] = [
 export function Sidebar({ activeTab, onTabChange, profile }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isAnimating, setIsAnimating] = useState(false)
+  const [isSigningOut, setIsSigningOut] = useState(false)
   const router = useRouter()
+  const dispatch = useAppDispatch()
 
   const handleCollapse = () => {
     setIsAnimating(true)
     setIsCollapsed(!isCollapsed)
     // Match the longest animation duration
     setTimeout(() => setIsAnimating(false), 400)
+  }
+
+  const handleSignOut = async () => {
+    try {
+      setIsSigningOut(true)
+      // Dispatch Redux signOut action (clears caches and Supabase session)
+      await dispatch(signOut()).unwrap()
+      // Small delay to ensure signOut completes
+      await new Promise(resolve => setTimeout(resolve, 100))
+      // Redirect to login page
+      router.push('/login')
+    } catch (error) {
+      console.error('Sign out error:', error)
+      // Still redirect even if error occurs
+      router.push('/login')
+    } finally {
+      setIsSigningOut(false)
+    }
   }
 
   return (
@@ -497,7 +519,8 @@ export function Sidebar({ activeTab, onTabChange, profile }: SidebarProps) {
           </motion.button>
           
           <motion.button
-            onClick={() => router.push('/logout')}
+            onClick={handleSignOut}
+            disabled={isSigningOut}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.25, duration: 0.2 }}
@@ -505,11 +528,16 @@ export function Sidebar({ activeTab, onTabChange, profile }: SidebarProps) {
             whileTap={{ scale: 0.97 }}
             className={cn(
               "w-full flex items-center px-3 py-2.5 rounded-lg hover:bg-red-50 transition-colors duration-250 group",
-              isCollapsed ? "justify-center" : "gap-3"
+              isCollapsed ? "justify-center" : "gap-3",
+              isSigningOut && "opacity-50 cursor-not-allowed"
             )}
             aria-label="Logout"
           >
-            <LogOut className="w-5 h-5 text-slate-600 group-hover:text-red-600 transition-colors duration-250" strokeWidth={2} />
+            {isSigningOut ? (
+              <div className="w-5 h-5 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <LogOut className="w-5 h-5 text-slate-600 group-hover:text-red-600 transition-colors duration-250" strokeWidth={2} />
+            )}
             <AnimatePresence mode="wait">
               {!isCollapsed && (
                 <motion.span 
@@ -524,7 +552,7 @@ export function Sidebar({ activeTab, onTabChange, profile }: SidebarProps) {
                   }}
                   className="text-sm text-slate-700 group-hover:text-red-600 transition-colors duration-250"
                 >
-                  Logout
+                  {isSigningOut ? 'Signing out...' : 'Logout'}
                 </motion.span>
               )}
             </AnimatePresence>

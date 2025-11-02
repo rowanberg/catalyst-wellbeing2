@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       .select('id')
       .eq('group_id', group_id)
       .eq('user_id', profile.id)
-      .single()
+      .maybeSingle()
 
     if (existingMember) {
       return NextResponse.json({ error: 'You are already a member of this group' }, { status: 400 })
@@ -79,6 +79,24 @@ export async function POST(request: NextRequest) {
 
     // For private groups, create a join request instead
     if (group.is_private) {
+      // Check if join request already exists
+      const { data: existingRequest } = await supabase
+        .from('study_group_join_requests')
+        .select('id, status')
+        .eq('group_id', group_id)
+        .eq('user_id', profile.id)
+        .maybeSingle()
+
+      if (existingRequest) {
+        if (existingRequest.status === 'pending') {
+          return NextResponse.json({ error: 'You already have a pending join request for this group' }, { status: 400 })
+        } else if (existingRequest.status === 'approved') {
+          return NextResponse.json({ error: 'Your join request was already approved' }, { status: 400 })
+        } else if (existingRequest.status === 'rejected') {
+          return NextResponse.json({ error: 'Your previous join request was rejected. Please contact the group moderator.' }, { status: 400 })
+        }
+      }
+
       const { error: requestError } = await supabase
         .from('study_group_join_requests')
         .insert({
@@ -89,6 +107,10 @@ export async function POST(request: NextRequest) {
 
       if (requestError) {
         console.error('Error creating join request:', requestError)
+        // Handle duplicate key error
+        if (requestError.code === '23505') {
+          return NextResponse.json({ error: 'You already have a join request for this group' }, { status: 400 })
+        }
         return NextResponse.json({ error: 'Failed to create join request' }, { status: 500 })
       }
 
@@ -108,6 +130,10 @@ export async function POST(request: NextRequest) {
 
     if (joinError) {
       console.error('Error joining group:', joinError)
+      // Handle duplicate key error gracefully
+      if (joinError.code === '23505') {
+        return NextResponse.json({ error: 'You are already a member of this group' }, { status: 400 })
+      }
       return NextResponse.json({ error: 'Failed to join group' }, { status: 500 })
     }
 

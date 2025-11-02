@@ -41,8 +41,8 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const limit = parseInt(searchParams.get('limit') || '7') // Default to 7 days
-    const offset = parseInt(searchParams.get('offset') || '0')
+    const limit = parseInt(searchParams.get('limit') || '7', 10) // Default to 7 days
+    const offset = parseInt(searchParams.get('offset') || '0', 10)
 
     // Build query to get attendance records with pagination
     // Note: attendance table doesn't have class_id column

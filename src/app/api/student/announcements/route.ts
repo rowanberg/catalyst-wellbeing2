@@ -7,8 +7,8 @@ export async function GET(request: NextRequest) {
   try {
     // Get pagination parameters
     const { searchParams } = new URL(request.url)
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 50) // Max 50 items
+    const page = parseInt(searchParams.get('page') || '1', 10)
+    const limit = Math.min(parseInt(searchParams.get('limit') || '10', 10), 50) // Max 50 items
     const offset = (page - 1) * limit
     
     // Enhanced authentication with better error handling

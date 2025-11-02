@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   const startTime = Date.now()
   
   try {
-    const { message, imageData, conversationHistory, schoolContext } = await req.json()
+    const { message, imageData, conversationHistory, schoolContext, flashCardMode, flashCardInstructions } = await req.json()
 
     if (!message) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
@@ -120,7 +120,8 @@ Example for sin(x) from -2π to 2π:
 {"title":"y = sin(x)","data":[{"x":-6.28,"y":0},{"x":-5.5,"y":0.71},{"x":-4.71,"y":1},{"x":-3.93,"y":0.71},{"x":-3.14,"y":0},{"x":-2.36,"y":-0.71},{"x":-1.57,"y":-1},{"x":-0.79,"y":-0.71},{"x":0,"y":0},{"x":0.79,"y":0.71},{"x":1.57,"y":1},{"x":2.36,"y":0.71},{"x":3.14,"y":0},{"x":3.93,"y":-0.71},{"x":4.71,"y":-1},{"x":5.5,"y":-0.71},{"x":6.28,"y":0}],"xKey":"x","yKeys":["y"]}
 <<<END_GRAPH>>>
 
-You have ${quotaCheck.remainingNormal} standard requests remaining today.`
+You have ${quotaCheck.remainingNormal} standard requests remaining today.
+${flashCardMode && flashCardInstructions ? flashCardInstructions : ''}`
 
         // Format conversation history
         let contextMessages = ''

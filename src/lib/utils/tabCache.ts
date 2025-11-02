@@ -15,11 +15,12 @@ export class TabDataCache {
   private defaultTTL: number = 5 * 60 * 1000 // 5 minutes default
 
   // Tab-specific TTL configurations (in milliseconds)
+  // All tabs use 1-hour cache to match backend API cache strategy
   private tabTTL: Record<string, number> = {
-    today: 3 * 60 * 1000,      // 3 minutes - frequently changing data
-    growth: 10 * 60 * 1000,     // 10 minutes - less frequent updates
-    wellbeing: 5 * 60 * 1000,   // 5 minutes - moderate update frequency
-    profile: 15 * 60 * 1000     // 15 minutes - rarely changes
+    today: 60 * 60 * 1000,      // 1 hour
+    growth: 60 * 60 * 1000,     // 1 hour
+    wellbeing: 60 * 60 * 1000,  // 1 hour
+    profile: 60 * 60 * 1000     // 1 hour
   }
 
   /**

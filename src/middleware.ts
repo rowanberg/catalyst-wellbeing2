@@ -30,8 +30,21 @@ export async function middleware(req: NextRequest) {
   // Create response with security headers for all routes
   let response: NextResponse
 
-  // Handle superpanel authentication
-  if (pathname.startsWith('/superpanel')) {
+  // Fast redirect for root path - avoid client-side delay
+  if (pathname === '/') {
+    // Check for auth session cookie
+    const authToken = req.cookies.get('sb-localhost-auth-token')?.value || 
+                     req.cookies.get(Object.keys(req.cookies).find(k => k.includes('auth-token')) || '')?.value
+    
+    if (authToken) {
+      // Has session - will redirect via client (needs profile lookup)
+      // But we can return immediately instead of rendering full page
+      response = NextResponse.next()
+    } else {
+      // No session - redirect directly to login (server-side)
+      return NextResponse.redirect(new URL('/login', req.url))
+    }
+  } else if (pathname.startsWith('/superpanel')) {
     // Always allow auth page - no checks at all
     if (pathname === '/superpanel/auth') {
       response = NextResponse.next()
@@ -108,7 +121,8 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match all paths except static files and images
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Match all paths except API routes, static files, and images
+    // CRITICAL: Exclude /api/* to prevent redirect loops
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

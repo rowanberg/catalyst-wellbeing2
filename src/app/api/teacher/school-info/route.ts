@@ -208,21 +208,21 @@ export async function GET(request: NextRequest) {
       academic_year_end: school.academic_year_end || null,
       
       // Statistics - use actual numbers from school_details
-      total_students: parseInt(schoolDetails?.total_students) || totalStudents,
-      total_teachers: parseInt(schoolDetails?.total_teachers) || totalTeachers,
+      total_students: parseInt(schoolDetails?.total_students, 10) || totalStudents,
+      total_teachers: parseInt(schoolDetails?.total_teachers, 10) || totalTeachers,
       grade_levels: schoolDetails?.grade_levels_offered || gradeNames.length > 0 ? gradeNames : ['K-12'],
       
       // Computed fields
-      student_teacher_ratio: (parseInt(schoolDetails?.total_teachers) || totalTeachers) > 0 
-        ? Math.round((parseInt(schoolDetails?.total_students) || totalStudents) / (parseInt(schoolDetails?.total_teachers) || totalTeachers)) 
+      student_teacher_ratio: (parseInt(schoolDetails?.total_teachers, 10) || totalTeachers) > 0 
+        ? Math.round((parseInt(schoolDetails?.total_students, 10) || totalStudents) / (parseInt(schoolDetails?.total_teachers, 10) || totalTeachers)) 
         : 0,
       
       // Enhanced info from school_details with proper field mapping
       core_values: ['Excellence', 'Integrity', 'Innovation', 'Collaboration', 'Respect'], // Default values as core_values not in schema
       achievements: [
         `Serving the community since ${schoolDetails?.established_year || 'establishment'}`,
-        `${parseInt(schoolDetails?.total_students) || totalStudents} students enrolled`,
-        `${parseInt(schoolDetails?.total_teachers) || totalTeachers} dedicated teachers`,
+        `${parseInt(schoolDetails?.total_students, 10) || totalStudents} students enrolled`,
+        `${parseInt(schoolDetails?.total_teachers, 10) || totalTeachers} dedicated teachers`,
         'Committed to educational excellence',
         schoolDetails?.school_motto ? `School Motto: ${schoolDetails.school_motto}` : null
       ].filter(Boolean),

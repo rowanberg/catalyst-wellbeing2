@@ -92,6 +92,7 @@ export const signUp = createAsyncThunk(
     password,
     firstName,
     lastName,
+    gender,
     role,
     schoolId,
     gradeLevel,
@@ -101,6 +102,7 @@ export const signUp = createAsyncThunk(
     password: string
     firstName: string
     lastName: string
+    gender: string
     role: string
     schoolId: string
     gradeLevel?: string
@@ -115,6 +117,7 @@ export const signUp = createAsyncThunk(
         password,
         firstName,
         lastName,
+        gender,
         role,
         schoolCode: schoolId,
         gradeLevel,

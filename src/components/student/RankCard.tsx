@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Trophy, TrendingUp, TrendingDown, Minus, Medal, Award, Download, Users, Target } from 'lucide-react'
+import { Trophy, TrendingUp, TrendingDown, Minus, Medal, Award, Download, Users, Target, RefreshCw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
@@ -40,6 +40,7 @@ interface RankCardProps {
 
 export const RankCard = ({ rankData, type = 'class', className }: RankCardProps) => {
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const { generatePDF } = useRankCardPDF()
 
   const isClassRank = type === 'class'
@@ -65,6 +66,31 @@ export const RankCard = ({ rankData, type = 'class', className }: RankCardProps)
       console.error('PDF generation error:', error)
     } finally {
       setIsGenerating(false)
+    }
+  }
+
+  const handleRefreshRankings = async () => {
+    try {
+      setIsRefreshing(true)
+      toast.loading('Refreshing rankings...')
+      
+      const response = await fetch('/api/student/rank/refresh', {
+        method: 'POST'
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        toast.success('Rankings updated! Please refresh the page to see latest data.')
+        // Reload the page after a short delay
+        setTimeout(() => window.location.reload(), 1500)
+      } else {
+        toast.error('Failed to refresh rankings')
+      }
+    } catch (error) {
+      toast.error('An error occurred while refreshing rankings')
+      console.error('Refresh error:', error)
+    } finally {
+      setIsRefreshing(false)
     }
   }
 
@@ -138,13 +164,13 @@ export const RankCard = ({ rankData, type = 'class', className }: RankCardProps)
             )}
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-gray-700">
-              {isClassRank ? 'Class Rank' : 'Grade Rank'}
+            <h3 className="text-sm font-bold text-gray-800">
+              {isClassRank ? 'Academic Class Standing' : 'Grade-Level Academic Ranking'}
             </h3>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-600 font-medium">
               {isClassRank 
-                ? `${rankData.class_name || 'N/A'} • ${rankData.grade_level}`
-                : `Grade ${rankData.grade_level}`}
+                ? `${rankData.class_name || 'N/A'} • Grade ${rankData.grade_level}`
+                : `Grade ${rankData.grade_level} • Academic Year ${new Date().getFullYear()}`}
             </p>
           </div>
         </div>
@@ -224,14 +250,19 @@ export const RankCard = ({ rankData, type = 'class', className }: RankCardProps)
           </motion.div>
           
           {percentile !== undefined && (
-            <motion.p
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
-              className="text-sm text-gray-600 mt-1"
+              className="mt-1 space-y-0.5"
             >
-              Top <span className="font-semibold text-indigo-600">{(100 - percentile).toFixed(1)}%</span>
-            </motion.p>
+              <p className="text-sm font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                Top {(100 - percentile).toFixed(1)}% Performer
+              </p>
+              <p className="text-xs text-gray-500">
+                Outperforming {percentile?.toFixed(0)}% of peers
+              </p>
+            </motion.div>
           )}
         </div>
       </div>
@@ -245,16 +276,24 @@ export const RankCard = ({ rankData, type = 'class', className }: RankCardProps)
       >
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <p className="text-xs text-gray-500 mb-1">Average Score</p>
-            <p className="text-lg font-semibold text-gray-900">
-              {rankData.average_score.toFixed(1)}%
-            </p>
+            <p className="text-xs font-medium text-gray-600 mb-1 uppercase tracking-wide">Cumulative Average</p>
+            <div className="flex items-baseline gap-1">
+              <p className="text-2xl font-bold text-gray-900">
+                {rankData.average_score.toFixed(1)}
+              </p>
+              <span className="text-sm text-gray-500 font-medium">%</span>
+            </div>
+            <p className="text-[10px] text-gray-500 mt-0.5">Overall academic performance</p>
           </div>
           <div>
-            <p className="text-xs text-gray-500 mb-1">Assessments</p>
-            <p className="text-lg font-semibold text-gray-900">
-              {rankData.total_assessments}
-            </p>
+            <p className="text-xs font-medium text-gray-600 mb-1 uppercase tracking-wide">Evaluations</p>
+            <div className="flex items-baseline gap-1">
+              <p className="text-2xl font-bold text-gray-900">
+                {rankData.total_assessments}
+              </p>
+              <span className="text-sm text-gray-500 font-medium">taken</span>
+            </div>
+            <p className="text-[10px] text-gray-500 mt-0.5">Assessments completed</p>
           </div>
         </div>
 
@@ -273,8 +312,8 @@ export const RankCard = ({ rankData, type = 'class', className }: RankCardProps)
               )}
             />
           </div>
-          <p className="text-xs text-gray-500 mt-1 text-right">
-            {percentile?.toFixed(1)}th percentile
+          <p className="text-xs font-medium text-gray-600 mt-1.5 text-right">
+            <span className="text-gray-900">{percentile?.toFixed(1)}</span>th Percentile Ranking
           </p>
         </div>
       </motion.div>
@@ -284,13 +323,34 @@ export const RankCard = ({ rankData, type = 'class', className }: RankCardProps)
         <Target className="w-20 h-20 text-gray-900" />
       </div>
 
-      {/* Download PDF Button */}
+      {/* Action Buttons */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.7 }}
-        className="mt-4"
+        className="mt-4 space-y-2"
       >
+        {/* Refresh Rankings Button */}
+        <Button
+          onClick={handleRefreshRankings}
+          disabled={isRefreshing}
+          variant="outline"
+          className="w-full gap-2 font-medium border-2"
+        >
+          {isRefreshing ? (
+            <>
+              <RefreshCw className="w-4 h-4 animate-spin" />
+              <span>Updating Rankings...</span>
+            </>
+          ) : (
+            <>
+              <RefreshCw className="w-4 h-4" />
+              <span>Refresh Rankings (includes new assessments)</span>
+            </>
+          )}
+        </Button>
+
+        {/* Download PDF Button */}
         <Button
           onClick={handleDownloadPDF}
           disabled={isGenerating}
@@ -309,7 +369,7 @@ export const RankCard = ({ rankData, type = 'class', className }: RankCardProps)
           ) : (
             <>
               <Download className="w-4 h-4" />
-              <span>Download Rank Card</span>
+              <span>Download Official Certificate</span>
             </>
           )}
         </Button>

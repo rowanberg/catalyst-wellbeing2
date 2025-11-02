@@ -25,13 +25,7 @@ export async function GET(request: NextRequest) {
       // Use user-context client for RLS enforcement
       const supabase = await createClient()
       
-      // Verify authentication - check session first
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-      if (sessionError || !session) {
-        console.error(`[${requestId}] No valid session found:`, sessionError?.message || 'Session is null')
-        return ApiResponse.unauthorized('Authentication required')
-      }
-      
+      // Verify authentication - Using getUser() for secure server-side validation
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) {
         console.error(`[${requestId}] Auth error:`, authError?.message || 'User is null')

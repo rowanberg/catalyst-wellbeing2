@@ -121,7 +121,7 @@ const GAME_LEVELS: GameLevel[] = [
     requiredLevel: 2,
     xpReward: 150,
     gemsReward: 30,
-    unlocked: false,
+    unlocked: true,
     completed: false,
     stars: 0,
     monsters: [
@@ -158,7 +158,7 @@ const GAME_LEVELS: GameLevel[] = [
     requiredLevel: 3,
     xpReward: 200,
     gemsReward: 50,
-    unlocked: false,
+    unlocked: true,
     completed: false,
     stars: 0,
     monsters: [
@@ -195,7 +195,7 @@ const GAME_LEVELS: GameLevel[] = [
     requiredLevel: 4,
     xpReward: 300,
     gemsReward: 75,
-    unlocked: false,
+    unlocked: true,
     completed: false,
     stars: 0,
     monsters: [
@@ -232,7 +232,7 @@ const GAME_LEVELS: GameLevel[] = [
     requiredLevel: 5,
     xpReward: 400,
     gemsReward: 100,
-    unlocked: false,
+    unlocked: true,
     completed: false,
     stars: 0,
     monsters: [
@@ -440,14 +440,14 @@ export function MathBattleArena() {
         const totalXpEarned = completedLevels.reduce((sum: number, level: any) => sum + (level.xp_earned || 0), 0)
         const totalGemsEarned = completedLevels.reduce((sum: number, level: any) => sum + (level.gems_earned || 0), 0)
         
-        // Update game levels with progress
+        // Update game levels with progress - ALL LEVELS UNLOCKED
         const updatedLevels = gameLevels.map(level => {
           const progress = completedLevels.find((p: any) => p.level_id === level.id)
           return {
             ...level,
             completed: !!progress,
             stars: progress?.stars || 0,
-            unlocked: level.id === 1 || completedLevels.some((p: any) => p.level_id === level.id - 1)
+            unlocked: true // All levels unlocked from the start
           }
         })
         
@@ -934,27 +934,57 @@ export function MathBattleArena() {
           <div className="absolute bottom-20 left-1/4 w-36 h-36 bg-purple-500/30 rounded-full blur-2xl animate-pulse delay-2000"></div>
         </div>
         
-        <div className="relative z-10 p-4">
-          <div className="max-w-4xl mx-auto pb-8">
-          {/* Battle Header */}
-          <div className="flex justify-between items-center mb-6">
-            <Button variant="outline" onClick={resetGame} className="bg-gray-800/50">
-              ← Back to Menu
+        <div className="relative z-10 p-3 sm:p-4">
+          <div className="max-w-4xl mx-auto pb-4 sm:pb-8">
+          {/* Battle Header - Enhanced & Mobile Optimized */}
+          <motion.div 
+            className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 mb-4 sm:mb-6 bg-gradient-to-r from-gray-900/80 via-purple-900/60 to-gray-900/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-purple-500/30 shadow-2xl"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Button 
+              variant="outline" 
+              onClick={resetGame} 
+              className="w-full sm:w-auto bg-gradient-to-r from-gray-800 to-gray-900 hover:from-gray-700 hover:to-gray-800 text-white border-gray-600 shadow-lg transition-all hover:scale-105 h-10 sm:h-auto"
+            >
+              <ArrowRight className="h-4 w-4 mr-2 rotate-180" />
+              <span className="text-sm sm:text-base">Back to Menu</span>
             </Button>
-            <div className="text-center">
-              <h2 className="text-3xl font-bold text-white">Battle in Progress</h2>
-              <div className="flex items-center gap-2 justify-center mt-2">
-                <Flame className="h-5 w-5 text-orange-400" />
-                <span className="text-lg text-orange-400">{combo}x Combo</span>
+            <div className="text-center flex-1">
+              <motion.h2 
+                className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 bg-clip-text text-transparent"
+                animate={{ scale: [1, 1.05, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                ⚔️ Battle Arena ⚔️
+              </motion.h2>
+              {combo > 1 && (
+                <motion.div 
+                  className="flex items-center gap-1 sm:gap-2 justify-center mt-2 bg-orange-500/20 px-3 sm:px-4 py-1 rounded-full border border-orange-400/50"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 1 }}
+                >
+                  <Flame className="h-4 sm:h-5 w-4 sm:w-5 text-orange-400 animate-pulse" />
+                  <span className="text-base sm:text-xl font-bold text-orange-300">{combo}x COMBO!</span>
+                  <Sparkles className="h-4 sm:h-5 w-4 sm:w-5 text-yellow-400 animate-pulse" />
+                </motion.div>
+              )}
+            </div>
+            <motion.div 
+              className="bg-gradient-to-br from-yellow-500/20 to-orange-500/20 px-3 sm:px-4 py-2 rounded-xl border border-yellow-400/50"
+              animate={{ scale: timeLeft <= 10 ? [1, 1.1, 1] : 1 }}
+              transition={{ duration: 0.5, repeat: timeLeft <= 10 ? Infinity : 0 }}
+            >
+              <div className={`text-xl sm:text-2xl font-bold ${timeLeft <= 10 ? 'text-red-400' : 'text-yellow-400'}`}>
+                ⏰ {timeLeft}s
               </div>
-            </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold text-yellow-400">⏰ {timeLeft}s</div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
           {/* Battle Arena */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-6 mb-4 sm:mb-6">
             {/* Player Side - Enhanced with Visual Effects */}
             <motion.div
               animate={shakeEffect === 'player' ? { x: [-5, 5, -5, 5, 0] } : {}}
@@ -972,9 +1002,9 @@ export function MathBattleArena() {
                   <CardTitle className="text-center text-white font-bold text-lg">🛡️ You (Lv.{player.level})</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center p-4 bg-gray-700/40 rounded-lg relative">
+                  <div className="text-center p-3 sm:p-4 bg-gray-700/40 rounded-lg relative">
                     <motion.div 
-                      className="text-6xl mb-3 bg-gray-600/30 rounded-lg p-2 inline-block"
+                      className="text-5xl sm:text-6xl mb-3 bg-gray-600/30 rounded-lg p-2 inline-block"
                       animate={attackEffect === 'player' ? { scale: [1, 1.2, 1] } : {}}
                       transition={{ duration: 0.6 }}
                     >
@@ -1087,55 +1117,98 @@ export function MathBattleArena() {
             </motion.div>
           </div>
 
-          {/* Question Section */}
+          {/* Question Section - Enhanced & Mobile Optimized */}
           {currentQuestion && (
-            <Card className="mb-6 bg-gray-800/90 border-purple-400/60 shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-center text-white text-2xl font-bold">
-                  🎯 Solve to Attack!
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center mb-6 p-4 bg-gray-700/40 rounded-lg">
-                  <div className="text-3xl font-bold text-white mb-4 bg-gray-600/30 p-3 rounded-lg">
-                    {currentQuestion.question}
-                  </div>
-                  <div className="flex gap-4 justify-center items-center">
-                    <Input
-                      type="number"
-                      value={userAnswer}
-                      onChange={(e) => setUserAnswer(e.target.value)}
-                      placeholder="Your answer..."
-                      className="text-center text-xl font-bold w-32 bg-gray-600/50 border-gray-500 text-white placeholder:text-gray-300"
-                      onKeyPress={(e) => e.key === 'Enter' && handleAnswer()}
-                      disabled={!isAnswering}
-                    />
-                    <Button 
-                      onClick={handleAnswer}
-                      disabled={!userAnswer || !isAnswering}
-                      className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 px-8 text-white font-bold shadow-lg"
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className="mb-4 sm:mb-6 bg-gradient-to-br from-purple-900/90 to-indigo-900/90 border-2 border-purple-400/60 shadow-2xl relative overflow-hidden">
+                {/* Animated Background */}
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-purple-500/10 animate-pulse" />
+                
+                <CardHeader className="relative z-10 p-3 sm:p-6">
+                  <motion.div
+                    animate={{ scale: [1, 1.05, 1] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  >
+                    <CardTitle className="text-center text-white text-lg sm:text-2xl font-bold flex items-center justify-center gap-2 sm:gap-3">
+                      <Target className="h-5 sm:h-7 w-5 sm:w-7 text-yellow-400" />
+                      <span className="text-base sm:text-2xl">Solve to Attack!</span>
+                      <Zap className="h-5 sm:h-7 w-5 sm:w-7 text-orange-400" />
+                    </CardTitle>
+                  </motion.div>
+                </CardHeader>
+                <CardContent className="relative z-10 p-3 sm:p-6">
+                  <div className="text-center mb-4 sm:mb-6">
+                    <motion.div 
+                      className="text-2xl sm:text-4xl font-bold text-white mb-4 sm:mb-6 bg-gradient-to-r from-gray-800 to-gray-900 p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-inner border-2 border-purple-500/30"
+                      initial={{ scale: 0.9 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 200 }}
                     >
-                      ⚔️ Attack!
-                    </Button>
+                      {currentQuestion.question}
+                    </motion.div>
+                    <div className="flex gap-4 justify-center items-center flex-wrap">
+                      <motion.div
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Input
+                          type="number"
+                          value={userAnswer}
+                          onChange={(e) => setUserAnswer(e.target.value)}
+                          placeholder="Your answer..."
+                          className="text-center text-xl sm:text-2xl font-bold w-32 sm:w-40 h-12 sm:h-14 bg-gradient-to-br from-gray-700 to-gray-800 border-2 border-purple-400 text-white placeholder:text-gray-400 focus:ring-4 focus:ring-purple-500/50 shadow-lg"
+                          onKeyPress={(e) => e.key === 'Enter' && handleAnswer()}
+                          disabled={!isAnswering}
+                          autoFocus
+                        />
+                      </motion.div>
+                      <motion.div
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                      >
+                        <Button 
+                          onClick={handleAnswer}
+                          disabled={!userAnswer || !isAnswering}
+                          className="bg-gradient-to-r from-green-500 via-emerald-500 to-green-600 hover:from-green-600 hover:via-emerald-600 hover:to-green-700 px-6 sm:px-10 h-12 sm:h-14 text-base sm:text-lg text-white font-black shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed border-2 border-green-400"
+                        >
+                          <Sword className="h-4 sm:h-5 w-4 sm:w-5 mr-2" />
+                          <span className="text-sm sm:text-lg">ATTACK!</span>
+                          <Zap className="h-4 sm:h-5 w-4 sm:w-5 ml-2" />
+                        </Button>
+                      </motion.div>
+                    </div>
+                    <motion.div 
+                      className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-300 flex items-center justify-center gap-2"
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      <Sparkles className="h-3 sm:h-4 w-3 sm:w-4 text-yellow-400" />
+                      <span className="hidden sm:inline">Press Enter to submit</span>
+                      <span className="sm:hidden">Tap Attack!</span>
+                    </motion.div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
           )}
 
-          {/* Battle Log - Enhanced Contrast */}
+          {/* Battle Log - Enhanced & Mobile Optimized */}
           <Card className="bg-gray-800/90 border-gray-600/50 shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-white font-bold">📜 Battle Log</CardTitle>
+            <CardHeader className="p-3 sm:p-6">
+              <CardTitle className="text-white font-bold text-base sm:text-lg">📜 Battle Log</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="h-32 overflow-y-auto space-y-2 p-3 bg-gray-700/30 rounded-lg">
+            <CardContent className="p-3 sm:p-6">
+              <div className="h-24 sm:h-32 overflow-y-auto space-y-2 p-2 sm:p-3 bg-gray-700/30 rounded-lg">
                 {battleLog.map((log, index) => (
                   <motion.div
                     key={index}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="text-gray-100 text-sm p-2 bg-gray-600/30 rounded border-l-2 border-blue-400/50 font-medium"
+                    className="text-gray-100 text-xs sm:text-sm p-2 bg-gray-600/30 rounded border-l-2 border-blue-400/50 font-medium"
                   >
                     {log}
                   </motion.div>

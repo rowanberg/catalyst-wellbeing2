@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, firstName, lastName, role, schoolCode, email, password, gradeLevel, className } = await request.json()
+    const { userId, firstName, lastName, gender, role, schoolCode, email, password, gradeLevel, className } = await request.json()
 
     let user: { id: string } | null = null
     let shouldCreateUser = false
@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
       email: email || '', // Add email to profile for lookups
       first_name: firstName,
       last_name: lastName,
+      gender: gender || null,
       role,
       school_id: school.id,
       school_code: schoolCode,

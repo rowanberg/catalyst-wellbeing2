@@ -27,10 +27,22 @@ interface School {
 
 export async function GET(request: NextRequest) {
   try {
-    // For super admin, we'll use a simpler auth check
-    const accessKey = request.cookies.get('super_admin_key')?.value
-    if (!accessKey || accessKey !== '4C4F52454D5F495053554D5F444F4C4F525F534954') {
+    // Verify super admin session (secure server-side check)
+    const sessionToken = request.cookies.get('super_admin_session')?.value
+    const secretKey = process.env.SUPER_ADMIN_SECRET_KEY
+
+    if (!sessionToken || !secretKey) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Validate session token
+    try {
+      const decoded = Buffer.from(sessionToken, 'base64').toString('utf-8')
+      if (!decoded.startsWith(secretKey)) {
+        return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
+      }
+    } catch {
+      return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
     }
 
     // Log access
@@ -157,10 +169,22 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Check super admin access
-    const accessKey = request.cookies.get('super_admin_key')?.value
-    if (!accessKey || accessKey !== '4C4F52454D5F495053554D5F444F4C4F525F534954') {
+    // Verify super admin session (secure server-side check)
+    const sessionToken = request.cookies.get('super_admin_session')?.value
+    const secretKey = process.env.SUPER_ADMIN_SECRET_KEY
+
+    if (!sessionToken || !secretKey) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Validate session token
+    try {
+      const decoded = Buffer.from(sessionToken, 'base64').toString('utf-8')
+      if (!decoded.startsWith(secretKey)) {
+        return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
+      }
+    } catch {
+      return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
     }
 
     const body = await request.json()

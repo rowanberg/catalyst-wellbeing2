@@ -86,6 +86,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { ProfileDropdown } from '@/components/ui/profile-dropdown'
 import { useAppSelector } from '@/lib/redux/hooks'
 import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
+import { fetchTeacherDashboard, teacherCache } from '@/lib/client/teacherCache'
 
 interface StudentOverview {
   id: string
@@ -192,27 +193,8 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
   const [selectedStudent, setSelectedStudent] = useState<StudentOverview | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  // Optimized real-time notifications with longer interval
-  useEffect(() => {
-    if (!user || !profile) return
-
-    const interval = setInterval(() => {
-      // Only update if user is on overview tab
-      if (activeTab !== 'overview') return
-      
-      if (Math.random() > 0.85) { // Reduced to 15% chance
-        const events = [
-          { type: 'help_request', message: 'New help request from student' },
-          { type: 'quest_completed', message: 'Student completed a quest!' },
-          { type: 'mood_update', message: 'Student mood updated' }
-        ]
-        const event = events[Math.floor(Math.random() * events.length)]
-        addNotification(event.message, event.type === 'help_request' ? 'warning' : 'info')
-      }
-    }, 45000) // Increased to 45 seconds
-
-    return () => clearInterval(interval)
-  }, [user, profile, activeTab])
+  // Real-time notifications can be connected to actual events via WebSocket or polling
+  // Demo system removed - notifications should come from real API events
 
   const addNotification = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
     const id = Date.now().toString()
@@ -224,28 +206,11 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
     }, 5000)
   }
 
-  // Optimized data loading with cache validation
+  // Optimized data loading with aggressive client-side caching
   useEffect(() => {
-    const cacheKey = `teacher_cache_${user?.id}`
-    const cached = sessionStorage.getItem(cacheKey)
-    const cacheTimestamp = sessionStorage.getItem(`${cacheKey}_timestamp`)
-    const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+    if (!user?.id || !profile?.user_id || dataFetched) return
     
-    if (cached && cacheTimestamp) {
-      const age = Date.now() - parseInt(cacheTimestamp)
-      if (age < CACHE_DURATION) {
-        const data = JSON.parse(cached)
-        setAnalytics(data.analytics)
-        setStudents(data.students)
-        setDataFetched(true)
-        setLoading(false)
-        return
-      }
-    }
-    
-    if (!dataFetched && user?.id && profile?.user_id) {
-      fetchClassData()
-    }
+    fetchClassData()
   }, [user?.id, profile?.user_id])
 
   // Add a timeout to prevent infinite loading
@@ -267,71 +232,44 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
       return
     }
 
-    // Prevent concurrent API calls using ref for immediate check
-    if (fetchingRef.current) {
-      return
-    }
-
-    // Double check with state as well
-    if (isDataFetching) {
+    // Prevent concurrent API calls
+    if (fetchingRef.current || isDataFetching) {
+      console.log('⏭️ Skipping fetch - already in progress')
       return
     }
 
     try {
-      fetchingRef.current = true // Set ref guard immediately
-      setIsDataFetching(true) // Set state guard
+      fetchingRef.current = true
+      setIsDataFetching(true)
       setLoading(true)
       
-      // Use combined API for better performance (single request instead of two)
-      const response = await fetch(`/api/teacher/dashboard-combined?teacher_id=${user.id}`)
+      const pageLoadStart = performance.now()
       
+      // Use optimized client-side cache with stale-while-revalidate
+      const combinedData = await fetchTeacherDashboard(user.id)
       
-      if (response.ok) {
-        const combinedData = await response.json()
-        
-        // Set analytics data
-        const analyticsData = combinedData.analytics || {
-          totalStudents: 0,
-          averageXP: 0,
-          activeToday: 0,
-          helpRequests: 0,
-          moodDistribution: { happy: 0, excited: 0, calm: 0, sad: 0, angry: 0, anxious: 0 },
-          averageStreak: 0
-        }
-        setAnalytics(analyticsData)
-        
-        // Set students data
-        const studentsData = combinedData.students || []
-        setStudents(studentsData)
-        
-        // Cache with timestamp for expiration
-        const cacheKey = `teacher_cache_${user.id}`
-        sessionStorage.setItem(cacheKey, JSON.stringify({ analytics: analyticsData, students: studentsData }))
-        sessionStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString())
-        
-        setDataFetched(true)
-      } else {
-        console.error('Failed to fetch teacher analytics:', response.status)
-        // Set default analytics if API fails
-        setAnalytics({
-          totalStudents: 0,
-          averageXP: 0,
-          activeToday: 0,
-          helpRequests: 0,
-          moodDistribution: {
-            happy: 0,
-            excited: 0,
-            calm: 0,
-            sad: 0,
-            angry: 0,
-            anxious: 0
-          },
-          averageStreak: 0
-        })
+      const loadTime = Math.round(performance.now() - pageLoadStart)
+      console.log(`📊 [Teacher Dashboard] Loaded in ${loadTime}ms`)
+      
+      // Set analytics data
+      const analyticsData = combinedData.analytics || {
+        totalStudents: 0,
+        averageXP: 0,
+        activeToday: 0,
+        helpRequests: 0,
+        moodDistribution: { happy: 0, excited: 0, calm: 0, sad: 0, angry: 0, anxious: 0 },
+        averageStreak: 0
       }
+      setAnalytics(analyticsData)
+      
+      // Set students data
+      const studentsData = combinedData.students || []
+      setStudents(studentsData)
+      
+      setDataFetched(true)
 
     } catch (error: any) {
-      console.error('Error fetching class data:', error)
+      console.error('❌ Error fetching class data:', error)
       // Set default analytics on error
       setAnalytics({
         totalStudents: 0,
@@ -349,8 +287,8 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
         averageStreak: 0
       })
     } finally {
-      fetchingRef.current = false // Clear ref guard
-      setIsDataFetching(false) // Clear state guard
+      fetchingRef.current = false
+      setIsDataFetching(false)
       setLoading(false)
     }
   }

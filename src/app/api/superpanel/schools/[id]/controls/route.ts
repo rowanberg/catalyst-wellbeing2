@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import crypto from 'crypto'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -263,8 +264,8 @@ export async function POST(
           return NextResponse.json({ error: 'User not found in this school' }, { status: 404 })
         }
 
-        // Generate temporary password
-        const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8)
+        // Generate cryptographically secure temporary password
+        const tempPassword = crypto.randomBytes(12).toString('base64').replace(/[+/=]/g, '').slice(0, 16)
 
         // Update auth user password
         const { error } = await supabaseAdmin.auth.admin.updateUserById(

@@ -216,15 +216,6 @@ function SchoolSettingsContent() {
             <div className="flex items-center gap-2 sm:gap-3">
               <ClientWrapper>
                 <Button 
-                  variant="default"
-                  onClick={() => router.push('/admin/subscription')}
-                  size="sm"
-                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white flex-1 sm:flex-none min-w-0 px-3 py-2 shadow-lg"
-                >
-                  <CreditCard className="h-4 w-4 mr-2 flex-shrink-0" />
-                  <span className="text-sm font-medium truncate">Subscription</span>
-                </Button>
-                <Button 
                   onClick={saveSettings} 
                   disabled={saving}
                   size="sm"

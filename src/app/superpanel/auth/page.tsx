@@ -7,8 +7,6 @@ import { Shield, Lock, Eye, EyeOff, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
-const SUPER_ADMIN_ACCESS_KEY = '4C4F52454D5F495053554D5F444F4C4F525F534954'
-
 export default function SuperAdminAuth() {
   const [accessKey, setAccessKey] = useState('')
   const [showKey, setShowKey] = useState(false)
@@ -19,40 +17,58 @@ export default function SuperAdminAuth() {
 
   useEffect(() => {
     setMounted(true)
-    // Check if already authenticated
-    const cookies = document.cookie.split(';')
-    const hasValidKey = cookies.some(cookie => {
-      const [name, value] = cookie.trim().split('=')
-      return name === 'super_admin_key' && value === SUPER_ADMIN_ACCESS_KEY
-    })
-    
-    if (hasValidKey) {
-      router.push('/superpanel/dashboard')
-    }
+    // Check if already authenticated via server-side session
+    checkAuthentication()
   }, [])
+
+  const checkAuthentication = async () => {
+    try {
+      const response = await fetch('/api/superpanel/verify-key')
+      const data = await response.json()
+      
+      if (data.valid) {
+        router.push('/superpanel/dashboard')
+      }
+    } catch (error) {
+      console.error('Auth check failed:', error)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
-    // Security delay to prevent brute force
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      // Send key to server for verification (key never stored client-side)
+      const response = await fetch('/api/superpanel/verify-key', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ accessKey })
+      })
 
-    if (accessKey === SUPER_ADMIN_ACCESS_KEY) {
-      // Set secure cookie
-      document.cookie = `super_admin_key=${accessKey}; path=/; secure; samesite=strict; max-age=86400`
-      
-      // Redirect to dashboard
-      router.push('/superpanel/dashboard')
-    } else {
-      setAttempts(prev => prev + 1)
-      
-      if (attempts >= 2) {
-        alert('Multiple failed attempts detected. Please try again later.')
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        // Server set secure HTTP-only cookie, redirect to dashboard
+        router.push('/superpanel/dashboard')
+      } else {
+        // Invalid key
+        setAttempts(prev => prev + 1)
+        
+        if (attempts >= 2) {
+          alert('Multiple failed attempts detected. Access may be temporarily locked.')
+        }
+        
+        setAccessKey('')
       }
-      
+    } catch (error) {
+      console.error('Authentication error:', error)
+      alert('Authentication failed. Please try again.')
+    } finally {
       setIsLoading(false)
-      setAccessKey('')
     }
   }
 

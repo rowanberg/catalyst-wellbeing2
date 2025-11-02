@@ -113,7 +113,7 @@ const DESTINATIONS: Destination[] = [
       'Took over 2,000 years to build'
     ],
     climate: 'Continental',
-    unlocked: false,
+    unlocked: true,
     challenges: [
       {
         id: 'wall1',
@@ -140,7 +140,7 @@ const DESTINATIONS: Destination[] = [
       'Contains 10% of known species on Earth'
     ],
     climate: 'Tropical rainforest',
-    unlocked: false,
+    unlocked: true,
     challenges: [
       {
         id: 'amazon1',
@@ -167,7 +167,7 @@ const DESTINATIONS: Destination[] = [
       'Temperatures can reach 50°C (122°F)'
     ],
     climate: 'Hot desert',
-    unlocked: false,
+    unlocked: true,
     challenges: [
       {
         id: 'sahara1',
@@ -432,29 +432,29 @@ export function GeographyExplorer() {
 
   if (gameState === 'destination') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-teal-900 via-blue-900 to-indigo-900 p-4">
+      <div className="min-h-screen bg-gradient-to-br from-teal-900 via-blue-900 to-indigo-900 p-3 sm:p-4">
         <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-6">
-            <Button variant="outline" onClick={resetToMenu} className="bg-gray-800/50">
-              ← Back to World Map
+          {/* Header - Mobile Optimized */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mb-4 sm:mb-6">
+            <Button variant="outline" onClick={resetToMenu} className="w-full sm:w-auto bg-gray-800/50 h-10">
+              <span className="text-sm sm:text-base">← Back to World Map</span>
             </Button>
-            <div className="text-center">
-              <h2 className="text-4xl font-bold text-white">{currentDestination?.name}</h2>
-              <p className="text-xl text-gray-200">{currentDestination?.country} • {currentDestination?.continent}</p>
+            <div className="text-center flex-1">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white">{currentDestination?.name}</h2>
+              <p className="text-base sm:text-lg lg:text-xl text-gray-200">{currentDestination?.country} • {currentDestination?.continent}</p>
             </div>
-            <Button onClick={takePhoto} className="bg-gradient-to-r from-purple-500 to-pink-500">
+            <Button onClick={takePhoto} className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-pink-500 h-10">
               <Camera className="h-4 w-4 mr-2" />
-              📸 Photo
+              <span className="text-sm sm:text-base">📸 Photo</span>
             </Button>
           </div>
 
           {/* Destination Info */}
-          <Card className="mb-6 bg-gradient-to-br from-teal-600/20 to-blue-600/20 border-teal-400/30">
-            <CardContent className="p-6">
+          <Card className="mb-4 sm:mb-6 bg-gradient-to-br from-teal-600/20 to-blue-600/20 border-teal-400/30">
+            <CardContent className="p-4 sm:p-6">
               <div className="text-center mb-6">
-                <div className="text-8xl mb-4">{currentDestination?.emoji}</div>
-                <p className="text-lg text-white mb-4">{currentDestination?.description}</p>
+                <div className="text-6xl sm:text-8xl mb-4">{currentDestination?.emoji}</div>
+                <p className="text-base sm:text-lg text-white mb-4">{currentDestination?.description}</p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <div className="bg-blue-100 p-4 rounded-lg">
@@ -482,8 +482,8 @@ export function GeographyExplorer() {
           </Card>
 
           {/* Challenges */}
-          <div className="space-y-4">
-            <h3 className="text-2xl font-bold text-white text-center">Exploration Challenges</h3>
+          <div className="space-y-3 sm:space-y-4">
+            <h3 className="text-xl sm:text-2xl font-bold text-white text-center">Exploration Challenges</h3>
             {currentDestination?.challenges.map((challenge, index) => (
               <motion.div
                 key={challenge.id}
@@ -495,17 +495,17 @@ export function GeographyExplorer() {
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <div className="text-lg font-semibold text-white mb-2">
+                        <div className="text-base sm:text-lg font-semibold text-white mb-2">
                           Challenge {index + 1}: {challenge.type.toUpperCase()}
                         </div>
-                        <div className="text-gray-300 mb-2">{challenge.question}</div>
+                        <div className="text-sm sm:text-base text-gray-300 mb-2">{challenge.question}</div>
                         <div className="text-sm text-yellow-400">Reward: {challenge.points} XP</div>
                       </div>
                       <Button 
                         onClick={() => startChallenge(challenge.id)}
-                        className="bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600"
+                        className="w-full sm:w-auto bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 h-10 mt-2 sm:mt-0"
                       >
-                        Start Challenge
+                        <span className="text-sm sm:text-base">Start Challenge</span>
                       </Button>
                     </div>
                   </CardContent>
@@ -520,12 +520,12 @@ export function GeographyExplorer() {
 
   if (gameState === 'challenge') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 p-4">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 p-3 sm:p-4">
         <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-6">
-            <Button variant="outline" onClick={backToDestination} className="bg-gray-800/50">
-              ← Back to {currentDestination?.name}
+          {/* Header - Mobile Optimized */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mb-4 sm:mb-6">
+            <Button variant="outline" onClick={backToDestination} className="w-full sm:w-auto bg-gray-800/50 h-10">
+              <span className="text-sm sm:text-base">← Back to {currentDestination?.name}</span>
             </Button>
             <div className="text-center">
               <h2 className="text-3xl font-bold text-white">Geography Challenge</h2>

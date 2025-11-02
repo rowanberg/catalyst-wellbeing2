@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const teacherId = searchParams.get('teacher_id')
-    const limit = parseInt(searchParams.get('limit') || '10')
+    const limit = parseInt(searchParams.get('limit') || '10', 10)
 
     if (!teacherId || teacherId !== user.id) {
       return NextResponse.json({ error: 'Invalid teacher ID' }, { status: 400 })

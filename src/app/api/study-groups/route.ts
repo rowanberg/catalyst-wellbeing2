@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         creator_info:profiles!study_groups_created_by_fkey(id, first_name, last_name, avatar_url, grade_level),
-        study_group_members(count, user_id, role)
+        study_group_members(user_id, role)
       `)
       .eq('school_id', schoolId)
       .eq('status', 'active')
@@ -79,19 +79,35 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch study groups' }, { status: 500 })
     }
 
+    // Get user's join requests for private groups
+    const { data: userJoinRequests } = await supabase
+      .from('study_group_join_requests')
+      .select('group_id, status')
+      .eq('user_id', profile.id)
+      .in('status', ['pending', 'approved', 'rejected'])
+
+    const joinRequestsMap = new Map(
+      userJoinRequests?.map(req => [req.group_id, req.status]) || []
+    )
+
     // Process groups to add computed fields
     const processedGroups = groups?.map((group: any) => {
       const memberCount = Array.isArray(group.study_group_members) ? group.study_group_members.length : 0
       const userMembership = Array.isArray(group.study_group_members) 
         ? group.study_group_members.find((m: any) => m.user_id === profile.id)
         : null
+      
+      const isCreator = group.created_by === profile.id
+      const joinRequestStatus = joinRequestsMap.get(group.id)
 
       return {
         ...group,
         member_count: memberCount,
         is_joined: !!userMembership,
         user_role: userMembership?.role || null,
-        creator_info: group.creator_info
+        creator_info: group.creator_info,
+        is_creator: isCreator,
+        join_request_status: joinRequestStatus || null
       }
     }) || []
 

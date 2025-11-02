@@ -1,7 +1,9 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabaseClient'
+import { parseFullName } from '@/lib/nameUtils'
 
 export default function HomePage() {
   const router = useRouter()
@@ -9,13 +11,6 @@ export default function HomePage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Check if Supabase is configured
-        if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-          console.warn('Supabase not configured, redirecting to login')
-          router.push('/login')
-          return
-        }
-
         const { supabase } = await import('@/lib/supabaseClient')
         const { data: { session } } = await supabase.auth.getSession()
         
@@ -43,10 +38,11 @@ export default function HomePage() {
                   console.log('🔄 Google OAuth user without profile, redirecting to registration...')
                   
                   // Store Google OAuth data for registration
+                  const { firstName, lastName } = parseFullName(user.user_metadata?.full_name)
                   const googleUserData = {
                     email: user.email,
-                    firstName: user.user_metadata?.full_name?.split(' ')[0] || '',
-                    lastName: user.user_metadata?.full_name?.split(' ').slice(1).join(' ') || '',
+                    firstName,
+                    lastName,
                     avatarUrl: user.user_metadata?.avatar_url || null,
                     userId: user.id,
                     provider: 'google'

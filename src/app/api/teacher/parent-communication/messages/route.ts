@@ -5,7 +5,7 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
     const { searchParams } = new URL(request.url)
-    const limit = parseInt(searchParams.get('limit') || '50')
+    const limit = parseInt(searchParams.get('limit') || '50', 10)
     const parentId = searchParams.get('parent_id')
     const studentId = searchParams.get('student_id')
 

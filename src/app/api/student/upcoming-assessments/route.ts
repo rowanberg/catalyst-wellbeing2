@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
+// 1-hour cache for upcoming assessments
+const assessmentsCache = new Map<string, { data: any; timestamp: number }>()
+const CACHE_TTL = 60 * 60 * 1000 // 1 hour
+const MAX_CACHE_SIZE = 200
+
+// Cleanup old cache entries
+function cleanupCache() {
+  if (assessmentsCache.size > MAX_CACHE_SIZE) {
+    const entries = Array.from(assessmentsCache.entries())
+    entries.sort((a, b) => b[1].timestamp - a[1].timestamp)
+    assessmentsCache.clear()
+    entries.slice(0, MAX_CACHE_SIZE).forEach(([key, value]) => assessmentsCache.set(key, value))
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createSupabaseServerClient()
@@ -20,6 +35,17 @@ export async function GET(request: NextRequest) {
 
     if (profileError || !profile || profile.role !== 'student') {
       return NextResponse.json({ error: 'Student access required' }, { status: 403 })
+    }
+
+    // Check cache first
+    const cacheKey = `assessments-${profile.id}`
+    const cached = assessmentsCache.get(cacheKey)
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      const response = NextResponse.json(cached.data)
+      response.headers.set('X-Cache', 'HIT')
+      response.headers.set('X-Cache-Age', Math.floor((Date.now() - cached.timestamp) / 1000).toString())
+      response.headers.set('Cache-Control', 'private, max-age=3600')
+      return response
     }
 
     // Get all classes the student is enrolled in using student_class_assignments
@@ -112,10 +138,19 @@ export async function GET(request: NextRequest) {
       assessments: formattedAssessments
     })
 
-    return NextResponse.json({ 
+    const responseData = { 
       assessments: formattedAssessments,
       count: formattedAssessments.length
-    })
+    }
+
+    // Store in cache
+    assessmentsCache.set(cacheKey, { data: responseData, timestamp: Date.now() })
+    cleanupCache()
+
+    const response = NextResponse.json(responseData)
+    response.headers.set('X-Cache', 'MISS')
+    response.headers.set('Cache-Control', 'private, max-age=3600')
+    return response
 
   } catch (error) {
     console.error('Error in upcoming assessments API:', error)

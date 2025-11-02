@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   try {
     // Parse query parameters
     const { searchParams } = new URL(request.url)
-    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : undefined
+    const limit = parseInt(searchParams.get('limit') || '10', 10)
     
     const cookieStore = await cookies()
     const supabase = createServerClient(

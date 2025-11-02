@@ -25,7 +25,8 @@ export async function POST(request: NextRequest) {
       adminFirstName,
       adminLastName,
       adminEmail,
-      password
+      password,
+      referralCode // Optional: affiliate referral code from URL
     } = await request.json()
 
     // Generate unique school code
@@ -81,19 +82,56 @@ export async function POST(request: NextRequest) {
       // Don't fail registration if email sending fails
     }
 
+    // Lookup affiliate by referral code (if provided)
+    let affiliateId: string | null = null
+    
+    if (referralCode) {
+      console.log('🔍 Looking up affiliate with referral code:', referralCode)
+      
+      const { data: affiliateData, error: affiliateError } = await supabaseAdmin
+        .from('affiliates')
+        .select('id, name, status')
+        .eq('referral_code', referralCode)
+        .eq('status', 'active') // Only active affiliates
+        .single()
+      
+      if (affiliateError) {
+        console.warn('⚠️ Affiliate lookup failed:', affiliateError.message)
+        // Don't fail registration if affiliate code is invalid - just log it
+      } else if (affiliateData) {
+        affiliateId = affiliateData.id
+        console.log('✅ Affiliate found:', { id: affiliateId, name: affiliateData.name })
+      } else {
+        console.warn('⚠️ No affiliate found with code:', referralCode)
+      }
+    }
+
     // Create school record using admin client to bypass RLS
-    console.log('📝 Attempting to insert school:', { schoolName, schoolCode, adminId: authData.user.id })
+    console.log('📝 Attempting to insert school:', { 
+      schoolName, 
+      schoolCode, 
+      adminId: authData.user.id,
+      referredBy: affiliateId || 'none'
+    })
+    
+    // Build school record - only include referred_by_affiliate_id if affiliate was found
+    const schoolRecord: Record<string, any> = {
+      name: schoolName,
+      address,
+      phone,
+      email: schoolEmail,
+      admin_id: authData.user.id,
+      school_code: schoolCode,
+    }
+    
+    // Only add affiliate ID if it exists (prevents schema errors if column doesn't exist)
+    if (affiliateId) {
+      schoolRecord.referred_by_affiliate_id = affiliateId
+    }
     
     const { data: schoolData, error: schoolError } = await supabaseAdmin
       .from('schools')
-      .insert({
-        name: schoolName,
-        address,
-        phone,
-        email: schoolEmail,
-        admin_id: authData.user.id,
-        school_code: schoolCode,
-      })
+      .insert(schoolRecord)
       .select()
       .single()
 
@@ -177,7 +215,9 @@ export async function POST(request: NextRequest) {
       adminUserId: authData.user.id,
       profileCreated: profileData ? 'yes' : 'no',
       schoolDetailsCreated: schoolDetailsData ? 'yes' : 'no',
-      schoolCode
+      schoolCode,
+      affiliateId: affiliateId || 'none',
+      referralTracked: !!affiliateId
     })
 
     return NextResponse.json({

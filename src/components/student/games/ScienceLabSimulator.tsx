@@ -309,60 +309,134 @@ export function ScienceLabSimulator() {
 
   if (gameState === 'menu') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-teal-900 to-green-900 p-4">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
+      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-teal-900 to-green-900 p-4 relative overflow-hidden">
+        {/* Animated Background Elements */}
+        <div className="absolute inset-0 opacity-20 pointer-events-none">
           <motion.div 
-            className="text-center mb-8"
-            initial={{ opacity: 0, y: -20 }}
+            className="absolute top-20 left-10 w-72 h-72 bg-teal-500/30 rounded-full blur-3xl"
+            animate={{ scale: [1, 1.2, 1], x: [0, 50, 0] }}
+            transition={{ duration: 8, repeat: Infinity }}
+          />
+          <motion.div 
+            className="absolute bottom-20 right-10 w-96 h-96 bg-blue-500/30 rounded-full blur-3xl"
+            animate={{ scale: [1, 1.3, 1], y: [0, -50, 0] }}
+            transition={{ duration: 10, repeat: Infinity }}
+          />
+          <motion.div 
+            className="absolute top-1/2 left-1/3 w-64 h-64 bg-green-500/20 rounded-full blur-3xl"
+            animate={{ scale: [1, 1.1, 1], rotate: [0, 180, 360] }}
+            transition={{ duration: 15, repeat: Infinity }}
+          />
+        </div>
+
+        <div className="max-w-6xl mx-auto relative z-10">
+          {/* Header - Enhanced */}
+          <motion.div 
+            className="text-center mb-10"
+            initial={{ opacity: 0, y: -30 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
           >
-            <h1 className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-teal-500 to-green-400 mb-4">
-              🔬 Science Lab Simulator
-            </h1>
-            <p className="text-xl text-gray-300">Conduct virtual experiments safely and learn real science!</p>
+            <motion.div
+              className="inline-block mb-6"
+              animate={{ 
+                rotateY: [0, 360],
+                scale: [1, 1.1, 1]
+              }}
+              transition={{ duration: 3, repeat: Infinity, repeatDelay: 2 }}
+            >
+              <div className="text-8xl drop-shadow-2xl">🔬</div>
+            </motion.div>
+            <motion.h1 
+              className="text-5xl sm:text-7xl font-black mb-4"
+              style={{
+                background: 'linear-gradient(135deg, #60a5fa 0%, #34d399 50%, #10b981 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                textShadow: '0 0 40px rgba(52, 211, 153, 0.3)'
+              }}
+            >
+              SCIENCE LAB SIMULATOR
+            </motion.h1>
+            <motion.p 
+              className="text-xl sm:text-2xl text-teal-200 font-medium"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+            >
+              ⚗️ Conduct virtual experiments • Learn real science • Stay safe! ⚗️
+            </motion.p>
           </motion.div>
 
-          {/* Lab Stats */}
-          <Card className="mb-8 bg-gradient-to-r from-teal-600/20 to-blue-600/20 border-teal-400/30">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <Microscope className="h-6 w-6 text-teal-400" />
-                Lab Scientist Stats
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-teal-400">Lv.{labStats.level}</div>
-                  <div className="text-sm text-gray-300">Level</div>
+          {/* Lab Stats - Enhanced */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+          >
+            <Card className="mb-10 bg-gradient-to-br from-teal-900/40 to-blue-900/40 border-2 border-teal-400/50 backdrop-blur-xl shadow-2xl">
+              <CardHeader className="bg-gradient-to-r from-teal-600/30 to-blue-600/30 border-b border-teal-400/30">
+                <CardTitle className="flex items-center justify-center gap-3 text-white text-xl sm:text-2xl">
+                  <Microscope className="h-7 w-7 text-teal-400" />
+                  Lab Scientist Profile
+                  <Atom className="h-7 w-7 text-blue-400 animate-spin" style={{ animationDuration: '3s' }} />
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                  <motion.div 
+                    className="text-center p-4 bg-gradient-to-br from-teal-500/20 to-teal-600/20 rounded-xl border border-teal-400/30"
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    <div className="text-3xl font-black text-teal-300">Lv.{labStats.level}</div>
+                    <div className="text-sm text-teal-200 font-medium mt-1">Level</div>
+                  </motion.div>
+                  <motion.div 
+                    className="text-center p-4 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-xl border border-green-400/30"
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    <div className="text-3xl font-black text-green-300">{labStats.experimentsCompleted}</div>
+                    <div className="text-sm text-green-200 font-medium mt-1">Experiments</div>
+                  </motion.div>
+                  <motion.div 
+                    className="text-center p-4 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-xl border border-blue-400/30"
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    <div className="text-3xl font-black text-blue-300">{labStats.safetyScore}%</div>
+                    <div className="text-sm text-blue-200 font-medium mt-1">Safety</div>
+                  </motion.div>
+                  <motion.div 
+                    className="text-center p-4 bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-xl border border-purple-400/30"
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    <div className="text-3xl font-black text-purple-300">{labStats.accuracy}%</div>
+                    <div className="text-sm text-purple-200 font-medium mt-1">Accuracy</div>
+                  </motion.div>
+                  <motion.div 
+                    className="text-center p-4 bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 rounded-xl border border-yellow-400/30"
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    <div className="text-3xl font-black text-yellow-300">{labStats.gems}</div>
+                    <div className="text-sm text-yellow-200 font-medium mt-1">Gems</div>
+                  </motion.div>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-400">{labStats.experimentsCompleted}</div>
-                  <div className="text-sm text-gray-300">Experiments</div>
+                <div className="bg-gray-900/50 p-4 rounded-xl border border-teal-500/30">
+                  <div className="flex justify-between text-sm text-teal-200 mb-2 font-semibold">
+                    <span>🔬 Research Progress</span>
+                    <span className="text-teal-300">{labStats.xp}/{labStats.maxXp} XP</span>
+                  </div>
+                  <div className="relative h-4 bg-gray-800 rounded-full overflow-hidden border border-teal-500/30">
+                    <motion.div 
+                      className="absolute inset-0 bg-gradient-to-r from-teal-500 via-blue-500 to-green-500"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(labStats.xp / labStats.maxXp) * 100}%` }}
+                      transition={{ duration: 1, ease: "easeOut" }}
+                    />
+                  </div>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-400">{labStats.safetyScore}%</div>
-                  <div className="text-sm text-gray-300">Safety</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-400">{labStats.accuracy}%</div>
-                  <div className="text-sm text-gray-300">Accuracy</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-yellow-400">{labStats.gems}</div>
-                  <div className="text-sm text-gray-300">Gems</div>
-                </div>
-              </div>
-              <div className="mt-4">
-                <div className="flex justify-between text-sm text-gray-300 mb-1">
-                  <span>Research Progress</span>
-                  <span>{labStats.xp}/{labStats.maxXp}</span>
-                </div>
-                <Progress value={(labStats.xp / labStats.maxXp) * 100} className="h-2" />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </motion.div>
 
           {/* Experiments */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -375,16 +449,27 @@ export function ScienceLabSimulator() {
               >
                 <Card className={`${
                   experiment.type === 'chemistry'
-                    ? 'bg-gradient-to-br from-green-600/20 to-teal-600/20 border-green-400/30'
-                    : 'bg-gradient-to-br from-blue-600/20 to-purple-600/20 border-blue-400/30'
-                } hover:border-opacity-60 transition-all cursor-pointer group`}>
-                  <CardContent className="p-6">
+                    ? 'bg-gradient-to-br from-green-900/60 to-teal-900/60 border-2 border-green-400/40'
+                    : 'bg-gradient-to-br from-blue-900/60 to-purple-900/60 border-2 border-blue-400/40'
+                } hover:border-opacity-100 hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer group backdrop-blur-sm relative overflow-hidden`}>
+                  {/* Hover Glow Effect */}
+                  <div className={`absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-300 ${
+                    experiment.type === 'chemistry' 
+                      ? 'bg-gradient-to-br from-green-400 to-teal-400'
+                      : 'bg-gradient-to-br from-blue-400 to-purple-400'
+                  }`} />
+                  
+                  <CardContent className="p-6 relative z-10">
                     <div className="text-center mb-4">
-                      <div className="text-6xl mb-2 group-hover:scale-110 transition-transform">
+                      <motion.div 
+                        className="text-7xl mb-3 inline-block"
+                        whileHover={{ rotate: [0, -10, 10, -10, 0], scale: 1.2 }}
+                        transition={{ duration: 0.5 }}
+                      >
                         {experiment.type === 'chemistry' ? '🧪' : '⚡'}
-                      </div>
-                      <h3 className="text-xl font-bold text-white mb-2">{experiment.name}</h3>
-                      <p className="text-sm text-gray-300 mb-4">{experiment.description}</p>
+                      </motion.div>
+                      <h3 className="text-xl font-bold text-white mb-2 group-hover:text-teal-200 transition-colors">{experiment.name}</h3>
+                      <p className="text-sm text-gray-300 mb-4 leading-relaxed">{experiment.description}</p>
                     </div>
                     
                     <div className="space-y-3 mb-4">
@@ -413,17 +498,19 @@ export function ScienceLabSimulator() {
                       </div>
                     </div>
                     
-                    <Button 
-                      className={`w-full ${
-                        experiment.type === 'chemistry'
-                          ? 'bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600'
-                          : 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600'
-                      }`}
-                      onClick={() => startExperiment(experiment.id)}
-                      disabled={labStats.level < experiment.difficulty}
-                    >
-                      {labStats.level < experiment.difficulty ? '🔒 Locked' : '🔬 Start Experiment'}
-                    </Button>
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                      <Button 
+                        className={`w-full h-12 font-bold text-base shadow-xl ${
+                          experiment.type === 'chemistry'
+                            ? 'bg-gradient-to-r from-green-500 via-teal-500 to-green-600 hover:from-green-600 hover:via-teal-600 hover:to-green-700 border-2 border-green-400'
+                            : 'bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 hover:from-blue-600 hover:via-purple-600 hover:to-blue-700 border-2 border-blue-400'
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        onClick={() => startExperiment(experiment.id)}
+                        disabled={labStats.level < experiment.difficulty}
+                      >
+                        {labStats.level < experiment.difficulty ? '🔒 Locked' : '🔬 Start Experiment'}
+                      </Button>
+                    </motion.div>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -494,29 +581,29 @@ export function ScienceLabSimulator() {
     }
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-teal-900 via-blue-900 to-indigo-900 p-4">
+      <div className="min-h-screen bg-gradient-to-br from-teal-900 via-blue-900 to-indigo-900 p-3 sm:p-4">
         <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-6">
-            <Button variant="outline" onClick={resetToMenu} className="bg-gray-800/50">
-              ← Back to Lab
+          {/* Header - Mobile Optimized */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mb-4 sm:mb-6">
+            <Button variant="outline" onClick={resetToMenu} className="w-full sm:w-auto bg-gray-800/50 h-10">
+              <span className="text-sm sm:text-base">← Back to Lab</span>
             </Button>
-            <div className="text-center">
-              <h2 className="text-3xl font-bold text-white">{currentExperiment?.name}</h2>
-              <div className="text-lg text-teal-300">
+            <div className="text-center flex-1">
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white">{currentExperiment?.name}</h2>
+              <div className="text-sm sm:text-base lg:text-lg text-teal-300">
                 Step {currentStep + 1} of {currentExperiment?.steps.length}
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-lg text-red-400">⚠️ Safety: {3 - safetyViolations}/3</div>
+            <div className="text-center sm:text-right">
+              <div className="text-base sm:text-lg text-red-400">⚠️ Safety: {3 - safetyViolations}/3</div>
             </div>
           </div>
 
           {/* Current Step */}
           {currentExperiment && (
-            <Card className="mb-6 bg-gradient-to-br from-teal-600/20 to-blue-600/20 border-teal-400/30">
-              <CardHeader>
-                <CardTitle className="text-center text-white text-xl flex items-center justify-center gap-2">
+            <Card className="mb-4 sm:mb-6 bg-gradient-to-br from-teal-600/20 to-blue-600/20 border-teal-400/30">
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-center text-white text-lg sm:text-xl flex items-center justify-center gap-2">
                   {currentExperiment.steps[currentStep]?.action === 'mix' && <Beaker className="h-6 w-6" />}
                   {currentExperiment.steps[currentStep]?.action === 'heat' && <Flame className="h-6 w-6" />}
                   {currentExperiment.steps[currentStep]?.action === 'measure' && <TestTube className="h-6 w-6" />}
@@ -525,9 +612,9 @@ export function ScienceLabSimulator() {
                   Current Step
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-center space-y-4">
-                  <div className="text-2xl font-bold text-white mb-4">
+              <CardContent className="p-4 sm:p-6">
+                <div className="text-center space-y-3 sm:space-y-4">
+                  <div className="text-lg sm:text-xl lg:text-2xl font-bold text-white mb-4">
                     {currentExperiment.steps[currentStep]?.instruction}
                   </div>
                   
@@ -545,7 +632,7 @@ export function ScienceLabSimulator() {
                   
                   <Button 
                     onClick={() => executeStep(currentStep)}
-                    className="bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 px-8 py-3 text-lg"
+                    className="w-full sm:w-auto bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 px-6 sm:px-8 py-3 text-base sm:text-lg h-12"
                   >
                     ✅ Execute Step
                   </Button>
@@ -555,7 +642,7 @@ export function ScienceLabSimulator() {
           )}
 
           {/* Equipment & Results */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* Equipment */}
             <Card className="bg-gray-900/50 border-gray-600/30">
               <CardHeader>

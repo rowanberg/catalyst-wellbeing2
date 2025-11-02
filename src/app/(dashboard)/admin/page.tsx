@@ -164,8 +164,10 @@ function AdminDashboardContent() {
         
         const detailsResponse = await fetch('/api/admin/school-details', { headers })
         
+        let detailsDataForCache = null
         if (detailsResponse.ok) {
           const detailsData = await detailsResponse.json()
+          detailsDataForCache = detailsData.details
           
           setSchoolDetails(detailsData.details)
           
@@ -191,7 +193,6 @@ function AdminDashboardContent() {
           // If API fails, show banner unless URL says just completed
           const shouldShowBanner = !setupCompleted
           setShowSetupBanner(shouldShowBanner)
-          console.log('🚨 API FAILED - Setting banner to:', shouldShowBanner)
         }
         
         // Fetch school statistics
@@ -202,11 +203,11 @@ function AdminDashboardContent() {
         const statsData = await statsResponse.json()
         setSchoolStats(statsData.stats)
         
-        // Cache the data in sessionStorage
+        // Cache the data in sessionStorage (use API response, not state)
         sessionStorage.setItem('admin_school_info', JSON.stringify(schoolData.school))
         sessionStorage.setItem('admin_school_stats', JSON.stringify(statsData.stats))
-        if (schoolDetails) {
-          sessionStorage.setItem('admin_school_details', JSON.stringify(schoolDetails))
+        if (detailsDataForCache) {
+          sessionStorage.setItem('admin_school_details', JSON.stringify(detailsDataForCache))
         }
         
         setDataFetched(true)
@@ -594,18 +595,18 @@ function AdminDashboardContent() {
                 </Link>
               </motion.div>
 
-              {/* Messaging */}
+              {/* Academic Schedule */}
               <motion.div whileHover={{ scale: 1.02, y: -3 }} whileTap={{ scale: 0.98 }}>
-                <Link href="/admin/messaging" className="block">
-                  <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-0 shadow-md hover:shadow-xl transition-all duration-300 h-full group">
+                <Link href="/admin/schedule" className="block">
+                  <Card className="bg-gradient-to-br from-purple-50 to-indigo-50 border-0 shadow-md hover:shadow-xl transition-all duration-300 h-full group">
                     <CardContent className="p-4">
                       <div className="flex flex-col items-center text-center space-y-3">
-                        <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300">
-                          <MessageSquare className="h-5 w-5 text-white" />
+                        <div className="p-3 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300">
+                          <Calendar className="h-5 w-5 text-white" />
                         </div>
                         <div>
-                          <p className="font-bold text-green-700 text-sm">Messaging</p>
-                          <p className="text-xs text-green-600 mt-1">Communication hub</p>
+                          <p className="font-bold text-purple-700 text-sm">Academic Schedule</p>
+                          <p className="text-xs text-purple-600 mt-1">2024-25 Academic Year</p>
                         </div>
                       </div>
                     </CardContent>

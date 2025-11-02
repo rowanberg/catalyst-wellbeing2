@@ -133,16 +133,12 @@ export default function TeacherAttendancePage() {
 
   // Load assigned classes when user is available
   useEffect(() => {
-    console.log('🔍 [Teacher Attendance] Auth state:', { user: user?.id, profile: profile?.id })
-    
     if (user?.id) {
-      console.log('📞 [Teacher Attendance] Calling loadAssignedClasses...')
       setAuthChecked(true)
       loadAssignedClasses()
       
       // Fallback timeout in case API hangs
       fallbackTimerRef.current = setTimeout(() => {
-        console.error('⏱️ [Teacher Attendance] API timeout - forcing loading to false')
         setLoading(false)
         setLoadingAssignedClasses(false)
       }, 10000) // 10 second timeout
@@ -155,7 +151,6 @@ export default function TeacherAttendancePage() {
     } else {
       // Wait longer before declaring no user (auth takes time to load)
       const timer = setTimeout(() => {
-        console.log('⚠️ [Teacher Attendance] Auth check complete, no user found')
         setAuthChecked(true)
         setLoading(false)
       }, 3000) // Wait 3 seconds for auth to load
@@ -165,23 +160,18 @@ export default function TeacherAttendancePage() {
 
   const loadAssignedClasses = async () => {
     if (!user?.id) {
-      console.log('❌ [Teacher Attendance] No user ID, cannot load classes')
       setLoading(false)
       return
     }
     
-    console.log('🚀 [Teacher Attendance] Starting loadAssignedClasses for user:', user.id)
     setLoadingAssignedClasses(true)
     setError(null)
     
     try {
-      console.log('📡 [Teacher Attendance] Fetching from API...')
       const response = await fetch(`/api/teacher/class-assignments?teacher_id=${user.id}`)
-      console.log('📊 [Teacher Attendance] API response status:', response.status)
       
       if (response.ok) {
         const data = await response.json()
-        console.log('📦 [Teacher Attendance] API data:', data)
         
         if (data.assignments && data.assignments.length > 0) {
           // Transform the assignments data to match our Class interface
@@ -201,7 +191,6 @@ export default function TeacherAttendancePage() {
           }))
           
           setClasses(transformedClasses)
-          console.log(`✅ [Teacher Attendance] Loaded ${transformedClasses.length} assigned classes`)
           
           // Clear the timeout since API completed successfully
           if (fallbackTimerRef.current) {
@@ -210,19 +199,14 @@ export default function TeacherAttendancePage() {
           }
         } else {
           setClasses([])
-          console.log('⚠️ [Teacher Attendance] No assigned classes found')
         }
       } else {
-        const errorText = await response.text()
-        console.error('❌ [Teacher Attendance] API error:', response.status, errorText)
         throw new Error(`Failed to fetch assigned classes: ${response.status}`)
       }
     } catch (error: any) {
-      console.error('💥 [Teacher Attendance] Error loading assigned classes:', error)
       setError('Failed to load assigned classes. Please try again.')
       setClasses([])
     } finally {
-      console.log('🏁 [Teacher Attendance] loadAssignedClasses complete, setting loading to false')
       setLoadingAssignedClasses(false)
       setLoading(false)
     }
@@ -231,7 +215,6 @@ export default function TeacherAttendancePage() {
 
   const fetchGrades = async (schoolId: string) => {
     if (!schoolId) {
-      // console.error('No school ID provided to fetchGrades')
       setLoading(false)
       return
     }
@@ -241,11 +224,9 @@ export default function TeacherAttendancePage() {
       if (response.ok) {
         const data = await response.json()
         setGrades(data.grades || [])
-      } else {
-        // console.error('Failed to fetch grades:', response.status, response.statusText)
       }
     } catch (error: any) {
-      // console.error('Error fetching grades:', error)
+      // Silent fail
     } finally {
       setLoading(false)
     }
@@ -255,32 +236,22 @@ export default function TeacherAttendancePage() {
 
   const fetchStudents = async (classId: string) => {
     if (!profile?.school_id) {
-      // console.error('No school ID available for fetching students')
       return
     }
     
     setLoading(true)
     try {
       // First, get the students in the class
-      console.log('🔍 Fetching students for class:', classId, 'school:', profile.school_id)
       const studentsResponse = await fetch(`/api/teacher/students?school_id=${profile.school_id}&class_id=${classId}`)
       
-      console.log('📡 Students API response status:', studentsResponse.status)
-      
       if (!studentsResponse.ok) {
-        // console.error('❌ Failed to fetch students:', studentsResponse.status, studentsResponse.statusText)
-        const errorText = await studentsResponse.text()
-        // console.error('Error details:', errorText)
         setStudents([])
         setCurrentView('students')
         return
       }
       
       const studentsData = await studentsResponse.json()
-      console.log('📊 Students API response data:', studentsData)
-      
       const classStudents = studentsData.students || []
-      console.log('👥 Raw class students:', classStudents.length, classStudents)
       
       // Normalize student objects to ensure they have proper IDs
       const validStudents = classStudents.map((student: any) => ({
@@ -288,10 +259,7 @@ export default function TeacherAttendancePage() {
         id: student.id || student.student_id, // Ensure we have an ID
       })).filter((student: any) => student.id) // Only keep students with valid IDs
       
-      console.log('✅ Processed students:', validStudents.length, validStudents)
-      
       if (validStudents.length === 0) {
-        // console.warn('⚠️ No valid students found in class')
         setStudents([])
         setCurrentView('students')
         return
@@ -304,8 +272,6 @@ export default function TeacherAttendancePage() {
         
         if (attendanceResponse.ok) {
           attendanceData = await attendanceResponse.json()
-        } else {
-          console.log('No existing attendance data found for date:', selectedDate)
         }
         
         // Create a map of student attendance by student ID
@@ -324,12 +290,10 @@ export default function TeacherAttendancePage() {
           attendance_status: attendanceMap.get(student.id) || 'present' // Default to present
         }))
         
-        console.log(`✅ Loaded ${studentsWithAttendance.length} students with attendance data`)
         setStudents(studentsWithAttendance)
         setCurrentView('students')
         
       } catch (attendanceError: any) {
-        // console.error('Error fetching attendance data:', attendanceError)
         // Still show students with default attendance status
         const studentsWithDefaultAttendance = validStudents.map((student: any) => ({
           ...student,
@@ -340,7 +304,6 @@ export default function TeacherAttendancePage() {
       }
       
     } catch (error: any) {
-      // console.error('Error fetching students:', error)
       setStudents([])
     } finally {
       setLoading(false)
@@ -356,7 +319,6 @@ export default function TeacherAttendancePage() {
 
   const handleStudentAttendanceChange = (studentId: string | undefined, status: 'present' | 'absent' | 'late' | 'excused') => {
     if (!studentId) {
-      // console.warn('Cannot change attendance: student ID is undefined')
       return
     }
     
@@ -410,10 +372,6 @@ export default function TeacherAttendancePage() {
       return
     }
     
-    if (validStudents.length < students.length) {
-      // console.warn(`Warning: ${students.length - validStudents.length} students have invalid IDs and will be skipped`)
-    }
-    
     setSaving(true)
     try {
       const attendanceData = validStudents.map(student => ({
@@ -422,16 +380,6 @@ export default function TeacherAttendancePage() {
         notes: ''
       }))
 
-      console.log('Saving attendance data:', {
-        class: selectedClass.class_name,
-        date: selectedDate,
-        studentsCount: attendanceData.length,
-        attendanceData: attendanceData
-      })
-
-      console.log('🚀 Making POST request to /api/attendance')
-      console.log('📦 Request payload:', { attendanceData, date: selectedDate })
-      
       const response = await fetch('/api/attendance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -441,12 +389,8 @@ export default function TeacherAttendancePage() {
         })
       })
       
-      console.log('📡 Response status:', response.status)
-      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()))
-
       if (response.ok) {
         const result = await response.json()
-        console.log('Attendance saved successfully:', result)
         setAttendanceSaved(true)
         setSavedStudentCount(attendanceData.length)
         // Auto-hide success message after 5 seconds
@@ -1246,23 +1190,6 @@ export default function TeacherAttendancePage() {
                             School ID: {profile?.school_id}<br/>
                             Check the browser console for more details.
                           </p>
-                          <Button
-                            onClick={async () => {
-                              try {
-                                const response = await fetch(`/api/debug/students?school_id=${profile?.school_id}&class_id=${selectedClass?.id}`)
-                                const debugData = await response.json()
-                                console.log('🔍 Debug API Results:', debugData)
-                                alert('Debug results logged to console. Check browser dev tools.')
-                              } catch (error) {
-                                // console.error('Debug API failed:', error)
-                                alert('Debug API failed. Check console for details.')
-                              }
-                            }}
-                            size="sm"
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                          >
-                            Run Database Debug
-                          </Button>
                         </div>
                       )}
                     </div>

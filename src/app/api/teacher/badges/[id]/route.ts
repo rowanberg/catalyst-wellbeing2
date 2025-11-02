@@ -89,7 +89,7 @@ export async function PUT(
       criteria: body.criteria || [],
       rarity: body.rarity || 'common',
       category: body.category || 'achievement',
-      points: Math.max(1, parseInt(body.points) || 10),
+      points: Math.max(1, parseInt(body.points, 10) || 10),
       prerequisites: body.prerequisites || [],
       is_stackable: body.isStackable || false,
       max_stack: body.maxStack || 1,

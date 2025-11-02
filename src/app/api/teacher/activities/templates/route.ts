@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const category = searchParams.get('category')
     const mood = searchParams.get('mood')
-    const duration = parseInt(searchParams.get('duration') || '30')
+    const duration = parseInt(searchParams.get('duration') || '30', 10)
     const difficulty = searchParams.get('difficulty')
     const groupSize = searchParams.get('group_size')
 

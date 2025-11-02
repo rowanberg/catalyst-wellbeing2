@@ -13,35 +13,62 @@ interface AnalyticsTabProps {
   studentName?: string
 }
 
-// Professional Stats Card with Dark Mode
-const StatCard = ({ icon: Icon, label, value, change, trend, color }: {
+// Enterprise Metric Card
+const StatCard = ({ icon: Icon, label, value, change, trend, colorClass }: {
   icon: any
   label: string
   value: string
   change?: string
   trend?: 'up' | 'down' | 'stable'
-  color: string
-}) => (
-  <div className="bg-white dark:bg-gray-800 rounded-lg p-3 lg:p-4 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
-    <div className="flex items-start justify-between mb-2 lg:mb-3">
-      <div className={`w-9 h-9 lg:w-12 lg:h-12 rounded-lg ${color} flex items-center justify-center flex-shrink-0`}>
-        <Icon className="h-4 w-4 lg:h-6 lg:w-6 text-white" strokeWidth={2} />
+  colorClass: string
+}) => {
+  const gradientClasses = {
+    'blue': 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800',
+    'emerald': 'bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900 border-emerald-200 dark:border-emerald-800',
+    'violet': 'bg-gradient-to-br from-violet-50 to-violet-100 dark:from-violet-950 dark:to-violet-900 border-violet-200 dark:border-violet-800',
+    'amber': 'bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 border-amber-200 dark:border-amber-800'
+  }[colorClass] || 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800'
+
+  const iconColors = {
+    'blue': 'text-blue-500',
+    'emerald': 'text-emerald-500',
+    'violet': 'text-violet-500',
+    'amber': 'text-amber-500'
+  }[colorClass] || 'text-blue-500'
+
+  const textColors = {
+    'blue': 'text-blue-600 dark:text-blue-400',
+    'emerald': 'text-emerald-600 dark:text-emerald-400',
+    'violet': 'text-violet-600 dark:text-violet-400',
+    'amber': 'text-amber-600 dark:text-amber-400'
+  }[colorClass] || 'text-blue-600 dark:text-blue-400'
+
+  const valueColors = {
+    'blue': 'text-blue-900 dark:text-blue-100',
+    'emerald': 'text-emerald-900 dark:text-emerald-100',
+    'violet': 'text-violet-900 dark:text-violet-100',
+    'amber': 'text-amber-900 dark:text-amber-100'
+  }[colorClass] || 'text-blue-900 dark:text-blue-100'
+
+  return (
+    <div className={`${gradientClasses} rounded-lg p-4 border`}>
+      <div className="flex items-center justify-between mb-2">
+        <span className={`text-xs font-medium ${textColors} uppercase tracking-wider`}>{label}</span>
+        <Icon className={`w-4 h-4 ${iconColors}`} strokeWidth={2} />
       </div>
+      <div className={`text-2xl font-bold ${valueColors} mb-1`}>{value}</div>
       {change && trend && (
-        <div className={`flex items-center gap-0.5 lg:gap-1 text-[10px] lg:text-xs font-semibold px-1.5 lg:px-2 py-0.5 lg:py-1 rounded-md ${
-          trend === 'up' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' : 
-          trend === 'down' ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' : 
-          'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+        <div className={`text-xs font-medium ${
+          trend === 'up' ? 'text-emerald-600 dark:text-emerald-400' : 
+          trend === 'down' ? 'text-red-600 dark:text-red-400' : 
+          'text-slate-600 dark:text-slate-400'
         }`}>
-          {trend === 'up' ? <TrendingUp className="h-2.5 lg:h-3.5 w-2.5 lg:w-3.5" /> : trend === 'down' ? <TrendingDown className="h-2.5 lg:h-3.5 w-2.5 lg:w-3.5" /> : null}
-          <span className="whitespace-nowrap">{change}</span>
+          {trend === 'up' ? '↑' : trend === 'down' ? '↓' : '—'} {change}
         </div>
       )}
     </div>
-    <h3 className="text-lg lg:text-2xl xl:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-0.5 lg:mb-1 truncate">{value}</h3>
-    <p className="text-[10px] lg:text-xs text-gray-600 dark:text-gray-400 font-medium truncate">{label}</p>
-  </div>
-)
+  )
+}
 
 // GPA Trend Chart with Dark Mode
 const GPATrendChart = ({ data, timeRange, onTimeRangeChange }: {
@@ -57,13 +84,13 @@ const GPATrendChart = ({ data, timeRange, onTimeRangeChange }: {
   }).join(' ')
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg p-3 lg:p-4 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-        <h3 className="text-sm lg:text-base font-bold text-gray-900 dark:text-gray-100">GPA Trend</h3>
+    <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border border-slate-200 dark:border-slate-800">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-base font-semibold text-slate-900 dark:text-white">GPA Trend</h3>
         <select
           value={timeRange}
           onChange={(e) => onTimeRangeChange(e.target.value)}
-          className="px-2 lg:px-3 py-1.5 text-[10px] lg:text-xs bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 dark:text-gray-200 font-medium"
+          className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white font-medium"
         >
           <option value="1week">Last Week</option>
           <option value="1month">Last Month</option>
@@ -73,11 +100,11 @@ const GPATrendChart = ({ data, timeRange, onTimeRangeChange }: {
         </select>
       </div>
       
-      <div className="relative h-48 lg:h-64">
+      <div className="relative h-64">
         <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-          <line x1="0" y1="25" x2="100" y2="25" stroke="currentColor" className="text-gray-200 dark:text-gray-700" strokeWidth="0.5" />
-          <line x1="0" y1="50" x2="100" y2="50" stroke="currentColor" className="text-gray-200 dark:text-gray-700" strokeWidth="0.5" />
-          <line x1="0" y1="75" x2="100" y2="75" stroke="currentColor" className="text-gray-200 dark:text-gray-700" strokeWidth="0.5" />
+          <line x1="0" y1="25" x2="100" y2="25" stroke="currentColor" className="text-slate-200 dark:text-slate-800" strokeWidth="0.5" />
+          <line x1="0" y1="50" x2="100" y2="50" stroke="currentColor" className="text-slate-200 dark:text-slate-800" strokeWidth="0.5" />
+          <line x1="0" y1="75" x2="100" y2="75" stroke="currentColor" className="text-slate-200 dark:text-slate-800" strokeWidth="0.5" />
           
           <polygon
             points={`0,100 ${points} 100,100`}
@@ -102,7 +129,7 @@ const GPATrendChart = ({ data, timeRange, onTimeRangeChange }: {
           </defs>
         </svg>
         
-        <div className="absolute -left-8 top-0 flex flex-col justify-between h-full text-xs text-gray-500 dark:text-gray-400">
+        <div className="absolute -left-8 top-0 flex flex-col justify-between h-full text-xs text-slate-500 dark:text-slate-400">
           <span>4.0</span>
           <span>3.0</span>
           <span>2.0</span>
@@ -110,7 +137,7 @@ const GPATrendChart = ({ data, timeRange, onTimeRangeChange }: {
         </div>
       </div>
       
-      <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-2">
+      <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 mt-2">
         {data.map((item, index) => (
           index % Math.ceil(data.length / 6) === 0 && (
             <span key={index}>{item.label}</span>
@@ -123,25 +150,25 @@ const GPATrendChart = ({ data, timeRange, onTimeRangeChange }: {
 
 // Subject Performance with Dark Mode
 const SubjectPerformance = ({ subjects }: { subjects: any[] }) => (
-  <div className="bg-white dark:bg-gray-800 rounded-lg p-3 lg:p-4 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
-    <h3 className="text-sm lg:text-base font-bold text-gray-900 dark:text-gray-100 mb-3 lg:mb-4">Subject Performance</h3>
-    <div className="space-y-3 lg:space-y-4">
+  <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border border-slate-200 dark:border-slate-800">
+    <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Subject Performance</h3>
+    <div className="space-y-4">
       {subjects.map((subject, index) => (
         <div key={subject.name}>
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs lg:text-sm font-medium text-gray-700 dark:text-gray-300 truncate pr-2">{subject.name}</span>
-            <span className="text-xs lg:text-sm font-bold text-gray-900 dark:text-gray-100 flex-shrink-0">{subject.score}%</span>
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate pr-2">{subject.name}</span>
+            <span className="text-sm font-semibold text-slate-900 dark:text-white flex-shrink-0">{subject.score}%</span>
           </div>
-          <div className="relative h-2 lg:h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div className="relative h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
             <div
               className={`absolute top-0 left-0 h-full rounded-full transition-all duration-500 ${subject.color}`}
               style={{ width: `${subject.score}%` }}
             />
           </div>
           <div className="flex items-center justify-between mt-1">
-            <span className="text-[10px] lg:text-xs text-gray-500 dark:text-gray-400 truncate pr-2">{subject.assignments} assignments</span>
-            <span className={`text-[10px] lg:text-xs font-medium flex-shrink-0 ${
-              subject.trend === 'up' ? 'text-green-600 dark:text-green-400' : subject.trend === 'down' ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'
+            <span className="text-xs text-slate-500 dark:text-slate-400 truncate pr-2">{subject.assignments} assignments</span>
+            <span className={`text-xs font-medium flex-shrink-0 ${
+              subject.trend === 'up' ? 'text-emerald-600 dark:text-emerald-400' : subject.trend === 'down' ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400'
             }`}>
               {subject.trend === 'up' ? '↑' : subject.trend === 'down' ? '↓' : '—'} {subject.change}
             </span>
@@ -271,13 +298,13 @@ const AssignmentCompletionChart = ({ completed, pending, overdue, total }: {
   const overdueAngle = (overduePercent / 100) * 360
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg p-3 lg:p-4 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
-      <h3 className="text-sm lg:text-base font-bold text-gray-900 dark:text-gray-100 mb-3 lg:mb-4">Assignment Status</h3>
+    <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border border-slate-200 dark:border-slate-800">
+      <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Assignment Status</h3>
       
-      <div className="flex flex-col lg:flex-row items-center gap-4 lg:gap-6">
-        <div className="relative w-36 h-36 lg:w-40 lg:h-40 flex-shrink-0">
+      <div className="flex flex-col lg:flex-row items-center gap-6">
+        <div className="relative w-40 h-40 flex-shrink-0">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" className="text-gray-100 dark:text-gray-700" strokeWidth="12" />
+            <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" className="text-slate-100 dark:text-slate-800" strokeWidth="12" />
             
             <circle
               cx="50" cy="50" r="40" fill="none" stroke="#10b981" strokeWidth="12"
@@ -299,34 +326,34 @@ const AssignmentCompletionChart = ({ completed, pending, overdue, total }: {
           </svg>
           
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <p className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-gray-100">{total}</p>
-            <p className="text-xs lg:text-sm text-gray-600 dark:text-gray-400 font-medium">Total</p>
+            <p className="text-3xl font-bold text-slate-900 dark:text-white">{total}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Total</p>
           </div>
         </div>
         
-        <div className="flex-1 w-full space-y-2 lg:space-y-2.5">
-          <div className="flex items-center justify-between p-2.5 lg:p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/30 rounded-lg">
-            <div className="flex items-center gap-2 lg:gap-2.5 min-w-0">
-              <div className="w-2.5 h-2.5 lg:w-3 lg:h-3 rounded-full bg-green-500 flex-shrink-0" />
-              <span className="text-xs lg:text-sm font-semibold text-gray-700 dark:text-gray-300 truncate">Completed</span>
+        <div className="flex-1 w-full space-y-2.5">
+          <div className="flex items-center justify-between p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-900/30 rounded-lg">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-3 h-3 rounded-full bg-emerald-500 flex-shrink-0" />
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">Completed</span>
             </div>
-            <span className="text-sm lg:text-lg font-bold text-gray-900 dark:text-gray-100 flex-shrink-0 ml-2">{completed}</span>
+            <span className="text-lg font-semibold text-slate-900 dark:text-white flex-shrink-0 ml-2">{completed}</span>
           </div>
           
-          <div className="flex items-center justify-between p-2.5 lg:p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/30 rounded-lg">
-            <div className="flex items-center gap-2 lg:gap-2.5 min-w-0">
-              <div className="w-2.5 h-2.5 lg:w-3 lg:h-3 rounded-full bg-amber-500 flex-shrink-0" />
-              <span className="text-xs lg:text-sm font-semibold text-gray-700 dark:text-gray-300 truncate">Pending</span>
+          <div className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/30 rounded-lg">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-3 h-3 rounded-full bg-amber-500 flex-shrink-0" />
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">Pending</span>
             </div>
-            <span className="text-sm lg:text-lg font-bold text-gray-900 dark:text-gray-100 flex-shrink-0 ml-2">{pending}</span>
+            <span className="text-lg font-semibold text-slate-900 dark:text-white flex-shrink-0 ml-2">{pending}</span>
           </div>
           
-          <div className="flex items-center justify-between p-2.5 lg:p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 rounded-lg">
-            <div className="flex items-center gap-2 lg:gap-2.5 min-w-0">
-              <div className="w-2.5 h-2.5 lg:w-3 lg:h-3 rounded-full bg-red-500 flex-shrink-0" />
-              <span className="text-xs lg:text-sm font-semibold text-gray-700 dark:text-gray-300 truncate">Overdue</span>
+          <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 rounded-lg">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-3 h-3 rounded-full bg-red-500 flex-shrink-0" />
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">Overdue</span>
             </div>
-            <span className="text-sm lg:text-lg font-bold text-gray-900 dark:text-gray-100 flex-shrink-0 ml-2">{overdue}</span>
+            <span className="text-lg font-semibold text-slate-900 dark:text-white flex-shrink-0 ml-2">{overdue}</span>
           </div>
         </div>
       </div>
@@ -502,45 +529,45 @@ export default function AnalyticsTab({ studentId, studentName }: AnalyticsTabPro
 
   if (loading) {
     return (
-      <div className="space-y-3 lg:space-y-4 p-3 lg:p-4 w-full bg-gray-50 dark:bg-gray-900 min-h-screen">
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-3 lg:p-4 border border-gray-200 dark:border-gray-700 h-16 animate-pulse" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-3">
+      <div className="space-y-6 w-full">
+        <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border border-slate-200 dark:border-slate-800 h-20 animate-pulse" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 h-20 lg:h-24 animate-pulse" />
+            <div key={i} className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 h-24 animate-pulse" />
           ))}
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 h-64 lg:h-80 animate-pulse" />
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 h-64 lg:h-80 animate-pulse" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 h-80 animate-pulse" />
+          <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 h-80 animate-pulse" />
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-3 lg:space-y-4 p-3 lg:p-4 w-full bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <div className="space-y-6 w-full">
       {/* Child Info Header */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-3 lg:p-4 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
-        <div className="flex items-center gap-2.5 lg:gap-3">
-          <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-            <User className="h-5 w-5 lg:h-6 lg:w-6 text-white" strokeWidth={2} />
+      <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border border-slate-200 dark:border-slate-800">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+            <User className="h-6 w-6 text-blue-600 dark:text-blue-400" strokeWidth={2} />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] lg:text-xs text-gray-600 dark:text-gray-400 font-medium">Viewing Analytics For</p>
-            <h2 className="text-base lg:text-lg font-bold text-gray-900 dark:text-gray-100 truncate">{studentName || 'Student'}</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">Student Analytics</p>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white truncate">{studentName || 'Student'}</h2>
           </div>
         </div>
       </div>
 
       {/* Overview Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={Target}
           label="Current GPA"
           value={mockData?.overview?.gpa || '0.00'}
           change={mockData?.overview?.gpaChange}
           trend={mockData?.overview?.gpaTrend}
-          color="bg-blue-500"
+          colorClass="blue"
         />
         <StatCard
           icon={Calendar}
@@ -548,7 +575,7 @@ export default function AnalyticsTab({ studentId, studentName }: AnalyticsTabPro
           value={mockData?.overview?.attendance || '0%'}
           change={mockData?.overview?.attendanceChange}
           trend={mockData?.overview?.attendanceTrend}
-          color="bg-green-500"
+          colorClass="emerald"
         />
         <StatCard
           icon={CheckCircle2}
@@ -556,7 +583,7 @@ export default function AnalyticsTab({ studentId, studentName }: AnalyticsTabPro
           value={mockData?.overview?.assignments || '0%'}
           change={mockData?.overview?.assignmentsChange}
           trend={mockData?.overview?.assignmentsTrend}
-          color="bg-purple-500"
+          colorClass="violet"
         />
         <StatCard
           icon={Award}
@@ -564,12 +591,12 @@ export default function AnalyticsTab({ studentId, studentName }: AnalyticsTabPro
           value={mockData?.overview?.classRank || 'N/A'}
           change={mockData?.overview?.classRankChange}
           trend={mockData?.overview?.classRankTrend}
-          color="bg-amber-500"
+          colorClass="amber"
         />
       </div>
 
       {/* GPA Trend & Subject Performance */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <GPATrendChart
           data={mockData?.gpaTrend || []}
           timeRange={timeRange}
@@ -587,31 +614,31 @@ export default function AnalyticsTab({ studentId, studentName }: AnalyticsTabPro
       />
 
       {/* Monthly Attendance Calendar with Navigation */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-3 lg:p-4 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
-        <div className="flex items-center justify-between mb-3 lg:mb-4">
+      <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between mb-4">
           <div className="min-w-0">
-            <h3 className="text-sm lg:text-base font-bold text-gray-900 dark:text-gray-100">Monthly Attendance</h3>
-            <p className="text-[10px] lg:text-xs text-gray-600 dark:text-gray-400 mt-0.5 truncate">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white">Monthly Attendance</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
               Viewing: {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </p>
           </div>
-          <div className="flex items-center gap-1.5 lg:gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <button
               onClick={() => changeMonth('prev')}
-              className="w-7 h-7 lg:w-8 lg:h-8 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center transition-colors"
+              className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-colors"
               aria-label="Previous month"
             >
-              <ChevronLeft className="h-3.5 w-3.5 lg:h-4 lg:w-4 text-gray-600 dark:text-gray-300" />
+              <ChevronLeft className="h-4 w-4 text-slate-600 dark:text-slate-300" />
             </button>
-            <div className="w-9 h-9 lg:w-11 lg:h-11 rounded-lg bg-green-500 flex items-center justify-center">
-              <Calendar className="h-4 w-4 lg:h-5 lg:w-5 text-white" strokeWidth={2} />
+            <div className="w-10 h-10 rounded-lg bg-emerald-500 flex items-center justify-center">
+              <Calendar className="h-5 w-5 text-white" strokeWidth={2} />
             </div>
             <button
               onClick={() => changeMonth('next')}
-              className="w-7 h-7 lg:w-8 lg:h-8 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center transition-colors"
+              className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-colors"
               aria-label="Next month"
             >
-              <ChevronRight className="h-3.5 w-3.5 lg:h-4 lg:w-4 text-gray-600 dark:text-gray-300" />
+              <ChevronRight className="h-4 w-4 text-slate-600 dark:text-slate-300" />
             </button>
           </div>
         </div>

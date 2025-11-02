@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       .eq('teacher_id', teacherId)
       .eq('transaction_type', 'credit_issued')
       .gte('created_at', `${currentMonth}-01T00:00:00.000Z`)
-      .lt('created_at', `${currentMonth === '2024-12' ? '2025-01' : currentMonth.slice(0, 5) + String(parseInt(currentMonth.slice(5)) + 1).padStart(2, '0')}-01T00:00:00.000Z`)
+      .lt('created_at', `${currentMonth === '2024-12' ? '2025-01' : currentMonth.slice(0, 5) + String(parseInt(currentMonth.slice(5), 10) + 1).padStart(2, '0')}-01T00:00:00.000Z`)
 
     if (statsError) {
       console.error('Error fetching monthly stats:', statsError)

@@ -51,6 +51,10 @@ function TeacherCommunityContent() {
   const [uploadingImage, setUploadingImage] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const observerTarget = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (user?.id) {
@@ -60,9 +64,33 @@ function TeacherCommunityContent() {
 
   useEffect(() => {
     if (selectedClass) {
-      fetchPosts(selectedClass.id)
+      // Reset pagination when class changes
+      setPage(1)
+      setHasMore(true)
+      setPosts([])
+      fetchPosts(selectedClass.id, 1, true)
     }
   }, [selectedClass])
+
+  // Infinite scroll observer
+  useEffect(() => {
+    if (!observerTarget.current || !selectedClass || !hasMore || loadingMore) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore) {
+          const nextPage = page + 1
+          setPage(nextPage)
+          fetchPosts(selectedClass.id, nextPage, false)
+        }
+      },
+      { threshold: 0.1 }
+    )
+
+    observer.observe(observerTarget.current)
+
+    return () => observer.disconnect()
+  }, [observerTarget.current, hasMore, loadingMore, page, selectedClass])
 
   const fetchClasses = async () => {
     try {
@@ -79,17 +107,28 @@ function TeacherCommunityContent() {
     }
   }
 
-  const fetchPosts = async (classId: string) => {
+  const fetchPosts = async (classId: string, pageNum: number = 1, reset: boolean = false) => {
     if (!user?.id) {
       setError('User not authenticated')
       return
     }
 
+    // Prevent duplicate requests
+    if (loadingMore && !reset) return
+
     try {
-      setPostsLoading(true)
+      if (reset) {
+        setPostsLoading(true)
+      } else {
+        setLoadingMore(true)
+      }
       setError(null)
       
-      const response = await fetch(`/api/teacher/community/posts?class_id=${classId}&teacher_id=${user.id}`)
+      const limit = 10
+      const offset = (pageNum - 1) * limit
+      const response = await fetch(
+        `/api/teacher/community/posts?class_id=${classId}&teacher_id=${user.id}&limit=${limit}&offset=${offset}`
+      )
       
       if (!response.ok) {
         const errorData = await response.json()
@@ -97,13 +136,26 @@ function TeacherCommunityContent() {
       }
       
       const data = await response.json()
-      setPosts(data.posts || [])
+      const newPosts = data.posts || []
+      
+      if (reset) {
+        setPosts(newPosts)
+      } else {
+        setPosts(prev => [...prev, ...newPosts])
+      }
+      
+      // Check if there are more posts
+      setHasMore(newPosts.length === limit)
+      
     } catch (error) {
       console.error('Error fetching posts:', error)
       setError(error instanceof Error ? error.message : 'Failed to load posts. Please try again.')
-      setPosts([])
+      if (reset) {
+        setPosts([])
+      }
     } finally {
       setPostsLoading(false)
+      setLoadingMore(false)
     }
   }
 
@@ -279,149 +331,182 @@ function TeacherCommunityContent() {
     )
   }
 
-  // Instagram-like Feed View
+  // Simplified Feed View
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-3xl mx-auto">
-        {/* Header */}
-        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30 shadow-sm">
-          <div className="p-3 lg:p-4 flex items-center justify-between">
-            <div className="flex items-center space-x-2 lg:space-x-3 min-w-0">
+      <div className="max-w-2xl mx-auto">
+        {/* Simplified Header */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30">
+          <div className="p-4 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
               <button
                 onClick={() => setSelectedClass(null)}
-                className="p-1.5 lg:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
               >
                 <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-gray-300" />
               </button>
-              <div className="min-w-0">
-                <h2 className="text-sm lg:text-base font-bold text-gray-900 dark:text-white truncate">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                   {selectedClass.class_name}
                 </h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {selectedClass.total_students} students
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {selectedClass.total_students} students • {selectedClass.subject}
                 </p>
               </div>
             </div>
-            
-            <button
-              onClick={() => setShowNewPost(true)}
-              className="px-3 lg:px-4 py-1.5 lg:py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg text-xs lg:text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center space-x-1.5 lg:space-x-2 shadow-sm flex-shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">New Post</span>
-              <span className="sm:hidden">Post</span>
-            </button>
           </div>
         </div>
 
-        {/* New Post Modal */}
+        {/* Simplified Create Post Button - Fixed at bottom */}
+        <div className="fixed bottom-6 right-6 z-40">
+          <button
+            onClick={() => setShowNewPost(true)}
+            className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-full shadow-2xl hover:shadow-3xl hover:scale-110 transition-all duration-200 flex items-center justify-center"
+          >
+            <Plus className="w-8 h-8" />
+          </button>
+        </div>
+
+        {/* Simplified Post Modal */}
         <AnimatePresence>
           {showNewPost && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 lg:p-4"
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center"
               onClick={() => {
-                setShowNewPost(false)
-                setSelectedImage(null)
-                setImageFile(null)
+                if (!creating) {
+                  setShowNewPost(false)
+                  setSelectedImage(null)
+                  setImageFile(null)
+                  setNewPostContent('')
+                  setError(null)
+                }
               }}
             >
               <motion.div
-                initial={{ scale: 0.95, opacity: 0, y: 20 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                initial={{ y: 100, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 100, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
-                className="bg-white dark:bg-gray-800 rounded-xl lg:rounded-2xl p-4 lg:p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                className="bg-white dark:bg-gray-800 rounded-t-3xl sm:rounded-2xl w-full sm:max-w-lg max-h-[85vh] overflow-hidden flex flex-col"
               >
-                <h3 className="text-lg lg:text-xl font-bold text-gray-900 dark:text-white mb-4">
-                  Create Post
-                </h3>
-                
-                {/* Error Display */}
-                {error && (
-                  <div className="mb-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start space-x-2">
-                    <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
-                  </div>
-                )}
-                
-                <textarea
-                  value={newPostContent}
-                  onChange={(e) => setNewPostContent(e.target.value)}
-                  placeholder="Share an update with your class..."
-                  className="w-full h-28 lg:h-32 p-3 border border-gray-200 dark:border-gray-700 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-sm lg:text-base"
-                />
-                
-                {/* Image Preview */}
-                {selectedImage && (
-                  <div className="mt-3 relative">
-                    <div className="relative w-full" style={{ maxHeight: '20rem' }}>
-                      <Image
-                        src={selectedImage}
-                        alt="Preview"
-                        width={800}
-                        height={400}
-                        className="w-full h-auto max-h-80 object-cover rounded-lg"
-                        style={{ width: '100%', height: 'auto', maxHeight: '20rem', objectFit: 'cover' }}
-                      />
-                    </div>
-                    <button
-                      onClick={removeImage}
-                      disabled={creating}
-                      className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg disabled:opacity-50"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-                
-                {/* Uploading Indicator */}
-                {uploadingImage && (
-                  <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center space-x-2">
-                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-sm text-blue-800 dark:text-blue-300">Compressing image...</p>
-                  </div>
-                )}
-                
-                <div className="flex items-center justify-between mt-4">
-                  {/* Image Upload Button */}
-                  <label className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-pointer transition-colors">
-                    <ImageIcon className="w-4 h-4" />
-                    <span className="hidden sm:inline">Add Photo</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageSelect}
-                      disabled={uploadingImage || creating}
-                      className="hidden"
-                    />
-                  </label>
-                  
-                  <div className="flex space-x-2 lg:space-x-3">
-                    <button
-                      onClick={() => {
+                {/* Header */}
+                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                    Share with Class
+                  </h3>
+                  <button
+                    onClick={() => {
+                      if (!creating) {
                         setShowNewPost(false)
                         setSelectedImage(null)
                         setImageFile(null)
                         setNewPostContent('')
-                      }}
-                      className="px-3 lg:px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleCreatePost}
-                      disabled={!newPostContent.trim() || creating || uploadingImage}
-                      className="px-4 lg:px-6 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm flex items-center space-x-2"
-                    >
-                      {creating && (
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      )}
-                      <span>{creating ? 'Posting...' : 'Post'}</span>
-                    </button>
+                        setError(null)
+                      }
+                    }}
+                    disabled={creating}
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors disabled:opacity-50"
+                  >
+                    <X className="w-5 h-5 text-gray-500" />
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                  {/* Error */}
+                  {error && (
+                    <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-start space-x-2">
+                      <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
+                    </div>
+                  )}
+
+                  {/* Photo Upload - Primary Action */}
+                  {!selectedImage && !uploadingImage && (
+                    <label className="block cursor-pointer">
+                      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl p-12 text-center hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all">
+                        <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <ImageIcon className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <p className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                          Add a Photo
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Tap to choose from your device
+                        </p>
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageSelect}
+                        disabled={uploadingImage || creating}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+
+                  {/* Uploading State */}
+                  {uploadingImage && (
+                    <div className="border-2 border-gray-300 dark:border-gray-600 rounded-2xl p-12 text-center">
+                      <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Preparing your photo...</p>
+                    </div>
+                  )}
+
+                  {/* Image Preview */}
+                  {selectedImage && (
+                    <div className="relative">
+                      <Image
+                        src={selectedImage}
+                        alt="Preview"
+                        width={600}
+                        height={400}
+                        className="w-full h-auto max-h-80 object-cover rounded-2xl"
+                      />
+                      <button
+                        onClick={removeImage}
+                        disabled={creating}
+                        className="absolute top-3 right-3 p-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm text-gray-700 dark:text-gray-300 rounded-full hover:bg-white dark:hover:bg-gray-800 transition-colors shadow-lg disabled:opacity-50"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Caption */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Add a caption (optional)
+                    </label>
+                    <textarea
+                      value={newPostContent}
+                      onChange={(e) => setNewPostContent(e.target.value)}
+                      placeholder="What's happening in class today?"
+                      rows={3}
+                      className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400"
+                    />
                   </div>
+                </div>
+
+                {/* Footer */}
+                <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={handleCreatePost}
+                    disabled={!newPostContent.trim() || creating || uploadingImage}
+                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg flex items-center justify-center space-x-2"
+                  >
+                    {creating ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Posting...</span>
+                      </>
+                    ) : (
+                      <span>Share with Students</span>
+                    )}
+                  </button>
                 </div>
               </motion.div>
             </motion.div>
@@ -463,97 +548,112 @@ function TeacherCommunityContent() {
                   animate={{ opacity: 1, y: 0 }}
                   className="bg-white dark:bg-gray-800 rounded-lg lg:rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm"
                 >
-                  {/* Post Header */}
-                  <div className="p-3 lg:p-4 flex items-center justify-between">
-                    <div className="flex items-center space-x-2.5 lg:space-x-3 min-w-0">
-                      <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+                  {/* Post Image - Full Width */}
+                  {post.image_url && (
+                    <div className="bg-gray-100 dark:bg-gray-900">
+                      <Image
+                        src={post.image_url}
+                        alt="Post"
+                        width={800}
+                        height={600}
+                        className="w-full h-auto object-cover"
+                        style={{ maxHeight: '500px' }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Post Content */}
+                  <div className="p-4">
+                    <div className="flex items-start space-x-3 mb-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
                         <span className="text-white font-bold text-sm">
                           {post.teacher_name[0]}
                         </span>
                       </div>
-                      <div className="min-w-0">
-                        <p className="font-semibold text-gray-900 dark:text-white text-sm lg:text-base truncate">
-                          {post.teacher_name}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {new Date(post.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-1 lg:space-x-2 flex-shrink-0">
-                      {post.is_pinned && (
-                        <div className="p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                          <Pin className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-blue-600 dark:text-blue-400" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2">
+                          <p className="font-bold text-gray-900 dark:text-white">
+                            {post.teacher_name}
+                          </p>
+                          {post.is_pinned && (
+                            <div className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center space-x-1">
+                              <Pin className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                              <span className="text-xs font-medium text-blue-600 dark:text-blue-400">Pinned</span>
+                            </div>
+                          )}
                         </div>
-                      )}
-                      <button className="p-1.5 lg:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                        <MoreVertical className="w-4 h-4 text-gray-500" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Post Content */}
-                  <div className="px-3 lg:px-4 pb-3">
-                    <p className="text-sm lg:text-base text-gray-900 dark:text-white whitespace-pre-wrap">
-                      {post.content}
-                    </p>
-                  </div>
-
-                  {/* Post Image */}
-                  {post.image_url && (
-                    <div className="bg-gray-100 dark:bg-gray-900">
-                      <div className="relative w-full" style={{ maxHeight: '24rem' }}>
-                        <Image
-                          src={post.image_url}
-                          alt="Post"
-                          width={800}
-                          height={600}
-                          className="w-full h-auto max-h-96 object-contain"
-                          style={{ width: '100%', height: 'auto', maxHeight: '24rem', objectFit: 'contain' }}
-                        />
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {new Date(post.created_at).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit'
+                          })}
+                        </p>
                       </div>
                     </div>
-                  )}
-
-                  {/* Post Actions */}
-                  <div className="px-3 lg:px-4 py-2.5 lg:py-3 border-t border-gray-100 dark:border-gray-700">
-                    <div className="flex items-center justify-between">
+                    
+                    {post.content && (
+                      <p className="text-gray-900 dark:text-white whitespace-pre-wrap leading-relaxed">
+                        {post.content}
+                      </p>
+                    )}
+                    
+                    {/* Simplified Like Button */}
+                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                       <button
-                        className={`flex items-center space-x-1.5 lg:space-x-2 px-2.5 lg:px-3 py-1.5 lg:py-2 rounded-lg transition-all ${
+                        className={`flex items-center space-x-2 px-4 py-2.5 rounded-full transition-all ${
                           post.has_reacted
                             ? 'text-red-600 bg-red-50 dark:bg-red-900/20'
                             : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
                         }`}
                       >
-                        <Heart className={`w-4 h-4 lg:w-5 lg:h-5 ${post.has_reacted ? 'fill-current' : ''}`} />
-                        <span className="text-xs lg:text-sm font-semibold">{post.reactions_count}</span>
+                        <Heart className={`w-5 h-5 ${post.has_reacted ? 'fill-current' : ''}`} />
+                        <span className="font-semibold">{post.reactions_count} {post.reactions_count === 1 ? 'like' : 'likes'}</span>
                       </button>
-                      
-                      <div className="flex items-center space-x-0.5 lg:space-x-1">
-                        <button className="p-1.5 lg:p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                          <MessageCircle className="w-4 h-4 lg:w-5 lg:h-5" />
-                        </button>
-                        <button className="p-1.5 lg:p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                          <Send className="w-4 h-4 lg:w-5 lg:h-5" />
-                        </button>
-                      </div>
                     </div>
                   </div>
                 </motion.div>
               ))}
 
               {posts.length === 0 && (
-                <div className="text-center py-12">
-                  <Sparkles className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    No posts yet for this class
+                <div className="text-center py-16 px-6">
+                  <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <ImageIcon className="w-10 h-10 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                    No Posts Yet
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400 mb-6">
+                    Share your first classroom moment with students!
                   </p>
                   <button
                     onClick={() => setShowNewPost(true)}
-                    className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all"
+                    className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full text-lg font-bold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
                   >
-                    Create First Post
+                    Share a Photo
                   </button>
+                </div>
+              )}
+
+              {/* Infinite Scroll Trigger */}
+              {posts.length > 0 && hasMore && (
+                <div ref={observerTarget} className="py-8 flex justify-center">
+                  {loadingMore && (
+                    <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400">
+                      <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-sm">Loading more posts...</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* End of Posts Message */}
+              {posts.length > 0 && !hasMore && (
+                <div className="text-center py-8">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    You've reached the end
+                  </p>
                 </div>
               )}
             </>

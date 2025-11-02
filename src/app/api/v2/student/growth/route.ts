@@ -2,6 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
+// 1-hour cache for growth data
+const growthCache = new Map<string, { data: any; timestamp: number }>()
+const CACHE_TTL = 60 * 60 * 1000 // 1 hour
+const MAX_CACHE_SIZE = 200
+
+// Cleanup old cache entries
+function cleanupCache() {
+  if (growthCache.size > MAX_CACHE_SIZE) {
+    const entries = Array.from(growthCache.entries())
+    entries.sort((a, b) => b[1].timestamp - a[1].timestamp)
+    growthCache.clear()
+    entries.slice(0, MAX_CACHE_SIZE).forEach(([key, value]) => growthCache.set(key, value))
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies()
@@ -33,6 +48,17 @@ export async function GET(request: NextRequest) {
 
     if (!profile) {
       return NextResponse.json({ message: 'Profile not found' }, { status: 404 })
+    }
+
+    // Check cache first
+    const cacheKey = `growth-${profile.id}`
+    const cached = growthCache.get(cacheKey)
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      const response = NextResponse.json(cached.data)
+      response.headers.set('X-Cache', 'HIT')
+      response.headers.set('X-Cache-Age', Math.floor((Date.now() - cached.timestamp) / 1000).toString())
+      response.headers.set('Cache-Control', 'private, max-age=3600')
+      return response
     }
 
     // Parallel fetch all data needed for Growth tab
@@ -99,7 +125,7 @@ export async function GET(request: NextRequest) {
       { subject: 'English', improvement: -2 }
     ]
 
-    return NextResponse.json({
+    const responseData = {
       stats: {
         overallGPA: overallGPA,
         avgScore: Math.round(avgScore),
@@ -129,7 +155,16 @@ export async function GET(request: NextRequest) {
         studyStreak: analytics?.study_streak || 0,
         focusAreas: focusAreas
       }
-    })
+    }
+
+    // Store in cache
+    growthCache.set(cacheKey, { data: responseData, timestamp: Date.now() })
+    cleanupCache()
+
+    const response = NextResponse.json(responseData)
+    response.headers.set('X-Cache', 'MISS')
+    response.headers.set('Cache-Control', 'private, max-age=3600')
+    return response
 
   } catch (error: any) {
     console.error('Error in /api/v2/student/growth:', error)

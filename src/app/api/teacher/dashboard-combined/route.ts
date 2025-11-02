@@ -1,14 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { dedupedRequest } from '@/lib/cache/requestDedup'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    db: {
+      schema: 'public',
+    },
+    global: {
+      headers: {
+        'x-application-name': 'teacher-dashboard',
+      },
+    },
+  }
 )
 
-// In-memory cache for teacher dashboard data (5 minutes TTL)
+// In-memory cache for teacher dashboard data (10 minutes TTL for better performance)
 const dashboardCache = new Map<string, { data: any; timestamp: number }>()
-const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+const CACHE_TTL = 10 * 60 * 1000 // 10 minutes
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,82 +37,106 @@ export async function GET(request: NextRequest) {
     const cacheKey = `teacher-dashboard-${teacherId}`
     const cached = dashboardCache.get(cacheKey)
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      const cacheAge = Math.round((Date.now() - cached.timestamp) / 1000)
+      console.log(`✅ [Dashboard Cache] HIT for teacher ${teacherId} (age: ${cacheAge}s)`)
       const response = NextResponse.json(cached.data)
       response.headers.set('X-Cache', 'HIT')
-      response.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120')
+      response.headers.set('X-Cache-Age', cacheAge.toString())
+      response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600')
+      response.headers.set('CDN-Cache-Control', 'public, max-age=600')
       return response
     }
+    
+    console.log(`🔄 [Dashboard Cache] MISS for teacher ${teacherId}`)
 
-    // Start all queries in parallel for better performance
-    const [
-      teacherClassesResult,
-      teacherProfileResult
-    ] = await Promise.allSettled([
-      supabaseAdmin
-        .from('teacher_class_assignments')
-        .select('class_id')
-        .eq('teacher_id', teacherId),
-      supabaseAdmin
-        .from('profiles')
-        .select('school_id, first_name, last_name')
-        .eq('user_id', teacherId)
-        .single()
-    ])
+    // Use request deduplication to prevent concurrent duplicate requests
+    const fetchData = async () => {
+      const startTime = Date.now()
+      
+      // Start all queries in parallel for better performance
+      const [
+        teacherClassesResult,
+        teacherProfileResult
+      ] = await Promise.allSettled([
+        supabaseAdmin
+          .from('teacher_class_assignments')
+          .select('class_id')
+          .eq('teacher_id', teacherId),
+        supabaseAdmin
+          .from('profiles')
+          .select('school_id, first_name, last_name')
+          .eq('user_id', teacherId)
+          .maybeSingle() // Use maybeSingle to avoid errors if not found
+      ])
+      
+      const profileFetchTime = Date.now() - startTime
+      console.log(`⚡ [Dashboard] Profile fetch: ${profileFetchTime}ms`)
 
-    // Handle teacher classes
-    let classIds: string[] = []
-    let teacherSchoolId: string | null = null
+      // Handle teacher classes
+      let classIds: string[] = []
+      let teacherSchoolId: string | null = null
 
-    if (teacherClassesResult.status === 'fulfilled' && teacherClassesResult.value.data) {
-      classIds = teacherClassesResult.value.data.map((tc: any) => tc.class_id)
-    }
+      if (teacherClassesResult.status === 'fulfilled' && teacherClassesResult.value.data) {
+        classIds = teacherClassesResult.value.data.map((tc: any) => tc.class_id)
+      }
 
-    // Handle teacher profile
-    if (teacherProfileResult.status === 'fulfilled' && teacherProfileResult.value.data) {
-      teacherSchoolId = teacherProfileResult.value.data.school_id
-    }
+      // Handle teacher profile
+      if (teacherProfileResult.status === 'fulfilled' && teacherProfileResult.value.data) {
+        teacherSchoolId = teacherProfileResult.value.data.school_id
+      }
 
-    if (classIds.length === 0) {
-      return NextResponse.json({
-        analytics: {
-          totalStudents: 0,
-          averageXP: 0,
-          activeToday: 0,
-          helpRequests: 0,
-          moodDistribution: { happy: 0, excited: 0, calm: 0, sad: 0, angry: 0, anxious: 0 },
-          averageStreak: 0
-        },
-        students: [],
-        teacherInfo: {
-          name: teacherProfileResult.status === 'fulfilled' ? 
-            `${teacherProfileResult.value.data?.first_name || ''} ${teacherProfileResult.value.data?.last_name || ''}`.trim() : 
-            'Teacher',
-          schoolId: teacherSchoolId
+      if (classIds.length === 0) {
+        const emptyData = {
+          analytics: {
+            totalStudents: 0,
+            averageXP: 0,
+            activeToday: 0,
+            helpRequests: 0,
+            moodDistribution: { happy: 0, excited: 0, calm: 0, sad: 0, angry: 0, anxious: 0 },
+            averageStreak: 0
+          },
+          students: [],
+          teacherInfo: {
+            name: teacherProfileResult.status === 'fulfilled' ? 
+              `${teacherProfileResult.value.data?.first_name || ''} ${teacherProfileResult.value.data?.last_name || ''}`.trim() : 
+              'Teacher',
+            schoolId: teacherSchoolId
+          }
         }
-      })
-    }
+        
+        // Cache empty result too
+        dashboardCache.set(cacheKey, { data: emptyData, timestamp: Date.now() })
+        console.log(`💾 [Dashboard Cache] Stored empty data for teacher ${teacherId}`)
+        
+        return emptyData
+      }
 
-    // Fetch all required data in parallel
-    const [
-      studentAssignmentsResult,
-      classInfoResult,
-      helpRequestsResult
-    ] = await Promise.allSettled([
-      supabaseAdmin
-        .from('student_class_assignments')
-        .select('student_id, class_id')
-        .in('class_id', classIds)
-        .eq('is_active', true),
-      supabaseAdmin
-        .from('classes')
-        .select('id, class_name, subject, room_number, grade_level_id')
-        .in('id', classIds),
-      supabaseAdmin
-        .from('help_requests')
-        .select('id, urgency_level, status, created_at')
-        .eq('school_id', teacherSchoolId)
-        .eq('status', 'pending')
-    ])
+      const queryStart = Date.now()
+      
+      // Fetch all required data in parallel with optimized queries
+      const [
+        studentAssignmentsResult,
+        classInfoResult,
+        helpRequestsResult
+      ] = await Promise.allSettled([
+        supabaseAdmin
+          .from('student_class_assignments')
+          .select('student_id, class_id')
+          .in('class_id', classIds)
+          .eq('is_active', true),
+        supabaseAdmin
+          .from('classes')
+          .select('id, class_name, subject, room_number, grade_level_id')
+          .in('id', classIds),
+        teacherSchoolId ? supabaseAdmin
+          .from('help_requests')
+          .select('id')
+          .eq('school_id', teacherSchoolId)
+          .eq('status', 'pending')
+          .limit(100) : Promise.resolve({ data: [], error: null })
+      ])
+      
+      console.log(`⚡ [Dashboard] Parallel queries: ${Date.now() - queryStart}ms`)
 
     // Process student assignments
     let studentIds: string[] = []
@@ -109,22 +144,20 @@ export async function GET(request: NextRequest) {
       studentIds = Array.from(new Set(studentAssignmentsResult.value.data.map((sa: any) => sa.student_id)))
     }
 
-    // Fetch student profiles if we have student IDs (limit to 100 for performance)
-    let studentProfiles: any[] = []
-    if (studentIds.length > 0) {
-      const limitedStudentIds = studentIds.slice(0, 100) // Prevent massive queries
-      const { data: profiles } = await supabaseAdmin
-        .from('profiles')
-        .select(`
-          user_id, first_name, last_name, xp, level, gems, 
-          streak_days, current_mood, updated_at, grade_level
-        `)
-        .in('user_id', limitedStudentIds)
-        .order('updated_at', { ascending: false })
-        .limit(100)
-      
-      studentProfiles = profiles || []
-    }
+      // Fetch student profiles if we have student IDs (limit to 100 for performance)
+      let studentProfiles: any[] = []
+      if (studentIds.length > 0) {
+        const profileStart = Date.now()
+        const limitedStudentIds = studentIds.slice(0, 100) // Prevent massive queries
+        const { data: profiles } = await supabaseAdmin
+          .from('profiles')
+          .select('user_id, first_name, last_name, xp, level, gems, streak_days, current_mood, updated_at, grade_level')
+          .in('user_id', limitedStudentIds)
+          .limit(100)
+        
+        console.log(`⚡ [Dashboard] Student profiles fetch (${studentIds.length} students): ${Date.now() - profileStart}ms`)
+        studentProfiles = profiles || []
+      }
 
     // Calculate analytics
     const totalStudents = studentProfiles.length
@@ -217,20 +250,31 @@ export async function GET(request: NextRequest) {
       classes: classInfo
     }
 
+      return responseData
+    }
+    
+    // Use request deduplication
+    const responseData = await dedupedRequest(
+      cacheKey,
+      fetchData
+    )
+    
     // Store in cache
     dashboardCache.set(cacheKey, { data: responseData, timestamp: Date.now() })
+    console.log(`💾 [Dashboard Cache] Stored data for teacher ${teacherId}`)
     
-    // Clean old cache entries (keep last 50)
-    if (dashboardCache.size > 50) {
+    // Clean old cache entries (keep last 100)
+    if (dashboardCache.size > 100) {
       const entries = Array.from(dashboardCache.entries())
       entries.sort((a, b) => b[1].timestamp - a[1].timestamp)
       dashboardCache.clear()
-      entries.slice(0, 50).forEach(([key, value]) => dashboardCache.set(key, value))
+      entries.slice(0, 100).forEach(([key, value]) => dashboardCache.set(key, value))
     }
 
     const response = NextResponse.json(responseData)
     response.headers.set('X-Cache', 'MISS')
-    response.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120')
+    response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600')
+    response.headers.set('CDN-Cache-Control', 'public, max-age=600')
     
     return response
 

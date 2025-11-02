@@ -21,16 +21,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // First, let's check if there are any schools in the database at all
-    const { data: allSchools, error: countError } = await supabaseAdmin
-      .from('schools')
-      .select('school_code, name')
-      .limit(5)
-
-    console.log('Available schools in database:', allSchools)
-    console.log('Count error:', countError)
-
-    // Now try to find the specific school
+    // Find the specific school by school code
     const { data: school, error } = await supabaseAdmin
       .from('schools')
       .select('id, name, school_code')
@@ -43,14 +34,7 @@ export async function POST(request: NextRequest) {
       console.error('Database error:', error)
       if (error.code === 'PGRST116') {
         return NextResponse.json(
-          { 
-            message: 'School not found with this ID',
-            debug: {
-              searchedId: schoolId,
-              availableSchools: allSchools?.map(s => s.school_code) || [],
-              totalSchoolsInDb: allSchools?.length || 0
-            }
-          },
+          { message: 'School not found with this ID' },
           { status: 404 }
         )
       }
@@ -62,14 +46,7 @@ export async function POST(request: NextRequest) {
 
     if (!school) {
       return NextResponse.json(
-        { 
-          message: 'School not found with this ID',
-          debug: {
-            searchedId: schoolId,
-            availableSchools: allSchools?.map(s => s.school_code) || [],
-            totalSchoolsInDb: allSchools?.length || 0
-          }
-        },
+        { message: 'School not found with this ID' },
         { status: 404 }
       )
     }

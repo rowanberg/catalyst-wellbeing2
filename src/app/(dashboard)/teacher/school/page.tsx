@@ -70,7 +70,6 @@ const TeacherSchoolPage = () => {
   const fetchSchoolInfo = async () => {
     try {
       setLoading(true)
-      console.log('🏫 Fetching school information...')
       
       const response = await fetch('/api/teacher/school-info', {
         headers: {
@@ -81,11 +80,9 @@ const TeacherSchoolPage = () => {
       
       if (response.ok) {
         const data = await response.json()
-        console.log('✅ School data received:', data.school)
         setSchoolInfo(data.school)
       } else {
-        const errorData = await response.json()
-        console.error('❌ Failed to fetch school info:', errorData)
+        await response.json()
         setSchoolInfo({
           name: "School Information Unavailable",
           principal_name: "Not Available",
@@ -111,7 +108,6 @@ const TeacherSchoolPage = () => {
         })
       }
     } catch (error) {
-      console.error('❌ Error fetching school info:', error)
       setSchoolInfo({
         name: "Error Loading School Information",
         principal_name: "Unable to load",

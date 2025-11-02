@@ -134,7 +134,7 @@ const TIME_PERIODS: TimePeriod[] = [
     description: 'Enter the age of knights, castles, and feudalism',
     emoji: '🏰',
     color: 'from-gray-600 to-blue-600',
-    unlocked: false,
+    unlocked: true,
     scenarios: [
       {
         id: 'medieval1',
@@ -185,7 +185,7 @@ const TIME_PERIODS: TimePeriod[] = [
     description: 'Experience the rebirth of art, science, and learning',
     emoji: '🎨',
     color: 'from-purple-600 to-pink-600',
-    unlocked: false,
+    unlocked: true,
     scenarios: [
       {
         id: 'renaissance1',
@@ -477,30 +477,30 @@ export function HistoryTimeMachine() {
 
   if (gameState === 'timeline') {
     return (
-      <div className={`min-h-screen bg-gradient-to-br ${currentPeriod?.color} p-4`}>
+      <div className={`min-h-screen bg-gradient-to-br ${currentPeriod?.color} p-3 sm:p-4`}>
         <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-6">
-            <Button variant="outline" onClick={resetToMenu} className="bg-gray-800/50">
-              ← Back to Time Machine
+          {/* Header - Mobile Optimized */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mb-4 sm:mb-6">
+            <Button variant="outline" onClick={resetToMenu} className="w-full sm:w-auto bg-gray-800/50 h-10">
+              <span className="text-sm sm:text-base">← Back to Time Machine</span>
             </Button>
-            <div className="text-center">
-              <h2 className="text-4xl font-bold text-white">{currentPeriod?.name}</h2>
-              <p className="text-xl text-gray-200">{currentPeriod?.era} • {currentPeriod?.year}</p>
+            <div className="text-center flex-1">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white">{currentPeriod?.name}</h2>
+              <p className="text-base sm:text-lg lg:text-xl text-gray-200">{currentPeriod?.era} • {currentPeriod?.year}</p>
             </div>
-            <div className="text-6xl">{currentPeriod?.emoji}</div>
+            <div className="text-5xl sm:text-6xl">{currentPeriod?.emoji}</div>
           </div>
 
           {/* Period Description */}
-          <Card className="mb-8 bg-white/10 border-white/20">
-            <CardContent className="p-6 text-center">
+          <Card className="mb-6 sm:mb-8 bg-white/10 border-white/20">
+            <CardContent className="p-4 sm:p-6 text-center">
               <p className="text-lg text-white">{currentPeriod?.description}</p>
             </CardContent>
           </Card>
 
           {/* Scenarios */}
-          <div className="space-y-6">
-            <h3 className="text-2xl font-bold text-white text-center">Historical Scenarios</h3>
+          <div className="space-y-4 sm:space-y-6">
+            <h3 className="text-xl sm:text-2xl font-bold text-white text-center">Historical Scenarios</h3>
             {currentPeriod?.scenarios.map((scenario, index) => (
               <motion.div
                 key={scenario.id}
@@ -509,19 +509,19 @@ export function HistoryTimeMachine() {
                 transition={{ delay: index * 0.1 }}
               >
                 <Card className="bg-white/10 border-white/20 hover:bg-white/20 transition-all cursor-pointer">
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="flex items-start gap-4">
                       <div className="text-4xl">📜</div>
                       <div className="flex-1">
-                        <h4 className="text-xl font-bold text-white mb-2">{scenario.title}</h4>
-                        <p className="text-gray-200 mb-3">{scenario.description}</p>
+                        <h4 className="text-lg sm:text-xl font-bold text-white mb-2">{scenario.title}</h4>
+                        <p className="text-sm sm:text-base text-gray-200 mb-3">{scenario.description}</p>
                         <div className="flex items-center gap-2 mb-3">
                           <Users className="h-4 w-4 text-blue-300" />
                           <span className="text-blue-300 text-sm">Playing as: {scenario.character}</span>
                         </div>
                         <Button 
                           onClick={() => startScenario(scenario.id)}
-                          className="bg-white/20 hover:bg-white/30 text-white"
+                          className="w-full sm:w-auto bg-white/20 hover:bg-white/30 text-white h-10"
                         >
                           <ArrowRight className="h-4 w-4 mr-2" />
                           Enter Scenario
@@ -540,24 +540,24 @@ export function HistoryTimeMachine() {
 
   if (gameState === 'scenario') {
     return (
-      <div className={`min-h-screen bg-gradient-to-br ${currentPeriod?.color} p-4`}>
+      <div className={`min-h-screen bg-gradient-to-br ${currentPeriod?.color} p-3 sm:p-4`}>
         <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-6">
-            <Button variant="outline" onClick={backToTimeline} className="bg-gray-800/50">
+          {/* Header - Mobile Optimized */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mb-4 sm:mb-6">
+            <Button variant="outline" onClick={backToTimeline} className="w-full sm:w-auto bg-gray-800/50 h-10">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Timeline
+              <span className="text-sm sm:text-base">Back to Timeline</span>
             </Button>
-            <div className="text-center">
-              <h2 className="text-3xl font-bold text-white">{currentScenario?.title}</h2>
-              <p className="text-lg text-gray-200">Playing as: {currentScenario?.character}</p>
+            <div className="text-center flex-1">
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white">{currentScenario?.title}</h2>
+              <p className="text-sm sm:text-base lg:text-lg text-gray-200">Playing as: {currentScenario?.character}</p>
             </div>
-            <div className="text-4xl">⏳</div>
+            <div className="text-3xl sm:text-4xl">⏳</div>
           </div>
 
           {/* Scenario Content */}
-          <Card className="mb-6 bg-white/10 border-white/20">
-            <CardContent className="p-6">
+          <Card className="mb-4 sm:mb-6 bg-white/10 border-white/20">
+            <CardContent className="p-4 sm:p-6">
               <div className="text-center mb-6">
                 <div className="text-6xl mb-4">🎭</div>
                 <p className="text-lg text-white mb-4">{currentScenario?.description}</p>
@@ -571,7 +571,7 @@ export function HistoryTimeMachine() {
           </Card>
 
           {/* Choices */}
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <h3 className="text-xl font-bold text-white text-center">What do you choose to do?</h3>
             {currentScenario?.choices.map((choice, index) => (
               <motion.div

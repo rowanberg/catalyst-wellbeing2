@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
     const type = searchParams.get('type')
     const audience = searchParams.get('audience')
-    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : undefined
+    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!, 10) : undefined
 
     let finalSchoolId = schoolId
 

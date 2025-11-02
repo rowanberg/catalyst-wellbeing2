@@ -79,50 +79,41 @@ function TeacherCommunicationsContent() {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Mock data - in production, this would fetch from API
-      setConversations([
-        {
-          id: 'conv_1',
-          participantId: 'parent_123',
-          participantName: 'Sarah Johnson',
-          participantRole: 'parent',
-          lastMessage: 'Thank you for the update on Emma\'s progress',
-          lastMessageTime: '2024-01-15T14:30:00Z',
-          unreadCount: 0,
-          isEncrypted: true,
-          status: 'active'
-        },
-        {
-          id: 'conv_2',
-          participantId: 'student_456',
-          participantName: 'Alex Wilson',
-          participantRole: 'student',
-          lastMessage: 'Can you help me understand the math homework?',
-          lastMessageTime: '2024-01-15T10:15:00Z',
-          unreadCount: 1,
-          isEncrypted: false,
-          status: 'active'
-        },
-        {
-          id: 'conv_3',
-          participantId: 'parent_789',
-          participantName: 'Michael Davis',
-          participantRole: 'parent',
-          lastMessage: 'When is the next parent-teacher conference?',
-          lastMessageTime: '2024-01-14T16:45:00Z',
-          unreadCount: 2,
-          isEncrypted: true,
-          status: 'active'
-        }
-      ]);
+      // Fetch real channels from API
+      const channelsResponse = await fetch('/api/communications/channels', {
+        credentials: 'include'
+      });
+      
+      if (channelsResponse.ok) {
+        const channelsData = await channelsResponse.json();
+        const channels = channelsData.channels || [];
+        
+        // Transform API channels to conversation format
+        const conversations = channels.map((channel: any) => ({
+          id: channel.id,
+          participantId: channel.id,
+          participantName: channel.channel_type === 'direct' ? 'Direct Message' : channel.channel_type,
+          participantRole: channel.metadata?.creator_role || 'unknown',
+          lastMessage: channel.last_message || 'No messages yet',
+          lastMessageTime: channel.updated_at || channel.created_at,
+          unreadCount: 0, // Can be enhanced with unread count tracking
+          isEncrypted: channel.is_encrypted,
+          status: channel.is_active ? 'active' : 'inactive'
+        }));
+        
+        setConversations(conversations);
+      }
 
+      // Office hours would typically come from teacher profile settings
+      // For now, using default schedule (can be enhanced)
       setOfficeHours([
         { id: '1', dayOfWeek: 1, startTime: '09:00', endTime: '10:00', isActive: true },
         { id: '2', dayOfWeek: 3, startTime: '14:00', endTime: '15:00', isActive: true },
         { id: '3', dayOfWeek: 5, startTime: '11:00', endTime: '12:00', isActive: true }
       ]);
     } catch (error: any) {
-      console.error('Error loading communication data:', error);
+      // Silent error handling
+      setConversations([]);
     } finally {
       setLoading(false);
     }
@@ -149,42 +140,32 @@ function TeacherCommunicationsContent() {
 
   const loadMessages = async (conversationId: string) => {
     try {
-      // Mock messages - in production, this would fetch from API
-      const mockMessages: Message[] = [
-        {
-          id: 'msg_1',
-          senderId: 'parent_123',
-          senderName: 'Sarah Johnson',
-          content: 'Hi Ms. Smith, I wanted to ask about Emma\'s progress in math class.',
-          timestamp: '2024-01-15T14:00:00Z',
-          isEncrypted: true,
-          isFlagged: false,
-          contentScore: 0.95
-        },
-        {
-          id: 'msg_2',
-          senderId: 'teacher_current',
-          senderName: 'You',
-          content: 'Hello Sarah! Emma is doing very well. She\'s shown great improvement in problem-solving.',
-          timestamp: '2024-01-15T14:15:00Z',
-          isEncrypted: true,
-          isFlagged: false,
-          contentScore: 0.98
-        },
-        {
-          id: 'msg_3',
-          senderId: 'parent_123',
-          senderName: 'Sarah Johnson',
-          content: 'Thank you for the update on Emma\'s progress',
-          timestamp: '2024-01-15T14:30:00Z',
-          isEncrypted: true,
-          isFlagged: false,
-          contentScore: 0.99
-        }
-      ];
-      setMessages(mockMessages);
+      // Fetch real messages from API
+      const response = await fetch(`/api/communications/messages?channelId=${conversationId}&limit=100`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const apiMessages = data.messages || [];
+        
+        // Transform API messages to component format
+        const formattedMessages: Message[] = apiMessages.map((msg: any) => ({
+          id: msg.id,
+          senderId: msg.senderId,
+          content: msg.content || msg.encryptedContent || '',
+          timestamp: msg.timestamp,
+          isFromCurrentUser: msg.isFromCurrentUser,
+          isEncrypted: !!msg.encryptedContent,
+          safetyScore: msg.isFlagged ? 0.5 : 0.95
+        }));
+        
+        setMessages(formattedMessages);
+      } else {
+        setMessages([]);
+      }
     } catch (error: any) {
-      console.error('Error loading messages:', error);
+      setMessages([]);
     }
   };
 
@@ -195,7 +176,7 @@ function TeacherCommunicationsContent() {
       const conversation = conversations.find(c => c.id === selectedConversation);
       if (!conversation) return;
 
-      // In production, this would call the secure API
+      // Call the real secure API
       const response = await fetch('/api/communications/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

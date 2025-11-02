@@ -4,7 +4,6 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import crypto from 'crypto'
 
 const CSRF_TOKEN_LENGTH = 32
 const CSRF_COOKIE_NAME = 'csrf_token'
@@ -12,9 +11,13 @@ const CSRF_HEADER_NAME = 'X-CSRF-Token'
 
 /**
  * Generate a cryptographically secure CSRF token
+ * Uses Web Crypto API for Edge runtime compatibility
  */
 export function generateCSRFToken(): string {
-  return crypto.randomBytes(CSRF_TOKEN_LENGTH).toString('hex')
+  // Use Web Crypto API (available in Edge runtime)
+  const array = new Uint8Array(CSRF_TOKEN_LENGTH)
+  crypto.getRandomValues(array)
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('')
 }
 
 /**
@@ -74,14 +77,21 @@ export function verifyCSRFToken(request: NextRequest): boolean {
 
 /**
  * Timing-safe string comparison to prevent timing attacks
+ * Uses constant-time comparison for Edge runtime
  */
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false
   
-  const bufferA = Buffer.from(a)
-  const bufferB = Buffer.from(b)
+  // Convert strings to arrays for constant-time comparison
+  const aBytes = new TextEncoder().encode(a)
+  const bBytes = new TextEncoder().encode(b)
   
-  return crypto.timingSafeEqual(bufferA, bufferB)
+  let result = 0
+  for (let i = 0; i < aBytes.length; i++) {
+    result |= aBytes[i] ^ bBytes[i]
+  }
+  
+  return result === 0
 }
 
 /**

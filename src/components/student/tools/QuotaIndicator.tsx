@@ -73,7 +73,7 @@ export function QuotaIndicator() {
       }
 
       console.log('[QuotaIndicator] Fetching quota status...')
-      const response = await fetch('/api/chat/gemini-extended', {
+      const response = await fetch('/api/quota/status', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${session.access_token}`

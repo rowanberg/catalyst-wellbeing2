@@ -39,8 +39,7 @@ import {
   Image as ImageIcon,
   Zap,
   ThumbsUp,
-  Smile as Laugh,
-  Frown as Angry,
+  Frown,
   Shield,
   School,
   Crown,
@@ -59,7 +58,6 @@ import {
   PieChart,
   Activity,
   Compass,
-  Map,
   Bookmark,
   Bell,
   Gift,
@@ -71,7 +69,6 @@ import {
   GraduationCap,
   Palette,
   Music,
-  Camera as CameraIcon,
   Scissors,
   Paintbrush
 } from 'lucide-react'
@@ -136,7 +133,7 @@ interface WhatsAppConfig {
 }
 
 // Cache for API responses
-const apiCache = new globalThis.Map<string, { data: any; timestamp: number; ttl: number }>()
+const apiCache = new Map<string, { data: any; timestamp: number; ttl: number }>()
 
 // Utility function for caching API responses
 const getCachedData = (key: string) => {
@@ -689,11 +686,7 @@ function StudentMessagingContent() {
     
     setIsLoadingTeachers(true)
     try {
-      const response = await fetch(`/api/student/assigned-teachers?student_id=${user.id}`, {
-        headers: {
-          'Cache-Control': 'max-age=300', // Cache for 5 minutes
-        }
-      })
+      const response = await fetch(`/api/student/assigned-teachers?student_id=${user.id}`)
       if (response.ok) {
         const data = await response.json()
         const teachersData = data.teachers || []

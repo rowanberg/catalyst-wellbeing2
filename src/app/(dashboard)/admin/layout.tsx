@@ -7,6 +7,7 @@ import { fetchProfile } from '@/lib/redux/slices/authSlice'
 import { PageLoader } from '@/components/ui/loading-spinner'
 import { useToast } from '@/components/ui/toast'
 import { supabase } from '@/lib/supabaseClient'
+import { ProfessionalFooter } from '@/components/layout/ProfessionalFooter'
 
 export default function AdminLayout({
   children,
@@ -125,5 +126,12 @@ export default function AdminLayout({
   }
 
   // Only render admin content if user is authenticated and has admin role
-  return <>{children}</>
+  return (
+    <div className="flex flex-col min-h-screen">
+      <div className="flex-1">
+        {children}
+      </div>
+      <ProfessionalFooter />
+    </div>
+  )
 }

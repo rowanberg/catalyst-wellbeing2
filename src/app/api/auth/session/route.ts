@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 
-// Session cache to prevent redundant auth checks (30 second TTL)
+// Session cache to prevent redundant auth checks (1 month TTL)
 const sessionCache = new Map<string, { user: any; timestamp: number }>()
-const SESSION_CACHE_TTL = 30 * 1000 // 30 seconds
+const SESSION_CACHE_TTL = 30 * 24 * 60 * 60 * 1000 // 1 month (30 days)
 
 export async function GET(request: Request) {
   try {
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     if (cached && Date.now() - cached.timestamp < SESSION_CACHE_TTL) {
       const response = NextResponse.json({ user: cached.user })
       response.headers.set('X-Cache', 'HIT')
-      response.headers.set('Cache-Control', 'private, max-age=30')
+      response.headers.set('Cache-Control', 'private, max-age=2592000') // 30 days
       return response
     }
 
@@ -61,7 +61,7 @@ export async function GET(request: Request) {
     console.log('✅ [SessionAPI] Valid session found for user:', user.email)
     const response = NextResponse.json({ user })
     response.headers.set('X-Cache', 'MISS')
-    response.headers.set('Cache-Control', 'private, max-age=30')
+    response.headers.set('Cache-Control', 'private, max-age=2592000') // 30 days
     return response
   } catch (error) {
     console.error('Session check error:', error)

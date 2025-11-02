@@ -89,12 +89,8 @@ export default function GratitudeJournalPage() {
         }
       }
 
-      // Fetch from API with cache headers
-      const response = await fetch('/api/student/gratitude', {
-        headers: {
-          'Cache-Control': 'max-age=300', // 5 minutes browser cache
-        }
-      })
+      // Fetch from API (server sets cache headers)
+      const response = await fetch('/api/student/gratitude')
       
       if (response.ok) {
         const data = await response.json()
@@ -106,7 +102,7 @@ export default function GratitudeJournalPage() {
         sessionStorage.setItem(cacheTimestampKey, Date.now().toString())
       }
     } catch (error: any) {
-      console.error('Error fetching gratitude entries:', error)
+      // Silent fail - entries will be empty array
     }
   }
 
@@ -115,8 +111,6 @@ export default function GratitudeJournalPage() {
 
     setIsLoading(true)
     setSubmitError(null)
-    
-    console.log('Submitting gratitude entry:', data)
     
     try {
       const response = await fetch('/api/student/gratitude', {
@@ -129,18 +123,14 @@ export default function GratitudeJournalPage() {
 
       if (response.ok) {
         const result = await response.json()
-        console.log('Gratitude entry saved successfully:', result)
         
         // Show success message
         setShowSuccess(true)
         
-        // Update XP/gems in Redux
-        console.log('Updating XP and Gems:', result.xpGained, result.gemsGained)
+        // Update XP/gems in Redux (state updates immediately, no reload needed)
         if (result.xpGained && result.gemsGained) {
           dispatch(updateXP(result.xpGained))
           dispatch(updateGems(result.gemsGained))
-        } else {
-          console.error('XP/Gems not returned from API:', result)
         }
         
         // Clear cache
@@ -156,17 +146,16 @@ export default function GratitudeJournalPage() {
         reset()
         setGratitudeText('')
         
-        // Keep success message visible for 3 seconds, then reload page to show updated XP/Gems
+        // Hide success message and form after 3 seconds (no reload needed - Redux already updated)
         setTimeout(() => {
-          window.location.reload()
+          setShowSuccess(false)
+          setShowForm(false)
         }, 3000)
       } else {
-        const errorData = await response.text()
-        console.error('API Error:', response.status, errorData)
+        await response.text()
         setSubmitError(`Failed to save entry (${response.status}). Please try again.`)
       }
     } catch (error: any) {
-      console.error('Error saving gratitude entry:', error)
       setSubmitError(error.message || 'An unexpected error occurred. Please try again.')
     } finally {
       setIsLoading(false)
@@ -254,7 +243,7 @@ export default function GratitudeJournalPage() {
                   {celebrationMessages[Math.floor(Math.random() * celebrationMessages.length)]}
                 </div>
                 <div className="text-xs sm:text-sm mt-2 opacity-80">
-                  Refreshing your progress...
+                  Your progress has been updated!
                 </div>
               </div>
             </motion.div>

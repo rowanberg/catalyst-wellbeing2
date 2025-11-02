@@ -27,8 +27,8 @@ export async function GET(request: NextRequest) {
     const studentId = searchParams.get('student_id')
     const incidentType = searchParams.get('incident_type')
     const severityLevel = searchParams.get('severity_level')
-    const limit = parseInt(searchParams.get('limit') || '50')
-    const offset = parseInt(searchParams.get('offset') || '0')
+    const limit = parseInt(searchParams.get('limit') || '50', 10)
+    const offset = parseInt(searchParams.get('offset') || '0', 10)
 
     // Build query
     let query = supabase

@@ -477,34 +477,34 @@ export function BrainTrainingGym() {
 
   if (gameState === 'exercise') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 p-4">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 p-3 sm:p-4">
         <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-6">
-            <Button variant="outline" onClick={resetToMenu} className="bg-gray-800/50">
-              ← Back to Gym
+          {/* Header - Mobile Optimized */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mb-4 sm:mb-6">
+            <Button variant="outline" onClick={resetToMenu} className="w-full sm:w-auto bg-gray-800/50 h-10">
+              <span className="text-sm sm:text-base">← Back to Gym</span>
             </Button>
-            <div className="text-center">
-              <h2 className="text-3xl font-bold text-white">{currentExercise?.name}</h2>
-              <div className="text-lg text-purple-300">{currentExercise?.category.toUpperCase()}</div>
+            <div className="text-center flex-1">
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white">{currentExercise?.name}</h2>
+              <div className="text-sm sm:text-base lg:text-lg text-purple-300">{currentExercise?.category.toUpperCase()}</div>
             </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold text-yellow-400">
-                <Timer className="h-6 w-6 inline mr-2" />
+            <div className="text-center sm:text-right">
+              <div className="text-xl sm:text-2xl font-bold text-yellow-400">
+                <Timer className="h-5 sm:h-6 w-5 sm:w-6 inline mr-2" />
                 {timeLeft}s
               </div>
             </div>
           </div>
 
           {gamePhase === 'instructions' && (
-            <Card className="mb-6 bg-gradient-to-br from-blue-600/20 to-purple-600/20 border-blue-400/30">
-              <CardContent className="p-6 text-center">
-                <div className="text-6xl mb-4">{currentExercise?.icon}</div>
-                <h3 className="text-2xl font-bold text-white mb-4">Get Ready!</h3>
-                <p className="text-lg text-gray-300 mb-6">{currentExercise?.instructions}</p>
+            <Card className="mb-4 sm:mb-6 bg-gradient-to-br from-blue-600/20 to-purple-600/20 border-blue-400/30">
+              <CardContent className="p-4 sm:p-6 text-center">
+                <div className="text-5xl sm:text-6xl mb-4">{currentExercise?.icon}</div>
+                <h3 className="text-xl sm:text-2xl font-bold text-white mb-4">Get Ready!</h3>
+                <p className="text-base sm:text-lg text-gray-300 mb-6">{currentExercise?.instructions}</p>
                 <Button 
                   onClick={beginExercise}
-                  className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 px-8 py-3 text-lg"
+                  className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 px-6 sm:px-8 py-3 text-base sm:text-lg h-12"
                 >
                   🚀 Start Exercise
                 </Button>
@@ -514,21 +514,21 @@ export function BrainTrainingGym() {
 
           {gamePhase === 'playing' && currentExercise && (
             <Card className="bg-gradient-to-br from-purple-600/20 to-pink-600/20 border-purple-400/30">
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 {/* Exercise-specific content would go here */}
                 <div className="text-center">
-                  <div className="text-8xl mb-6">{currentExercise.icon}</div>
-                  <div className="text-2xl font-bold text-white mb-4">
+                  <div className="text-6xl sm:text-8xl mb-6">{currentExercise.icon}</div>
+                  <div className="text-xl sm:text-2xl font-bold text-white mb-4">
                     Exercise in Progress...
                   </div>
-                  <div className="text-lg text-gray-300 mb-6">
+                  <div className="text-base sm:text-lg text-gray-300 mb-6">
                     Current Score: {score}%
                   </div>
                   <Button 
                     onClick={finishExercise}
-                    className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600"
+                    className="w-full sm:w-auto bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 h-10"
                   >
-                    Finish Early
+                    <span className="text-sm sm:text-base">Finish Early</span>
                   </Button>
                 </div>
               </CardContent>
@@ -541,22 +541,22 @@ export function BrainTrainingGym() {
 
   if (gameState === 'results') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-900 via-emerald-900 to-teal-900 p-4 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-green-900 via-emerald-900 to-teal-900 p-3 sm:p-4 flex items-center justify-center">
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           className="text-center"
         >
-          <Card className="bg-gradient-to-br from-green-600/20 to-emerald-600/20 border-green-400/30 p-8">
+          <Card className="bg-gradient-to-br from-green-600/20 to-emerald-600/20 border-green-400/30 p-4 sm:p-8">
             <CardContent>
-              <div className="text-8xl mb-6">🏆</div>
-              <h2 className="text-4xl font-bold text-green-400 mb-4">Training Complete!</h2>
-              <p className="text-xl text-white mb-6">
+              <div className="text-6xl sm:text-8xl mb-6">🏆</div>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-green-400 mb-4">Training Complete!</h2>
+              <p className="text-base sm:text-lg lg:text-xl text-white mb-6">
                 You completed {currentExercise?.name}!
               </p>
               
-              <div className="space-y-4 mb-8">
-                <div className="text-3xl font-bold text-yellow-400">
+              <div className="space-y-4 mb-6 sm:mb-8">
+                <div className="text-2xl sm:text-3xl font-bold text-yellow-400">
                   Final Score: {score}%
                 </div>
                 

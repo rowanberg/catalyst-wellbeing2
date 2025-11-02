@@ -6,8 +6,8 @@ export async function GET(request: NextRequest) {
     const supabase = supabaseAdmin;
     const { searchParams } = new URL(request.url);
     const channelId = searchParams.get('channelId');
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const limit = parseInt(searchParams.get('limit') || '50', 10);
+    const offset = parseInt(searchParams.get('offset') || '0', 10);
     
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();

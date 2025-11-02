@@ -171,6 +171,35 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
         )}
       </motion.div>
 
+      {/* Quick Access Cards */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+      >
+        <Card 
+          className="border-0 shadow-xl rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 cursor-pointer hover:shadow-2xl transition-all group"
+          onClick={() => router.push('/student/calendar')}
+        >
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="flex items-center space-x-3 mb-2">
+                  <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl group-hover:scale-110 transition-transform">
+                    <Calendar className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Calendar & Attendance</h3>
+                    <p className="text-white/90 text-sm">Track your schedule</p>
+                  </div>
+                </div>
+              </div>
+              <ChevronRight className="w-6 h-6 text-white group-hover:translate-x-1 transition-transform" />
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
       {/* Quick Stats - Mobile Optimized */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <motion.div

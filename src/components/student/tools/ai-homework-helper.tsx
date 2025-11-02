@@ -8,7 +8,8 @@ import { useAppSelector } from '@/lib/redux/hooks'
 import { usePerformanceOptimizer } from '@/hooks/usePerformanceOptimizer'
 import { 
   Brain, Send, Lightbulb, Target, CheckCircle2, Clock, Sparkles,
-  Paperclip, Plus, MessageCircle, Copy, Check, X, Menu, History
+  Paperclip, Plus, MessageCircle, Copy, Check, X, Menu, History,
+  CreditCard, ChevronLeft, ChevronRight, RotateCw, Maximize, Minimize
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FluidThinking } from './FluidThinking'
@@ -25,6 +26,7 @@ interface ChatMessage {
   timestamp: string
   subject?: string
   imageData?: string
+  isFlashCard?: boolean
 }
 
 interface ChatSession {
@@ -496,6 +498,262 @@ function parseInlineMarkdown(text: string): React.ReactNode[] {
   return parts.length > 0 ? parts : [<span key="0">{processedText}</span>]
 }
 
+// Flash Card Component with flip animation
+function FlashCard({ question, answer, index, total, onNext, onPrev }: { 
+  question: string
+  answer: string
+  index: number
+  total: number
+  onNext: () => void
+  onPrev: () => void
+}) {
+  const [isFlipped, setIsFlipped] = React.useState(false)
+  const [isFullscreen, setIsFullscreen] = React.useState(false)
+  const containerRef = React.useRef<HTMLDivElement>(null)
+
+  // Handle fullscreen toggle
+  const toggleFullscreen = React.useCallback(async () => {
+    if (!containerRef.current) return
+
+    try {
+      if (!isFullscreen) {
+        // Enter fullscreen
+        if (containerRef.current.requestFullscreen) {
+          await containerRef.current.requestFullscreen()
+        } else if ((containerRef.current as any).webkitRequestFullscreen) {
+          await (containerRef.current as any).webkitRequestFullscreen()
+        } else if ((containerRef.current as any).mozRequestFullScreen) {
+          await (containerRef.current as any).mozRequestFullScreen()
+        } else if ((containerRef.current as any).msRequestFullscreen) {
+          await (containerRef.current as any).msRequestFullscreen()
+        }
+        setIsFullscreen(true)
+      } else {
+        // Exit fullscreen
+        if (document.exitFullscreen) {
+          await document.exitFullscreen()
+        } else if ((document as any).webkitExitFullscreen) {
+          await (document as any).webkitExitFullscreen()
+        } else if ((document as any).mozCancelFullScreen) {
+          await (document as any).mozCancelFullScreen()
+        } else if ((document as any).msExitFullscreen) {
+          await (document as any).msExitFullscreen()
+        }
+        setIsFullscreen(false)
+      }
+    } catch (error) {
+      console.error('Fullscreen error:', error)
+    }
+  }, [isFullscreen])
+
+  // Listen for fullscreen changes (e.g., ESC key)
+  React.useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!(document.fullscreenElement || 
+        (document as any).webkitFullscreenElement || 
+        (document as any).mozFullScreenElement || 
+        (document as any).msFullscreenElement)
+      setIsFullscreen(isCurrentlyFullscreen)
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange)
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange)
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange)
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange)
+    }
+  }, [])
+
+  return (
+    <div 
+      ref={containerRef}
+      className={cn(
+        "w-full mx-auto transition-all",
+        isFullscreen 
+          ? "fixed inset-0 z-50 bg-slate-900 p-6 sm:p-12 flex flex-col items-center justify-center max-w-none" 
+          : "max-w-2xl"
+      )}
+    >
+      {/* Card Counter & Fullscreen Button */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex-1" />
+        <span className="text-sm font-medium text-slate-400">
+          Card {index + 1} of {total}
+        </span>
+        <div className="flex-1 flex justify-end">
+          <Button
+            onClick={(e) => {
+              e.stopPropagation()
+              toggleFullscreen()
+            }}
+            size="sm"
+            variant="ghost"
+            className="text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg px-3 py-2"
+            title={isFullscreen ? "Exit Fullscreen (ESC)" : "Enter Fullscreen"}
+          >
+            {isFullscreen ? (
+              <Minimize className="h-4 w-4" />
+            ) : (
+              <Maximize className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+      </div>
+
+      {/* Flip Card */}
+      <motion.div
+        className={cn(
+          "relative cursor-pointer perspective-1000",
+          isFullscreen ? "h-[400px] sm:h-[500px] w-full max-w-4xl" : "h-[280px] sm:h-[320px]"
+        )}
+        onClick={() => setIsFlipped(!isFlipped)}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+      >
+        <motion.div
+          className="relative w-full h-full"
+          initial={false}
+          animate={{ rotateY: isFlipped ? 180 : 0 }}
+          transition={{ duration: 0.6, ease: "easeInOut" }}
+          style={{ transformStyle: 'preserve-3d' }}
+        >
+          {/* Front Side (Question) */}
+          <div
+            className="absolute inset-0 rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center text-center border-2 shadow-2xl"
+            style={{
+              backfaceVisibility: 'hidden',
+              background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(236, 72, 153, 0.15))',
+              borderColor: 'rgba(168, 85, 247, 0.4)'
+            }}
+          >
+            <div className="mb-4 p-3 bg-purple-500/20 rounded-full">
+              <Brain className="h-8 w-8 text-purple-400" />
+            </div>
+            <h3 className="text-lg sm:text-xl font-bold text-white mb-6">Question</h3>
+            <div className="text-base sm:text-xl text-slate-100 leading-loose px-4 max-w-xl mx-auto flashcard-content" style={{ lineHeight: '1.8' }}>
+              {parseInlineMarkdown(question)}
+            </div>
+            <style jsx global>{`
+              .flashcard-content em {
+                font-family: 'Georgia', 'Times New Roman', serif;
+                color: #e0e7ff;
+                font-style: italic;
+                font-size: 1.05em;
+              }
+              .flashcard-content strong {
+                color: #fff;
+                font-weight: 700;
+                text-shadow: 0 0 8px rgba(168, 85, 247, 0.3);
+              }
+            `}</style>
+            <div className="mt-6 text-xs sm:text-sm text-slate-400 flex items-center gap-2">
+              <RotateCw className="h-4 w-4" />
+              Tap to reveal answer
+            </div>
+          </div>
+
+          {/* Back Side (Answer) */}
+          <div
+            className="absolute inset-0 rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center text-center border-2 shadow-2xl"
+            style={{
+              backfaceVisibility: 'hidden',
+              transform: 'rotateY(180deg)',
+              background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(59, 130, 246, 0.15))',
+              borderColor: 'rgba(34, 197, 94, 0.4)'
+            }}
+          >
+            <div className="mb-4 p-3 bg-green-500/20 rounded-full">
+              <CheckCircle2 className="h-8 w-8 text-green-400" />
+            </div>
+            <h3 className="text-lg sm:text-xl font-bold text-white mb-6">Answer</h3>
+            <div className="text-base sm:text-xl text-slate-100 leading-loose px-4 max-w-xl mx-auto flashcard-content" style={{ lineHeight: '1.8' }}>
+              {parseInlineMarkdown(answer)}
+            </div>
+            <div className="mt-6 text-xs sm:text-sm text-slate-400 flex items-center gap-2">
+              <RotateCw className="h-4 w-4" />
+              Tap to see question
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+
+      {/* Navigation */}
+      <div className="flex items-center justify-between mt-6 gap-4">
+        <Button
+          onClick={(e) => {
+            e.stopPropagation()
+            onPrev()
+            setIsFlipped(false)
+          }}
+          disabled={index === 0}
+          className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2 px-4 py-2 rounded-lg"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          <span className="hidden sm:inline">Previous</span>
+        </Button>
+
+        <button
+          onClick={() => setIsFlipped(!isFlipped)}
+          className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-2"
+        >
+          <RotateCw className="h-4 w-4" />
+          Flip Card
+        </button>
+
+        <Button
+          onClick={(e) => {
+            e.stopPropagation()
+            onNext()
+            setIsFlipped(false)
+          }}
+          disabled={index === total - 1}
+          className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2 px-4 py-2 rounded-lg"
+        >
+          <span className="hidden sm:inline">Next</span>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Study Progress */}
+      <div className="mt-6 bg-slate-800/50 rounded-lg p-4 border border-slate-700/50">
+        <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
+          <span>Study Progress</span>
+          <span>{Math.round(((index + 1) / total) * 100)}%</span>
+        </div>
+        <div className="w-full bg-slate-700/50 rounded-full h-2 overflow-hidden">
+          <motion.div
+            className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
+            initial={{ width: 0 }}
+            animate={{ width: `${((index + 1) / total) * 100}%` }}
+            transition={{ duration: 0.3 }}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Parse flash cards from AI response
+function parseFlashCards(content: string): { question: string; answer: string }[] {
+  const flashCards: { question: string; answer: string }[] = []
+  const regex = /<<<FLASHCARD>>>\s*Q:\s*([\s\S]*?)\s*A:\s*([\s\S]*?)\s*<<<END_FLASHCARD>>>/g
+  let match
+
+  while ((match = regex.exec(content)) !== null) {
+    flashCards.push({
+      question: match[1].trim(),
+      answer: match[2].trim()
+    })
+  }
+
+  return flashCards
+}
+
 // Component to render formatted message content
 function MessageContent({ content, onCopy, showCopyButton }: { content: string; onCopy?: (code: string) => void; showCopyButton?: boolean }) {
   const [copied, setCopied] = React.useState(false)
@@ -869,6 +1127,8 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
   const [showHistory, setShowHistory] = useState(false)
   const [remainingRequests, setRemainingRequests] = useState(DAILY_REQUEST_LIMIT)
   const [resetDate, setResetDate] = useState<Date>(new Date())
+  const [flashCardMode, setFlashCardMode] = useState(false)
+  const [currentCardIndex, setCurrentCardIndex] = useState(0)
   const profile = useAppSelector((state) => state.auth.profile)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
@@ -1069,7 +1329,35 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
             studentName: profile?.full_name || 'Student',
             schoolName: profile?.school_name || 'School',
             imageAttached: !!currentImage
-          }
+          },
+          flashCardMode: flashCardMode,
+          flashCardInstructions: flashCardMode ? `
+
+⚠️ CRITICAL FORMATTING REQUIREMENT - FLASH CARD MODE ACTIVE:
+
+You MUST use this EXACT format for EVERY flash card. Do NOT use any other format like bullet points or "Front/Back" - ONLY this:
+
+<<<FLASHCARD>>>
+Q: What is a Square Matrix?
+A: A matrix with an equal number of rows and columns (m = n).
+<<<END_FLASHCARD>>>
+
+<<<FLASHCARD>>>
+Q: What is an Identity Matrix?
+A: A square matrix with 1s on the main diagonal and 0s elsewhere. When multiplied with another matrix, it leaves the other matrix unchanged.
+<<<END_FLASHCARD>>>
+
+REQUIREMENTS:
+- Start EACH card with: <<<FLASHCARD>>>
+- Then write: Q: [your question]
+- Then write: A: [your answer]
+- End EACH card with: <<<END_FLASHCARD>>>
+- Generate 5-10 flash cards
+- NO bullet points, NO "Flashcard 1, 2, 3...", NO "Front/Back" labels
+- ONLY use the <<<FLASHCARD>>> format shown above` : `
+
+NOTE: When appropriate for study materials (formulas, definitions, key concepts), you can mention to the student:
+"💡 Tip: You can enable Flash Cards mode using the button at the top to get interactive study cards for this topic!"`
         })
       })
 
@@ -1115,7 +1403,8 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
               id: aiMessageId,
               type: 'ai' as const,
               content: accumulatedText,
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
+              isFlashCard: flashCardMode
             }]
           }
         })
@@ -1962,7 +2251,7 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
             className="px-3 sm:px-6 py-3 sm:py-4 border-b border-slate-700/50 bg-gradient-to-r from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-xl shadow-lg"
           >
             <div className="flex items-center justify-between w-full sm:max-w-4xl sm:mx-auto">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <button
                   onClick={() => setIsMobileSidebarOpen(true)}
                   className="lg:hidden p-2.5 hover:bg-slate-700/50 rounded-xl transition-all duration-200 border border-slate-700/50 hover:border-purple-500/30 hover:shadow-lg hover:shadow-purple-500/10"
@@ -1979,9 +2268,28 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
                   </div>
                 </div>
               </div>
-              <div className="hidden sm:flex items-center gap-2 text-[10px] text-slate-400">
-                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-lg shadow-emerald-500/50"></div>
-                <span className="font-semibold">Online</span>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Button
+                  onClick={() => {
+                    setFlashCardMode(!flashCardMode)
+                    setCurrentCardIndex(0)
+                  }}
+                  size="sm"
+                  className={cn(
+                    "h-8 sm:h-9 px-3 sm:px-4 rounded-lg transition-all duration-200 flex items-center gap-2 text-xs sm:text-sm font-medium border",
+                    flashCardMode
+                      ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white border-purple-500/50 shadow-lg shadow-purple-500/30"
+                      : "bg-slate-800/50 text-slate-300 border-slate-700/50 hover:bg-slate-700/50 hover:border-purple-500/30"
+                  )}
+                >
+                  <CreditCard className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">{flashCardMode ? 'Flash Cards ON' : 'Flash Cards'}</span>
+                  <span className="sm:hidden">Cards</span>
+                </Button>
+                <div className="hidden sm:flex items-center gap-2 text-[10px] text-slate-400">
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-lg shadow-emerald-500/50"></div>
+                  <span className="font-semibold">Online</span>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -2099,11 +2407,34 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
                     )}
                     
                     <div className="relative">
-                      <MessageContent 
-                        content={message.content} 
-                        onCopy={(code) => { setCopiedCode(`${message.id}-code`); setTimeout(() => setCopiedCode(null), 2000) }}
-                        showCopyButton={message.type === 'ai' && !isStreaming}
-                      />
+                      {(() => {
+                        // If it's marked as flash card and it's AI response, check if we have actual cards
+                        if (message.isFlashCard && message.type === 'ai') {
+                          const flashCards = parseFlashCards(message.content)
+                          if (flashCards.length > 0) {
+                            // We found flash cards, render the flash card UI
+                            return (
+                              <FlashCard
+                                question={flashCards[currentCardIndex]?.question || ''}
+                                answer={flashCards[currentCardIndex]?.answer || ''}
+                                index={currentCardIndex}
+                                total={flashCards.length}
+                                onNext={() => setCurrentCardIndex(prev => Math.min(prev + 1, flashCards.length - 1))}
+                                onPrev={() => setCurrentCardIndex(prev => Math.max(prev - 1, 0))}
+                              />
+                            )
+                          }
+                          // No flash cards found, fall back to normal message display
+                        }
+                        // Normal message rendering
+                        return (
+                          <MessageContent 
+                            content={message.content} 
+                            onCopy={(code) => { setCopiedCode(`${message.id}-code`); setTimeout(() => setCopiedCode(null), 2000) }}
+                            showCopyButton={message.type === 'ai' && !isStreaming}
+                          />
+                        )
+                      })()}
                       {/* Show typing cursor while streaming */}
                       {message.type === 'ai' && isStreaming && messages[messages.length - 1]?.id === message.id && (
                         <span className="inline-block w-0.5 h-5 bg-indigo-500 ml-1 animate-pulse" />

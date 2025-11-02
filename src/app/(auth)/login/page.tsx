@@ -41,6 +41,9 @@ export default function LoginPage() {
   const [showResetForm, setShowResetForm] = useState(false)
   const [resetEmailSent, setResetEmailSent] = useState(false)
   const [isResetLoading, setIsResetLoading] = useState(false)
+  const [isPageReady, setIsPageReady] = useState(false)
+  const [emailTouched, setEmailTouched] = useState(false)
+  const [passwordTouched, setPasswordTouched] = useState(false)
   const router = useRouter()
   const dispatch = useAppDispatch()
   const { error: authError} = useAppSelector((state) => state.auth)
@@ -67,13 +70,21 @@ export default function LoginPage() {
 
   const emailValue = watch('email')
 
-  // Auto-focus on email field using query selector
+  // Page ready animation
   useEffect(() => {
-    const emailInput = document.querySelector('input[type="email"]') as HTMLInputElement
-    if (emailInput) {
-      emailInput.focus()
-    }
+    setIsPageReady(true)
   }, [])
+
+  // Auto-focus on email field with delay for smooth animation
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const emailInput = document.querySelector('input[type="email"]') as HTMLInputElement
+      if (emailInput && !showResetForm) {
+        emailInput.focus()
+      }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [showResetForm])
 
   // Dark mode initialization and persistence
   useEffect(() => {
@@ -329,10 +340,12 @@ export default function LoginPage() {
       <div className="w-full lg:flex lg:flex-row">
         {/* Left Section - Login Form */}
         <div className="flex-1 flex items-center justify-center px-4 sm:px-6 py-6 sm:py-8 lg:py-0 relative z-10 min-h-[60vh] lg:min-h-full">
-          <div className="w-full max-w-md space-y-4 sm:space-y-6 lg:space-y-8">
+          <div className={`w-full max-w-md space-y-4 sm:space-y-6 lg:space-y-8 transition-all duration-700 ease-out ${
+            isPageReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}>
           {/* Brand Header */}
           <div className="text-center">
-            <div className="mx-auto w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+            <div className="mx-auto w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg transform transition-all duration-500 hover:scale-110 hover:rotate-3">
               <GraduationCap className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
@@ -347,7 +360,7 @@ export default function LoginPage() {
           </div>
 
           {/* Optimized Login/Reset Form */}
-          <div className="bg-white/95 dark:bg-slate-800/95 rounded-2xl p-4 sm:p-6 shadow-xl border border-white/30 dark:border-slate-700/30 backdrop-blur-sm">
+          <div className="bg-white/95 dark:bg-slate-800/95 rounded-2xl p-4 sm:p-6 shadow-xl border border-white/30 dark:border-slate-700/30 backdrop-blur-sm transition-all duration-300 hover:shadow-2xl">
             {!showResetForm ? (
               /* Login Form */
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-5">
@@ -360,12 +373,33 @@ export default function LoginPage() {
                     {...register('email')}
                     type="email"
                     autoComplete="email"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     placeholder="Enter your email"
-                    onFocus={() => emailValue && setShowSuggestions(true)}
+                    onFocus={() => {
+                      setEmailTouched(true)
+                      emailValue && setShowSuggestions(true)
+                    }}
                     onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                     suppressHydrationWarning={true}
+                    aria-label="Email address"
+                    aria-invalid={emailTouched && !!errors.email}
+                    aria-describedby={emailTouched && errors.email ? 'email-error' : undefined}
                   />
+                  {/* Real-time validation feedback */}
+                  {emailTouched && errors.email && (
+                    <p id="email-error" className="mt-1.5 text-xs text-red-600 dark:text-red-400 flex items-center gap-1 animate-in slide-in-from-top-1 duration-200">
+                      <AlertCircle className="h-3 w-3" />
+                      {errors.email.message}
+                    </p>
+                  )}
+                  {emailTouched && !errors.email && emailValue && (
+                    <p className="mt-1.5 text-xs text-green-600 dark:text-green-400 flex items-center gap-1 animate-in slide-in-from-top-1 duration-200">
+                      <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      Valid email format
+                    </p>
+                  )}
                   {/* Email Suggestions Dropdown */}
                   {showSuggestions && emailSuggestions.length > 0 && (
                     <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl shadow-lg">
@@ -398,18 +432,30 @@ export default function LoginPage() {
                     autoComplete="current-password"
                     onKeyUp={handleKeyPress}
                     onKeyDown={handleKeyPress}
-                    className="w-full pl-10 pr-10 py-3 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    onFocus={() => setPasswordTouched(true)}
+                    className="w-full pl-10 pr-10 py-3 border border-gray-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     placeholder="Enter your password"
                     suppressHydrationWarning={true}
+                    aria-label="Password"
+                    aria-invalid={passwordTouched && !!errors.password}
+                    aria-describedby={passwordTouched && errors.password ? 'password-error' : undefined}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition-colors duration-200"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+                {/* Password validation feedback */}
+                {passwordTouched && errors.password && (
+                  <p id="password-error" className="mt-1.5 text-xs text-red-600 dark:text-red-400 flex items-center gap-1 animate-in slide-in-from-top-1 duration-200">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.password.message}
+                  </p>
+                )}
                 {/* Caps Lock Warning */}
                 {capsLockOn && (
                   <div className="flex items-center gap-2 mt-2 text-xs text-amber-600 dark:text-amber-400">
@@ -451,7 +497,8 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 dark:from-blue-500 dark:to-indigo-500 dark:hover:from-blue-600 dark:hover:to-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 touch-manipulation"
+                className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 dark:from-blue-500 dark:to-indigo-500 dark:hover:from-blue-600 dark:hover:to-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 touch-manipulation transform hover:scale-[1.02] active:scale-[0.98]"
+                aria-label="Sign in to your account"
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center space-x-2">
@@ -471,7 +518,8 @@ export default function LoginPage() {
                 type="button"
                 onClick={handleGoogleSignIn}
                 disabled={isLoading || isGoogleLoading}
-                className="w-full py-3 px-4 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 font-medium rounded-xl hover:bg-gray-50 dark:hover:bg-slate-600 transition-all duration-200 flex items-center justify-center gap-2 touch-manipulation disabled:opacity-50"
+                className="w-full py-3 px-4 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 font-medium rounded-xl hover:bg-gray-50 dark:hover:bg-slate-600 transition-all duration-200 flex items-center justify-center gap-2 touch-manipulation disabled:opacity-50 transform hover:scale-[1.02] active:scale-[0.98]"
+                aria-label="Sign in with Google"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

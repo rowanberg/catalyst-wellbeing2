@@ -98,11 +98,11 @@ export default function StudentExaminations() {
 
 
   const handleStartExam = (examId: string) => {
-    router.push(`/student-dashboard/examinations/${examId}`)
+    router.push(`/student/examinations/${examId}`)
   }
 
   const handleViewResults = (examId: string) => {
-    router.push(`/student-dashboard/examinations/${examId}/results`)
+    router.push(`/student/examinations/${examId}/results`)
   }
 
   const getFilteredExams = () => {

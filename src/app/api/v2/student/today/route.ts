@@ -3,6 +3,21 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
+// 1-hour cache for today data
+const todayCache = new Map<string, { data: any; timestamp: number }>()
+const CACHE_TTL = 60 * 60 * 1000 // 1 hour
+const MAX_CACHE_SIZE = 200
+
+// Cleanup old cache entries
+function cleanupCache() {
+  if (todayCache.size > MAX_CACHE_SIZE) {
+    const entries = Array.from(todayCache.entries())
+    entries.sort((a, b) => b[1].timestamp - a[1].timestamp)
+    todayCache.clear()
+    entries.slice(0, MAX_CACHE_SIZE).forEach(([key, value]) => todayCache.set(key, value))
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies()
@@ -34,6 +49,17 @@ export async function GET(request: NextRequest) {
 
     if (!profile) {
       return NextResponse.json({ message: 'Profile not found' }, { status: 404 })
+    }
+
+    // Check cache first
+    const cacheKey = `today-${profile.id}-${new Date().toISOString().split('T')[0]}`
+    const cached = todayCache.get(cacheKey)
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      const response = NextResponse.json(cached.data)
+      response.headers.set('X-Cache', 'HIT')
+      response.headers.set('X-Cache-Age', Math.floor((Date.now() - cached.timestamp) / 1000).toString())
+      response.headers.set('Cache-Control', 'private, max-age=3600')
+      return response
     }
 
     // Parallel fetch all data needed for Today tab - using EXACT same queries as dashboard-data API
@@ -190,7 +216,7 @@ export async function GET(request: NextRequest) {
 
     const completedCount = questItems.filter(q => q.completed).length
 
-    return NextResponse.json({
+    const responseData = {
       quests: {
         completed: completedCount,
         total: questItems.length,
@@ -212,7 +238,16 @@ export async function GET(request: NextRequest) {
         polls: polls.length > 0 ? polls : [],
         announcements: announcements.length > 0 ? announcements : []
       }
-    })
+    }
+
+    // Store in cache
+    todayCache.set(cacheKey, { data: responseData, timestamp: Date.now() })
+    cleanupCache()
+
+    const response = NextResponse.json(responseData)
+    response.headers.set('X-Cache', 'MISS')
+    response.headers.set('Cache-Control', 'private, max-age=3600')
+    return response
 
   } catch (error: any) {
     console.error('Error in /api/v2/student/today:', error)

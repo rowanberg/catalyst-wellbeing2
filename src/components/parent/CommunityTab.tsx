@@ -85,10 +85,10 @@ const PostCard = memo(({
   userReaction?: string 
 }) => {
   return (
-    <div className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg mb-4">
       {/* Teacher Name Header */}
-      <div className="px-4 lg:px-5 pt-4 pb-2">
-        <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-base">{post.teacher.name}</h3>
+      <div className="px-4 pt-4 pb-2">
+        <h3 className="font-semibold text-slate-900 dark:text-white text-base">{post.teacher.name}</h3>
       </div>
 
       {/* Media Grid */}

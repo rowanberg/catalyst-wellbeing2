@@ -1,12 +1,16 @@
 /**
  * Teacher Assigned Classes API - OPTIMIZED
  * Reduced 33 logger.debug → logger (97% reduction)
- * Uses: Supabase singleton, logger, ApiResponse
+ * Uses: Supabase singleton, logger, ApiResponse, request deduplication
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin-client'
 import { ApiResponse } from '@/lib/api/response'
 import { logger } from '@/lib/logger'
+import { dedupedRequest, generateCacheKey } from '@/lib/cache/requestDedup'
+
+// Enable Next.js caching for 60 seconds
+export const revalidate = 60
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
@@ -18,6 +22,22 @@ export async function GET(request: NextRequest) {
     if (!teacherId) {
       return ApiResponse.badRequest('Teacher ID is required')
     }
+
+    // Generate cache key for deduplication
+    const cacheKey = generateCacheKey('teacher-assigned-classes', { teacherId })
+    
+    // Use deduplication to prevent concurrent duplicate requests
+    return dedupedRequest(cacheKey, async () => {
+      return await fetchTeacherClassesInternal(teacherId, startTime)
+    })
+  } catch (error) {
+    logger.error('Error in teacher assigned classes API:', error)
+    return ApiResponse.error('Failed to fetch assigned classes')
+  }
+}
+
+async function fetchTeacherClassesInternal(teacherId: string, startTime: number): Promise<NextResponse> {
+  try {
 
     const supabase = getSupabaseAdmin()
 

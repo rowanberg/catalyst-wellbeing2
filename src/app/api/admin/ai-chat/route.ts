@@ -191,8 +191,8 @@ export async function POST(request: NextRequest) {
       sections: Array.from(sections).sort(),
       studentCount: students.filter((s: any) => s.grade_level === grade).length
     })).sort((a, b) => {
-      const gradeA = parseInt(a.grade) || 0
-      const gradeB = parseInt(b.grade) || 0
+      const gradeA = parseInt(a.grade, 10) || 0
+      const gradeB = parseInt(b.grade, 10) || 0
       return gradeA - gradeB
     })
     

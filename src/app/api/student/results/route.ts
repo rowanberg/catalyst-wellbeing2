@@ -5,7 +5,7 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createSupabaseServerClient()
     const { searchParams } = new URL(request.url)
-    const limit = searchParams.get('limit') || '10'
+    const limit = parseInt(searchParams.get('limit') || '10', 10)
     const year = searchParams.get('year') || new Date().getFullYear().toString()
     
     // Get authenticated user
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
       .gte('created_at', `${year}-01-01`)
       .lte('created_at', `${year}-12-31`)
       .order('created_at', { ascending: false })
-      .limit(parseInt(limit))
+      .limit(limit)
 
     if (resultsError) {
       console.error('Error fetching student results:', resultsError)

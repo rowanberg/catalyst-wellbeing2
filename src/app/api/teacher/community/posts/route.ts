@@ -7,6 +7,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const classId = searchParams.get('class_id')
     const teacherId = searchParams.get('teacher_id')
+    const limit = parseInt(searchParams.get('limit') || '10', 10)
+    const offset = parseInt(searchParams.get('offset') || '0', 10)
 
     if (!classId) {
       return NextResponse.json({ error: 'Class ID is required' }, { status: 400 })
@@ -14,6 +16,15 @@ export async function GET(request: NextRequest) {
 
     if (!teacherId) {
       return NextResponse.json({ error: 'Teacher ID is required' }, { status: 400 })
+    }
+
+    // Validate pagination parameters
+    if (limit < 1 || limit > 50) {
+      return NextResponse.json({ error: 'Limit must be between 1 and 50' }, { status: 400 })
+    }
+
+    if (offset < 0) {
+      return NextResponse.json({ error: 'Offset must be non-negative' }, { status: 400 })
     }
 
     const supabase = getSupabaseAdmin()
@@ -30,7 +41,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Access denied to this class' }, { status: 403 })
     }
 
-    // Fetch posts for the class
+    // Fetch posts for the class with pagination
     const { data: posts, error: postsError } = await supabase
       .from('community_posts')
       .select(`
@@ -50,7 +61,7 @@ export async function GET(request: NextRequest) {
       .eq('class_id', classId)
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: false })
-      .limit(50)
+      .range(offset, offset + limit - 1)
 
     if (postsError) {
       console.error('Error fetching posts:', postsError)

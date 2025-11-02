@@ -24,6 +24,9 @@ export const useRankCardPDF = () => {
         rankData.school_name = assessmentsData.schoolName
       }
 
+      // Load Google Fonts dynamically for professional typography
+      await loadGoogleFonts()
+
       // Create a temporary container for the rank card
       const container = document.createElement('div')
       container.style.position = 'absolute'
@@ -35,8 +38,8 @@ export const useRankCardPDF = () => {
       // Generate the rank card HTML with assessments
       container.innerHTML = generateRankCardHTML(rankData, assessmentsData.assessments || [])
 
-      // Wait for fonts and images to load
-      await new Promise(resolve => setTimeout(resolve, 800))
+      // Wait for fonts and images to load (increased time for font loading)
+      await new Promise(resolve => setTimeout(resolve, 1500))
 
       // Get both page containers
       const page1 = container.querySelector('.pdf-page-1') as HTMLElement
@@ -110,6 +113,35 @@ export const useRankCardPDF = () => {
   return { generatePDF }
 }
 
+// Load Google Fonts for professional typography
+const loadGoogleFonts = async (): Promise<void> => {
+  return new Promise((resolve) => {
+    // Check if fonts are already loaded
+    if (document.getElementById('pdf-google-fonts')) {
+      resolve()
+      return
+    }
+
+    // Create link element for Google Fonts
+    const link = document.createElement('link')
+    link.id = 'pdf-google-fonts'
+    link.rel = 'stylesheet'
+    link.href = 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&family=Merriweather:wght@400;700;900&display=swap'
+    
+    link.onload = () => {
+      // Give fonts time to fully load
+      setTimeout(resolve, 300)
+    }
+    
+    link.onerror = () => {
+      console.warn('Failed to load Google Fonts, using fallback fonts')
+      resolve()
+    }
+    
+    document.head.appendChild(link)
+  })
+}
+
 // HTML template for the rank card
 const generateRankCardHTML = (data: RankCardData, assessments: any[]): string => {
   const currentDate = new Date().toLocaleDateString('en-US', {
@@ -152,30 +184,93 @@ const generateRankCardHTML = (data: RankCardData, assessments: any[]): string =>
   }))
 
   return `
-    <div class="pdf-page-1" style="width: 210mm; min-height: 297mm; padding: 15mm 20mm; font-family: 'Arial', 'Helvetica', sans-serif; background: linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%); box-sizing: border-box; position: relative;">
+    <div class="pdf-page-1" style="width: 210mm; min-height: 297mm; padding: 15mm 20mm; font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; background: linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%); box-sizing: border-box; position: relative;">
       
-      <!-- Premium Border -->
-      <div style="position: absolute; top: 8mm; left: 12mm; right: 12mm; bottom: 8mm; border: 2px solid #0f172a; pointer-events: none;"></div>
-      <div style="position: absolute; top: 8mm; left: 12mm; width: 60mm; height: 3px; background: linear-gradient(to right, #d97706, #f59e0b, #fbbf24); pointer-events: none;"></div>
-      <div style="position: absolute; top: 8mm; right: 12mm; width: 60mm; height: 3px; background: linear-gradient(to left, #d97706, #f59e0b, #fbbf24); pointer-events: none;"></div>
+      <!-- Premium Multi-Layer Border -->
+      <div style="position: absolute; top: 8mm; left: 12mm; right: 12mm; bottom: 8mm; border: 3px solid #0f172a; pointer-events: none;"></div>
+      <div style="position: absolute; top: 9mm; left: 13mm; right: 13mm; bottom: 9mm; border: 1px solid #cbd5e1; pointer-events: none;"></div>
+      <div style="position: absolute; top: 8mm; left: 12mm; width: 70mm; height: 4px; background: linear-gradient(to right, #d97706, #f59e0b, #fbbf24); pointer-events: none;"></div>
+      <div style="position: absolute; top: 8mm; right: 12mm; width: 70mm; height: 4px; background: linear-gradient(to left, #d97706, #f59e0b, #fbbf24); pointer-events: none;"></div>
+      <div style="position: absolute; bottom: 8mm; left: 12mm; width: 70mm; height: 4px; background: linear-gradient(to right, #d97706, #f59e0b, #fbbf24); pointer-events: none;"></div>
+      <div style="position: absolute; bottom: 8mm; right: 12mm; width: 70mm; height: 4px; background: linear-gradient(to left, #d97706, #f59e0b, #fbbf24); pointer-events: none;"></div>
       
+      <!-- Corner Decorations -->
+      <div style="position: absolute; top: 8mm; left: 12mm; width: 15mm; height: 15mm; border-top: 3px solid #d97706; border-left: 3px solid #d97706; pointer-events: none;"></div>
+      <div style="position: absolute; top: 8mm; right: 12mm; width: 15mm; height: 15mm; border-top: 3px solid #d97706; border-right: 3px solid #d97706; pointer-events: none;"></div>
+      <div style="position: absolute; bottom: 8mm; left: 12mm; width: 15mm; height: 15mm; border-bottom: 3px solid #d97706; border-left: 3px solid #d97706; pointer-events: none;"></div>
+      <div style="position: absolute; bottom: 8mm; right: 12mm; width: 15mm; height: 15mm; border-bottom: 3px solid #d97706; border-right: 3px solid #d97706; pointer-events: none;"></div>
+      
+      <!-- Watermark -->
+      <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 120px; color: rgba(15, 23, 42, 0.02); font-weight: 900; font-family: 'Playfair Display', serif; letter-spacing: 10px; pointer-events: none; user-select: none;">OFFICIAL</div>
 
       <!-- Content Container -->
       <div style="position: relative; z-index: 1;">
         
-        <!-- Executive Header Section -->
-        <div style="text-align: center; padding: 30px 20px 25px 20px; margin-bottom: 25px; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: 8px; position: relative; overflow: hidden;">
-          <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(to right, #d97706, #f59e0b, #fbbf24);"></div>
-          ${data.school_logo ? `<div style="margin-bottom: 15px;"><img src="${data.school_logo}" alt="School Logo" style="width: 80px; height: 80px; border-radius: 50%; border: 4px solid #d97706; box-shadow: 0 6px 20px rgba(217, 119, 6, 0.4);" /></div>` : `<div style="margin-bottom: 15px; width: 80px; height: 80px; margin-left: auto; margin-right: auto; border-radius: 50%; background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); display: flex; align-items: center; justify-content: center; border: 4px solid #fbbf24; box-shadow: 0 6px 20px rgba(217, 119, 6, 0.4);"><span style="font-size: 36px; color: white;">🎓</span></div>`}
-          <h1 style="margin: 15px 0 8px 0; font-size: 32px; color: #ffffff; font-weight: 900; text-transform: uppercase; letter-spacing: 4px; font-family: 'Arial', sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">
-            ${data.school_name || 'School Name'}
-          </h1>
-          <div style="display: inline-block; padding: 2px 20px; background: rgba(217, 119, 6, 0.2); border: 1px solid #d97706; border-radius: 20px; margin: 12px 0;">
-            <p style="margin: 5px 0; font-size: 11px; color: #fbbf24; font-weight: 600; letter-spacing: 1px;">ACADEMIC YEAR ${academicYear}</p>
+        <!-- Premium Executive Header Section -->
+        <div style="position: relative; margin-bottom: 25px;">
+          <!-- Decorative Top Banner -->
+          <div style="position: absolute; top: -5px; left: 0; right: 0; height: 8px; background: linear-gradient(to right, #d97706 0%, #f59e0b 50%, #d97706 100%); border-radius: 4px;"></div>
+          
+          <div style="text-align: center; padding: 35px 25px 30px 25px; background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); border-radius: 10px; position: relative; overflow: hidden; border: 2px solid #d97706; box-shadow: 0 8px 30px rgba(15, 23, 42, 0.3);">
+            <!-- Diagonal Pattern Background -->
+            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-image: repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(217, 119, 6, 0.03) 35px, rgba(217, 119, 6, 0.03) 70px); pointer-events: none;"></div>
+            
+            <!-- Top Gold Bar -->
+            <div style="position: absolute; top: 0; left: 0; right: 0; height: 5px; background: linear-gradient(to right, transparent 0%, #d97706 20%, #f59e0b 50%, #d97706 80%, transparent 100%);"></div>
+            
+            <!-- School Logo with Premium Styling -->
+            ${data.school_logo ? `
+              <div style="position: relative; display: inline-block; margin-bottom: 18px;">
+                <div style="position: absolute; inset: -8px; background: linear-gradient(135deg, #d97706, #f59e0b); border-radius: 50%; filter: blur(15px); opacity: 0.5;"></div>
+                <img src="${data.school_logo}" alt="School Logo" style="position: relative; width: 90px; height: 90px; border-radius: 50%; border: 5px solid #fbbf24; box-shadow: 0 8px 25px rgba(217, 119, 6, 0.5), inset 0 2px 10px rgba(255, 255, 255, 0.2);" />
+              </div>
+            ` : `
+              <div style="position: relative; display: inline-block; margin-bottom: 18px;">
+                <div style="position: absolute; inset: -8px; background: linear-gradient(135deg, #d97706, #f59e0b); border-radius: 50%; filter: blur(15px); opacity: 0.5;"></div>
+                <div style="position: relative; width: 90px; height: 90px; margin-left: auto; margin-right: auto; border-radius: 50%; background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); display: flex; align-items: center; justify-content: center; border: 5px solid #fbbf24; box-shadow: 0 8px 25px rgba(217, 119, 6, 0.5), inset 0 2px 10px rgba(255, 255, 255, 0.2);">
+                  <span style="font-size: 42px; color: white; text-shadow: 0 2px 8px rgba(0,0,0,0.3);">🎓</span>
+                </div>
+              </div>
+            `}
+            
+            <!-- School Name with Underline -->
+            <div style="position: relative; display: inline-block; margin-bottom: 15px;">
+              <h1 style="margin: 0; font-size: 38px; color: #ffffff; font-weight: 900; text-transform: uppercase; letter-spacing: 6px; font-family: 'Playfair Display', 'Georgia', serif; text-shadow: 0 4px 8px rgba(0,0,0,0.5), 0 0 30px rgba(251, 191, 36, 0.3); position: relative; z-index: 1;">
+                ${data.school_name || 'School Name'}
+              </h1>
+              <div style="position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); width: 80%; height: 3px; background: linear-gradient(to right, transparent, #fbbf24, transparent); border-radius: 2px;"></div>
+            </div>
+            
+            <!-- Academic Year Badge -->
+            <div style="display: inline-block; padding: 6px 25px; background: linear-gradient(135deg, rgba(217, 119, 6, 0.25) 0%, rgba(251, 191, 36, 0.25) 100%); border: 2px solid #d97706; border-radius: 25px; margin: 15px 0; backdrop-filter: blur(10px); box-shadow: 0 4px 15px rgba(217, 119, 6, 0.3);">
+              <p style="margin: 0; font-size: 12px; color: #fbbf24; font-weight: 800; letter-spacing: 2px; font-family: 'Inter', sans-serif; text-transform: uppercase;">📅 Academic Year ${academicYear}</p>
+            </div>
+            
+            <!-- Certificate Title with Premium Styling -->
+            <div style="margin-top: 20px; position: relative; display: inline-block;">
+              <div style="position: absolute; inset: -3px; background: linear-gradient(135deg, #d97706, #f59e0b, #fbbf24); border-radius: 8px; filter: blur(8px); opacity: 0.6;"></div>
+              <div style="position: relative; padding: 16px 45px; background: linear-gradient(135deg, #d97706 0%, #f59e0b 50%, #d97706 100%); color: white; border-radius: 8px; font-size: 17px; font-weight: 900; letter-spacing: 5px; box-shadow: 0 6px 20px rgba(217, 119, 6, 0.5), inset 0 1px 3px rgba(255, 255, 255, 0.3); text-shadow: 0 2px 4px rgba(0,0,0,0.3); font-family: 'Merriweather', 'Georgia', serif; border: 2px solid #fbbf24;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                  <span style="font-size: 20px;">🏆</span>
+                  <span>ACADEMIC PERFORMANCE CERTIFICATE</span>
+                  <span style="font-size: 20px;">🏆</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Decorative Bottom Elements -->
+            <div style="margin-top: 15px; display: flex; justify-content: center; gap: 8px;">
+              <div style="width: 8px; height: 8px; background: #fbbf24; border-radius: 50%; box-shadow: 0 0 10px #fbbf24;"></div>
+              <div style="width: 8px; height: 8px; background: #f59e0b; border-radius: 50%; box-shadow: 0 0 10px #f59e0b;"></div>
+              <div style="width: 8px; height: 8px; background: #d97706; border-radius: 50%; box-shadow: 0 0 10px #d97706;"></div>
+            </div>
+            
+            <!-- Bottom Gold Bar -->
+            <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 5px; background: linear-gradient(to right, transparent 0%, #d97706 20%, #f59e0b 50%, #d97706 80%, transparent 100%);"></div>
           </div>
-          <div style="margin-top: 15px; padding: 12px 35px; background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); color: white; display: inline-block; border-radius: 6px; font-size: 15px; font-weight: 800; letter-spacing: 3px; box-shadow: 0 4px 15px rgba(217, 119, 6, 0.4); text-shadow: 0 1px 2px rgba(0,0,0,0.2);">
-            ACADEMIC PERFORMANCE CERTIFICATE
-          </div>
+          
+          <!-- Decorative Bottom Banner -->
+          <div style="position: absolute; bottom: -5px; left: 0; right: 0; height: 8px; background: linear-gradient(to right, #d97706 0%, #f59e0b 50%, #d97706 100%); border-radius: 4px;"></div>
         </div>
 
         <!-- Executive Student Information Card -->
@@ -185,19 +280,19 @@ const generateRankCardHTML = (data: RankCardData, assessments: any[]): string =>
           </div>
           <div style="padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px 35px;">
             <div style="border-left: 3px solid #d97706; padding-left: 12px;">
-              <p style="margin: 0 0 6px 0; font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Student Name</p>
-              <p style="margin: 0; font-size: 19px; font-weight: 800; color: #0f172a;">${data.first_name} ${data.last_name}</p>
+              <p style="margin: 0 0 6px 0; font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; font-family: 'Inter', sans-serif;">Student Name</p>
+              <p style="margin: 0; font-size: 20px; font-weight: 900; color: #0f172a; font-family: 'Playfair Display', 'Georgia', serif; letter-spacing: 0.5px;">${data.first_name} ${data.last_name}</p>
             </div>
             <div style="border-left: 3px solid #d97706; padding-left: 12px;">
-              <p style="margin: 0 0 6px 0; font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Student ID</p>
+              <p style="margin: 0 0 6px 0; font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; font-family: 'Inter', sans-serif;">Student ID</p>
               <p style="margin: 0; font-size: 15px; font-weight: 700; color: #334155;">${data.student_id.substring(0, 8).toUpperCase()}</p>
             </div>
             <div style="border-left: 3px solid #d97706; padding-left: 12px;">
-              <p style="margin: 0 0 6px 0; font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Class</p>
+              <p style="margin: 0 0 6px 0; font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; font-family: 'Inter', sans-serif;">Class</p>
               <p style="margin: 0; font-size: 15px; font-weight: 700; color: #334155;">${data.class_name || 'N/A'}</p>
             </div>
             <div style="border-left: 3px solid #d97706; padding-left: 12px;">
-              <p style="margin: 0 0 6px 0; font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Grade Level</p>
+              <p style="margin: 0 0 6px 0; font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; font-family: 'Inter', sans-serif;">Grade Level</p>
               <p style="margin: 0; font-size: 15px; font-weight: 700; color: #334155;">Grade ${data.grade_level}</p>
             </div>
           </div>
@@ -248,8 +343,8 @@ const generateRankCardHTML = (data: RankCardData, assessments: any[]): string =>
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin: 25px 0;">
           <div style="padding: 18px; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: 8px; text-align: center; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); position: relative; overflow: hidden;">
             <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(to right, #d97706, #fbbf24);"></div>
-            <p style="margin: 0 0 10px 0; font-size: 10px; text-transform: uppercase; color: #fbbf24; letter-spacing: 1.5px; font-weight: 700;">Average Score</p>
-            <p style="margin: 0; font-size: 38px; font-weight: 900; color: #ffffff;">${data.average_score.toFixed(1)}%</p>
+            <p style="margin: 0 0 10px 0; font-size: 10px; text-transform: uppercase; color: #fbbf24; letter-spacing: 2px; font-weight: 800; font-family: 'Inter', sans-serif;">Average Score</p>
+            <p style="margin: 0; font-size: 42px; font-weight: 900; color: #ffffff; font-family: 'Playfair Display', 'Georgia', serif; letter-spacing: 1px;">${data.average_score.toFixed(1)}%</p>
           </div>
           <div style="padding: 18px; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: 8px; text-align: center; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); position: relative; overflow: hidden;">
             <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(to right, #d97706, #fbbf24);"></div>
@@ -311,9 +406,9 @@ const generateRankCardHTML = (data: RankCardData, assessments: any[]): string =>
 
         <!-- Achievement Recognition -->
         <div style="margin: 15px 0; padding: 15px; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border-radius: 10px; text-align: center; box-shadow: 0 3px 12px rgba(251, 191, 36, 0.3);">
-          <p style="margin: 0 0 8px 0; font-size: 13px; color: #78350f; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;">🌟 Certificate of Excellence 🌟</p>
-          <p style="margin: 0; font-size: 11px; color: #92400e; font-style: italic; line-height: 1.5;">
-            This certifies that <strong>${data.first_name} ${data.last_name}</strong> has demonstrated exceptional commitment to academic excellence and is hereby recognized for outstanding performance during the academic year ${academicYear}.
+          <p style="margin: 0 0 10px 0; font-size: 14px; color: #78350f; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; font-family: 'Merriweather', 'Georgia', serif;">🌟 Certificate of Excellence 🌟</p>
+          <p style="margin: 0; font-size: 11.5px; color: #92400e; font-style: italic; line-height: 1.7; font-family: 'Playfair Display', 'Georgia', serif;">
+            This certifies that <strong style="font-weight: 700; font-family: 'Playfair Display', serif;">${data.first_name} ${data.last_name}</strong> has demonstrated exceptional commitment to academic excellence and is hereby recognized for outstanding performance during the academic year ${academicYear}.
           </p>
         </div>
 
@@ -322,15 +417,15 @@ const generateRankCardHTML = (data: RankCardData, assessments: any[]): string =>
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; text-align: center;">
             <div>
               <div style="height: 40px; margin-bottom: 8px; border-bottom: 2px solid #1e3a8a;"></div>
-              <p style="margin: 0; font-size: 10px; color: #1e3a8a; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Class Teacher</p>
+              <p style="margin: 0; font-size: 10px; color: #1e3a8a; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; font-family: 'Inter', sans-serif;">Class Teacher</p>
             </div>
             <div>
               <div style="height: 40px; margin-bottom: 8px; border-bottom: 2px solid #1e3a8a;"></div>
-              <p style="margin: 0; font-size: 10px; color: #1e3a8a; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Principal</p>
+              <p style="margin: 0; font-size: 10px; color: #1e3a8a; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; font-family: 'Inter', sans-serif;">Principal</p>
             </div>
             <div>
               <div style="height: 40px; margin-bottom: 8px; border-bottom: 2px solid #1e3a8a;"></div>
-              <p style="margin: 0; font-size: 10px; color: #1e3a8a; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">School Seal</p>
+              <p style="margin: 0; font-size: 10px; color: #1e3a8a; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; font-family: 'Inter', sans-serif;">School Seal</p>
             </div>
           </div>
         </div>
@@ -353,22 +448,58 @@ const generateRankCardHTML = (data: RankCardData, assessments: any[]): string =>
     </div>
 
     <!-- PAGE 2: DETAILED MARKS SHEET -->
-    <div class="pdf-page-2" style="width: 210mm; min-height: 297mm; padding: 15mm 20mm; font-family: 'Arial', 'Helvetica', sans-serif; background: linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%); box-sizing: border-box; position: relative; page-break-before: always;">
+    <div class="pdf-page-2" style="width: 210mm; min-height: 297mm; padding: 15mm 20mm; font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; background: linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%); box-sizing: border-box; position: relative; page-break-before: always;">
       
-      <!-- Premium Border -->
-      <div style="position: absolute; top: 8mm; left: 12mm; right: 12mm; bottom: 8mm; border: 2px solid #0f172a; pointer-events: none;"></div>
-      <div style="position: absolute; top: 8mm; left: 12mm; width: 60mm; height: 3px; background: linear-gradient(to right, #d97706, #f59e0b, #fbbf24); pointer-events: none;"></div>
-      <div style="position: absolute; top: 8mm; right: 12mm; width: 60mm; height: 3px; background: linear-gradient(to left, #d97706, #f59e0b, #fbbf24); pointer-events: none;"></div>
+      <!-- Premium Multi-Layer Border -->
+      <div style="position: absolute; top: 8mm; left: 12mm; right: 12mm; bottom: 8mm; border: 3px solid #0f172a; pointer-events: none;"></div>
+      <div style="position: absolute; top: 9mm; left: 13mm; right: 13mm; bottom: 9mm; border: 1px solid #cbd5e1; pointer-events: none;"></div>
+      <div style="position: absolute; top: 8mm; left: 12mm; width: 70mm; height: 4px; background: linear-gradient(to right, #d97706, #f59e0b, #fbbf24); pointer-events: none;"></div>
+      <div style="position: absolute; top: 8mm; right: 12mm; width: 70mm; height: 4px; background: linear-gradient(to left, #d97706, #f59e0b, #fbbf24); pointer-events: none;"></div>
+      <div style="position: absolute; bottom: 8mm; left: 12mm; width: 70mm; height: 4px; background: linear-gradient(to right, #d97706, #f59e0b, #fbbf24); pointer-events: none;"></div>
+      <div style="position: absolute; bottom: 8mm; right: 12mm; width: 70mm; height: 4px; background: linear-gradient(to left, #d97706, #f59e0b, #fbbf24); pointer-events: none;"></div>
+      
+      <!-- Corner Decorations -->
+      <div style="position: absolute; top: 8mm; left: 12mm; width: 15mm; height: 15mm; border-top: 3px solid #d97706; border-left: 3px solid #d97706; pointer-events: none;"></div>
+      <div style="position: absolute; top: 8mm; right: 12mm; width: 15mm; height: 15mm; border-top: 3px solid #d97706; border-right: 3px solid #d97706; pointer-events: none;"></div>
+      <div style="position: absolute; bottom: 8mm; left: 12mm; width: 15mm; height: 15mm; border-bottom: 3px solid #d97706; border-left: 3px solid #d97706; pointer-events: none;"></div>
+      <div style="position: absolute; bottom: 8mm; right: 12mm; width: 15mm; height: 15mm; border-bottom: 3px solid #d97706; border-right: 3px solid #d97706; pointer-events: none;"></div>
+      
+      <!-- Watermark -->
+      <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 120px; color: rgba(15, 23, 42, 0.02); font-weight: 900; font-family: 'Playfair Display', serif; letter-spacing: 10px; pointer-events: none; user-select: none;">OFFICIAL</div>
 
       <!-- Content Container -->
       <div style="position: relative; z-index: 1;">
         
-        <!-- Page 2 Header -->
-        <div style="text-align: center; padding: 12px 20px; margin-bottom: 20px; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: 8px; position: relative; overflow: hidden;">
-          <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(to right, #d97706, #f59e0b, #fbbf24);"></div>
-          <h2 style="margin: 0; font-size: 16px; color: #fbbf24; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; font-family: 'Arial', sans-serif;">
-            📊 DETAILED ASSESSMENT RECORDS - PAGE 2
-          </h2>
+        <!-- Premium Page 2 Header -->
+        <div style="position: relative; margin-bottom: 20px;">
+          <!-- Decorative Top Banner -->
+          <div style="position: absolute; top: -5px; left: 0; right: 0; height: 6px; background: linear-gradient(to right, #d97706 0%, #f59e0b 50%, #d97706 100%); border-radius: 3px;"></div>
+          
+          <div style="text-align: center; padding: 20px 25px; background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); border-radius: 8px; position: relative; overflow: hidden; border: 2px solid #d97706; box-shadow: 0 6px 20px rgba(15, 23, 42, 0.25);">
+            <!-- Diagonal Pattern Background -->
+            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-image: repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(217, 119, 6, 0.03) 35px, rgba(217, 119, 6, 0.03) 70px); pointer-events: none;"></div>
+            
+            <!-- Top Gold Bar -->
+            <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(to right, transparent 0%, #d97706 20%, #f59e0b 50%, #d97706 80%, transparent 100%);"></div>
+            
+            <div style="position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 12px;">
+              <div style="width: 45px; height: 45px; background: linear-gradient(135deg, #d97706, #f59e0b); border-radius: 8px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(217, 119, 6, 0.4); border: 2px solid #fbbf24;">
+                <span style="font-size: 24px;">📊</span>
+              </div>
+              <h2 style="margin: 0; font-size: 19px; color: #fbbf24; font-weight: 900; text-transform: uppercase; letter-spacing: 3px; font-family: 'Merriweather', 'Georgia', serif; text-shadow: 0 2px 8px rgba(0,0,0,0.4);">
+                Detailed Assessment Records
+              </h2>
+              <div style="display: inline-block; padding: 4px 12px; background: rgba(251, 191, 36, 0.2); border: 1px solid #fbbf24; border-radius: 12px;">
+                <span style="font-size: 10px; color: #fbbf24; font-weight: 700; letter-spacing: 1px; font-family: 'Inter', sans-serif;">PAGE 2 OF 2</span>
+              </div>
+            </div>
+            
+            <!-- Bottom Gold Bar -->
+            <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: linear-gradient(to right, transparent 0%, #d97706 20%, #f59e0b 50%, #d97706 80%, transparent 100%);"></div>
+          </div>
+          
+          <!-- Decorative Bottom Banner -->
+          <div style="position: absolute; bottom: -5px; left: 0; right: 0; height: 6px; background: linear-gradient(to right, #d97706 0%, #f59e0b 50%, #d97706 100%); border-radius: 3px;"></div>
         </div>
 
         <!-- Subject-wise Detailed Marks -->

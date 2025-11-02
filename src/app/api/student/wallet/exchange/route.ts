@@ -17,7 +17,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    if (amount <= 0) {
+    const parsedAmount = parseFloat(amount);
+
+    if (parsedAmount <= 0 || isNaN(parsedAmount)) {
       return NextResponse.json({ error: 'Amount must be greater than 0' }, { status: 400 });
     }
 

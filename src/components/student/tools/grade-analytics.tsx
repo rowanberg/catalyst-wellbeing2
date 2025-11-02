@@ -75,128 +75,88 @@ export function GradeAnalytics({ onBack }: { onBack?: () => void }) {
   const [showPredictions, setShowPredictions] = useState(false)
   const [compareMode, setCompareMode] = useState(false)
 
-  // Mock data for demonstration
+  // Fetch real assessment data
   useEffect(() => {
-    setGrades([
-      {
-        id: '1',
-        subject: 'Mathematics',
-        assignment: 'Algebra Quiz #3',
-        score: 87,
-        maxScore: 100,
-        percentage: 87,
-        date: '2025-09-25',
-        type: 'quiz',
-        difficulty: 'medium',
-        weight: 0.15
-      },
-      {
-        id: '2',
-        subject: 'Science',
-        assignment: 'Chemistry Lab Report',
-        score: 92,
-        maxScore: 100,
-        percentage: 92,
-        date: '2025-09-24',
-        type: 'project',
-        difficulty: 'hard',
-        weight: 0.25
-      },
-      {
-        id: '3',
-        subject: 'English',
-        assignment: 'Essay: Climate Change',
-        score: 78,
-        maxScore: 100,
-        percentage: 78,
-        date: '2025-09-23',
-        type: 'project',
-        difficulty: 'hard',
-        weight: 0.30
-      },
-      {
-        id: '4',
-        subject: 'History',
-        assignment: 'WWII Timeline Test',
-        score: 95,
-        maxScore: 100,
-        percentage: 95,
-        date: '2025-09-22',
-        type: 'test',
-        difficulty: 'medium',
-        weight: 0.20
-      },
-      {
-        id: '5',
-        subject: 'Mathematics',
-        assignment: 'Homework Set 12',
-        score: 85,
-        maxScore: 100,
-        percentage: 85,
-        date: '2025-09-21',
-        type: 'homework',
-        difficulty: 'easy',
-        weight: 0.10
-      }
-    ])
+    const fetchGrades = async () => {
+      try {
+        // Get current user profile to get student ID
+        const profileResponse = await fetch('/api/profile')
+        if (!profileResponse.ok) return
+        
+        const { profile } = await profileResponse.json()
+        if (!profile?.id) return
 
-    setSubjectAnalytics([
-      {
-        subject: 'Mathematics',
-        currentGrade: 86.5,
-        trend: 'up',
-        trendPercentage: 3.2,
-        assignments: 8,
-        averageScore: 84.2,
-        strengths: ['Problem Solving', 'Algebraic Thinking'],
-        improvements: ['Geometry Concepts', 'Word Problems'],
-        nextAssignment: {
-          name: 'Midterm Exam',
-          date: '2025-10-05',
-          type: 'test'
-        }
-      },
-      {
-        subject: 'Science',
-        currentGrade: 91.2,
-        trend: 'up',
-        trendPercentage: 5.8,
-        assignments: 6,
-        averageScore: 89.5,
-        strengths: ['Lab Work', 'Scientific Method'],
-        improvements: ['Theoretical Concepts', 'Data Analysis'],
-        nextAssignment: {
-          name: 'Physics Quiz',
-          date: '2025-09-30',
-          type: 'quiz'
-        }
-      },
-      {
-        subject: 'English',
-        currentGrade: 82.1,
-        trend: 'down',
-        trendPercentage: -2.1,
-        assignments: 7,
-        averageScore: 81.8,
-        strengths: ['Creative Writing', 'Reading Comprehension'],
-        improvements: ['Grammar', 'Essay Structure'],
-        nextAssignment: {
-          name: 'Poetry Analysis',
-          date: '2025-10-02',
-          type: 'project'
-        }
-      },
-      {
-        subject: 'History',
-        currentGrade: 93.4,
-        trend: 'stable',
-        trendPercentage: 0.5,
-        assignments: 5,
-        averageScore: 92.8,
-        strengths: ['Historical Analysis', 'Research Skills'],
-        improvements: ['Timeline Memorization', 'Map Skills']
+        // Fetch assessments
+        const response = await fetch(`/api/student/assessments?student_id=${profile.id}`)
+        if (!response.ok) return
+
+        const { assessments } = await response.json()
+        if (!assessments || assessments.length === 0) return
+
+        // Map assessments to grade format
+        const mappedGrades: Grade[] = assessments.map((a: any) => ({
+          id: a.id,
+          subject: a.subject || 'General',
+          assignment: a.title || 'Assessment',
+          score: a.score || 0,
+          maxScore: a.maxScore || 100,
+          percentage: parseFloat(a.percentage) || 0,
+          date: a.date,
+          type: (a.type?.toLowerCase() || 'assessment') as any,
+          difficulty: 'medium' as any,
+          weight: 0.2
+        }))
+
+        setGrades(mappedGrades)
+
+        // Calculate subject analytics from real data
+        const subjectMap = new Map<string, Grade[]>()
+        mappedGrades.forEach(grade => {
+          if (!subjectMap.has(grade.subject)) {
+            subjectMap.set(grade.subject, [])
+          }
+          subjectMap.get(grade.subject)!.push(grade)
+        })
+
+        const analytics: SubjectAnalytics[] = []
+        subjectMap.forEach((subjectGrades, subject) => {
+          const sortedGrades = subjectGrades.sort((a, b) => 
+            new Date(b.date).getTime() - new Date(a.date).getTime()
+          )
+          const avgScore = subjectGrades.reduce((sum, g) => sum + g.percentage, 0) / subjectGrades.length
+          
+          // Calculate trend
+          let trend: 'up' | 'down' | 'stable' = 'stable'
+          let trendPercentage = 0
+          if (sortedGrades.length >= 2) {
+            const recent = sortedGrades.slice(0, Math.ceil(sortedGrades.length / 2))
+            const older = sortedGrades.slice(Math.ceil(sortedGrades.length / 2))
+            const recentAvg = recent.reduce((sum, g) => sum + g.percentage, 0) / recent.length
+            const olderAvg = older.reduce((sum, g) => sum + g.percentage, 0) / older.length
+            trendPercentage = recentAvg - olderAvg
+            if (trendPercentage > 3) trend = 'up'
+            else if (trendPercentage < -3) trend = 'down'
+          }
+
+          analytics.push({
+            subject,
+            currentGrade: avgScore,
+            trend,
+            trendPercentage,
+            assignments: subjectGrades.length,
+            averageScore: avgScore,
+            strengths: [],
+            improvements: []
+          })
+        })
+
+        setSubjectAnalytics(analytics)
+      } catch (error) {
+        console.error('Error fetching grades:', error)
       }
-    ])
+    }
+
+    fetchGrades()
   }, [])
 
   // Optimized functions with useCallback

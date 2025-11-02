@@ -26,6 +26,9 @@ const registerSchema = z.object({
   schoolId: z.string().length(12, 'School ID must be exactly 12 characters'),
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
   lastName: z.string().min(2, 'Last name must be at least 2 characters'),
+  gender: z.enum(['male', 'female', 'other', 'prefer_not_to_say'], {
+    required_error: 'Please select your gender',
+  }),
   email: z.string().email('Invalid email address'),
   password: z.string()
     .min(8, 'Password must be at least 8 characters')
@@ -455,6 +458,7 @@ export default function RegisterPage() {
         email: data.email,
         firstName: data.firstName,
         lastName: data.lastName,
+        gender: data.gender,
         role: data.role,
         schoolId: data.schoolId,
         gradeLevel: data.gradeLevel,
@@ -944,45 +948,68 @@ export default function RegisterPage() {
                 {/* Personal Information */}
                 <div>
                   <h4 className="text-base lg:text-lg font-semibold text-gray-800 mb-3 lg:mb-4">Personal Information</h4>
-                  <div className="grid grid-cols-2 gap-3 lg:gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">First Name <span className="text-red-500">*</span></label>
-                      <div className="relative">
-                        <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                          <User className="h-4 w-4 text-gray-400" />
+                  <div className="space-y-3 lg:space-y-4">
+                    <div className="grid grid-cols-2 gap-3 lg:gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">First Name <span className="text-red-500">*</span></label>
+                        <div className="relative">
+                          <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                            <User className="h-4 w-4 text-gray-400" />
+                          </div>
+                          <input
+                            {...register('firstName')}
+                            type="text"
+                            className="w-full pl-9 pr-3 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-50 transition-all focus:outline-none text-sm"
+                            placeholder="First name"
+                          />
                         </div>
-                        <input
-                          {...register('firstName')}
-                          type="text"
-                          className="w-full pl-9 pr-3 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-50 transition-all focus:outline-none text-sm"
-                          placeholder="First name"
-                        />
+                        {errors.firstName && (
+                          <p className="mt-1 text-xs text-red-600 flex items-center">
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            {errors.firstName.message}
+                          </p>
+                        )}
                       </div>
-                      {errors.firstName && (
-                        <p className="mt-1 text-xs text-red-600 flex items-center">
-                          <AlertCircle className="h-3 w-3 mr-1" />
-                          {errors.firstName.message}
-                        </p>
-                      )}
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Last Name <span className="text-red-500">*</span></label>
+                        <div className="relative">
+                          <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                            <User className="h-4 w-4 text-gray-400" />
+                          </div>
+                          <input
+                            {...register('lastName')}
+                            type="text"
+                            className="w-full pl-9 pr-3 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-50 transition-all focus:outline-none text-sm"
+                            placeholder="Last name"
+                          />
+                        </div>
+                        {errors.lastName && (
+                          <p className="mt-1 text-xs text-red-600 flex items-center">
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            {errors.lastName.message}
+                          </p>
+                        )}
+                      </div>
                     </div>
 
+                    {/* Gender Selection - Compact */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Last Name <span className="text-red-500">*</span></label>
-                      <div className="relative">
-                        <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                          <User className="h-4 w-4 text-gray-400" />
-                        </div>
-                        <input
-                          {...register('lastName')}
-                          type="text"
-                          className="w-full pl-9 pr-3 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-50 transition-all focus:outline-none text-sm"
-                          placeholder="Last name"
-                        />
-                      </div>
-                      {errors.lastName && (
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Gender <span className="text-red-500">*</span></label>
+                      <select
+                        {...register('gender')}
+                        className="w-full px-3 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-50 transition-all focus:outline-none text-sm"
+                      >
+                        <option value="">Select gender</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
+                        <option value="prefer_not_to_say">Prefer not to say</option>
+                      </select>
+                      {errors.gender && (
                         <p className="mt-1 text-xs text-red-600 flex items-center">
                           <AlertCircle className="h-3 w-3 mr-1" />
-                          {errors.lastName.message}
+                          {errors.gender.message}
                         </p>
                       )}
                     </div>

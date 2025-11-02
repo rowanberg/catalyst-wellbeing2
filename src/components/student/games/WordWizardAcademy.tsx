@@ -1041,24 +1041,24 @@ export function WordWizardAcademy() {
         <SpellEffectDisplay effect={spellEffect} category={currentSpell?.category} />
         
         <div className="max-w-4xl mx-auto relative z-10">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row justify-between items-center mb-6 bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-lg border-2 border-purple-200">
+          {/* Header - Mobile Optimized */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mb-4 sm:mb-6 bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-lg border-2 border-purple-200">
             <Button 
               variant="outline" 
               onClick={resetToMenu} 
-              className="bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:shadow-md transition-all duration-200 mb-4 sm:mb-0"
+              className="w-full sm:w-auto bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:shadow-md transition-all duration-200 h-10"
             >
-              ← Back to Academy
+              <span className="text-sm sm:text-base">← Back to Academy</span>
             </Button>
-            <div className="text-center flex-1 mx-4">
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-1">{currentChapter?.title}</h2>
-              <div className="text-base sm:text-lg text-purple-600 font-medium">
+            <div className="text-center flex-1">
+              <h2 className="text-lg sm:text-2xl lg:text-3xl font-bold text-gray-800 mb-1">{currentChapter?.title}</h2>
+              <div className="text-sm sm:text-base lg:text-lg text-purple-600 font-medium">
                 Spell {currentSpellIndex + 1} of {currentChapter?.spells.length}
               </div>
             </div>
             <div className="text-center sm:text-right">
-              <div className="text-2xl font-bold text-orange-600 mb-1">⏰ {timeLeft}s</div>
-              <div className="text-sm font-medium text-gray-700">🔥 Streak: {wizardStats.streak}</div>
+              <div className="text-xl sm:text-2xl font-bold text-orange-600 mb-1">⏰ {timeLeft}s</div>
+              <div className="text-xs sm:text-sm font-medium text-gray-700">🔥 Streak: {wizardStats.streak}</div>
               {isSaving && (
                 <div className="flex items-center justify-center sm:justify-end gap-1 text-xs text-blue-600 mt-1">
                   <Loader2 className="h-3 w-3 animate-spin" />
@@ -1084,25 +1084,25 @@ export function WordWizardAcademy() {
             )}
           </AnimatePresence>
 
-          {/* Spell Book */}
+          {/* Spell Book - Mobile Optimized */}
           {currentSpell && (
-            <Card className="mb-6 bg-white/95 backdrop-blur-sm border-2 border-amber-300 shadow-xl">
-              <CardHeader className="bg-gradient-to-r from-amber-400 to-orange-400 text-white rounded-t-lg">
-                <CardTitle className="text-center text-2xl flex items-center justify-center gap-3">
+            <Card className="mb-4 sm:mb-6 bg-white/95 backdrop-blur-sm border-2 border-amber-300 shadow-xl">
+              <CardHeader className="bg-gradient-to-r from-amber-400 to-orange-400 text-white rounded-t-lg p-4 sm:p-6">
+                <CardTitle className="text-center text-lg sm:text-2xl flex items-center justify-center gap-2 sm:gap-3">
                   <Scroll className="h-8 w-8 text-white" />
                   Magic Spell Scroll
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6">
-                <div className="text-center space-y-6">
-                  <div className="bg-gradient-to-br from-yellow-50 to-amber-50 p-6 rounded-xl border-2 border-amber-200 shadow-inner">
-                    <div className="text-lg font-bold mb-3 text-amber-800">📖 What does this word mean?</div>
+              <CardContent className="p-4 sm:p-6">
+                <div className="text-center space-y-4 sm:space-y-6">
+                  <div className="bg-gradient-to-br from-yellow-50 to-amber-50 p-4 sm:p-6 rounded-xl border-2 border-amber-200 shadow-inner">
+                    <div className="text-base sm:text-lg font-bold mb-3 text-amber-800">📖 What does this word mean?</div>
                     <div className="text-xl font-medium mb-6 text-gray-800 bg-white p-4 rounded-lg border border-amber-200">
                       "{currentSpell.definition}"
                     </div>
                     
                     <div className="text-lg font-bold mb-3 text-purple-800">🔤 Unscramble the letters:</div>
-                    <div className="text-4xl sm:text-5xl font-bold text-purple-600 tracking-wider mb-6 bg-white p-4 rounded-lg border-2 border-purple-200 shadow-sm">
+                    <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-purple-600 tracking-wider mb-6 bg-white p-3 sm:p-4 rounded-lg border-2 border-purple-200 shadow-sm">
                       {currentSpell.scrambled.toUpperCase()}
                     </div>
                     
@@ -1118,43 +1118,44 @@ export function WordWizardAcademy() {
                     )}
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
                     <div className="w-full sm:w-80">
                       <Input
                         type="text"
                         value={userInput}
                         onChange={(e) => setUserInput(e.target.value)}
                         placeholder="Type your answer here..."
-                        className="text-center text-xl font-bold bg-white border-2 border-purple-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 rounded-xl h-14 shadow-lg"
+                        className="text-center text-lg sm:text-xl font-bold bg-white border-2 border-purple-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 rounded-xl h-12 sm:h-14 shadow-lg"
                         onKeyPress={(e) => e.key === 'Enter' && handleSpellCast()}
                       />
                     </div>
                     <motion.div
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
+                      className="w-full sm:w-auto"
                     >
                       <Button 
                         onClick={handleSpellCast}
                         disabled={!userInput.trim()}
                         data-spell-cast-button
-                        className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 px-8 py-4 text-lg font-bold text-white shadow-xl rounded-xl relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed h-14"
+                        className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-bold text-white shadow-xl rounded-xl relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed h-12 sm:h-14"
                       >
                         <motion.div
                           className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0"
                           animate={{ x: [-100, 300] }}
                           transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                         />
-                        <Wand2 className="h-6 w-6 mr-2 relative z-10" />
-                        <span className="relative z-10">✨ Cast Spell!</span>
+                        <Wand2 className="h-5 sm:h-6 w-5 sm:w-6 mr-2 relative z-10" />
+                        <span className="relative z-10 text-sm sm:text-lg">✨ Cast Spell!</span>
                       </Button>
                     </motion.div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row justify-center gap-4">
-                    <Badge className="text-base px-6 py-3 bg-yellow-100 text-yellow-800 border-2 border-yellow-300 rounded-xl font-bold">
+                  <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
+                    <Badge className="text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-3 bg-yellow-100 text-yellow-800 border-2 border-yellow-300 rounded-xl font-bold">
                       ⭐ Difficulty: {currentSpell.difficulty}/5
                     </Badge>
-                    <Badge className={`text-base px-6 py-3 rounded-xl font-bold border-2 ${
+                    <Badge className={`text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-bold border-2 ${
                       attempts === 0 ? 'bg-green-100 text-green-800 border-green-300' :
                       attempts === 1 ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
                       'bg-red-100 text-red-800 border-red-300'
@@ -1169,7 +1170,7 @@ export function WordWizardAcademy() {
 
           {/* Progress */}
           <Card className="bg-white/95 backdrop-blur-sm border-2 border-indigo-200 shadow-lg">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex justify-between items-center text-base font-bold text-gray-800 mb-3">
                 <span>📚 Chapter Progress</span>
                 <span className="text-indigo-600">{currentSpellIndex + 1}/{currentChapter?.spells.length}</span>

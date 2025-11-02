@@ -359,39 +359,19 @@ export default function EnhancedStudentDashboard() {
     }
   }, [cache])
 
-  // Load initial tab data
+  // Load initial tab data (only today tab)
   useEffect(() => {
     if (!authLoading && user) {
       loadTabData('today')
     }
   }, [authLoading, user, loadTabData])
 
-  // Prefetch adjacent tabs for smoother navigation
-  const prefetchAdjacentTabs = useCallback((currentTabId: TabData['id']) => {
-    const currentIndex = tabs.findIndex(t => t.id === currentTabId)
-    const adjacentTabs: TabData['id'][] = []
-    
-    if (currentIndex > 0) adjacentTabs.push(tabs[currentIndex - 1].id)
-    if (currentIndex < tabs.length - 1) adjacentTabs.push(tabs[currentIndex + 1].id)
-    
-    adjacentTabs.forEach(tabId => {
-      if (!tabData[tabId] && !tabLoading[tabId]) {
-        setTimeout(() => loadTabData(tabId), 500)
-      }
-    })
-  }, [tabs, tabData, tabLoading, loadTabData])
-
-  // Load data when tab changes and prefetch adjacent tabs
+  // Load data on demand when tab changes
   useEffect(() => {
     if (activeTab && !tabData[activeTab] && !tabLoading[activeTab]) {
       loadTabData(activeTab)
     }
-    // Prefetch adjacent tabs after a delay
-    const timer = setTimeout(() => {
-      prefetchAdjacentTabs(activeTab)
-    }, 1000)
-    return () => clearTimeout(timer)
-  }, [activeTab, tabData, tabLoading, loadTabData, prefetchAdjacentTabs])
+  }, [activeTab, tabData, tabLoading, loadTabData])
 
   // Handle tab change with direction-aware animations
   const handleTabChange = useCallback((newTab: TabData['id']) => {
@@ -406,9 +386,8 @@ export default function EnhancedStudentDashboard() {
     }
     
     setActiveTab(newTab)
-    loadTabData(newTab)
-    prefetchAdjacentTabs(newTab)
-  }, [activeTab, loadTabData, prefetchAdjacentTabs])
+    // Data will be loaded on-demand by useEffect
+  }, [activeTab])
 
   const handleRefresh = async () => {
     setIsPullRefreshing(true)

@@ -26,8 +26,8 @@ export async function GET(request: NextRequest) {
     // Parse query parameters
     const messageType = searchParams.get('message_type')
     const priority = searchParams.get('priority')
-    const limit = parseInt(searchParams.get('limit') || '50')
-    const offset = parseInt(searchParams.get('offset') || '0')
+    const limit = parseInt(searchParams.get('limit') || '50', 10)
+    const offset = parseInt(searchParams.get('offset') || '0', 10)
 
     // Build query for messages where teacher is sender or receiver
     let query = supabase

@@ -76,8 +76,8 @@ export async function GET(
 
     // Get query parameters for date range (default to current month)
     const { searchParams } = new URL(request.url)
-    const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString())
-    const month = parseInt(searchParams.get('month') || (new Date().getMonth() + 1).toString())
+    const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString(), 10)
+    const month = parseInt(searchParams.get('month') || (new Date().getMonth() + 1).toString(), 10)
     
     // Calculate date range for the month
     const startDate = new Date(year, month - 1, 1)

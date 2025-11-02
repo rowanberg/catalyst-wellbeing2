@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     // Fetch school name
     const { data: profileData } = await supabase
       .from('profiles')
-      .select('school_id, schools(name)')
+      .select('school_id, schools!fk_profiles_school_id(name)')
       .eq('id', studentId)
       .single()
 

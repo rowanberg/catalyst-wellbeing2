@@ -296,12 +296,8 @@ const StudentSettingsPage = () => {
 
       // Parallel API calls for better performance
       const [profileResponse, settingsResponse] = await Promise.all([
-        fetch('/api/student/profile', {
-          headers: { 'Cache-Control': 'max-age=300' } // 5 min cache
-        }),
-        fetch('/api/student/settings', {
-          headers: { 'Cache-Control': 'max-age=300' }
-        })
+        fetch('/api/student/profile'),
+        fetch('/api/student/settings')
       ])
 
       // Process profile
@@ -720,7 +716,7 @@ const StudentSettingsPage = () => {
               </div>
             </motion.div>
 
-            {/* Optimized Settings Grid - Mobile-First Layout */}
+            {/* Optimized Settings Grid - Organized Desktop Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
               
               {/* Profile Section */}
@@ -1056,109 +1052,14 @@ const StudentSettingsPage = () => {
                 </Card>
               </motion.div>
 
-              {/* Account Management - New Section for Desktop Layout */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.5 }}
-                className="lg:col-span-2 xl:col-span-3"
-              >
-                <Card className="bg-white/95 backdrop-blur-xl shadow-xl border border-[#F8AD9D]/30 rounded-xl sm:rounded-2xl h-full">
-                  <CardHeader className="p-3 pb-2 sm:p-6 sm:pb-4">
-                    <CardTitle className="flex items-center space-x-2 sm:space-x-3 text-sm sm:text-base lg:text-lg text-slate-800">
-                      <User className="h-4 w-4 sm:h-5 sm:w-5 text-[#F08080]" />
-                      <span className="truncate">Account Management</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 sm:space-y-6 p-3 sm:px-6 sm:pb-6">
-                    {/* Account Information */}
-                    <div className="p-2.5 sm:p-4 bg-[#FFF5EE]/50 rounded-lg sm:rounded-xl border border-[#F8AD9D]/20">
-                      <div className="flex items-center justify-between mb-2 sm:mb-3">
-                        <div className="flex items-center space-x-2 sm:space-x-3">
-                          <div className="p-1.5 sm:p-2 bg-[#F08080]/20 rounded-lg sm:rounded-xl">
-                            <User className="h-4 w-4 sm:h-5 sm:w-5 text-[#F08080]" />
-                          </div>
-                          <div>
-                            <p className="text-slate-800 font-medium text-xs sm:text-sm">Account Information</p>
-                            <p className="text-slate-600 text-[10px] sm:text-sm">View your account details</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                        <div>
-                          <p className="text-slate-600 text-xs">Full Name</p>
-                          <p className="text-slate-800 font-medium">{profile?.first_name} {profile?.last_name}</p>
-                        </div>
-                        <div>
-                          <p className="text-slate-600 text-xs">Account Type</p>
-                          <p className="text-slate-800 font-medium">Student Account</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Data & Storage */}
-                    <div className="p-3 sm:p-4 bg-[#FFF5EE]/50 rounded-xl sm:rounded-2xl border border-[#F8AD9D]/20">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center space-x-3">
-                          <div className="p-2 bg-[#F4978E]/20 rounded-xl">
-                            <Globe className="h-5 w-5 text-[#F4978E]" />
-                          </div>
-                          <div>
-                            <p className="text-slate-800 font-medium">Data & Storage</p>
-                            <p className="text-slate-600 text-sm">Manage your data usage</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-slate-600">Profile Data</span>
-                          <span className="text-slate-800 font-medium">2.4 MB</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-slate-600">Messages</span>
-                          <span className="text-slate-800 font-medium">15.2 MB</span>
-                        </div>
-                        <div className="w-full bg-slate-200 rounded-full h-2 mt-3">
-                          <div className="bg-gradient-to-r from-[#F08080] to-[#F4978E] h-2 rounded-full" style={{ width: '25%' }}></div>
-                        </div>
-                        <p className="text-slate-600 text-xs">17.6 MB of 100 MB used</p>
-                      </div>
-                    </div>
-
-                    {/* Quick Actions */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <Button
-                        variant="outline"
-                        className="bg-[#FFF5EE]/50 border-[#F8AD9D]/30 text-slate-700 hover:bg-[#FBC4AB]/30 hover:text-slate-900 rounded-xl p-3 h-auto justify-start"
-                      >
-                        <RefreshCw className="h-4 w-4 mr-2 text-[#F08080]" />
-                        <div className="text-left">
-                          <p className="font-medium text-sm">Sync Data</p>
-                          <p className="text-xs text-slate-600">Update across devices</p>
-                        </div>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="bg-[#FFF5EE]/50 border-[#F8AD9D]/30 text-slate-700 hover:bg-[#FBC4AB]/30 hover:text-slate-900 rounded-xl p-3 h-auto justify-start"
-                      >
-                        <Shield className="h-4 w-4 mr-2 text-[#F4978E]" />
-                        <div className="text-left">
-                          <p className="font-medium text-sm">Privacy Center</p>
-                          <p className="text-xs text-slate-600">Manage permissions</p>
-                        </div>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
 
 
               {/* WhatsApp Configuration Section */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.45 }}
-                className="xl:col-span-2 lg:col-span-1"
+                transition={{ duration: 0.6, delay: 0.5 }}
+                className="lg:col-span-2 xl:col-span-1"
               >
                 <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border border-[#F8AD9D]/30 rounded-2xl sm:rounded-3xl">
                   <CardHeader className="pb-3 sm:pb-6">
@@ -1301,12 +1202,12 @@ const StudentSettingsPage = () => {
                 </Card>
               </motion.div>
 
-              {/* Account Management Section */}
+              {/* Account & Sign Out Section */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.5 }}
-                className="xl:col-span-3 lg:col-span-2"
+                transition={{ duration: 0.6, delay: 0.6 }}
+                className="lg:col-span-2 xl:col-span-2"
               >
                 <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border border-[#F8AD9D]/30 rounded-2xl sm:rounded-3xl">
                   <CardHeader className="pb-3 sm:pb-6">

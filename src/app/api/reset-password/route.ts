@@ -103,11 +103,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ 
-      message: 'If an account with that email exists, we\'ve sent password reset instructions.',
-      // Include action link for development/testing (remove in production)
-      ...(process.env.NODE_ENV === 'development' && { 
-        actionUrl: data.properties?.action_link 
-      })
+      message: 'If an account with that email exists, we\'ve sent password reset instructions.'
     })
   } catch (error) {
     console.error('Reset password API error:', error)

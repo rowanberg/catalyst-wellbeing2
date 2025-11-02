@@ -59,31 +59,31 @@ const NotificationToggle = memo(({
   onChange: (setting: NotificationSetting) => void
 }) => {
   return (
-    <div className="flex items-start justify-between py-4 border-b border-gray-200 dark:border-gray-700 last:border-0">
+    <div className="flex items-start justify-between py-4 border-b border-slate-200 dark:border-slate-800 last:border-0">
       <div className="flex-1 pr-4">
-        <p className="font-medium text-gray-900 dark:text-gray-100">{label}</p>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">{description}</p>
+        <p className="font-medium text-slate-900 dark:text-white">{label}</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">{description}</p>
         {setting.threshold !== null && (
           <div className="mt-2 flex items-center gap-2">
-            <label className="text-sm text-gray-600 dark:text-gray-400">Threshold:</label>
+            <label className="text-sm text-slate-600 dark:text-slate-400">Threshold:</label>
             <input
               type="number"
               value={setting.threshold}
               onChange={(e) => onChange({ ...setting, threshold: parseInt(e.target.value) })}
-              className="w-16 px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-16 px-2 py-1 text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               min="0"
               max="100"
             />
-            <span className="text-sm text-gray-600 dark:text-gray-400">%</span>
+            <span className="text-sm text-slate-600 dark:text-slate-400">%</span>
           </div>
         )}
         {setting.frequency && (
           <div className="mt-2 flex items-center gap-2">
-            <label className="text-sm text-gray-600 dark:text-gray-400">Frequency:</label>
+            <label className="text-sm text-slate-600 dark:text-slate-400">Frequency:</label>
             <select
               value={setting.frequency}
               onChange={(e) => onChange({ ...setting, frequency: e.target.value as any })}
-              className="text-sm border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="immediate">Immediate</option>
               <option value="daily">Daily Summary</option>
@@ -121,10 +121,10 @@ const ChildCard = memo(({ child, isActive, onClick }: {
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className={`w-full p-4 rounded-xl border transition-all ${
+      className={`w-full p-4 rounded-lg border transition-all ${
         isActive 
-          ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-600 shadow-md' 
-          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm'
+          ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 dark:border-blue-600 shadow-sm' 
+          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
       }`}
     >
       <div className="flex items-center gap-4">
@@ -146,8 +146,8 @@ const ChildCard = memo(({ child, isActive, onClick }: {
           </div>
         )}
         <div className="flex-1 text-left">
-          <p className="font-semibold text-gray-900 dark:text-gray-100">{child.name}</p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Grade {child.grade} • {child.school}</p>
+          <p className="font-semibold text-slate-900 dark:text-white">{child.name}</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">Grade {child.grade} • {child.school}</p>
         </div>
         <ChevronRight className={`h-4 w-4 transition-colors ${
           isActive ? 'text-blue-600' : 'text-gray-400'
@@ -281,66 +281,66 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
     return (
       <div className="w-full pb-8">
         {/* Cover Banner Skeleton */}
-        <div className="relative bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-600 h-24 lg:h-32 rounded-t-xl" />
+        <div className="relative bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-600 h-24 lg:h-32 rounded-t-lg" />
 
         {/* Main Profile Card Skeleton */}
-        <div className="bg-white dark:bg-gray-900 rounded-b-2xl shadow-lg border border-gray-200 dark:border-gray-800">
+        <div className="bg-white dark:bg-slate-900 rounded-b-lg border border-slate-200 dark:border-slate-800">
           {/* Profile Header Skeleton */}
           <div className="px-4 lg:px-6 pt-3 pb-2">
             <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-6">
               {/* Avatar Skeleton */}
               <div className="relative -mt-12 lg:-mt-16">
-                <div className="w-24 h-24 lg:w-28 lg:h-28 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 ring-4 ring-white dark:ring-gray-900 animate-pulse" />
+                <div className="w-24 h-24 lg:w-28 lg:h-28 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 ring-4 ring-white dark:ring-slate-950 animate-pulse" />
               </div>
 
               {/* Name Section Skeleton */}
               <div className="flex-1">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2">
                   <div className="space-y-2">
-                    <div className="h-6 lg:h-7 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                    <div className="h-4 w-28 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
+                    <div className="h-6 lg:h-7 w-40 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                    <div className="h-4 w-28 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
                   </div>
                   <div className="flex gap-2">
-                    <div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
-                    <div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+                    <div className="h-6 w-16 bg-slate-200 dark:bg-slate-700 rounded-full animate-pulse" />
+                    <div className="h-6 w-20 bg-slate-200 dark:bg-slate-700 rounded-full animate-pulse" />
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="border-t border-gray-200 dark:border-gray-800" />
+          <div className="border-t border-slate-200 dark:border-slate-800" />
 
           {/* Children Section Skeleton */}
           <div className="px-4 lg:px-6 py-3">
             <div className="flex items-center justify-between mb-3">
-              <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              <div className="h-5 w-32 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
               <div className="h-8 w-24 bg-blue-600 rounded-lg animate-pulse" />
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5">
               {[1, 2].map(i => (
-                <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 animate-pulse" />
                   <div className="flex-1 space-y-2">
-                    <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                    <div className="h-3 w-16 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
+                    <div className="h-4 w-20 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                    <div className="h-3 w-16 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="border-t border-gray-200 dark:border-gray-800" />
+          <div className="border-t border-slate-200 dark:border-slate-800" />
 
           {/* Two Column Grid Skeleton */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 px-4 lg:px-6 py-4">
             {/* Payments Card Skeleton */}
-            <div className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded-lg p-4 border border-emerald-200 dark:border-emerald-800">
+            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900 rounded-lg p-4 border border-emerald-200 dark:border-emerald-800">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-12 h-12 bg-emerald-500 rounded-full animate-pulse" />
                 <div className="space-y-2">
-                  <div className="h-5 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                  <div className="h-3 w-32 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
+                  <div className="h-5 w-24 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                  <div className="h-3 w-32 bg-slate-100 dark:bg-slate-800 rounded animate-pulse" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4 mb-4">

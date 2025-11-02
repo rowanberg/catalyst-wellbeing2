@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
+import { parseFullName } from '@/lib/nameUtils'
 import { useAppDispatch } from '@/lib/redux/hooks'
 import { setUser, setProfile } from '@/lib/redux/slices/authSlice'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
@@ -86,10 +87,11 @@ export default function AuthCallback() {
             console.log('👤 No profile found for Google user, redirecting to registration...')
             
             // Store Google OAuth data in sessionStorage for registration page
+            const { firstName, lastName } = parseFullName(data.session.user.user_metadata?.full_name)
             const googleUserData = {
               email: data.session.user.email,
-              firstName: data.session.user.user_metadata?.full_name?.split(' ')[0] || '',
-              lastName: data.session.user.user_metadata?.full_name?.split(' ').slice(1).join(' ') || '',
+              firstName,
+              lastName,
               avatarUrl: data.session.user.user_metadata?.avatar_url || null,
               userId: data.session.user.id,
               provider: 'google'

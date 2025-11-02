@@ -208,10 +208,10 @@ export default function SchoolRevealPro({
   }
 
   const iconVariants = [
-    { icon: Shield, label: 'Secure', color: 'from-blue-400 to-cyan-400', delay: 0 },
-    { icon: TrendingUp, label: 'Growth', color: 'from-purple-400 to-pink-400', delay: 0.4 },
-    { icon: Award, label: 'Excellence', color: 'from-amber-400 to-orange-400', delay: 0.8 },
-    { icon: Sparkle, label: 'Innovation', color: 'from-emerald-400 to-teal-400', delay: 1.2 }
+    { icon: Shield, label: 'Enterprise Security', color: 'from-blue-400 to-cyan-400', delay: 0 },
+    { icon: TrendingUp, label: 'Scalable Architecture', color: 'from-purple-400 to-pink-400', delay: 0.4 },
+    { icon: Award, label: 'Institutional Excellence', color: 'from-amber-400 to-orange-400', delay: 0.8 },
+    { icon: Sparkle, label: 'Advanced Analytics', color: 'from-emerald-400 to-teal-400', delay: 1.2 }
   ]
 
   return (
@@ -312,9 +312,10 @@ export default function SchoolRevealPro({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-3 sm:mb-4 px-2"
+                className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-3 sm:mb-4 px-2 tracking-tight"
+                style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
               >
-                Initializing Your Platform
+                Provisioning Enterprise Platform
               </motion.h2>
 
               {/* Progress bar */}
@@ -329,9 +330,10 @@ export default function SchoolRevealPro({
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="text-slate-400 text-xs sm:text-sm px-2"
+                className="text-slate-400 text-xs sm:text-sm px-2 font-medium"
+                style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
               >
-                Setting up your secure environment...
+                Configuring institutional infrastructure and security protocols...
               </motion.p>
             </motion.div>
           )}
@@ -369,7 +371,8 @@ export default function SchoolRevealPro({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: item.delay + 0.3 }}
-                    className="text-slate-300 text-[10px] sm:text-xs md:text-sm mt-2 sm:mt-3 text-center font-medium"
+                    className="text-slate-300 text-[10px] sm:text-xs md:text-sm mt-2 sm:mt-3 text-center font-semibold tracking-wide"
+                    style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
                   >
                     {item.label}
                   </motion.p>
@@ -417,18 +420,20 @@ export default function SchoolRevealPro({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-3 sm:mb-4 leading-tight"
+                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-3 sm:mb-4 leading-tight tracking-tight"
+                style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
               >
-                Welcome Aboard
+                Enterprise Platform Activated
               </motion.h1>
               
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4 }}
-                className="text-lg sm:text-xl md:text-2xl text-slate-300 font-light"
+                className="text-lg sm:text-xl md:text-2xl text-slate-300 font-medium tracking-wide"
+                style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
               >
-                Your institution is ready
+                Your institutional ecosystem is now operational
               </motion.p>
             </motion.div>
           )}
@@ -466,9 +471,9 @@ export default function SchoolRevealPro({
                   
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-4 sm:mb-5 md:mb-6">
-                      <h3 className="text-base sm:text-lg md:text-xl font-bold text-white flex items-center gap-2">
+                      <h3 className="text-base sm:text-lg md:text-xl font-bold text-white flex items-center gap-2 tracking-tight" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                         <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full animate-pulse" />
-                        Institution ID
+                        Enterprise Credentials
                       </h3>
                       <div className="flex gap-2">
                         <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
@@ -479,12 +484,12 @@ export default function SchoolRevealPro({
                     
                     <div className="space-y-3 sm:space-y-4 md:space-y-5">
                       <div className="bg-slate-800/50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-700/50">
-                        <p className="text-[10px] sm:text-xs text-slate-400 mb-1.5 sm:mb-2 uppercase tracking-wider">Institution Name</p>
-                        <p className="text-sm sm:text-base md:text-lg font-bold text-white break-words">{schoolName}</p>
+                        <p className="text-[10px] sm:text-xs text-slate-400 mb-1.5 sm:mb-2 uppercase tracking-widest font-semibold" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Organization Name</p>
+                        <p className="text-sm sm:text-base md:text-lg font-bold text-white break-words tracking-tight" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{schoolName}</p>
                       </div>
                       
                       <div className="bg-slate-800/50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-700/50">
-                        <p className="text-[10px] sm:text-xs text-slate-400 mb-1.5 sm:mb-2 uppercase tracking-wider">Access Code</p>
+                        <p className="text-[10px] sm:text-xs text-slate-400 mb-1.5 sm:mb-2 uppercase tracking-widest font-semibold" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Enterprise Access Code</p>
                         <div className="flex items-center gap-2 sm:gap-3">
                           <code className="text-base sm:text-lg md:text-xl font-mono font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 tracking-wider break-all flex-1">
                             {schoolId}
@@ -505,8 +510,8 @@ export default function SchoolRevealPro({
                       </div>
                       
                       <div className="bg-slate-800/50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-700/50">
-                        <p className="text-[10px] sm:text-xs text-slate-400 mb-1.5 sm:mb-2 uppercase tracking-wider">Location</p>
-                        <p className="text-sm sm:text-base md:text-lg font-semibold text-slate-200 break-words">{location}</p>
+                        <p className="text-[10px] sm:text-xs text-slate-400 mb-1.5 sm:mb-2 uppercase tracking-widest font-semibold" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Geographical Region</p>
+                        <p className="text-sm sm:text-base md:text-lg font-semibold text-slate-200 break-words tracking-tight" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{location}</p>
                       </div>
                     </div>
                   </div>
@@ -537,12 +542,12 @@ export default function SchoolRevealPro({
                   
                   {/* Verification Text */}
                   <div className="space-y-2">
-                    <h3 className="text-xl sm:text-2xl font-bold text-white">
-                      Verify Your Email
+                    <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                      Email Verification Required
                     </h3>
-                    <p className="text-slate-300 text-sm sm:text-base max-w-md">
-                      We've sent a verification email to your registered address. 
-                      Please check your inbox and click the verification link.
+                    <p className="text-slate-300 text-sm sm:text-base max-w-md font-medium" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                      A verification message has been dispatched to your registered institutional email address. 
+                      Please authenticate your account by accessing the secure verification link.
                     </p>
                   </div>
                   
@@ -551,11 +556,11 @@ export default function SchoolRevealPro({
                     <div className="flex items-start gap-2">
                       <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
                       <div className="text-left">
-                        <p className="text-amber-300 text-xs sm:text-sm font-medium">
-                          Important: Email verification required
+                        <p className="text-amber-300 text-xs sm:text-sm font-semibold tracking-wide" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                          Critical: Authentication Verification Mandatory
                         </p>
-                        <p className="text-amber-200/70 text-xs mt-1">
-                          You must verify your email before you can sign in to your account.
+                        <p className="text-amber-200/70 text-xs mt-1 font-medium" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                          Email authentication must be completed before accessing your enterprise dashboard.
                         </p>
                       </div>
                     </div>
@@ -569,15 +574,15 @@ export default function SchoolRevealPro({
                     className="w-full group relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 text-white font-bold shadow-2xl transition-all duration-300"
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <span className="relative z-10 flex items-center justify-center gap-2">
-                      Go to Sign In
+                    <span className="relative z-10 flex items-center justify-center gap-2 font-semibold tracking-wide" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                      Access Enterprise Portal
                       <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </span>
                   </motion.button>
                   
                   {/* Help Text */}
-                  <p className="text-slate-400 text-xs mt-4">
-                    Didn't receive the email? Check your spam folder or contact support.
+                  <p className="text-slate-400 text-xs mt-4 font-medium" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                    Email not received? Verify spam filters or contact enterprise support services.
                   </p>
                 </div>
               </div>

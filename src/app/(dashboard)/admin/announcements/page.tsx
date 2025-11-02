@@ -29,7 +29,9 @@ import {
   Megaphone,
   Bell,
   Clock,
-  MoreVertical
+  MoreVertical,
+  Sparkles,
+  BarChart3
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -68,6 +70,7 @@ export default function AdminAnnouncementsPage() {
   const [filterType, setFilterType] = useState('all')
   const [filterAudience, setFilterAudience] = useState('all')
   const [showFilters, setShowFilters] = useState(false)
+  const [enhancing, setEnhancing] = useState(false)
 
   const [formData, setFormData] = useState({
     title: '',
@@ -125,6 +128,51 @@ export default function AdminAnnouncementsPage() {
 
     fetchAnnouncements()
   }, [profile])
+
+  const handleEnhanceWithAI = async () => {
+    try {
+      setEnhancing(true)
+      setError(null)
+      
+      // Validate that we have content to enhance
+      if (!formData.title.trim() && !formData.content.trim()) {
+        throw new Error('Please enter a title or content to enhance')
+      }
+
+      const response = await fetch('/api/admin/announcements/enhance-ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: formData.title.trim() || 'Untitled',
+          content: formData.content.trim() || 'No content provided',
+        }),
+      })
+
+      const data = await response.json()
+      
+      if (!response.ok) {
+        if (response.status === 429) {
+          throw new Error('AI service is currently busy. Please try again in a moment.')
+        }
+        throw new Error(data.message || 'Failed to enhance announcement')
+      }
+
+      // Update form with enhanced content
+      setFormData(prev => ({
+        ...prev,
+        title: data.enhanced.title,
+        content: data.enhanced.content
+      }))
+
+      addToast('Announcement enhanced successfully! ✨')
+    } catch (err) {
+      handleError(err instanceof Error ? err.message : 'Failed to enhance announcement')
+    } finally {
+      setEnhancing(false)
+    }
+  }
 
   const handleCreateAnnouncement = async () => {
     try {
@@ -240,30 +288,42 @@ export default function AdminAnnouncementsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto"
-      >
-        {/* Header Section - Mobile Optimized */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              School Announcements
-            </h1>
-            <p className="text-gray-600 text-sm sm:text-base">Create and manage school-wide communications</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Sticky Professional Header */}
+      <div className="sticky top-0 z-40 backdrop-blur-xl bg-white/80 border-b border-white/20 shadow-lg">
+        <div className="px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <motion.div 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-center space-x-3 sm:space-x-4"
+            >
+              <div className="p-2 sm:p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+                <Megaphone className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                  Announcements
+                </h1>
+                <p className="text-sm sm:text-base text-gray-600 mt-1 hidden sm:block">Create and manage school-wide communications</p>
+              </div>
+            </motion.div>
+            
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Button 
+                onClick={() => setShowCreateModal(true)} 
+                size="sm"
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-xs sm:text-sm"
+              >
+                <Plus className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                <span className="hidden xs:inline">New</span>
+              </Button>
+            </div>
           </div>
-          <Button 
-            onClick={() => setShowCreateModal(true)} 
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-200 w-full sm:w-auto"
-            size="lg"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">New Announcement</span>
-            <span className="sm:hidden">Create</span>
-          </Button>
         </div>
+      </div>
+
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
 
         {/* Error Message */}
         <AnimatePresence>
@@ -307,45 +367,49 @@ export default function AdminAnnouncementsPage() {
           )}
         </AnimatePresence>
 
-        {/* Modern Tab Navigation */}
+        {/* Professional Tab Navigation */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 bg-white/70 backdrop-blur-sm border border-gray-200 rounded-xl p-1 shadow-sm">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 bg-white border border-gray-200 shadow-lg rounded-xl p-2 mb-6 h-auto min-h-[48px] sm:min-h-[56px]">
             <TabsTrigger 
               value="overview" 
-              className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200"
+              className="text-xs sm:text-sm font-medium px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-all duration-200 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-blue-600 flex items-center justify-center whitespace-nowrap"
             >
               <TrendingUp className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Overview</span>
-              <span className="sm:hidden">Stats</span>
+              Overview
             </TabsTrigger>
             <TabsTrigger 
               value="announcements"
-              className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200"
+              className="text-xs sm:text-sm font-medium px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-all duration-200 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-blue-600 flex items-center justify-center whitespace-nowrap"
             >
               <Megaphone className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Announcements</span>
-              <span className="sm:hidden">Posts</span>
+              Announcements
+            </TabsTrigger>
+            <TabsTrigger 
+              value="analytics"
+              className="text-xs sm:text-sm font-medium px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-all duration-200 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-blue-600 flex items-center justify-center whitespace-nowrap"
+            >
+              <BarChart3 className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Analytics</span>
+              <span className="sm:hidden">Stats</span>
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4 sm:space-y-6">
-            {/* Modern Stats Cards - Mobile Optimized */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {/* Enhanced Statistics - Gradient Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
               >
-                <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-all duration-200">
-                  <CardContent className="p-4 sm:p-6">
+                <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-xl">
+                  <CardContent className="p-3 sm:p-4 lg:p-6">
                     <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-xs sm:text-sm text-blue-700 font-medium">Total</p>
-                        <p className="text-xl sm:text-2xl font-bold text-blue-900">{announcements.length}</p>
+                      <div>
+                        <p className="text-blue-100 text-xs sm:text-sm font-medium">Total</p>
+                        <p className="text-xl sm:text-2xl lg:text-3xl font-bold">{announcements.length}</p>
                       </div>
-                      <div className="bg-blue-600 p-2 sm:p-3 rounded-xl">
-                        <Megaphone className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
-                      </div>
+                      <Megaphone className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-blue-200" />
                     </div>
                   </CardContent>
                 </Card>
@@ -356,16 +420,14 @@ export default function AdminAnnouncementsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
               >
-                <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-all duration-200">
-                  <CardContent className="p-4 sm:p-6">
+                <Card className="bg-gradient-to-br from-green-500 to-emerald-600 text-white border-0 shadow-xl">
+                  <CardContent className="p-3 sm:p-4 lg:p-6">
                     <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-xs sm:text-sm text-green-700 font-medium">Published</p>
-                        <p className="text-xl sm:text-2xl font-bold text-green-900">{announcements.filter(a => a.status === 'published').length}</p>
+                      <div>
+                        <p className="text-green-100 text-xs sm:text-sm font-medium">Published</p>
+                        <p className="text-xl sm:text-2xl lg:text-3xl font-bold">{announcements.filter(a => a.status === 'published').length}</p>
                       </div>
-                      <div className="bg-green-600 p-2 sm:p-3 rounded-xl">
-                        <CheckCircle className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
-                      </div>
+                      <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-green-200" />
                     </div>
                   </CardContent>
                 </Card>
@@ -376,16 +438,14 @@ export default function AdminAnnouncementsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
               >
-                <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-all duration-200">
-                  <CardContent className="p-4 sm:p-6">
+                <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0 shadow-xl">
+                  <CardContent className="p-3 sm:p-4 lg:p-6">
                     <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-xs sm:text-sm text-purple-700 font-medium">Views</p>
-                        <p className="text-xl sm:text-2xl font-bold text-purple-900">{announcements.reduce((sum, a) => sum + a.views, 0)}</p>
+                      <div>
+                        <p className="text-purple-100 text-xs sm:text-sm font-medium">Views</p>
+                        <p className="text-xl sm:text-2xl lg:text-3xl font-bold">{announcements.reduce((sum, a) => sum + a.views, 0)}</p>
                       </div>
-                      <div className="bg-purple-600 p-2 sm:p-3 rounded-xl">
-                        <Eye className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
-                      </div>
+                      <Eye className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-purple-200" />
                     </div>
                   </CardContent>
                 </Card>
@@ -396,30 +456,46 @@ export default function AdminAnnouncementsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
               >
-                <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 hover:shadow-lg transition-all duration-200">
-                  <CardContent className="p-4 sm:p-6">
+                <Card className="bg-gradient-to-br from-orange-500 to-red-600 text-white border-0 shadow-xl">
+                  <CardContent className="p-3 sm:p-4 lg:p-6">
                     <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-xs sm:text-sm text-orange-700 font-medium">This Month</p>
-                        <p className="text-xl sm:text-2xl font-bold text-orange-900">{announcements.length}</p>
+                      <div>
+                        <p className="text-orange-100 text-xs sm:text-sm font-medium">This Month</p>
+                        <p className="text-xl sm:text-2xl lg:text-3xl font-bold">{announcements.length}</p>
                       </div>
-                      <div className="bg-orange-600 p-2 sm:p-3 rounded-xl">
-                        <Calendar className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
+                      <Calendar className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-orange-200" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+              >
+                <Card className="bg-gradient-to-br from-cyan-500 to-blue-600 text-white border-0 shadow-xl">
+                  <CardContent className="p-3 sm:p-4 lg:p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-cyan-100 text-xs sm:text-sm font-medium">Urgent</p>
+                        <p className="text-xl sm:text-2xl lg:text-3xl font-bold">{announcements.filter(a => a.priority === 'urgent').length}</p>
                       </div>
+                      <Zap className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-cyan-200" />
                     </div>
                   </CardContent>
                 </Card>
               </motion.div>
             </div>
 
-            {/* Quick Actions - Mobile Optimized */}
-            <Card className="bg-white/70 backdrop-blur-sm border border-gray-200 shadow-lg">
+            {/* Quick Actions */}
+            <Card className="bg-white/80 backdrop-blur-sm border border-gray-200 shadow-xl">
               <CardHeader className="pb-4">
                 <CardTitle className="text-lg sm:text-xl font-semibold text-gray-900">Quick Actions</CardTitle>
                 <CardDescription className="text-sm text-gray-600">Create common announcement types instantly</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-6">
                   <Button 
                     variant="outline" 
                     className="h-16 sm:h-20 flex-col space-y-1 sm:space-y-2 border-red-200 hover:bg-red-50 hover:border-red-300 transition-all duration-200"
@@ -470,8 +546,8 @@ export default function AdminAnnouncementsPage() {
           </TabsContent>
 
           <TabsContent value="announcements" className="space-y-4 sm:space-y-6">
-            {/* Search and Filter Section - Mobile Optimized */}
-            <Card className="bg-white/70 backdrop-blur-sm border border-gray-200 shadow-sm">
+            {/* Search and Filter Section */}
+            <Card className="bg-white/80 backdrop-blur-sm border border-gray-200 shadow-lg">
               <CardContent className="p-4 sm:p-6 space-y-4">
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                   <div className="relative flex-1">
@@ -540,14 +616,14 @@ export default function AdminAnnouncementsPage() {
               </CardContent>
             </Card>
 
-            {/* Announcements List - Mobile Optimized */}
-            <div className="space-y-3 sm:space-y-4">
+            {/* Announcements Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
               {filteredAnnouncements.length === 0 ? (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                 >
-                  <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200">
+                  <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 lg:col-span-2 xl:col-span-3">
                     <CardContent className="p-8 sm:p-12 text-center">
                       <Megaphone className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-4" />
                       <h3 className="text-lg sm:text-xl font-medium text-gray-900 mb-2">
@@ -578,10 +654,10 @@ export default function AdminAnnouncementsPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
                   >
-                    <Card className="bg-white hover:shadow-lg transition-all duration-200 border border-gray-200">
-                      <CardContent className="p-4 sm:p-6">
+                    <Card className="bg-white hover:shadow-lg transition-all duration-200 border border-gray-200 h-full flex flex-col">
+                      <CardContent className="p-4 sm:p-6 flex-1 flex flex-col">
                         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0 flex flex-col">
                             <div className="flex flex-wrap items-center gap-2 mb-3">
                               {getPriorityIcon(announcement.priority)}
                               <Badge className={`${getTypeColor(announcement.type)} text-xs`}>
@@ -628,6 +704,20 @@ export default function AdminAnnouncementsPage() {
               )}
             </div>
           </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-4 sm:space-y-6">
+            <Card className="bg-white/80 backdrop-blur-sm border border-gray-200 shadow-xl">
+              <CardContent className="p-8 sm:p-12 text-center">
+                <BarChart3 className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg sm:text-xl font-medium text-gray-900 mb-2">
+                  Analytics Coming Soon
+                </h3>
+                <p className="text-gray-600 text-sm sm:text-base">
+                  Detailed engagement metrics and performance analytics will be available here.
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
 
         {/* Modern Create Announcement Dialog - Mobile Optimized */}
@@ -659,9 +749,31 @@ export default function AdminAnnouncementsPage() {
 
               {/* Content Textarea */}
               <div className="space-y-2">
-                <Label htmlFor="content" className="text-sm font-medium text-gray-700">
-                  Message Content *
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="content" className="text-sm font-medium text-gray-700">
+                    Message Content *
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleEnhanceWithAI}
+                    disabled={enhancing || (!formData.title.trim() && !formData.content.trim())}
+                    className="border-indigo-200 hover:bg-indigo-50 hover:border-indigo-300 text-indigo-700 shadow-sm"
+                  >
+                    {enhancing ? (
+                      <>
+                        <div className="animate-spin rounded-full h-3 w-3 border-2 border-indigo-600 border-t-transparent mr-2"></div>
+                        <span>Enhancing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                        <span>Enhance with AI</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
                 <Textarea
                   id="content"
                   value={formData.content}
@@ -669,7 +781,12 @@ export default function AdminAnnouncementsPage() {
                   placeholder="Write your announcement message here..."
                   rows={4}
                   className="bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500 resize-none"
+                  disabled={enhancing}
                 />
+                <p className="text-xs text-gray-500 flex items-center">
+                  <Sparkles className="h-3 w-3 mr-1 text-indigo-500" />
+                  AI will enhance your announcement to make it more professional and engaging
+                </p>
               </div>
 
               {/* Type and Audience Grid */}
@@ -796,7 +913,7 @@ export default function AdminAnnouncementsPage() {
             </div>
           </DialogContent>
         </Dialog>
-      </motion.div>
+      </div>
     </div>
   )
 }

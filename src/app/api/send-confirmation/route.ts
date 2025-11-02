@@ -28,8 +28,7 @@ export async function POST(request: NextRequest) {
 
     console.log('Confirmation email sent successfully to:', email)
     return NextResponse.json({ 
-      message: 'Confirmation email sent successfully',
-      actionUrl: data.properties?.action_link // For development/testing purposes
+      message: 'Confirmation email sent successfully'
     })
   } catch (error) {
     console.error('Send confirmation API error:', error)

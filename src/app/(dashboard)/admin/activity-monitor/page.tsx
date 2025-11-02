@@ -68,119 +68,108 @@ export default function ActivityMonitorPage() {
   const [summary, setSummary] = useState<ActivitySummary | null>(null)
   const [userActivities, setUserActivities] = useState<UserActivity[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
   const [timeFilter, setTimeFilter] = useState('today')
+  const [schoolId, setSchoolId] = useState<string | null>(null)
+  
+  // User activity pagination
+  const [userSearch, setUserSearch] = useState('')
+  const [userOffset, setUserOffset] = useState(0)
+  const [userPagination, setUserPagination] = useState<{ total: number; hasMore: boolean } | null>(null)
+  const [loadingMore, setLoadingMore] = useState(false)
 
-  // Mock data for demonstration
+  // Fetch school ID from profile
   useEffect(() => {
-    const mockActivities: ActivityLog[] = [
-      {
-        id: '1',
-        userId: 'user1',
-        userName: 'Emma Johnson',
-        userRole: 'student',
-        grade: '5',
-        activityType: 'quest_completion',
-        description: 'Completed daily gratitude quest',
-        timestamp: '2024-01-15T14:30:00Z',
-        metadata: { questType: 'gratitude', xpEarned: 50 }
-      },
-      {
-        id: '2',
-        userId: 'user2',
-        userName: 'Ms. Rodriguez',
-        userRole: 'teacher',
-        activityType: 'help_request',
-        description: 'Responded to student help request',
-        timestamp: '2024-01-15T14:15:00Z',
-        metadata: { responseTime: '15 minutes', urgency: 'medium' }
-      },
-      {
-        id: '3',
-        userId: 'user3',
-        userName: 'Michael Chen',
-        userRole: 'student',
-        grade: '6',
-        activityType: 'mood_log',
-        description: 'Logged mood as "happy"',
-        timestamp: '2024-01-15T13:45:00Z',
-        metadata: { mood: 'happy', streak: 7 }
-      },
-      {
-        id: '4',
-        userId: 'user4',
-        userName: 'Sarah Williams',
-        userRole: 'parent',
-        activityType: 'message_sent',
-        description: 'Sent message to teacher',
-        timestamp: '2024-01-15T13:30:00Z',
-        metadata: { recipient: 'teacher', messageLength: 150 }
-      },
-      {
-        id: '5',
-        userId: 'user5',
-        userName: 'Alex Thompson',
-        userRole: 'student',
-        grade: '7',
-        activityType: 'help_request',
-        description: 'Submitted urgent help request',
-        timestamp: '2024-01-15T13:00:00Z',
-        metadata: { urgency: 'high', category: 'bullying' },
-        riskLevel: 'high'
+    async function fetchSchoolId() {
+      try {
+        const response = await fetch('/api/profile')
+        if (response.ok) {
+          const data = await response.json()
+          setSchoolId(data.school_id)
+        }
+      } catch (err) {
+        console.error('Failed to fetch school ID:', err)
+        setError('Failed to load profile')
       }
-    ]
+    }
+    fetchSchoolId()
+  }, [])
 
-    const mockSummary: ActivitySummary = {
-      totalActivities: 156,
-      activeUsers: 89,
-      questsCompleted: 45,
-      helpRequests: 8,
-      messagesExchanged: 32,
-      averageSessionTime: 18
+  // Fetch real activity data
+  useEffect(() => {
+    if (!schoolId) return
+
+    async function fetchActivityData(append = false) {
+      if (append) {
+        setLoadingMore(true)
+      } else {
+        setLoading(true)
+      }
+      setError(null)
+
+      try {
+        if (!schoolId) return
+        
+        const params = new URLSearchParams({
+          school_id: schoolId,
+          time_filter: timeFilter,
+          role_filter: roleFilter,
+          type_filter: typeFilter,
+          user_search: userSearch,
+          user_limit: '12',
+          user_offset: append ? userOffset.toString() : '0'
+        })
+
+        const response = await fetch(`/api/admin/activity-monitor?${params}`)
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch activity data')
+        }
+
+        const result = await response.json()
+        
+        console.log('Activity monitor API response:', result)
+        
+        if (result.success && result.data) {
+          const activities = result.data.activities || []
+          const summary = result.data.summary || null
+          const newUserActivities = result.data.userActivities || []
+          const pagination = result.data.userPagination
+          
+          console.log('Setting state:', {
+            activitiesCount: activities.length,
+            summary,
+            userActivitiesCount: newUserActivities.length,
+            pagination
+          })
+          
+          setActivities(activities)
+          setSummary(summary)
+          
+          if (append) {
+            setUserActivities(prev => [...prev, ...newUserActivities])
+          } else {
+            setUserActivities(newUserActivities)
+          }
+          
+          setUserPagination(pagination)
+        } else {
+          throw new Error('Invalid response format')
+        }
+      } catch (err) {
+        console.error('Error fetching activity data:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load activity data')
+      } finally {
+        setLoading(false)
+        setLoadingMore(false)
+      }
     }
 
-    const mockUserActivities: UserActivity[] = [
-      {
-        userId: 'user1',
-        userName: 'Emma Johnson',
-        role: 'student',
-        grade: '5',
-        lastActive: '2024-01-15T14:30:00Z',
-        activitiesCount: 12,
-        sessionTime: 25,
-        riskIndicators: []
-      },
-      {
-        userId: 'user5',
-        userName: 'Alex Thompson',
-        role: 'student',
-        grade: '7',
-        lastActive: '2024-01-15T13:00:00Z',
-        activitiesCount: 8,
-        sessionTime: 15,
-        riskIndicators: ['High urgency help request', 'Bullying concern']
-      },
-      {
-        userId: 'user3',
-        userName: 'Michael Chen',
-        role: 'student',
-        grade: '6',
-        lastActive: '2024-01-15T13:45:00Z',
-        activitiesCount: 15,
-        sessionTime: 22,
-        riskIndicators: []
-      }
-    ]
-    
-    setTimeout(() => {
-      setActivities(mockActivities)
-      setSummary(mockSummary)
-      setUserActivities(mockUserActivities)
-      setLoading(false)
-    }, 1000)
-  }, [])
+    fetchActivityData()
+  }, [schoolId, timeFilter, roleFilter, typeFilter, userSearch])
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -235,10 +224,76 @@ export default function ActivityMonitorPage() {
     return matchesSearch && matchesRole && matchesType
   })
 
-  if (loading) {
+  // Refresh handler
+  const handleRefresh = () => {
+    if (schoolId) {
+      setLoading(true)
+      setUserOffset(0)
+      setTimeFilter(prev => prev)
+    }
+  }
+  
+  // Load more users
+  const handleLoadMore = () => {
+    if (!userPagination?.hasMore || loadingMore) return
+    
+    const newOffset = userOffset + 12
+    setUserOffset(newOffset)
+    
+    // Trigger fetch with append=true
+    if (schoolId) {
+      const params = new URLSearchParams({
+        school_id: schoolId,
+        time_filter: timeFilter,
+        role_filter: roleFilter,
+        type_filter: typeFilter,
+        user_search: userSearch,
+        user_limit: '12',
+        user_offset: newOffset.toString()
+      })
+      
+      setLoadingMore(true)
+      fetch(`/api/admin/activity-monitor?${params}`)
+        .then(res => res.json())
+        .then(result => {
+          if (result.success && result.data) {
+            setUserActivities(prev => [...prev, ...(result.data.userActivities || [])])
+            setUserPagination(result.data.userPagination)
+          }
+        })
+        .catch(console.error)
+        .finally(() => setLoadingMore(false))
+    }
+  }
+  
+  // Handle user search change
+  const handleUserSearchChange = (value: string) => {
+    setUserSearch(value)
+    setUserOffset(0) // Reset pagination when searching
+  }
+
+  if (loading && !activities.length) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600"></div>
+      </div>
+    )
+  }
+
+  if (error && !activities.length) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardContent className="p-6 text-center">
+            <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Error Loading Data</h2>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <Button onClick={handleRefresh}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -267,8 +322,13 @@ export default function ActivityMonitorPage() {
             
             <div className="flex items-center space-x-3">
               <ClientWrapper>
-                <Button variant="outline" className="bg-white/50 backdrop-blur-sm hover:bg-white/80">
-                  <RefreshCw className="w-4 h-4 mr-2" />
+                <Button 
+                  variant="outline" 
+                  className="bg-white/50 backdrop-blur-sm hover:bg-white/80"
+                  onClick={handleRefresh}
+                  disabled={loading}
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                   Refresh
                 </Button>
                 <Button variant="outline" className="bg-white/50 backdrop-blur-sm hover:bg-white/80">
@@ -444,7 +504,22 @@ export default function ActivityMonitorPage() {
 
             {/* Activity Feed */}
             <div className="space-y-4">
-              {filteredActivities.map((activity, index) => (
+              {filteredActivities.length === 0 ? (
+                <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
+                  <CardContent className="p-12 text-center">
+                    <Activity className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No Activities Found</h3>
+                    <p className="text-gray-600 mb-4">
+                      {searchTerm || roleFilter !== 'all' || typeFilter !== 'all'
+                        ? 'Try adjusting your filters to see more activities.'
+                        : 'No recent activities in the selected time period.'}
+                    </p>
+                    <div className="text-sm text-gray-500">
+                      <p>Time: {timeFilter} | Total users: {summary?.activeUsers || 0}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : filteredActivities.map((activity, index) => (
                 <motion.div
                   key={activity.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -506,8 +581,38 @@ export default function ActivityMonitorPage() {
           </TabsContent>
 
           <TabsContent value="users" className="space-y-6">
+            {/* User Search */}
+            <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-4">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      placeholder="Search users by name, role, or grade..."
+                      value={userSearch}
+                      onChange={(e) => handleUserSearchChange(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  {userPagination && (
+                    <div className="text-sm text-gray-600 whitespace-nowrap">
+                      Showing {userActivities.length} of {userPagination.total} users
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {userActivities.map((user, index) => (
+              {userActivities.length === 0 ? (
+                <Card className="col-span-full bg-white/70 backdrop-blur-sm border-0 shadow-xl">
+                  <CardContent className="p-12 text-center">
+                    <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No User Activity</h3>
+                    <p className="text-gray-600">No user activity recorded in the selected time period.</p>
+                  </CardContent>
+                </Card>
+              ) : userActivities.map((user, index) => (
                 <motion.div
                   key={user.userId}
                   initial={{ opacity: 0, y: 20 }}
@@ -565,6 +670,31 @@ export default function ActivityMonitorPage() {
                 </motion.div>
               ))}
             </div>
+            
+            {/* Load More Button */}
+            {userPagination && userPagination.hasMore && (
+              <div className="flex justify-center mt-6">
+                <ClientWrapper>
+                  <Button
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-8 py-3"
+                  >
+                    {loadingMore ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <Users className="w-4 h-4 mr-2" />
+                        Load More Users ({userPagination.total - userActivities.length} remaining)
+                      </>
+                    )}
+                  </Button>
+                </ClientWrapper>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="insights" className="space-y-6">

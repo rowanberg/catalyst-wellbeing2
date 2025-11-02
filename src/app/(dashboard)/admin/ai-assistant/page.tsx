@@ -91,6 +91,7 @@ export default function AIAssistantPage() {
   const [copiedMessage, setCopiedMessage] = useState<string | null>(null)
   const [showHistory, setShowHistory] = useState(false)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+  const [showMobilePrompts, setShowMobilePrompts] = useState(false)
   const [analysisContext, setAnalysisContext] = useState<'performance' | 'wellbeing' | 'operations' | 'general'>('general')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -334,6 +335,7 @@ Try again or contact support if the issue persists.`
   const handleQuickPrompt = (prompt: string, category: 'performance' | 'wellbeing' | 'operations') => {
     setInput(prompt)
     setAnalysisContext(category)
+    setShowMobilePrompts(false)
     inputRef.current?.focus()
   }
 
@@ -376,36 +378,44 @@ Try again or contact support if the issue persists.`
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 overflow-hidden">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-indigo-50/40 to-slate-100 overflow-hidden">
       {/* Header */}
-      <div className="flex-shrink-0 bg-white border-b border-slate-200 shadow-sm">
-        <div className="px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <div className="flex-shrink-0 bg-gradient-to-r from-white via-indigo-50/30 to-white border-b border-indigo-200/40 shadow-lg">
+        <div className="px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
             <Button
               variant="ghost"
               size="sm"
-              className="lg:hidden"
+              className="lg:hidden flex-shrink-0"
               onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl">
-                <Brain className="h-5 w-5 text-white" />
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl sm:rounded-2xl blur-sm opacity-40"></div>
+                <div className="relative p-2 sm:p-2.5 bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-700 rounded-xl sm:rounded-2xl flex-shrink-0 shadow-xl">
+                  <Brain className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                </div>
               </div>
-              <div>
-                <h1 className="text-lg font-bold text-slate-800">School Intelligence Assistant</h1>
-                <p className="text-xs text-slate-500">AI-powered analytics platform</p>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h1 className="text-sm sm:text-xl font-bold bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 bg-clip-text text-transparent truncate">School Intelligence</h1>
+                </div>
+                <div className="flex items-center gap-1.5 hidden sm:flex">
+                  <Sparkles className="h-3 w-3 text-indigo-600" />
+                  <p className="text-xs font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Luminex Premium Pro</p>
+                </div>
               </div>
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowHistory(!showHistory)}
-              className="hidden lg:flex"
+              className="hidden lg:flex border-indigo-200 hover:bg-indigo-50 hover:border-indigo-300"
             >
               <History className="h-4 w-4 mr-2" />
               History
@@ -413,10 +423,10 @@ Try again or contact support if the issue persists.`
             <Button
               onClick={createNewSession}
               size="sm"
-              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
+              className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:via-purple-700 hover:to-indigo-800 text-white shadow-xl shadow-indigo-500/40 px-2 sm:px-4 border border-indigo-400/30"
             >
-              <Plus className="h-4 w-4 mr-2" />
-              New Analysis
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">New Analysis</span>
             </Button>
           </div>
         </div>
@@ -432,7 +442,7 @@ Try again or contact support if the issue persists.`
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -300, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="hidden lg:block w-72 bg-white border-r border-slate-200 flex-shrink-0"
+              className="hidden lg:block w-72 bg-white/80 backdrop-blur-sm border-r border-slate-200/60 flex-shrink-0"
             >
               <div className="p-4 border-b border-slate-200">
                 <div className="flex items-center justify-between mb-2">
@@ -452,8 +462,8 @@ Try again or contact support if the issue persists.`
                       className={cn(
                         "w-full text-left p-3 rounded-lg transition-all",
                         currentSessionId === session.id
-                          ? "bg-blue-50 border border-blue-200"
-                          : "hover:bg-slate-50 border border-transparent"
+                          ? "bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 shadow-sm"
+                          : "hover:bg-slate-50 border border-transparent hover:border-slate-200"
                       )}
                     >
                       <div className="font-medium text-sm text-slate-800 truncate">
@@ -509,7 +519,7 @@ Try again or contact support if the issue persists.`
                         className={cn(
                           "w-full text-left p-3 rounded-lg transition-all",
                           currentSessionId === session.id
-                            ? "bg-blue-50 border border-blue-200"
+                            ? "bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 shadow-sm"
                             : "hover:bg-slate-50 border border-transparent"
                         )}
                       >
@@ -528,25 +538,100 @@ Try again or contact support if the issue persists.`
           )}
         </AnimatePresence>
 
+        {/* Mobile Quick Prompts Modal */}
+        <AnimatePresence>
+          {showMobilePrompts && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="xl:hidden fixed inset-0 bg-black/50 z-50"
+                onClick={() => setShowMobilePrompts(false)}
+              />
+              <motion.div
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                className="xl:hidden fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-50 shadow-2xl max-h-[80vh] overflow-hidden flex flex-col"
+              >
+                <div className="flex items-center justify-between p-4 border-b border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-blue-600" />
+                    <h3 className="font-semibold text-slate-800">Quick Analysis</h3>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => setShowMobilePrompts(false)}>
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+                
+                <ScrollArea className="flex-1">
+                  <div className="p-4 space-y-6">
+                    {['performance', 'wellbeing', 'operations'].map((category) => (
+                      <div key={category}>
+                        <h4 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">
+                          {category}
+                        </h4>
+                        <div className="space-y-2">
+                          {quickPrompts
+                            .filter(p => p.category === category)
+                            .map((prompt, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => handleQuickPrompt(prompt.prompt, prompt.category)}
+                                className="w-full text-left p-3 rounded-xl border border-slate-200 active:bg-blue-50 transition-all"
+                              >
+                                <div className="flex items-start gap-3">
+                                  <div className={cn(
+                                    "p-2 rounded-lg flex-shrink-0",
+                                    category === 'performance' && "bg-blue-100 text-blue-600",
+                                    category === 'wellbeing' && "bg-purple-100 text-purple-600",
+                                    category === 'operations' && "bg-slate-100 text-slate-600"
+                                  )}>
+                                    <prompt.icon className="h-5 w-5" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-sm text-slate-800 mb-1">
+                                      {prompt.label}
+                                    </div>
+                                    <div className="text-xs text-slate-500 line-clamp-2">
+                                      {prompt.prompt}
+                                    </div>
+                                  </div>
+                                  <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0 mt-0.5" />
+                                </div>
+                              </button>
+                            ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
         {/* Center - Chat Area */}
         <div className="flex-1 flex flex-col">
           {/* Messages */}
-          <ScrollArea className="flex-1 p-4" ref={messagesContainerRef}>
-            <div className="max-w-4xl mx-auto space-y-6">
+          <ScrollArea className="flex-1 p-2 sm:p-4" ref={messagesContainerRef}>
+            <div className="max-w-4xl mx-auto space-y-3 sm:space-y-6">
               {messages.map((message) => (
                 <motion.div
                   key={message.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   className={cn(
-                    "flex gap-3",
+                    "flex gap-2 sm:gap-3",
                     message.role === 'user' ? "justify-end" : "justify-start"
                   )}
                 >
                   {message.role === 'assistant' && (
-                    <Avatar className="h-8 w-8 flex-shrink-0">
-                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600">
-                        <Bot className="h-4 w-4 text-white" />
+                    <Avatar className="h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0 ring-2 ring-indigo-100">
+                      <AvatarFallback className="bg-gradient-to-br from-indigo-600 via-blue-600 to-indigo-700 shadow-md">
+                        <Bot className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
                       </AvatarFallback>
                     </Avatar>
                   )}
@@ -556,10 +641,10 @@ Try again or contact support if the issue persists.`
                     message.role === 'user' && "flex justify-end"
                   )}>
                     <div className={cn(
-                      "rounded-2xl p-4",
+                      "rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all",
                       message.role === 'user'
-                        ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white"
-                        : "bg-white border border-slate-200 shadow-sm"
+                        ? "bg-gradient-to-br from-indigo-600 via-blue-600 to-indigo-700 text-white shadow-lg shadow-indigo-500/30"
+                        : "bg-white/90 backdrop-blur-sm border border-slate-200/60 shadow-md hover:shadow-lg transition-shadow"
                     )}>
                       {message.role === 'assistant' ? (
                         <AIMessageRenderer
@@ -569,15 +654,15 @@ Try again or contact support if the issue persists.`
                           showCopyButton={true}
                         />
                       ) : (
-                        <p className="text-white whitespace-pre-wrap">{message.content}</p>
+                        <p className="text-white whitespace-pre-wrap text-sm sm:text-base">{message.content}</p>
                       )}
                     </div>
                   </div>
 
                   {message.role === 'user' && (
-                    <Avatar className="h-8 w-8 flex-shrink-0">
-                      <AvatarFallback className="bg-gradient-to-br from-slate-600 to-slate-700">
-                        <User className="h-4 w-4 text-white" />
+                    <Avatar className="h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0 ring-2 ring-slate-100">
+                      <AvatarFallback className="bg-gradient-to-br from-slate-700 to-slate-800 shadow-md">
+                        <User className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
                       </AvatarFallback>
                     </Avatar>
                   )}
@@ -590,31 +675,31 @@ Try again or contact support if the issue persists.`
                   animate={{ opacity: 1, y: 0 }}
                   className="flex gap-3"
                 >
-                  <Avatar className="h-8 w-8 flex-shrink-0">
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600">
+                  <Avatar className="h-8 w-8 flex-shrink-0 ring-2 ring-indigo-100">
+                    <AvatarFallback className="bg-gradient-to-br from-indigo-600 via-blue-600 to-indigo-700 shadow-md">
                       <Bot className="h-4 w-4 text-white" />
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 max-w-2xl">
-                    <div className="bg-gradient-to-br from-blue-50 to-slate-50 border border-blue-100 rounded-2xl p-5 shadow-sm">
+                    <div className="bg-gradient-to-br from-indigo-50/80 via-blue-50/80 to-slate-50/80 backdrop-blur-sm border border-indigo-200/60 rounded-2xl p-5 shadow-lg">
                       <div className="flex items-center gap-3">
                         <div className="relative">
-                          <div className="w-8 h-8 rounded-full bg-blue-100 animate-pulse"></div>
+                          <div className="w-8 h-8 rounded-full bg-indigo-100 animate-pulse"></div>
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
+                            <Loader2 className="h-4 w-4 text-indigo-600 animate-spin" />
                           </div>
                         </div>
                         <div>
-                          <div className="text-sm font-semibold text-slate-800 mb-1">
+                          <div className="text-sm font-semibold text-slate-900 mb-1">
                             Analyzing School Data
                           </div>
                           <div className="flex items-center gap-2">
                             <div className="flex gap-1">
-                              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                              <div className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                              <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                              <div className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-bounce" style={{ animationDelay: '300ms' }}></div>
                             </div>
-                            <span className="text-xs text-slate-600">Processing insights</span>
+                            <span className="text-xs text-slate-700 font-medium">Processing insights</span>
                           </div>
                         </div>
                       </div>
@@ -628,32 +713,42 @@ Try again or contact support if the issue persists.`
           </ScrollArea>
 
           {/* Input Area */}
-          <div className="flex-shrink-0 border-t border-slate-200 bg-white p-4">
+          <div className="flex-shrink-0 border-t border-slate-200/60 bg-white/95 backdrop-blur-sm p-2 sm:p-4 shadow-lg">
             <div className="max-w-4xl mx-auto">
               <div className="flex gap-2">
+                {/* Quick Prompts Button (Mobile Only) */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowMobilePrompts(true)}
+                  className="xl:hidden flex-shrink-0 h-[48px] sm:h-[52px] px-3"
+                  disabled={isLoading}
+                >
+                  <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
+                </Button>
                 <textarea
                   ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Ask about school performance, student wellbeing, or operational insights..."
-                  className="flex-1 resize-none border border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[52px] max-h-32"
+                  placeholder="Ask about school data..."
+                  className="flex-1 resize-none border border-slate-300 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[48px] sm:min-h-[52px] max-h-32 text-sm sm:text-base"
                   rows={1}
                   disabled={isLoading}
                 />
                 <Button
                   onClick={handleSend}
                   disabled={!input.trim() || isLoading}
-                  className="h-[52px] px-6 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
+                  className="h-[48px] sm:h-[52px] px-4 sm:px-6 bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-700 hover:from-indigo-700 hover:via-blue-700 hover:to-indigo-800 text-white shadow-lg shadow-indigo-500/30 flex-shrink-0 transition-all"
                 >
                   {isLoading ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
                   ) : (
-                    <Send className="h-5 w-5" />
+                    <Send className="h-4 w-4 sm:h-5 sm:w-5" />
                   )}
                 </Button>
               </div>
-              <p className="text-xs text-slate-500 mt-2">
+              <p className="text-xs text-slate-500 mt-1.5 sm:mt-2 hidden sm:block">
                 Press Enter to send, Shift+Enter for new line
               </p>
             </div>
@@ -661,7 +756,7 @@ Try again or contact support if the issue persists.`
         </div>
 
         {/* Right Sidebar - Quick Prompts */}
-        <div className="hidden xl:block w-80 bg-white border-l border-slate-200 flex-shrink-0 overflow-y-auto">
+        <div className="hidden xl:block w-80 bg-white/80 backdrop-blur-sm border-l border-slate-200/60 flex-shrink-0 overflow-y-auto">
           <div className="p-4">
             <h3 className="font-semibold text-slate-800 mb-4">Quick Analysis</h3>
             
@@ -678,19 +773,19 @@ Try again or contact support if the issue persists.`
                         <button
                           key={idx}
                           onClick={() => handleQuickPrompt(prompt.prompt, prompt.category)}
-                          className="w-full text-left p-3 rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-all group"
+                          className="w-full text-left p-3 rounded-lg border border-slate-200 hover:border-indigo-300 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-blue-50 hover:shadow-md transition-all duration-200 group"
                         >
                           <div className="flex items-start gap-2">
                             <div className={cn(
-                              "p-1.5 rounded-lg flex-shrink-0",
-                              category === 'performance' && "bg-blue-100 text-blue-600",
-                              category === 'wellbeing' && "bg-purple-100 text-purple-600",
-                              category === 'operations' && "bg-slate-100 text-slate-600"
+                              "p-1.5 rounded-lg flex-shrink-0 shadow-sm",
+                              category === 'performance' && "bg-blue-100 text-blue-600 group-hover:bg-blue-200",
+                              category === 'wellbeing' && "bg-purple-100 text-purple-600 group-hover:bg-purple-200",
+                              category === 'operations' && "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
                             )}>
                               <prompt.icon className="h-4 w-4" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="font-medium text-sm text-slate-800 group-hover:text-blue-700">
+                              <div className="font-medium text-sm text-slate-800 group-hover:text-indigo-700 transition-colors">
                                 {prompt.label}
                               </div>
                               <div className="text-xs text-slate-500 mt-1 line-clamp-2">
@@ -707,10 +802,10 @@ Try again or contact support if the issue persists.`
             </div>
 
             {/* Stats Card */}
-            <div className="mt-6 p-4 bg-gradient-to-br from-blue-50 to-slate-50 rounded-xl border border-blue-100">
+            <div className="mt-6 p-4 bg-gradient-to-br from-indigo-50 via-blue-50 to-slate-50 rounded-xl border border-indigo-200/60 shadow-md">
               <div className="flex items-center gap-2 mb-2">
-                <Shield className="h-4 w-4 text-blue-600" />
-                <span className="text-sm font-semibold text-slate-800">Session Info</span>
+                <Shield className="h-4 w-4 text-indigo-600" />
+                <span className="text-sm font-semibold text-slate-900">Session Info</span>
               </div>
               <div className="space-y-2 text-xs text-slate-600">
                 <div className="flex justify-between">

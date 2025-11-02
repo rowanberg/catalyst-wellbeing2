@@ -7,8 +7,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const schoolId = searchParams.get('school_id')
     const date = searchParams.get('date') || new Date().toISOString().split('T')[0]
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '20')
+    const page = parseInt(searchParams.get('page') || '1', 10)
+    const limit = parseInt(searchParams.get('limit') || '20', 10)
     const classId = searchParams.get('class_id')
     const gradeFilter = searchParams.get('grade')
     const statusFilter = searchParams.get('status')

@@ -387,37 +387,37 @@ export function CodeQuestAdventures() {
 
   if (gameState === 'challenge') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-green-900 to-blue-900 p-4">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-green-900 to-blue-900 p-3 sm:p-4">
         <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-6">
-            <Button variant="outline" onClick={resetToMenu} className="bg-gray-800/50">
-              ← Back to Quests
+          {/* Header - Mobile Optimized */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mb-4 sm:mb-6">
+            <Button variant="outline" onClick={resetToMenu} className="w-full sm:w-auto bg-gray-800/50 h-10">
+              <span className="text-sm sm:text-base">← Back to Quests</span>
             </Button>
-            <div className="text-center">
-              <h2 className="text-3xl font-bold text-white">{currentChallenge?.title}</h2>
-              <div className="text-lg text-green-300">
+            <div className="text-center flex-1">
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white">{currentChallenge?.title}</h2>
+              <div className="text-sm sm:text-base lg:text-lg text-green-300">
                 {currentChallenge?.language} • Difficulty: {currentChallenge?.difficulty}/5
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-lg text-blue-400">Attempts: {attempts}</div>
-              <div className="text-sm text-gray-300">Streak: {coderStats.streak}</div>
+            <div className="text-center sm:text-right">
+              <div className="text-base sm:text-lg text-blue-400">Attempts: {attempts}</div>
+              <div className="text-xs sm:text-sm text-gray-300">Streak: {coderStats.streak}</div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* Challenge Description */}
             <Card className="bg-gradient-to-br from-blue-600/20 to-purple-600/20 border-blue-400/30">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-white flex items-center gap-2 text-base sm:text-lg">
                   <Code className="h-5 w-5 text-blue-400" />
                   Quest Description
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <p className="text-gray-300">{currentChallenge?.description}</p>
+              <CardContent className="p-4 sm:p-6">
+                <div className="space-y-3 sm:space-y-4">
+                  <p className="text-sm sm:text-base text-gray-300">{currentChallenge?.description}</p>
                   
                   <div className="bg-green-100 p-3 rounded border-l-4 border-green-500">
                     <div className="font-semibold text-green-800 mb-1">Learning Goal:</div>
@@ -457,14 +457,14 @@ export function CodeQuestAdventures() {
 
             {/* Code Editor */}
             <Card className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 border-gray-600/30">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-white flex items-center gap-2 text-base sm:text-lg">
                   <Terminal className="h-5 w-5 text-green-400" />
                   Code Editor
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+              <CardContent className="p-4 sm:p-6">
+                <div className="space-y-3 sm:space-y-4">
                   <Textarea
                     value={userCode}
                     onChange={(e) => setUserCode(e.target.value)}

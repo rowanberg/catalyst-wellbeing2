@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { getCurrentUserProfile } from '@/lib/services/profileService'
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,57 +18,18 @@ export async function GET(request: NextRequest) {
       }
     )
 
-    // Get user from session
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    // Use centralized profile service with built-in caching and deduplication
+    const profile = await getCurrentUserProfile()
     
-    if (userError || !user) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Get complete user profile with school info
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select(`
-        id,
-        user_id,
-        first_name,
-        last_name,
-        email,
-        profile_picture_url,
-        avatar_url,
-        school_id,
-        grade_level,
-        class_name,
-        student_tag,
-        xp,
-        level,
-        gems,
-        streak_days,
-        total_quests_completed
-      `)
-      .eq('user_id', user.id)
-      .single()
-
     if (!profile) {
-      return NextResponse.json({ message: 'Profile not found' }, { status: 404 })
+      return NextResponse.json({ message: 'Unauthorized or profile not found' }, { status: 401 })
     }
 
-    // Get school info separately
-    let schoolData: any = null
-    if (profile.school_id) {
-      const { data: school } = await supabase
-        .from('schools')
-        .select('id, name, school_code, address, city, country, logo_url')
-        .eq('id', profile.school_id)
-        .single()
-      if (school) {
-        schoolData = school
-      }
-    }
+    // School info is already included in profile.school from profileService
+    const schoolData = profile.school
 
-    // Parallel fetch profile-related data
+    // Parallel fetch student-specific data (achievements, activity, rank)
     const [achievementsRes, activityRes, rankRes] = await Promise.allSettled([
-      // Recent achievements
       supabase
         .from('student_achievements')
         .select('*')
@@ -75,7 +37,6 @@ export async function GET(request: NextRequest) {
         .order('earned_at', { ascending: false })
         .limit(8),
       
-      // Recent activity
       supabase
         .from('student_activity')
         .select('*')
@@ -83,7 +44,6 @@ export async function GET(request: NextRequest) {
         .order('timestamp', { ascending: false })
         .limit(5),
       
-      // Class rank
       supabase
         .from('student_progress')
         .select('class_rank')
@@ -117,7 +77,7 @@ export async function GET(request: NextRequest) {
       xp: act.xp_gained || null
     }))
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       profile: {
         first_name: profile.first_name,
         last_name: profile.last_name,
@@ -127,7 +87,7 @@ export async function GET(request: NextRequest) {
         profile_picture_url: profile.profile_picture_url || profile.avatar_url,
         grade_level: profile.grade_level,
         class_name: profile.class_name,
-        bio: null,
+        bio: profile.bio,
         school: schoolData ? {
           id: schoolData.id,
           name: schoolData.name,
@@ -152,6 +112,9 @@ export async function GET(request: NextRequest) {
       achievements: formattedAchievements,
       recentActivity: formattedActivity
     })
+    
+    response.headers.set('Cache-Control', 'private, max-age=120, stale-while-revalidate=30')
+    return response
 
   } catch (error: any) {
     console.error('Error in /api/v2/student/profile:', error)

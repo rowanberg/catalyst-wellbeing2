@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
         // Extract from class_name like "Grade 5-A" or "Class 5A"
         const match = className.match(/(\d+)[^\d]*([A-Z])?/i)
         if (match) {
-          grade = parseInt(match[1])
+          grade = parseInt(match[1], 10)
           section = match[2] || 'A'
         }
       }
