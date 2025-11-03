@@ -7,6 +7,7 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin-client'
 import { ApiResponse } from '@/lib/api/response'
 import { logger } from '@/lib/logger'
 
+export const dynamic = 'force-dynamic'
 // Enable caching for 30 seconds
 export const revalidate = 30
 

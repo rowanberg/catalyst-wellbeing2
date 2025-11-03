@@ -38,7 +38,6 @@ export async function GET(request: NextRequest) {
     const cached = dashboardCache.get(cacheKey)
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       const cacheAge = Math.round((Date.now() - cached.timestamp) / 1000)
-      console.log(`✅ [Dashboard Cache] HIT for teacher ${teacherId} (age: ${cacheAge}s)`)
       const response = NextResponse.json(cached.data)
       response.headers.set('X-Cache', 'HIT')
       response.headers.set('X-Cache-Age', cacheAge.toString())
@@ -46,8 +45,6 @@ export async function GET(request: NextRequest) {
       response.headers.set('CDN-Cache-Control', 'public, max-age=600')
       return response
     }
-    
-    console.log(`🔄 [Dashboard Cache] MISS for teacher ${teacherId}`)
 
     // Use request deduplication to prevent concurrent duplicate requests
     const fetchData = async () => {
@@ -69,9 +66,6 @@ export async function GET(request: NextRequest) {
           .maybeSingle() // Use maybeSingle to avoid errors if not found
       ])
       
-      const profileFetchTime = Date.now() - startTime
-      console.log(`⚡ [Dashboard] Profile fetch: ${profileFetchTime}ms`)
-
       // Handle teacher classes
       let classIds: string[] = []
       let teacherSchoolId: string | null = null
@@ -106,7 +100,6 @@ export async function GET(request: NextRequest) {
         
         // Cache empty result too
         dashboardCache.set(cacheKey, { data: emptyData, timestamp: Date.now() })
-        console.log(`💾 [Dashboard Cache] Stored empty data for teacher ${teacherId}`)
         
         return emptyData
       }
@@ -135,8 +128,6 @@ export async function GET(request: NextRequest) {
           .eq('status', 'pending')
           .limit(100) : Promise.resolve({ data: [], error: null })
       ])
-      
-      console.log(`⚡ [Dashboard] Parallel queries: ${Date.now() - queryStart}ms`)
 
     // Process student assignments
     let studentIds: string[] = []
@@ -155,7 +146,6 @@ export async function GET(request: NextRequest) {
           .in('user_id', limitedStudentIds)
           .limit(100)
         
-        console.log(`⚡ [Dashboard] Student profiles fetch (${studentIds.length} students): ${Date.now() - profileStart}ms`)
         studentProfiles = profiles || []
       }
 
@@ -261,7 +251,6 @@ export async function GET(request: NextRequest) {
     
     // Store in cache
     dashboardCache.set(cacheKey, { data: responseData, timestamp: Date.now() })
-    console.log(`💾 [Dashboard Cache] Stored data for teacher ${teacherId}`)
     
     // Clean old cache entries (keep last 100)
     if (dashboardCache.size > 100) {
@@ -279,7 +268,6 @@ export async function GET(request: NextRequest) {
     return response
 
   } catch (error: any) {
-    console.error('Error in combined teacher dashboard API:', error)
     return NextResponse.json(
       { 
         error: 'Internal server error',

@@ -33,7 +33,6 @@ export async function GET(request: NextRequest) {
     const cacheKey = `teacher-data-${teacherId}-${schoolId}-${classId || 'none'}-${includeStudents}`
     const cached = responseCache.get(cacheKey)
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      logger.debug('Teacher data cache hit', { teacherId })
       const response = NextResponse.json({ success: true, data: cached.data })
       response.headers.set('X-Cache', 'HIT')
       response.headers.set('Cache-Control', 'private, max-age=30')
@@ -43,12 +42,9 @@ export async function GET(request: NextRequest) {
     // Check for in-flight request
     const inFlightKey = `inflight-${cacheKey}`
     if (inFlightRequests.has(inFlightKey)) {
-      logger.debug('Waiting for in-flight teacher data request', { teacherId })
       const data = await inFlightRequests.get(inFlightKey)!
       return NextResponse.json({ success: true, data })
     }
-
-    logger.debug('Teacher data API called', { teacherId, schoolId, includeStudents, classId })
 
     const supabase = getSupabaseAdmin()
 
@@ -66,8 +62,6 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      logger.debug('Starting teacher data queries', { teacherId, schoolId })
-
       // Direct parallel DB queries (replaces internal API calls)
       const [
         teacherProfile,
@@ -95,31 +89,11 @@ export async function GET(request: NextRequest) {
           .eq('school_id', schoolId)
       ])
 
-      logger.debug('Query results', {
-        teacherProfile: { 
-          found: !!teacherProfile.data?.length, 
-          count: teacherProfile.data?.length || 0,
-          error: teacherProfile.error?.message,
-          profileId: teacherProfile.data?.[0]?.id 
-        },
-        teacherAssignments: { 
-          count: teacherAssignments.data?.length || 0, 
-          error: teacherAssignments.error?.message,
-          assignments: teacherAssignments.data
-        },
-        gradeLevels: { 
-          count: gradeLevels.data?.length || 0, 
-          error: gradeLevels.error?.message 
-        },
-        queryParams: { teacherId, schoolId }
-      })
-
       // If no assignments found with user_id, try with profile_id
       let finalAssignments = teacherAssignments
       if ((!teacherAssignments.data || teacherAssignments.data.length === 0) && 
           teacherProfile.data && teacherProfile.data.length > 0) {
         const profileId = teacherProfile.data[0].id
-        logger.debug('Trying assignments with profile_id', { profileId })
         
         const profileAssignmentsResult = await supabase
           .from('teacher_class_assignments')
@@ -130,9 +104,6 @@ export async function GET(request: NextRequest) {
         
         if (profileAssignmentsResult.data && profileAssignmentsResult.data.length > 0) {
           finalAssignments = profileAssignmentsResult
-          logger.debug('Found assignments with profile_id', { count: profileAssignmentsResult.data.length })
-        } else {
-          logger.debug('No assignments found with profile_id either', { error: profileAssignmentsResult.error?.message })
         }
       }
 
@@ -141,10 +112,6 @@ export async function GET(request: NextRequest) {
       // If we have assignments, get the class details separately
       if (finalAssignments.data && finalAssignments.data.length > 0) {
         const classIds = finalAssignments.data.map((assignment: any) => assignment.class_id)
-        logger.debug('Found teacher assignments', { 
-          assignmentCount: finalAssignments.data.length, 
-          classIds 
-        })
         
         const { data: classDetails, error: classError } = await supabase
           .from('classes')
@@ -162,9 +129,6 @@ export async function GET(request: NextRequest) {
           .in('id', classIds)
         
         if (!classError && classDetails) {
-          logger.debug('Successfully fetched class details', { 
-            classDetailsCount: classDetails.length 
-          })
           // Merge assignment info with class details
           assignedClasses.data = classDetails.map((classDetail: any) => {
             const assignment = finalAssignments.data?.find((a: any) => a.class_id === classDetail.id)
@@ -174,7 +138,6 @@ export async function GET(request: NextRequest) {
             }
           })
         } else {
-          logger.warn('Failed to fetch class details', { error: classError?.message })
           // Fallback: create minimal class data from assignments
           assignedClasses.data = finalAssignments.data?.map((assignment: any) => ({
             ...assignment,
@@ -244,8 +207,6 @@ export async function GET(request: NextRequest) {
               assigned_at: assignment.assigned_at
             }
           })
-      } else {
-        logger.info('No assigned classes found for teacher', { teacherId, schoolId })
       }
 
       // Process grade levels
@@ -278,14 +239,6 @@ export async function GET(request: NextRequest) {
 
       const duration = Date.now() - startTime
       logger.perf('Teacher data fetch', duration)
-      logger.debug('Teacher data response prepared', {
-        teacherId,
-        schoolId,
-        assignedClasses: responseData.assignedClasses.length,
-        grades: responseData.grades.length,
-        students: responseData.students.length,
-        teacherProfile: !!responseData.teacher
-      })
 
       return {
         ...responseData,

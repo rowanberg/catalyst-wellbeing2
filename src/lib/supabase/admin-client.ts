@@ -44,7 +44,6 @@ export function getSupabaseAdmin(): SupabaseClient {
       },
     })
 
-    logger.info('Supabase admin client initialized')
     return supabaseAdminInstance
   } catch (error) {
     logger.error('Failed to initialize Supabase admin client', error)
@@ -57,5 +56,4 @@ export function getSupabaseAdmin(): SupabaseClient {
  */
 export function resetSupabaseAdmin(): void {
   supabaseAdminInstance = null
-  logger.debug('Supabase admin client reset')
 }

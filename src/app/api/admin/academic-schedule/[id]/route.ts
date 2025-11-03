@@ -7,12 +7,12 @@ export const dynamic = 'force-dynamic'
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = getSupabaseAdmin()
     const body = await request.json()
-    const eventId = params.id
+    const { id: eventId } = await params
 
     const {
       title,
@@ -77,11 +77,11 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = getSupabaseAdmin()
-    const eventId = params.id
+    const { id: eventId } = await params
 
     // Delete event
     const { error } = await supabase

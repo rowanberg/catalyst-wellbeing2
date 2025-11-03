@@ -12,18 +12,13 @@ export async function GET(request: NextRequest) {
   const startTime = Date.now()
   
   try {
-    logger.debug('Fetching teacher school information')
-
     const supabase = await createSupabaseServerClient()
 
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
-      logger.warn('User authentication failed', { error: authError?.message })
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    logger.debug('Authenticated user', { email: user.email })
 
     // Get teacher profile to find school_id
     const { data: profile, error: profileError } = await supabase
@@ -39,11 +34,8 @@ export async function GET(request: NextRequest) {
     }
 
     if (!profile.school_id) {
-      logger.warn('No school associated with teacher', { userId: user.id })
       return NextResponse.json({ error: 'No school associated with teacher' }, { status: 404 })
     }
-
-    logger.debug('Teacher school_id found', { schoolId: profile.school_id })
 
     // Fetch school basic information (without .single() first to avoid PGRST116)
     const { data: schoolData, error: schoolError } = await supabase
@@ -54,15 +46,8 @@ export async function GET(request: NextRequest) {
     const school = schoolData?.[0] || null
 
     if (schoolError || !school) {
-      logger.warn('School not found or error fetching', { 
-        schoolId: profile.school_id,
-        error: schoolError?.message,
-        code: schoolError?.code 
-      })
-      
       // Use fallback if school doesn't exist or has error
       if (!school || schoolError?.code === 'PGRST116') {
-        logger.info('Providing fallback school data', { schoolId: profile.school_id })
         
         const fallbackSchoolInfo = {
           id: profile.school_id,
@@ -103,8 +88,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'School not found' }, { status: 404 })
     }
 
-    logger.debug('School record found', { schoolId: school.id })
-
     // Fetch detailed school information from school_details (primary source)
     const { data: schoolDetailsData, error: detailsError } = await supabase
       .from('school_details')
@@ -112,19 +95,6 @@ export async function GET(request: NextRequest) {
       .eq('school_id', profile.school_id)
     
     const schoolDetails = schoolDetailsData?.[0] || null
-
-    if (detailsError) {
-      logger.warn('Error fetching school details', { error: detailsError.message })
-    }
-    
-    if (schoolDetails) {
-      logger.debug('School details found', { 
-        schoolName: schoolDetails.school_name,
-        setupCompleted: schoolDetails.setup_completed 
-      })
-    } else {
-      logger.info('No school details configured, using basic school info', { schoolId: profile.school_id })
-    }
 
     // Get school statistics with error handling
     let totalStudents = 0
@@ -159,16 +129,9 @@ export async function GET(request: NextRequest) {
       totalTeachers = teachersResult.count || 0
       gradeNames = gradesResult.data?.map((g: any) => g.name) || []
       
-      if (studentsResult.error) logger.warn('Error counting students', { error: studentsResult.error.message })
-      if (teachersResult.error) logger.warn('Error counting teachers', { error: teachersResult.error.message })
-      if (gradesResult.error) logger.warn('Error fetching grades', { error: gradesResult.error.message })
-      
     } catch (statsError) {
-      logger.warn('Error fetching school statistics')
       // Use default values if statistics queries fail
     }
-
-    logger.debug('School statistics', { totalStudents, totalTeachers, gradeCount: gradeNames.length })
 
     // Combine school information prioritizing school_details table with correct column names
     const schoolInfo = {

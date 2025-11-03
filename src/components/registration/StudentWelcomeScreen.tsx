@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import dynamic from 'next/dynamic'
+import Image from 'next/image'
 import confetti from 'canvas-confetti'
 import { 
   BookOpen,
@@ -389,7 +390,7 @@ export default function StudentWelcomeScreen({
 
                     <div className="flex items-center gap-4 sm:gap-6">
                       {schoolLogo ? (
-                        <img src={schoolLogo} alt={schoolName} className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover" />
+                        <Image src={schoolLogo} alt={schoolName} className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover" width={80} height={80} />
                       ) : (
                         <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-xl">
                           <School className="w-8 h-8 sm:w-10 sm:h-10 text-white" />

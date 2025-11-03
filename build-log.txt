@@ -1,0 +1,429 @@
+﻿
+> catalyst@0.1.0 build
+> next build
+
+   Γû▓ Next.js 15.5.2
+   - Environments: .env.local, .env.production
+   - Experiments (use with caution):
+     Γ£ô optimizeCss
+     Γ£ô webpackBuildWorker
+     ┬╖ optimizePackageImports
+     Γ£ô parallelServerCompiles
+     Γ£ô parallelServerBuildTraces
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully in 23.2s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/295) ...
+   Generating static pages (73/295) 
+node.exe : [2025-11-03T13:39:06.528Z] [ERROR] Error in 
+teacher assigned classes API: 
+{"error":{"message":"Dynamic server usage: Route 
+/api/teacher/teacher-assigned-classes couldn't be 
+rendered statically because it used `request.url`. See 
+more info here: https://nextjs.org/docs/messages/dynamic-s
+erver-error","stack":"Error: Dynamic server usage: Route 
+/api/teacher/teacher-assigned-classes couldn't be 
+rendered statically because it used `request.url`. See 
+more info here: 
+https://nextjs.org/docs/messages/dynamic-server-error\n   
+ at rJ (C:\\projects\\kids\\catalyst\\node_modules\\next\\
+dist\\compiled\\next-server\\app-route.runtime.prod.js:5:3
+3505)\n    at Object.get (C:\\projects\\kids\\catalyst\\no
+de_modules\\next\\dist\\compiled\\next-server\\app-route.r
+untime.prod.js:5:27306)\n    at A (C:\\projects\\kids\\cat
+alyst\\.next\\server\\app\\api\\teacher\\teacher-assigned-
+classes\\route.js:1:5213)\n    at AsyncLocalStorage.run 
+(node:internal/async_local_storage/async_hooks:91:14)\n   
+ at rN.do (C:\\projects\\kids\\catalyst\\node_modules\\nex
+t\\dist\\compiled\\next-server\\app-route.runtime.prod.js:
+5:21022)\n    at C:\\projects\\kids\\catalyst\\node_module
+s\\next\\dist\\compiled\\next-server\\app-route.runtime.pr
+od.js:5:27868\n    at C:\\projects\\kids\\catalyst\\node_m
+odules\\next\\dist\\server\\lib\\trace\\tracer.js:170:36\n
+    at NoopContextManager.with (C:\\projects\\kids\\cataly
+st\\node_modules\\@opentelemetry\\api\\build\\src\\context
+\\NoopContextManager.js:25:19)\n    at ContextAPI.with (C:
+\\projects\\kids\\catalyst\\node_modules\\@opentelemetry\\
+api\\build\\src\\api\\context.js:60:46)\n    at 
+NoopTracer.startActiveSpan (C:\\projects\\kids\\catalyst\\
+node_modules\\@opentelemetry\\api\\build\\src\\trace\\Noop
+Tracer.js:65:31)"}}
+At C:\Program Files\nodejs\npm.ps1:29 char:3
++   & $NODE_EXE $NPM_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([2025-11-03T 
+   13:...er.js:65:31)"}}:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[2025-11-03T13:39:06.651Z] [ERROR] Error fetching 
+activity monitor data: {"error":{"message":"Dynamic 
+server usage: Route /api/admin/activity-monitor couldn't 
+be rendered statically because it used `request.url`. See 
+more info here: https://nextjs.org/docs/messages/dynamic-s
+erver-error","stack":"Error: Dynamic server usage: Route 
+/api/admin/activity-monitor couldn't be rendered 
+statically because it used `request.url`. See more info 
+here: 
+https://nextjs.org/docs/messages/dynamic-server-error\n   
+ at rJ (C:\\projects\\kids\\catalyst\\node_modules\\next\\
+dist\\compiled\\next-server\\app-route.runtime.prod.js:5:3
+3505)\n    at Object.get (C:\\projects\\kids\\catalyst\\no
+de_modules\\next\\dist\\compiled\\next-server\\app-route.r
+untime.prod.js:5:27306)\n    at z (C:\\projects\\kids\\cat
+alyst\\.next\\server\\app\\api\\admin\\activity-monitor\\r
+oute.js:1:1552)\n    at AsyncLocalStorage.run 
+(node:internal/async_local_storage/async_hooks:91:14)\n   
+ at rN.do (C:\\projects\\kids\\catalyst\\node_modules\\nex
+t\\dist\\compiled\\next-server\\app-route.runtime.prod.js:
+5:21022)\n    at C:\\projects\\kids\\catalyst\\node_module
+s\\next\\dist\\compiled\\next-server\\app-route.runtime.pr
+od.js:5:27868\n    at C:\\projects\\kids\\catalyst\\node_m
+odules\\next\\dist\\server\\lib\\trace\\tracer.js:170:36\n
+    at NoopContextManager.with (C:\\projects\\kids\\cataly
+st\\node_modules\\@opentelemetry\\api\\build\\src\\context
+\\NoopContextManager.js:25:19)\n    at ContextAPI.with (C:
+\\projects\\kids\\catalyst\\node_modules\\@opentelemetry\\
+api\\build\\src\\api\\context.js:60:46)\n    at 
+NoopTracer.startActiveSpan (C:\\projects\\kids\\catalyst\\
+node_modules\\@opentelemetry\\api\\build\\src\\trace\\Noop
+Tracer.js:65:31)"}}
+   Generating static pages (147/295) 
+   Generating static pages (221/295) 
+ Γ£ô Generating static pages (295/295)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                             Size  First Load JS
+Γöî Γùï /                                                1.16 kB         104 kB
+Γö£ Γùï /_not-found                                        652 B         103 kB
+Γö£ Γùï /accessibility                                   5.06 kB         128 kB
+Γö£ Γùï /admin                                           14.3 kB         295 kB
+Γö£ Γùï /admin/academic-upgrade                          7.63 kB         170 kB
+Γö£ Γùï /admin/activity-monitor                          6.52 kB         204 kB
+Γö£ Γùï /admin/ai-assistant                              12.6 kB         299 kB
+Γö£ Γùï /admin/analytics                                 5.26 kB         170 kB
+Γö£ Γùï /admin/announcements                             12.2 kB         208 kB
+Γö£ Γùï /admin/attendance                                 7.1 kB         206 kB
+Γö£ Γùï /admin/communications                            5.82 kB         198 kB
+Γö£ Γùï /admin/help-requests                             6.92 kB         204 kB
+Γö£ Γùï /admin/messaging                                 7.02 kB         275 kB
+Γö£ Γùï /admin/parent-engagement                          5.4 kB         178 kB
+Γö£ Γùï /admin/pending-users                              4.4 kB         167 kB
+Γö£ Γùï /admin/polls-surveys                              9.3 kB         207 kB
+Γö£ Γùï /admin/progress                                  5.12 kB         202 kB
+Γö£ Γùï /admin/schedule                                  10.3 kB         202 kB
+Γö£ Γùï /admin/school-goals                              5.46 kB         172 kB
+Γö£ Γùï /admin/sel-programs                              4.95 kB         171 kB
+Γö£ Γùï /admin/settings                                  22.9 kB         214 kB
+Γö£ Γùï /admin/setup                                       11 kB         241 kB
+Γö£ Γùï /admin/users                                     18.3 kB         222 kB
+Γö£ Γùï /admin/wellbeing-analytics                       25.8 kB         329 kB
+Γö£ ╞Æ /api/achievements                                  652 B         103 kB
+Γö£ ╞Æ /api/achievements/milestones                       652 B         103 kB
+Γö£ ╞Æ /api/admin/academic-schedule                       652 B         103 kB
+Γö£ ╞Æ /api/admin/academic-schedule/[id]                  652 B         103 kB
+Γö£ ╞Æ /api/admin/academic-upgrade/classes                652 B         103 kB
+Γö£ ╞Æ /api/admin/academic-upgrade/mappings               652 B         103 kB
+Γö£ ╞Æ /api/admin/activity-monitor                        652 B         103 kB
+Γö£ ╞Æ /api/admin/ai-chat                                 652 B         103 kB
+Γö£ ╞Æ /api/admin/analytics                               652 B         103 kB
+Γö£ ╞Æ /api/admin/announcements                           652 B         103 kB
+Γö£ ╞Æ /api/admin/announcements/enhance-ai                652 B         103 kB
+Γö£ ╞Æ /api/admin/attendance                              652 B         103 kB
+Γö£ ╞Æ /api/admin/classes                                 652 B         103 kB
+Γö£ ╞Æ /api/admin/create-admin-user                       652 B         103 kB
+Γö£ ╞Æ /api/admin/direct-help-requests                    652 B         103 kB
+Γö£ ╞Æ /api/admin/export                                  652 B         103 kB
+Γö£ ╞Æ /api/admin/grade-levels                            652 B         103 kB
+Γö£ ╞Æ /api/admin/help-requests                           652 B         103 kB
+Γö£ ╞Æ /api/admin/init-school-setup                       652 B         103 kB
+Γö£ ╞Æ /api/admin/pending-users                           652 B         103 kB
+Γö£ ╞Æ /api/admin/polls                                   652 B         103 kB
+Γö£ ╞Æ /api/admin/polls/[id]                              652 B         103 kB
+Γö£ ╞Æ /api/admin/polls/[id]/analytics                    652 B         103 kB
+Γö£ ╞Æ /api/admin/polls/analytics                         652 B         103 kB
+Γö£ ╞Æ /api/admin/school                                  652 B         103 kB
+Γö£ ╞Æ /api/admin/school-details                          652 B         103 kB
+Γö£ ╞Æ /api/admin/school-info                             652 B         103 kB
+Γö£ ╞Æ /api/admin/school-settings                         652 B         103 kB
+Γö£ ╞Æ /api/admin/school-setup                            652 B         103 kB
+Γö£ ╞Æ /api/admin/send-message                            652 B         103 kB
+Γö£ ╞Æ /api/admin/stats                                   652 B         103 kB
+Γö£ ╞Æ /api/admin/students                                652 B         103 kB
+Γö£ ╞Æ /api/admin/users                                   652 B         103 kB
+Γö£ ╞Æ /api/admin/users/[id]                              652 B         103 kB
+Γö£ ╞Æ /api/admin/wellbeing-analytics                     652 B         103 kB
+Γö£ ╞Æ /api/admin/wellbeing-insights                      652 B         103 kB
+Γö£ ╞Æ /api/admin/wellbeing-overview                      652 B         103 kB
+Γö£ ╞Æ /api/attendance                                    652 B         103 kB
+Γö£ ╞Æ /api/auth/google-register                          652 B         103 kB
+Γö£ ╞Æ /api/auth/session                                  652 B         103 kB
+Γö£ ╞Æ /api/chat/gemini                                   652 B         103 kB
+Γö£ ╞Æ /api/chat/gemini-extended                          652 B         103 kB
+Γö£ ╞Æ /api/check-email-status                            652 B         103 kB
+Γö£ ╞Æ /api/classes                                       652 B         103 kB
+Γö£ ╞Æ /api/communications/channels                       652 B         103 kB
+Γö£ ╞Æ /api/communications/consent                        652 B         103 kB
+Γö£ ╞Æ /api/communications/emergency                      652 B         103 kB
+Γö£ ╞Æ /api/communications/messages                       652 B         103 kB
+Γö£ ╞Æ /api/communications/send                           652 B         103 kB
+Γö£ ╞Æ /api/confirm-email                                 652 B         103 kB
+Γö£ ╞Æ /api/create-admin-profile                          652 B         103 kB
+Γö£ ╞Æ /api/create-profile                                652 B         103 kB
+Γö£ ╞Æ /api/create-school                                 652 B         103 kB
+Γö£ ╞Æ /api/digital-portfolio                             652 B         103 kB
+Γö£ ╞Æ /api/examination/analytics/[examId]                652 B         103 kB
+Γö£ ╞Æ /api/examination/generate-questions                652 B         103 kB
+Γö£ ╞Æ /api/family-messaging                              652 B         103 kB
+Γö£ ╞Æ /api/family-messaging/cleanup                      652 B         103 kB
+Γö£ ╞Æ /api/family/conversations                          652 B         103 kB
+Γö£ ╞Æ /api/family/messages                               652 B         103 kB
+Γö£ ╞Æ /api/fix-orphaned-student                          652 B         103 kB
+Γö£ ╞Æ /api/get-profile                                   652 B         103 kB
+Γö£ ╞Æ /api/health                                        652 B         103 kB
+Γö£ ╞Æ /api/parent-child-relationships                    652 B         103 kB
+Γö£ ╞Æ /api/parent/children                               652 B         103 kB
+Γö£ ╞Æ /api/peer-tutoring/sessions                        652 B         103 kB
+Γö£ ╞Æ /api/peer-tutoring/tutors                          652 B         103 kB
+Γö£ ╞Æ /api/polls                                         652 B         103 kB
+Γö£ ╞Æ /api/polls/[id]/responses                          652 B         103 kB
+Γö£ ╞Æ /api/polls/responses                               652 B         103 kB
+Γö£ ╞Æ /api/profile                                       652 B         103 kB
+Γö£ ╞Æ /api/profile/upload-picture                        652 B         103 kB
+Γö£ ╞Æ /api/quota/status                                  652 B         103 kB
+Γö£ ╞Æ /api/register-school                               652 B         103 kB
+Γö£ ╞Æ /api/register-student                              652 B         103 kB
+Γö£ ╞Æ /api/registration/classes                          652 B         103 kB
+Γö£ ╞Æ /api/resend-confirmation                           652 B         103 kB
+Γö£ ╞Æ /api/reset-password                                652 B         103 kB
+Γö£ ╞Æ /api/school-events                                 652 B         103 kB
+Γö£ ╞Æ /api/school-events/my-events                       652 B         103 kB
+Γö£ ╞Æ /api/school-events/register                        652 B         103 kB
+Γö£ ╞Æ /api/send-confirmation                             652 B         103 kB
+Γö£ ╞Æ /api/send-email-backup                             652 B         103 kB
+Γö£ ╞Æ /api/send-password-reset-email                     652 B         103 kB
+Γö£ ╞Æ /api/send-verification-email                       652 B         103 kB
+Γö£ ╞Æ /api/student/affirmations                          652 B         103 kB
+Γö£ ╞Æ /api/student/ai-chat                               652 B         103 kB
+Γö£ ╞Æ /api/student/announcements                         652 B         103 kB
+Γö£ ╞Æ /api/student/assessments                           652 B         103 kB
+Γö£ ╞Æ /api/student/assigned-teachers                     652 B         103 kB
+Γö£ ╞Æ /api/student/attendance-history                    652 B         103 kB
+Γö£ ╞Æ /api/student/black-marks                           652 B         103 kB
+Γö£ ╞Æ /api/student/black-marks/submissions               652 B         103 kB
+Γö£ ╞Æ /api/student/breathing                             652 B         103 kB
+Γö£ ╞Æ /api/student/calendar-events                       652 B         103 kB
+Γö£ ╞Æ /api/student/courage                               652 B         103 kB
+Γö£ ╞Æ /api/student/dashboard                             652 B         103 kB
+Γö£ ╞Æ /api/student/dashboard-data                        652 B         103 kB
+Γö£ ╞Æ /api/student/examinations                          652 B         103 kB
+Γö£ ╞Æ /api/student/fix-data                              652 B         103 kB
+Γö£ ╞Æ /api/student/fix-student-tags                      652 B         103 kB
+Γö£ ╞Æ /api/student/gratitude                             652 B         103 kB
+Γö£ ╞Æ /api/student/habits                                652 B         103 kB
+Γö£ ╞Æ /api/student/help                                  652 B         103 kB
+Γö£ ╞Æ /api/student/kindness                              652 B         103 kB
+Γö£ ╞Æ /api/student/lookup                                652 B         103 kB
+Γö£ ╞Æ /api/student/management-messages                   652 B         103 kB
+Γö£ ╞Æ /api/student/math-battle-progress                  652 B         103 kB
+Γö£ ╞Æ /api/student/mindfulness                           652 B         103 kB
+Γö£ ╞Æ /api/student/mood                                  652 B         103 kB
+Γö£ ╞Æ /api/student/office-hours/conversations            652 B         103 kB
+Γö£ ╞Æ /api/student/office-hours/messages                 652 B         103 kB
+Γö£ ╞Æ /api/student/office-hours/send-message             652 B         103 kB
+Γö£ ╞Æ /api/student/office-hours/start-conversation       652 B         103 kB
+Γö£ ╞Æ /api/student/office-hours/teachers                 652 B         103 kB
+Γö£ ╞Æ /api/student/parents                               652 B         103 kB
+Γö£ ╞Æ /api/student/profile                               652 B         103 kB
+Γö£ ╞Æ /api/student/profile-picture                       652 B         103 kB
+Γö£ ╞Æ /api/student/quests                                652 B         103 kB
+Γö£ ╞Æ /api/student/rank                                  652 B         103 kB
+Γö£ ╞Æ /api/student/rank/refresh                          652 B         103 kB
+Γö£ ╞Æ /api/student/results                               652 B         103 kB
+Γö£ ╞Æ /api/student/school-info                           652 B         103 kB
+Γö£ ╞Æ /api/student/settings                              652 B         103 kB
+Γö£ ╞Æ /api/student/submit-help-request                   652 B         103 kB
+Γö£ ╞Æ /api/student/upcoming-assessments                  652 B         103 kB
+Γö£ ╞Æ /api/student/wallet                                652 B         103 kB
+Γö£ ╞Æ /api/student/wallet/classmates                     652 B         103 kB
+Γö£ ╞Æ /api/student/wallet/contacts                       652 B         103 kB
+Γö£ ╞Æ /api/student/wallet/create                         652 B         103 kB
+Γö£ ╞Æ /api/student/wallet/exchange                       652 B         103 kB
+Γö£ ╞Æ /api/student/wallet/notifications                  652 B         103 kB
+Γö£ ╞Æ /api/student/wallet/send                           652 B         103 kB
+Γö£ ╞Æ /api/student/wallet/setup-password                 652 B         103 kB
+Γö£ ╞Æ /api/student/wallet/transactions                   652 B         103 kB
+Γö£ ╞Æ /api/student/whatsapp-config                       652 B         103 kB
+Γö£ ╞Æ /api/student/word-wizard/progress                  652 B         103 kB
+Γö£ ╞Æ /api/study-groups                                  652 B         103 kB
+Γö£ ╞Æ /api/study-groups/join                             652 B         103 kB
+Γö£ ╞Æ /api/study-groups/my-groups                        652 B         103 kB
+Γö£ ╞Æ /api/study-groups/requests                         652 B         103 kB
+Γö£ ╞Æ /api/superpanel/api-keys                           652 B         103 kB
+Γö£ ╞Æ /api/superpanel/dashboard                          652 B         103 kB
+Γö£ ╞Æ /api/superpanel/notifications                      652 B         103 kB
+Γö£ ╞Æ /api/superpanel/schools/[id]                       652 B         103 kB
+Γö£ ╞Æ /api/superpanel/schools/[id]/controls              652 B         103 kB
+Γö£ ╞Æ /api/superpanel/verify-key                         652 B         103 kB
+Γö£ ╞Æ /api/sync/subscription                             652 B         103 kB
+Γö£ ╞Æ /api/teacher/activities/sessions                   652 B         103 kB
+Γö£ ╞Æ /api/teacher/activities/templates                  652 B         103 kB
+Γö£ ╞Æ /api/teacher/analytics                             652 B         103 kB
+Γö£ ╞Æ /api/teacher/analytics/assessment/[id]             652 B         103 kB
+Γö£ ╞Æ /api/teacher/assessment-grades                     652 B         103 kB
+Γö£ ╞Æ /api/teacher/assessments                           652 B         103 kB
+Γö£ ╞Æ /api/teacher/assign-class                          652 B         103 kB
+Γö£ ╞Æ /api/teacher/assign-to-class                       652 B         103 kB
+Γö£ ╞Æ /api/teacher/assigned-classes                      652 B         103 kB
+Γö£ ╞Æ /api/teacher/assigned-classes-v2                   652 B         103 kB
+Γö£ ╞Æ /api/teacher/attendance-details                    652 B         103 kB
+Γö£ ╞Æ /api/teacher/attendance-grades                     652 B         103 kB
+Γö£ ╞Æ /api/teacher/attendance-history                    652 B         103 kB
+Γö£ ╞Æ /api/teacher/attendance/classes                    652 B         103 kB
+Γö£ ╞Æ /api/teacher/attendance/grades                     652 B         103 kB
+Γö£ ╞Æ /api/teacher/attendance/students                   652 B         103 kB
+Γö£ ╞Æ /api/teacher/badges                                652 B         103 kB
+Γö£ ╞Æ /api/teacher/badges/[id]                           652 B         103 kB
+Γö£ ╞Æ /api/teacher/black-marks                           652 B         103 kB
+Γö£ ╞Æ /api/teacher/black-marks/[id]                      652 B         103 kB
+Γö£ ╞Æ /api/teacher/class-assignments                     652 B         103 kB
+Γö£ ╞Æ /api/teacher/classes                               652 B         103 kB
+Γö£ ╞Æ /api/teacher/classes/[gradeLevel]                  652 B         103 kB
+Γö£ ╞Æ /api/teacher/classes/batch                         652 B         103 kB
+Γö£ ╞Æ /api/teacher/community/posts                       652 B         103 kB
+Γö£ ╞Æ /api/teacher/create-post                           652 B         103 kB
+Γö£ ╞Æ /api/teacher/credit-stats                          652 B         103 kB
+Γö£ ╞Æ /api/teacher/custom-badges                         652 B         103 kB
+Γö£ ╞Æ /api/teacher/custom-quests                         652 B         103 kB
+Γö£ ╞Æ /api/teacher/dashboard-analytics                   652 B         103 kB
+Γö£ ╞Æ /api/teacher/dashboard-combined                    652 B         103 kB
+Γö£ ╞Æ /api/teacher/data                                  652 B         103 kB
+Γö£ ╞Æ /api/teacher/exam-stats                            652 B         103 kB
+Γö£ ╞Æ /api/teacher/examinations                          652 B         103 kB
+Γö£ ╞Æ /api/teacher/export-grades                         652 B         103 kB
+Γö£ ╞Æ /api/teacher/grade-levels                          652 B         103 kB
+Γö£ ╞Æ /api/teacher/grades                                652 B         103 kB
+Γö£ ╞Æ /api/teacher/implement-intervention                652 B         103 kB
+Γö£ ╞Æ /api/teacher/incident-logs                         652 B         103 kB
+Γö£ ╞Æ /api/teacher/intervention-activities               652 B         103 kB
+Γö£ ╞Æ /api/teacher/intervention-analytics                652 B         103 kB
+Γö£ ╞Æ /api/teacher/intervention-toolkit                  652 B         103 kB
+Γö£ ╞Æ /api/teacher/issue-credits                         652 B         103 kB
+Γö£ ╞Æ /api/teacher/messages                              652 B         103 kB
+Γö£ ╞Æ /api/teacher/messaging                             652 B         103 kB
+Γö£ ╞Æ /api/teacher/parent-communication/announcements    652 B         103 kB
+Γö£ ╞Æ /api/teacher/parent-communication/meetings         652 B         103 kB
+Γö£ ╞Æ /api/teacher/parent-communication/messages         652 B         103 kB
+Γö£ ╞Æ /api/teacher/profile                               652 B         103 kB
+Γö£ ╞Æ /api/teacher/quest-analytics                       652 B         103 kB
+Γö£ ╞Æ /api/teacher/quest-templates                       652 B         103 kB
+Γö£ ╞Æ /api/teacher/quests                                652 B         103 kB
+Γö£ ╞Æ /api/teacher/quests/[id]                           652 B         103 kB
+Γö£ ╞Æ /api/teacher/recent-transactions                   652 B         103 kB
+Γö£ ╞Æ /api/teacher/school-info                           652 B         103 kB
+Γö£ ╞Æ /api/teacher/send-shout-out                        652 B         103 kB
+Γö£ ╞Æ /api/teacher/set-primary-class                     652 B         103 kB
+Γö£ ╞Æ /api/teacher/settings                              652 B         103 kB
+Γö£ ╞Æ /api/teacher/shout-out-templates                   652 B         103 kB
+Γö£ ╞Æ /api/teacher/shout-outs                            652 B         103 kB
+Γö£ ╞Æ /api/teacher/simple-grades                         652 B         103 kB
+Γö£ ╞Æ /api/teacher/students                              652 B         103 kB
+Γö£ ╞Æ /api/teacher/students-overview                     652 B         103 kB
+Γö£ ╞Æ /api/teacher/teacher-assigned-classes              652 B         103 kB
+Γö£ ╞Æ /api/teacher/teacher-class-assignments             652 B         103 kB
+Γö£ ╞Æ /api/teacher/wellbeing-analytics                   652 B         103 kB
+Γö£ ╞Æ /api/v1/parents/community-feed                     652 B         103 kB
+Γö£ ╞Æ /api/v1/parents/dashboard                          652 B         103 kB
+Γö£ ╞Æ /api/v1/parents/link-child                         652 B         103 kB
+Γö£ ╞Æ /api/v1/parents/profile-picture                    652 B         103 kB
+Γö£ ╞Æ /api/v1/parents/settings                           652 B         103 kB
+Γö£ ╞Æ /api/v1/students/[id]/analytics                    652 B         103 kB
+Γö£ ╞Æ /api/v1/students/[id]/attendance                   652 B         103 kB
+Γö£ ╞Æ /api/v2/student/achievements                       652 B         103 kB
+Γö£ ╞Æ /api/v2/student/activity                           652 B         103 kB
+Γö£ ╞Æ /api/v2/student/dashboard-unified                  652 B         103 kB
+Γö£ ╞Æ /api/v2/student/growth                             652 B         103 kB
+Γö£ ╞Æ /api/v2/student/growth-optimized                   652 B         103 kB
+Γö£ ╞Æ /api/v2/student/profile                            652 B         103 kB
+Γö£ ╞Æ /api/v2/student/today                              652 B         103 kB
+Γö£ ╞Æ /api/v2/student/today-optimized                    652 B         103 kB
+Γö£ ╞Æ /api/v2/student/wallet                             652 B         103 kB
+Γö£ ╞Æ /api/v2/student/wellbeing                          652 B         103 kB
+Γö£ ╞Æ /api/verify-school                                 652 B         103 kB
+Γö£ ╞Æ /api/verify-student                                652 B         103 kB
+Γö£ Γùï /auth/callback                                   2.84 kB         193 kB
+Γö£ ╞Æ /auth/confirm                                      652 B         103 kB
+Γö£ Γùï /auth/reset-password-confirm                     6.75 kB         199 kB
+Γö£ Γùï /confirm-email                                   4.24 kB         131 kB
+Γö£ Γùï /email-confirmed                                 7.61 kB         134 kB
+Γö£ Γùï /login                                           10.4 kB         286 kB
+Γö£ Γùï /parent                                          9.21 kB         260 kB
+Γö£ Γùï /parent/messaging                                14.9 kB         272 kB
+Γö£ Γùï /privacy                                         5.58 kB         129 kB
+Γö£ Γùï /register                                        23.5 kB         336 kB
+Γö£ Γùï /register/school                                 3.67 kB         152 kB
+Γö£ Γùï /register/school/wizard                          5.47 kB         133 kB
+Γö£ Γùï /register/success                                3.72 kB         110 kB
+Γö£ Γùï /register/wizard                                   13 kB         186 kB
+Γö£ Γùï /reset-password                                    593 B         103 kB
+Γö£ Γùï /student                                          206 kB         469 kB
+Γö£ Γùï /student/achievement-center                      7.49 kB         183 kB
+Γö£ Γùï /student/affirmations                            9.61 kB         260 kB
+Γö£ Γùï /student/announcements                           11.7 kB         175 kB
+Γö£ Γùï /student/black-marks                             10.9 kB         189 kB
+Γö£ Γùï /student/breathing                               7.01 kB         258 kB
+Γö£ Γùï /student/calendar                                6.31 kB         174 kB
+Γö£ Γùï /student/communications                          8.29 kB         173 kB
+Γö£ Γùï /student/courage-log                             7.79 kB         280 kB
+Γö£ Γùï /student/digital-portfolio                       6.54 kB         175 kB
+Γö£ Γùï /student/examinations                             6.5 kB         173 kB
+Γö£ Γùï /student/grade-analytics                         9.57 kB         174 kB
+Γö£ Γùï /student/gratitude                                8.2 kB         280 kB
+Γö£ Γùï /student/habits                                  7.79 kB         258 kB
+Γö£ Γùï /student/help                                    8.17 kB         182 kB
+Γö£ Γùï /student/homework-helper                           24 kB         348 kB
+Γö£ Γùï /student/kindness                                7.11 kB         258 kB
+Γö£ Γùï /student/learning-games                          1.33 kB         244 kB
+Γö£ Γùï /student/messaging                               14.9 kB         184 kB
+Γö£ Γùï /student/peer-tutoring                           6.44 kB         175 kB
+Γö£ Γùï /student/project-showcase                        7.53 kB         176 kB
+Γö£ Γùï /student/results                                 7.03 kB         202 kB
+Γö£ Γùï /student/school-events                           7.39 kB         183 kB
+Γö£ Γùï /student/settings                                9.24 kB         176 kB
+Γö£ Γùï /student/study-groups                            13.3 kB         210 kB
+Γö£ Γùï /student/study-plan                              7.75 kB         171 kB
+Γö£ Γùï /student/study-plan/dashboard                    4.58 kB         167 kB
+Γö£ Γùï /student/study-planner                           8.19 kB         173 kB
+Γö£ Γùï /student/wallet                                  6.85 kB         244 kB
+Γö£ Γùï /student/wallet/create                           4.48 kB         154 kB
+Γö£ Γùï /student/wallet/pay                              14.6 kB         249 kB
+Γö£ Γùï /superpanel/auth                                  3.9 kB         167 kB
+Γö£ Γùï /superpanel/dashboard                             7.1 kB         179 kB
+Γö£ ╞Æ /superpanel/schools/[id]                         8.82 kB         175 kB
+Γö£ Γùï /teacher                                         12.9 kB         266 kB
+Γö£ Γùï /teacher/attendance                              8.58 kB         176 kB
+Γö£ Γùï /teacher/communications                          6.19 kB         202 kB
+Γö£ Γùï /teacher/community                               27.6 kB         197 kB
+Γö£ Γùï /teacher/examinations                            11.7 kB         214 kB
+Γö£ Γùï /teacher/issue-credits                             11 kB         180 kB
+Γö£ Γùï /teacher/profile                                 8.87 kB         179 kB
+Γö£ Γùï /teacher/school                                  5.87 kB         170 kB
+Γö£ Γùï /teacher/settings                                9.33 kB         216 kB
+Γö£ Γùï /teacher/students                                16.1 kB         208 kB
+Γö£ Γùï /teacher/update-results                          14.6 kB         193 kB
+Γö£ Γùï /terms                                           5.32 kB         129 kB
+Γö£ Γùï /test-games                                        301 B         243 kB
+Γöö Γùï /verify-email                                    8.29 kB         135 kB
++ First Load JS shared by all                         103 kB
+  Γö£ chunks/1255-d3af4a8874345c17.js                  45.5 kB
+  Γö£ chunks/4bd1b696-100b9d70ed4e49c1.js              54.2 kB
+  Γöö other shared chunks (total)                      2.91 kB
+
+
+╞Æ Middleware                                         33.7 kB
+
+Γùï  (Static)   prerendered as static content
+╞Æ  (Dynamic)  server-rendered on demand
+

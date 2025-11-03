@@ -24,7 +24,9 @@ import {
   Save,
   RefreshCw,
   Calendar,
-  CreditCard
+  CreditCard,
+  Sparkles,
+  CheckCircle2
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { AdvancedGradeLevelManager } from '@/components/admin/AdvancedGradeLevelManager'
@@ -40,6 +42,8 @@ interface SchoolSettings {
   timezone: string
   academic_year_start: string
   academic_year_end: string
+  subscription_plan?: string
+  subscription_status?: string
   notification_settings: {
     email_notifications: boolean
     sms_notifications: boolean
@@ -81,6 +85,8 @@ function SchoolSettingsContent() {
 
     try {
       setLoading(true)
+      console.log('Fetching school settings for schoolId:', profile.school_id)
+      
       const response = await fetch('/api/admin/school-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -88,10 +94,17 @@ function SchoolSettingsContent() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to fetch school settings')
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }))
+        console.error('School settings API error:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        })
+        throw new Error(errorData.message || `Failed to fetch school settings (${response.status})`)
       }
 
       const data = await response.json()
+      console.log('School settings fetched successfully')
       
       // Auto-populate email domain if not set
       if (data && !data.privacy_settings?.allowed_email_domain && data.email) {
@@ -232,6 +245,218 @@ function SchoolSettingsContent() {
 
       {/* Enhanced Mobile Main Content */}
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 overflow-x-hidden">
+        {/* Subscription Plan Display */}
+        <Card className="mb-6 sm:mb-8 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 shadow-lg rounded-xl overflow-hidden">
+          <CardHeader className="pb-4 sm:pb-6 px-4 sm:px-6 bg-white/50 backdrop-blur-sm">
+            <CardTitle className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 flex items-center">
+              <CreditCard className="h-5 w-5 mr-3 text-blue-600 flex-shrink-0" />
+              <span className="truncate">Current Subscription Plan</span>
+            </CardTitle>
+            <CardDescription className="text-sm sm:text-base text-gray-600 mt-2">
+              Your school's active subscription tier and features
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-4 sm:px-6 pb-6">
+            <div className="space-y-4">
+              {/* Plan Header */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 bg-white rounded-lg border-2 border-blue-100">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`px-4 py-2 rounded-lg font-bold text-base sm:text-lg ${
+                      settings.subscription_plan === 'catalyst_ai_extreme' ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white' :
+                      settings.subscription_plan === 'catalyst_ai_pro' ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white' :
+                      settings.subscription_plan === 'catalyst_ai' ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white' :
+                      'bg-gradient-to-r from-gray-400 to-gray-500 text-white'
+                    }`}>
+                      {settings.subscription_plan === 'catalyst_ai_extreme' ? '🚀 Catalyst AI Extreme' :
+                       settings.subscription_plan === 'catalyst_ai_pro' ? '⭐ Catalyst AI Pro' :
+                       settings.subscription_plan === 'catalyst_ai' ? '✨ Catalyst AI' :
+                       '📦 Free Plan'}
+                    </div>
+                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      settings.subscription_status === 'active' ? 'bg-green-100 text-green-700 border border-green-300' :
+                      settings.subscription_status === 'trial' ? 'bg-yellow-100 text-yellow-700 border border-yellow-300' :
+                      settings.subscription_status === 'expired' ? 'bg-red-100 text-red-700 border border-red-300' :
+                      'bg-gray-100 text-gray-700 border border-gray-300'
+                    }`}>
+                      {settings.subscription_status === 'active' ? '✓ Active' :
+                       settings.subscription_status === 'trial' ? '⏱ Trial' :
+                       settings.subscription_status === 'expired' ? '⚠ Expired' :
+                       settings.subscription_status || 'Unknown'}
+                    </div>
+                  </div>
+                  
+                  {/* Plan Description & Pricing */}
+                  {settings.subscription_plan === 'catalyst_ai_extreme' ? (
+                    <>
+                      <p className="text-sm font-medium text-gray-900 mb-1">The ultimate all-inclusive partnership for visionary institutions.</p>
+                      <p className="text-2xl font-bold text-purple-600 mb-2">₹500/student/month</p>
+                    </>
+                  ) : settings.subscription_plan === 'catalyst_ai_pro' ? (
+                    <>
+                      <p className="text-sm font-medium text-gray-900 mb-1">The best-value plan for fully empowering your students and staff with AI.</p>
+                      <p className="text-2xl font-bold text-blue-600 mb-2">₹25/student/month</p>
+                    </>
+                  ) : settings.subscription_plan === 'catalyst_ai' ? (
+                    <>
+                      <p className="text-sm font-medium text-gray-900 mb-1">The essential plan to connect your school and introduce the power of AI.</p>
+                      <p className="text-2xl font-bold text-green-600 mb-2">₹15/student/month</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium text-gray-900 mb-1">Basic features with limited access</p>
+                      <p className="text-2xl font-bold text-gray-600 mb-2">Free</p>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
+                          👨‍🎓 Up to 75 Students
+                        </span>
+                        <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium border border-green-200">
+                          👩‍🏫 Up to 10 Teachers
+                        </span>
+                        <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-medium border border-purple-200">
+                          👨‍👩‍👧 Up to 150 Parents
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push('/admin/billing')}
+                    className="bg-white hover:bg-gray-50 border-blue-300 text-blue-600 hover:text-blue-700 whitespace-nowrap"
+                  >
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Manage Plan
+                  </Button>
+                </div>
+              </div>
+
+              {/* Plan Features */}
+              {settings.subscription_plan && settings.subscription_plan !== 'free' && (
+                <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-lg p-4 border border-gray-200">
+                  <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                    <Sparkles className="h-4 w-4 mr-2 text-blue-600" />
+                    What's Included
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {settings.subscription_plan === 'catalyst_ai_extreme' ? (
+                      <>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                          <span>Luminex AI Extreme</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                          <span><strong>UNLIMITED</strong> AI Credits</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                          <span>All Dashboards & Core Modules</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                          <span>All Premium Resources</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                          <span>Real-Time Van Tracking</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                          <span>Priority Hardware Access</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                          <span>Premium API & SIS Integration</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                          <span>24/7 Priority Support</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                          <span>Dedicated Account Manager</span>
+                        </div>
+                      </>
+                    ) : settings.subscription_plan === 'catalyst_ai_pro' ? (
+                      <>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                          <span>Luminex AI Pro Plus</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                          <span>150 AI Credits/Student/Day</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                          <span>All Dashboards</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                          <span>Core Modules (Gamification, Reports)</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                          <span>On-Demand Branded Report Cards</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                          <span>Expanded AI Tools</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                          <span>Enterprise-Grade Security</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                          <span>Standard Support</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <span>Luminex Pro</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <span>70 AI Credits/Student/Day</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <span>All Dashboards</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <span>Core Modules (Gamification, Reports)</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <span>On-Demand Branded Report Cards</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <span>Metered AI Tools</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <span>Enterprise-Grade Security</span>
+                        </div>
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <span>Standard Support</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Grade Level Management - Mobile Optimized Container */}
         <Card className="mb-6 sm:mb-8 bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
           <CardHeader className="pb-4 sm:pb-6 px-4 sm:px-6">

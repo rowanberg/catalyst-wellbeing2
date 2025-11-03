@@ -9,7 +9,6 @@ export async function GET(request: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError || !user) {
-      console.error('GET No authenticated user, returning default stats')
       // Return default stats instead of error for development
       return NextResponse.json({ 
         stats: {
@@ -29,10 +28,6 @@ export async function GET(request: NextRequest) {
       .select('id', { count: 'exact' })
       .eq('teacher_id', user.id)
 
-    if (totalError) {
-      console.error('Error fetching total exams:', totalError)
-    }
-
     // Get active exams
     const { data: activeExams, error: activeError } = await supabase
       .from('examinations')
@@ -40,10 +35,6 @@ export async function GET(request: NextRequest) {
       .eq('teacher_id', user.id)
       .eq('is_published', true)
       .eq('is_active', true)
-
-    if (activeError) {
-      console.error('Error fetching active exams:', activeError)
-    }
 
     // Get total questions created
     const { data: questions, error: questionsError } = await supabase
@@ -57,19 +48,11 @@ export async function GET(request: NextRequest) {
           .then(res => res.data?.map(e => e.id) || [])
       )
 
-    if (questionsError) {
-      console.error('Error fetching questions:', questionsError)
-    }
-
     // Get AI generated questions
     const { data: aiQuestions, error: aiError } = await supabase
       .from('ai_question_generation')
       .select('id', { count: 'exact' })
       .eq('teacher_id', user.id)
-
-    if (aiError) {
-      console.error('Error fetching AI questions:', aiError)
-    }
 
     // Get unique students who have taken exams
     const { data: studentSessions, error: sessionsError } = await supabase
@@ -82,10 +65,6 @@ export async function GET(request: NextRequest) {
           .eq('teacher_id', user.id)
           .then(res => res.data?.map(e => e.id) || [])
       )
-
-    if (sessionsError) {
-      console.error('Error fetching student sessions:', sessionsError)
-    }
 
     const uniqueStudents = new Set(studentSessions?.map(s => s.student_id) || []).size
     const completedSessions = studentSessions?.filter(s => s.status === 'completed') || []
@@ -105,7 +84,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ stats })
 
   } catch (error) {
-    console.error('API Error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

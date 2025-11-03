@@ -502,6 +502,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
           {[
             { id: 'overview', label: 'Overview', icon: School, color: 'text-blue-600', bgColor: 'bg-blue-50' },
             { id: 'roster', label: 'Students', icon: Users, color: 'text-emerald-600', bgColor: 'bg-emerald-50', isLink: true, href: '/teacher/students' },
+            { id: 'attendance', label: 'Attendance', icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-50', isLink: true, href: '/teacher/attendance' },
             { id: 'community', label: 'Community', icon: Megaphone, color: 'text-indigo-600', bgColor: 'bg-indigo-50', isLink: true, href: '/teacher/community' },
             { id: 'analytics', label: 'Analytics', icon: Activity, color: 'text-violet-600', bgColor: 'bg-violet-50' },
             { id: 'credits', label: 'Issue Credits', icon: Gem, color: 'text-purple-600', bgColor: 'bg-purple-50', isLink: true, href: '/teacher/issue-credits' },

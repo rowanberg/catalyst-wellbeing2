@@ -122,9 +122,6 @@ export async function GET(request: NextRequest) {
       kindnessData: kindnessData.data || []
     })
 
-    const duration = Date.now() - startTime
-    logger.perf('Teacher analytics fetch', duration)
-
     return ApiResponse.success({
       ...analytics,
       metadata: {

@@ -21,7 +21,6 @@ async function createSupabaseServerClient() {
 
 // Simple GET for testing
 export async function GET(request: NextRequest) {
-  console.log('🎯 GET /api/attendance called')
   return NextResponse.json({ 
     message: 'Attendance GET working', 
     timestamp: new Date().toISOString(),
@@ -31,15 +30,12 @@ export async function GET(request: NextRequest) {
 
 // Save attendance records to database
 export async function POST(request: NextRequest) {
-  console.log('🎯 POST /api/attendance called')
-  
   try {
     const supabase = await createSupabaseServerClient()
     
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
-      console.error('❌ Authentication failed:', authError)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -51,14 +47,11 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (profileError || !profile || profile.role !== 'teacher') {
-      console.error('❌ Profile check failed:', profileError)
       return NextResponse.json({ error: 'Teacher access required' }, { status: 403 })
     }
 
     const body = await request.json()
     const { attendanceData, date } = body
-    
-    console.log('📦 Saving attendance for', attendanceData?.length, 'students on', date)
 
     if (!attendanceData || !Array.isArray(attendanceData) || attendanceData.length === 0) {
       return NextResponse.json({ error: 'No attendance data provided' }, { status: 400 })
@@ -80,8 +73,6 @@ export async function POST(request: NextRequest) {
       notes: record.notes || null
     }))
 
-    console.log('💾 Inserting attendance records:', attendanceRecords.length)
-
     // Use upsert to handle updates (UNIQUE constraint on student_id, date)
     const { data: savedRecords, error: insertError } = await supabase
       .from('attendance')
@@ -92,14 +83,11 @@ export async function POST(request: NextRequest) {
       .select()
 
     if (insertError) {
-      console.error('❌ Database insert error:', insertError)
       return NextResponse.json({ 
         error: 'Failed to save attendance', 
         details: insertError.message 
       }, { status: 500 })
     }
-
-    console.log('✅ Attendance saved successfully:', savedRecords?.length || attendanceRecords.length, 'records')
     
     return NextResponse.json({ 
       success: true,
@@ -109,7 +97,6 @@ export async function POST(request: NextRequest) {
     })
     
   } catch (error: any) {
-    console.error('❌ Error in POST /api/attendance:', error)
     return NextResponse.json({ 
       error: 'Internal server error',
       details: error.message 

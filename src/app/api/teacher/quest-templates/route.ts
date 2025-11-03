@@ -14,14 +14,11 @@ const supabaseAdmin = createClient(
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('📋 Fetching quest templates...')
-
     // Get user from session
     const authHeader = request.headers.get('authorization')
     const sessionToken = request.cookies.get('sb-access-token')?.value
 
     if (!authHeader && !sessionToken) {
-      console.log('❌ No authorization found')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -35,11 +32,8 @@ export async function GET(request: NextRequest) {
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     
     if (userError || !user) {
-      console.log('❌ User authentication failed:', userError)
       return NextResponse.json({ error: 'Authentication failed' }, { status: 401 })
     }
-
-    console.log('👤 Authenticated user:', user.email)
 
     // Get user profile to check role and school
     const { data: profile, error: profileError } = await supabaseAdmin
@@ -49,12 +43,10 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (profileError || !profile) {
-      console.log('❌ Profile not found:', profileError)
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
     if (!['teacher', 'admin'].includes(profile.role)) {
-      console.log('❌ Insufficient permissions:', profile.role)
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -70,7 +62,6 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.log('⚠️ Quest templates table may not exist:', error)
       return NextResponse.json({ 
         templates: [], 
         message: 'Quest templates system not yet configured for this school'
@@ -87,12 +78,9 @@ export async function GET(request: NextRequest) {
       filteredTemplates = filteredTemplates.filter(template => template.is_public === (isPublic === 'true'))
     }
 
-    console.log('✅ Quest templates fetched successfully:', filteredTemplates.length)
-
     return NextResponse.json({ templates: filteredTemplates })
 
   } catch (error) {
-    console.error('❌ Error in GET /api/teacher/quest-templates:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

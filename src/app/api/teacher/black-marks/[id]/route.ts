@@ -63,7 +63,6 @@ export async function GET(
     return NextResponse.json({ blackMark })
 
   } catch (error) {
-    console.error('Error fetching black mark:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -95,11 +94,8 @@ export async function PUT(
     
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
-      console.error('Auth error:', authError)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    console.log('Authenticated user ID:', user.id)
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
@@ -108,22 +104,14 @@ export async function PUT(
       .single()
 
     if (profileError || !profile) {
-      console.error('Profile lookup failed:', { 
-        userId: user.id, 
-        error: profileError,
-        hint: 'User may not have a profile record in the profiles table'
-      })
       return NextResponse.json({ 
         error: 'Profile not found. Please contact administrator.' 
       }, { status: 403 })
     }
 
     if (!['teacher', 'admin'].includes(profile.role)) {
-      console.error('Invalid role:', { role: profile.role })
       return NextResponse.json({ error: 'Access denied - invalid role' }, { status: 403 })
     }
-
-    console.log('User attempting update:', { userId: user.id, role: profile.role, schoolId: profile.school_id })
 
     const body = await request.json()
     const { status, resolutionNotes } = body
@@ -136,30 +124,17 @@ export async function PUT(
       .single()
 
     if (fetchError || !existingMark) {
-      console.error('Black mark not found:', { id, fetchError })
       return NextResponse.json({ error: 'Black mark not found' }, { status: 404 })
     }
 
-    console.log('Black mark details:', { 
-      markSchoolId: existingMark.school_id, 
-      markTeacherId: existingMark.teacher_id,
-      userSchoolId: profile.school_id,
-      userId: user.id,
-      userRole: profile.role
-    })
-
     // Check if teacher has permission (created it or is admin)
     if (existingMark.school_id !== profile.school_id) {
-      console.error('School mismatch:', { markSchool: existingMark.school_id, userSchool: profile.school_id })
       return NextResponse.json({ error: 'Access denied - different school' }, { status: 403 })
     }
 
     if (profile.role !== 'admin' && existingMark.teacher_id !== user.id) {
-      console.error('Permission denied:', { markTeacher: existingMark.teacher_id, currentUser: user.id, role: profile.role })
       return NextResponse.json({ error: 'Access denied - not your black mark' }, { status: 403 })
     }
-
-    console.log('Permission check passed, updating...')
 
     // Update black mark
     const updateData: any = {}
@@ -177,7 +152,6 @@ export async function PUT(
       .single()
 
     if (updateError) {
-      console.error('Error updating black mark:', updateError)
       return NextResponse.json({ error: 'Failed to update black mark' }, { status: 500 })
     }
 
@@ -187,7 +161,6 @@ export async function PUT(
     })
 
   } catch (error) {
-    console.error('Error updating black mark:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

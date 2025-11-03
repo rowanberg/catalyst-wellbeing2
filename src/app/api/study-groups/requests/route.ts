@@ -150,7 +150,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user is the group creator
-    if (joinRequest.study_groups.created_by !== profile.id) {
+    const studyGroup = Array.isArray(joinRequest.study_groups) ? joinRequest.study_groups[0] : joinRequest.study_groups
+    if (studyGroup.created_by !== profile.id) {
       return NextResponse.json({ error: 'Only group creators can approve requests' }, { status: 403 })
     }
 
@@ -167,7 +168,7 @@ export async function POST(request: NextRequest) {
         .eq('group_id', joinRequest.group_id)
 
       const memberCount = members?.length || 0
-      if (memberCount >= joinRequest.study_groups.max_members) {
+      if (memberCount >= studyGroup.max_members) {
         return NextResponse.json({ error: 'Group is full' }, { status: 400 })
       }
 
@@ -197,7 +198,7 @@ export async function POST(request: NextRequest) {
       }
 
       return NextResponse.json({ 
-        message: `Approved request to join ${joinRequest.study_groups.name}` 
+        message: `Approved request to join ${studyGroup.name}` 
       })
     } else {
       // Reject request

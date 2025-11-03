@@ -464,7 +464,6 @@ export default function TeacherAttendancePage() {
         setHasMoreHistory(false)
       }
     } catch (error) {
-      console.error('Error loading attendance history:', error)
       setError('Failed to load attendance history')
       if (reset) {
         setAttendanceHistory([])
@@ -506,15 +505,12 @@ export default function TeacherAttendancePage() {
         setError('No attendance details found for this date')
       }
     } catch (error) {
-      console.error('Error loading attendance details:', error)
       setError('Failed to load attendance details')
       setAttendanceDetails([])
     } finally {
       setLoadingHistory(false)
     }
   }
-
-  console.log('🎨 [Teacher Attendance] Rendering with:', { loading, authChecked, currentView, hasUser: !!user, hasProfile: !!profile })
 
   // Show loader while checking auth or loading data
   if (loading || !authChecked) {

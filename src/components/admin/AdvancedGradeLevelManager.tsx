@@ -490,10 +490,15 @@ export function AdvancedGradeLevelManager({ schoolId }: GradeLevelManagerProps) 
   }, [schoolId])
 
   const fetchGradeLevels = async () => {
-    if (!schoolId) return
+    if (!schoolId) {
+      console.error('AdvancedGradeLevelManager: No schoolId provided')
+      return
+    }
 
     try {
       setLoading(true)
+      console.log('Fetching grade levels for school:', schoolId)
+      
       const response = await fetch('/api/admin/grade-levels', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -501,16 +506,24 @@ export function AdvancedGradeLevelManager({ schoolId }: GradeLevelManagerProps) 
       })
 
       if (!response.ok) {
-        throw new Error('Failed to fetch grade levels')
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }))
+        console.error('Grade levels API error:', response.status, errorData)
+        throw new Error(errorData.message || 'Failed to fetch grade levels')
       }
 
       const data = await response.json()
+      console.log('Grade levels fetched:', data.gradeLevels?.length || 0, 'items')
       setGradeLevels(data.gradeLevels || [])
+      
+      if (!data.gradeLevels || data.gradeLevels.length === 0) {
+        console.log('No grade levels found for this school. Use Quick Setup Templates to add some.')
+      }
     } catch (error) {
+      console.error('fetchGradeLevels error:', error)
       addToast({
         type: 'error',
         title: 'Failed to Load Grade Levels',
-        description: 'Could not fetch grade levels from the server'
+        description: error instanceof Error ? error.message : 'Could not fetch grade levels from the server'
       })
     } finally {
       setLoading(false)
@@ -1217,7 +1230,7 @@ export function AdvancedGradeLevelManager({ schoolId }: GradeLevelManagerProps) 
       <Dialog.Root open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-          <Dialog.Content className="fixed top-0 left-0 right-0 bottom-0 sm:top-1/2 sm:left-1/2 sm:transform sm:-translate-x-1/2 sm:-translate-y-1/2 bg-white sm:rounded-xl shadow-xl w-full sm:w-[95vw] sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto z-50">
+          <Dialog.Content className="fixed inset-0 sm:inset-auto sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] bg-white sm:rounded-xl shadow-xl w-full sm:w-[90vw] sm:max-w-5xl h-full sm:h-auto sm:max-h-[85vh] overflow-y-auto z-50">
             {/* Mobile Header */}
             <div className="sticky top-0 bg-white border-b border-gray-200 p-4 sm:p-6 z-10">
               <div className="flex items-center justify-between">

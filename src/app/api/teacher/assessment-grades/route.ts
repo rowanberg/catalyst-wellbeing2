@@ -21,11 +21,8 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (profileError || !profile || profile.role !== 'teacher') {
-      console.error('❌ GET /assessment-grades - Profile check failed:', { profileError, profile, userId: user.id })
       return NextResponse.json({ error: 'Teacher access required' }, { status: 403 })
     }
-    
-    console.log('✅ GET /assessment-grades - Teacher verified:', { role: profile.role, userId: user.id })
 
     if (assessmentId) {
       // Get grades for specific assessment
@@ -63,7 +60,6 @@ export async function GET(request: NextRequest) {
       }
 
       if (gradesError) {
-        console.error('Error fetching grades:', gradesError)
         return NextResponse.json({ error: 'Failed to fetch grades' }, { status: 500 })
       }
 
@@ -77,7 +73,6 @@ export async function GET(request: NextRequest) {
       .eq('teacher_id', user.id)
     
     if (allGradesError) {
-      console.error('Error fetching all grades:', allGradesError)
       return NextResponse.json({ error: 'Failed to fetch grades' }, { status: 500 })
     }
     
@@ -88,7 +83,6 @@ export async function GET(request: NextRequest) {
     */
 
   } catch (error) {
-    console.error('Error in assessment grades API:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -111,11 +105,8 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (profileError || !profile || profile.role !== 'teacher') {
-      console.error('❌ POST /assessment-grades - Profile check failed:', { profileError, profile, userId: user.id })
       return NextResponse.json({ error: 'Teacher access required' }, { status: 403 })
     }
-    
-    console.log('✅ POST /assessment-grades - Teacher verified:', { role: profile.role, userId: user.id })
 
     const body = await request.json()
     const { 
@@ -166,7 +157,6 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (updateError) {
-        console.error('Error updating grade:', updateError)
         return NextResponse.json({ error: 'Failed to update grade' }, { status: 500 })
       }
 
@@ -190,7 +180,6 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (insertError) {
-        console.error('Error creating grade:', insertError)
         return NextResponse.json({ error: 'Failed to create grade' }, { status: 500 })
       }
 
@@ -200,7 +189,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ grade })
 
   } catch (error) {
-    console.error('Error in create/update grade API:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -235,14 +223,12 @@ export async function PUT(request: NextRequest) {
       .single()
 
     if (updateError) {
-      console.error('Error updating grade:', updateError)
       return NextResponse.json({ error: 'Failed to update grade' }, { status: 500 })
     }
 
     return NextResponse.json({ grade })
 
   } catch (error) {
-    console.error('Error in update grade API:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

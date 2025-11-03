@@ -14,14 +14,11 @@ const supabaseAdmin = createClient(
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🏆 Fetching badges...')
-
     // Get user from session
     const authHeader = request.headers.get('authorization')
     const sessionToken = request.cookies.get('sb-access-token')?.value
 
     if (!authHeader && !sessionToken) {
-      console.log('❌ No authorization found')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -35,11 +32,8 @@ export async function GET(request: NextRequest) {
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     
     if (userError || !user) {
-      console.log('❌ User authentication failed:', userError)
       return NextResponse.json({ error: 'Authentication failed' }, { status: 401 })
     }
-
-    console.log('👤 Authenticated user:', user.email)
 
     // Get user profile to check role and school
     const { data: profile, error: profileError } = await supabaseAdmin
@@ -49,12 +43,10 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (profileError || !profile) {
-      console.log('❌ Profile not found:', profileError)
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
     if (!['teacher', 'admin'].includes(profile.role)) {
-      console.log('❌ Insufficient permissions:', profile.role)
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -71,7 +63,6 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.log('⚠️ Quest badges table may not exist:', error)
       // Return empty badges array if table doesn't exist
       return NextResponse.json({ 
         badges: [], 
@@ -93,28 +84,23 @@ export async function GET(request: NextRequest) {
       filteredBadges = filteredBadges.filter(badge => badge.is_active === (active === 'true'))
     }
 
-    console.log('✅ Badges fetched successfully:', filteredBadges.length)
-
     return NextResponse.json({ 
       badges: filteredBadges, 
       totalAwarded: 0 // Will be calculated when badge_awards table is implemented
     })
   } catch (error) {
-    console.error('Error in GET /api/teacher/badges:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🏆 Creating new badge...')
 
     // Get user from session
     const authHeader = request.headers.get('authorization')
     const sessionToken = request.cookies.get('sb-access-token')?.value
 
     if (!authHeader && !sessionToken) {
-      console.log('❌ No authorization found')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -128,7 +114,6 @@ export async function POST(request: NextRequest) {
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     
     if (userError || !user) {
-      console.log('❌ User authentication failed:', userError)
       return NextResponse.json({ error: 'Authentication failed' }, { status: 401 })
     }
 
@@ -140,12 +125,10 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (profileError || !profile) {
-      console.log('❌ Profile not found:', profileError)
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
     if (!['teacher', 'admin'].includes(profile.role)) {
-      console.log('❌ Insufficient permissions:', profile.role)
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -182,14 +165,11 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('❌ Error creating badge:', error)
       return NextResponse.json({ error: 'Failed to create badge' }, { status: 500 })
     }
 
-    console.log('✅ Badge created successfully:', badge.name)
     return NextResponse.json({ badge }, { status: 201 })
   } catch (error) {
-    console.error('❌ Error in POST /api/teacher/badges:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

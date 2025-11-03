@@ -124,8 +124,10 @@ function TeacherCommunityContent() {
       }
       setError(null)
       
-      const limit = 10
-      const offset = (pageNum - 1) * limit
+      // Initial load: 5 posts (< 7), subsequent loads: 10 posts
+      const limit = reset ? 5 : 10
+      const offset = reset ? 0 : (pageNum === 2 ? 5 : 5 + (pageNum - 2) * 10)
+      
       const response = await fetch(
         `/api/teacher/community/posts?class_id=${classId}&teacher_id=${user.id}&limit=${limit}&offset=${offset}`
       )

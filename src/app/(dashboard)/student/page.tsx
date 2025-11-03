@@ -8,6 +8,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { useAppSelector } from '@/lib/redux/hooks'
 import { 
   Compass, Rocket, Flower2, ScanFace, Menu, X, BellDot, RefreshCcw
@@ -107,7 +108,7 @@ const MobileHeader = memo(({
           <div className="relative shrink-0">
             <div className="w-10 h-10 rounded-full flex items-center justify-center shadow-md overflow-hidden" style={{ background: 'linear-gradient(to bottom right, var(--theme-primary), var(--theme-secondary))' }}>
               {profile?.profilePicture || profile?.avatar_url ? (
-                <img src={profile.profilePicture || profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                <Image src={profile.profilePicture || profile.avatar_url} alt="Profile" className="w-full h-full object-cover" width={40} height={40} />
               ) : (
                 <span className="text-white font-semibold text-sm">
                   {profile?.firstName?.charAt(0) || profile?.first_name?.charAt(0) || 'S'}

@@ -8,11 +8,7 @@ export async function GET(request: NextRequest) {
     const schoolId = searchParams.get('school_id')
     const classId = searchParams.get('class_id')
 
-    console.log('🔍 Students API called with:', { schoolId, classId })
-    console.log('📍 Request URL:', request.url)
-
     if (!schoolId || !classId) {
-      console.log('❌ Missing required parameters')
       return NextResponse.json(
         { error: 'school_id and class_id are required' },
         { status: 400 }
@@ -25,7 +21,6 @@ export async function GET(request: NextRequest) {
     // Get current user and verify they're a teacher
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) {
-      console.log('❌ Auth error:', userError?.message || 'No user found')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -37,11 +32,8 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (!teacherProfile || teacherProfile.role !== 'teacher' || teacherProfile.school_id !== schoolId) {
-      console.log('❌ Access denied - Teacher role:', teacherProfile?.role, 'School:', teacherProfile?.school_id)
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
-
-    console.log('✅ Teacher verified:', user.email, 'School:', schoolId)
 
     // Try to fetch class assignments, but fallback to all students if table doesn't exist
     let studentProfiles: any[] = []
@@ -55,9 +47,6 @@ export async function GET(request: NextRequest) {
       .eq('is_active', true)
     
     if (assignmentError) {
-      console.log('⚠️ student_class_assignments query failed, falling back to all students in school')
-      console.log('Error details:', assignmentError.message)
-      
       // Fallback: Get all students from the same school using admin client
       const { data: allStudentProfiles, error: profilesError } = await supabaseAdmin
         .from('profiles')
@@ -66,7 +55,6 @@ export async function GET(request: NextRequest) {
         .eq('role', 'student')
       
       if (profilesError) {
-        console.error('❌ Failed to fetch student profiles:', profilesError.message)
         return NextResponse.json({
           students: [],
           total: 0,
@@ -75,25 +63,20 @@ export async function GET(request: NextRequest) {
       }
       
       studentProfiles = allStudentProfiles || []
-      console.log('✅ Fallback: Found', studentProfiles.length, 'students in school')
       
     } else {
       // Successfully got class assignments
       classAssignments = classAssignmentsData || []
       
       if (classAssignments.length === 0) {
-        console.log('⚠️ No students assigned to this class')
         return NextResponse.json({
           students: [],
           total: 0
         })
       }
-
-      console.log('✅ Found', classAssignments.length, 'class assignments')
       
       // Get student IDs and fetch their profiles separately
       const studentIds = classAssignments.map(assignment => assignment.student_id).filter(Boolean)
-      console.log('👥 Student IDs to fetch:', studentIds)
       
       // Fetch student profiles separately using admin client to bypass RLS
       const { data: studentProfilesData, error: profilesError } = await supabaseAdmin
@@ -102,7 +85,6 @@ export async function GET(request: NextRequest) {
         .in('user_id', studentIds)
       
       if (profilesError) {
-        console.error('❌ Failed to fetch student profiles:', profilesError.message)
         return NextResponse.json({
           students: [],
           total: 0,
@@ -112,11 +94,6 @@ export async function GET(request: NextRequest) {
       
       studentProfiles = studentProfilesData || []
     }
-    
-    console.log('📊 Profiles query result:', { 
-      profilesCount: studentProfiles?.length || 0,
-      usingFallback: !classAssignments.length
-    })
 
     // Fetch class information separately using admin client
     const { data: classInfo, error: classError } = await supabaseAdmin
@@ -124,13 +101,6 @@ export async function GET(request: NextRequest) {
       .select('id, class_name, subject, room_number')
       .eq('id', classId)
       .single()
-    
-    if (classError) {
-      console.error('❌ Failed to fetch class info:', classError.message)
-    }
-
-    console.log('✅ Found', studentProfiles?.length || 0, 'student profiles')
-    console.log('✅ Class info:', classInfo)
 
     // Map students based on whether we have class assignments or using fallback
     let students: any[] = []
@@ -197,16 +167,12 @@ export async function GET(request: NextRequest) {
       })).filter(student => student.id)
     }
 
-    console.log('📊 Final processed students:', students.length, students)
-    console.log('📧 Student emails check:', students.map(s => ({ name: `${s.first_name} ${s.last_name}`, email: s.email })))
-
     return NextResponse.json({
       students: students,
       total: students.length
     })
 
   } catch (error: any) {
-    console.error('❌ Error fetching students:', error)
     return NextResponse.json(
       { message: 'Internal server error' },
       { status: 500 }

@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     const rankData = rankRes.status === 'fulfilled' ? rankRes.value.data : null
 
     // Calculate next level XP
-    const currentLevel = profile.level || 1
+    const currentLevel = (profile as any).level || 1
     const nextLevelXP = currentLevel * 100
 
     // Format achievements
@@ -77,35 +77,39 @@ export async function GET(request: NextRequest) {
       xp: act.xp_gained || null
     }))
 
+    // Cast profile to any since this legacy route expects extended fields
+    const extendedProfile = profile as any
+    const extendedSchool = schoolData as any
+    
     const response = NextResponse.json({
       profile: {
         first_name: profile.first_name,
         last_name: profile.last_name,
         email: profile.email,
-        student_tag: profile.student_tag,
-        avatar_url: profile.avatar_url || profile.profile_picture_url,
-        profile_picture_url: profile.profile_picture_url || profile.avatar_url,
+        student_tag: extendedProfile.student_tag,
+        avatar_url: extendedProfile.avatar_url || profile.profile_picture,
+        profile_picture_url: profile.profile_picture || extendedProfile.avatar_url,
         grade_level: profile.grade_level,
-        class_name: profile.class_name,
-        bio: profile.bio,
+        class_name: extendedProfile.class_name,
+        bio: extendedProfile.bio,
         school: schoolData ? {
           id: schoolData.id,
           name: schoolData.name,
           school_code: schoolData.school_code,
-          address: schoolData.address,
-          city: schoolData.city,
-          country: schoolData.country,
+          address: extendedSchool.address,
+          city: extendedSchool.city,
+          country: extendedSchool.country,
           logo_url: schoolData.logo_url,
           vision: 'Empowering students to reach their full potential through quality education and holistic development'
         } : null
       },
       stats: {
-        level: profile.level || 1,
-        xp: profile.xp || 0,
+        level: extendedProfile.level || 1,
+        xp: extendedProfile.xp || 0,
         nextLevelXP: nextLevelXP,
-        gems: profile.gems || 0,
-        streakDays: profile.streak_days || 0,
-        totalQuests: profile.total_quests_completed || 0,
+        gems: extendedProfile.gems || 0,
+        streakDays: extendedProfile.streak_days || 0,
+        totalQuests: extendedProfile.total_quests_completed || 0,
         badges: achievements.length,
         rank: rankData?.class_rank || 0
       },

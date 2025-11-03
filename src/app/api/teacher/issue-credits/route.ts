@@ -6,19 +6,15 @@ const MONTHLY_LIMIT = 7000
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔍 Issue Credits API called')
     const supabase = await createSupabaseServerClient()
 
     // Get current user from cookies
     const { data: { user }, error: userError } = await supabase.auth.getUser()
-    console.log('🔍 Cookie auth check:', { hasUser: !!user, userId: user?.id, error: userError })
     
     const { student_id, teacher_id, amount, reason } = await request.json()
-    console.log('🔍 Request data:', { student_id, teacher_id, amount, reason })
 
     // Validation
     if (!student_id || !teacher_id || !amount || !reason) {
-      console.log('🔍 Missing fields - returning 400')
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -33,16 +29,12 @@ export async function POST(request: NextRequest) {
       .eq('role', 'teacher')
       .single()
     
-    console.log('🔍 Teacher verification:', { teacherAuth, teacherError })
-    
     if (teacherError || !teacherAuth) {
-      console.log('🔍 Teacher not found - returning 401')
       return NextResponse.json({ error: 'Teacher not found or invalid' }, { status: 401 })
     }
 
     // If we have cookie auth, verify it matches the teacher_id
     if (user && user.id !== teacher_id) {
-      console.log('🔍 Teacher ID mismatch - returning 403', { teacher_id, user_id: user.id })
       return NextResponse.json({ error: 'Unauthorized teacher' }, { status: 403 })
     }
 
@@ -56,7 +48,6 @@ export async function POST(request: NextRequest) {
 
     // Check monthly limit using direct query (database function might not exist)
     const currentMonth = new Date().toISOString().slice(0, 7) // YYYY-MM format
-    console.log('🔍 Checking monthly limit for:', { teacher_id, currentMonth })
     
     const { data: monthlyTransactions, error: monthlyError } = await supabaseAdmin
       .from('gem_transactions')
@@ -66,10 +57,7 @@ export async function POST(request: NextRequest) {
       .gte('created_at', `${currentMonth}-01T00:00:00.000Z`)
       .lt('created_at', `${currentMonth === '2024-12' ? '2025-01' : currentMonth.slice(0, 5) + String(parseInt(currentMonth.slice(5), 10) + 1).padStart(2, '0')}-01T00:00:00.000Z`)
 
-    console.log('🔍 Monthly transactions found:', monthlyTransactions)
-
     if (monthlyError) {
-      console.error('🔍 Monthly limit check failed - returning 500:', monthlyError)
       return NextResponse.json({ error: 'Failed to check monthly limit' }, { status: 500 })
     }
 
@@ -91,13 +79,10 @@ export async function POST(request: NextRequest) {
       .eq('is_active', true)
 
     if (accessError || !teacherClasses || teacherClasses.length === 0) {
-      console.error('Teacher access verification failed:', accessError)
       return NextResponse.json({ error: 'No teaching assignments found' }, { status: 403 })
     }
 
     // Verify student exists - try both user_id and id fields
-    console.log('🔍 Looking for student profile with ID:', student_id)
-    
     // First try user_id
     let { data: studentProfile, error: profileError } = await supabaseAdmin
       .from('profiles')
@@ -105,18 +90,13 @@ export async function POST(request: NextRequest) {
       .eq('user_id', student_id)
       .single()
 
-    console.log('🔍 Student profile query by user_id:', { studentProfile, profileError })
-
     // If not found by user_id, try by id (profile.id)
     if (!studentProfile && profileError?.code === 'PGRST116') {
-      console.log('🔍 Not found by user_id, trying by profile.id')
       const { data: studentByProfileId, error: profileIdError } = await supabaseAdmin
         .from('profiles')
         .select('school_id, role, first_name, last_name, user_id, id, gems')
         .eq('id', student_id)
         .single()
-      
-      console.log('🔍 Student profile query by profile.id:', { studentByProfileId, profileIdError })
       
       if (studentByProfileId) {
         studentProfile = studentByProfileId
@@ -125,13 +105,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (profileError || !studentProfile) {
-      console.error('🔍 Student verification failed:', profileError)
       return NextResponse.json({ error: 'Student not found or invalid' }, { status: 403 })
     }
 
     // Check if the profile has student role
     if (studentProfile.role !== 'student') {
-      console.error('🔍 Profile found but role is not student:', studentProfile.role)
       return NextResponse.json({ error: 'Profile is not a student' }, { status: 403 })
     }
 
@@ -145,13 +123,6 @@ export async function POST(request: NextRequest) {
     if (studentProfile.school_id !== teacherAuth?.school_id) {
       return NextResponse.json({ error: 'Student not in same school' }, { status: 403 })
     }
-
-    console.log('🔍 Creating transaction for:', { 
-      student_user_id: studentProfile.user_id, 
-      teacher_id, 
-      amount, 
-      reason 
-    })
 
     // Start transaction to issue credits - use student's user_id
     const { data: transaction, error: transactionError } = await supabaseAdmin
@@ -168,7 +139,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (transactionError) {
-      console.error('Error creating transaction:', transactionError)
       return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 })
     }
 
@@ -181,7 +151,6 @@ export async function POST(request: NextRequest) {
       .eq('user_id', studentProfile.user_id)
 
     if (updateError) {
-      console.error('Error updating student gems:', updateError)
       // Try to rollback the transaction
       await supabaseAdmin
         .from('gem_transactions')
@@ -190,8 +159,6 @@ export async function POST(request: NextRequest) {
       
       return NextResponse.json({ error: 'Failed to update student gems' }, { status: 500 })
     }
-
-    console.log('🔍 Successfully updated gems for student:', studentProfile.first_name)
 
     return NextResponse.json({
       success: true,
@@ -208,7 +175,6 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('API Error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

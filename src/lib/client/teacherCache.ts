@@ -32,19 +32,16 @@ class TeacherDashboardCache {
     if (!options?.forceRefresh && cached) {
       // Fresh data - return immediately
       if (now < cached.expiresAt) {
-        console.log(`✅ [Client Cache] HIT for ${key} (fresh)`)
         return cached.data
       }
 
       // Stale data - return stale while revalidating in background
       if (now < cached.timestamp + STALE_DURATION) {
-        console.log(`⚡ [Client Cache] HIT for ${key} (stale-while-revalidate)`)
-        
         // Return stale data immediately
         const staleData = cached.data
         
         // Revalidate in background (don't await)
-        this.revalidate(key, fetcher).catch(console.error)
+        this.revalidate(key, fetcher).catch(() => {})
         
         return staleData
       }
@@ -56,12 +53,10 @@ class TeacherDashboardCache {
     // Check for pending request
     const pending = this.pendingRequests.get(key)
     if (pending) {
-      console.log(`🔄 [Client Cache] Waiting for pending request: ${key}`)
       return pending
     }
 
     // Fetch fresh data
-    console.log(`🔄 [Client Cache] MISS for ${key} - fetching`)
     const promise = fetcher()
     this.pendingRequests.set(key, promise)
 
@@ -84,7 +79,6 @@ class TeacherDashboardCache {
       timestamp: now,
       expiresAt: now + CACHE_DURATION,
     })
-    console.log(`💾 [Client Cache] Stored ${key}`)
   }
 
   /**
@@ -94,9 +88,8 @@ class TeacherDashboardCache {
     try {
       const data = await fetcher()
       this.set(key, data)
-      console.log(`✨ [Client Cache] Revalidated ${key}`)
     } catch (error) {
-      console.error(`❌ [Client Cache] Revalidation failed for ${key}:`, error)
+      // Revalidation failed silently
     }
   }
 
@@ -105,7 +98,6 @@ class TeacherDashboardCache {
    */
   invalidate(key: string): void {
     this.cache.delete(key)
-    console.log(`🗑️ [Client Cache] Invalidated ${key}`)
   }
 
   /**
@@ -114,7 +106,6 @@ class TeacherDashboardCache {
   clear(): void {
     this.cache.clear()
     this.pendingRequests.clear()
-    console.log(`🧹 [Client Cache] Cleared all cache`)
   }
 
   /**
@@ -147,8 +138,6 @@ export async function fetchTeacherDashboard(teacherId: string, forceRefresh = fa
       }
       
       const data = await response.json()
-      const duration = Date.now() - startTime
-      console.log(`⚡ [Dashboard API] Fetched in ${duration}ms`)
       
       return data
     },

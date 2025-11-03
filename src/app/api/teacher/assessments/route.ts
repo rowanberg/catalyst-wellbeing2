@@ -19,11 +19,8 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (profileError || !profile || profile.role !== 'teacher') {
-      console.error('❌ GET /assessments - Profile check failed:', { profileError, profile })
       return NextResponse.json({ error: 'Teacher access required' }, { status: 403 })
     }
-
-    console.log('✅ GET /assessments - Teacher verified:', { role: profile.role, school_id: profile.school_id })
 
     // Get teacher's assessments
     const { data: assessments, error: assessmentsError } = await supabase
@@ -45,14 +42,12 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (assessmentsError) {
-      console.error('Error fetching assessments:', assessmentsError)
       return NextResponse.json({ error: 'Failed to fetch assessments' }, { status: 500 })
     }
 
     return NextResponse.json({ assessments: assessments || [] })
 
   } catch (error) {
-    console.error('Error in assessments API:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -75,24 +70,11 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (profileError || !profile || profile.role !== 'teacher') {
-      console.error('❌ POST /assessments - Profile check failed:', { profileError, profile })
       return NextResponse.json({ error: 'Teacher access required' }, { status: 403 })
     }
 
-    console.log('✅ POST /assessments - Teacher verified:', { role: profile.role, school_id: profile.school_id })
-
     const body = await request.json()
     const { title, type, max_score, pass_mark, class_id, due_date, assessment_date, rubric_criteria } = body
-
-    console.log('📝 Creating assessment with data:', {
-      title,
-      type,
-      max_score,
-      pass_mark,
-      class_id,
-      teacher_id: user.id,
-      school_id: profile.school_id
-    })
 
     // Validate required fields
     if (!class_id) {
@@ -118,20 +100,12 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (createError) {
-      console.error('❌ Error creating assessment:', createError)
       return NextResponse.json({ error: 'Failed to create assessment', details: createError.message }, { status: 500 })
     }
-
-    console.log('✅ Assessment created successfully:', {
-      id: assessment.id,
-      title: assessment.title,
-      teacher_id: assessment.teacher_id
-    })
 
     return NextResponse.json({ assessment })
 
   } catch (error) {
-    console.error('Error in create assessment API:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -154,7 +128,6 @@ export async function DELETE(request: NextRequest) {
       .single()
 
     if (profileError || !profile || profile.role !== 'teacher') {
-      console.error('❌ DELETE /assessments - Profile check failed:', { profileError, profile })
       return NextResponse.json({ error: 'Teacher access required' }, { status: 403 })
     }
 
@@ -166,8 +139,6 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Assessment ID is required' }, { status: 400 })
     }
 
-    console.log('🗑️ DELETE /assessments - Deleting assessment:', { assessmentId, teacher_id: user.id })
-
     // Verify the assessment belongs to this teacher
     const { data: assessment, error: fetchError } = await supabase
       .from('assessments')
@@ -178,7 +149,6 @@ export async function DELETE(request: NextRequest) {
       .single()
 
     if (fetchError || !assessment) {
-      console.error('❌ Assessment not found or unauthorized:', { fetchError, assessment })
       return NextResponse.json({ error: 'Assessment not found or unauthorized' }, { status: 404 })
     }
 
@@ -189,14 +159,8 @@ export async function DELETE(request: NextRequest) {
       .eq('id', assessmentId)
 
     if (deleteError) {
-      console.error('❌ Error deleting assessment:', deleteError)
       return NextResponse.json({ error: 'Failed to delete assessment', details: deleteError.message }, { status: 500 })
     }
-
-    console.log('✅ Assessment deleted successfully:', {
-      id: assessmentId,
-      title: assessment.title
-    })
 
     return NextResponse.json({ 
       success: true, 
@@ -204,7 +168,6 @@ export async function DELETE(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error in delete assessment API:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
