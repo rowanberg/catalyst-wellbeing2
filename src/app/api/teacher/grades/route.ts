@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { getCachedGrades, setCachedGrades } from '@/lib/redis'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -7,88 +9,63 @@ const supabaseAdmin = createClient(
 )
 
 export async function GET(request: NextRequest) {
+  const startTime = performance.now()
+  
   try {
+    // Parse URL once
     const { searchParams } = new URL(request.url)
     const schoolId = searchParams.get('school_id')
-    const teacherId = searchParams.get('teacher_id')
-
+    
     if (!schoolId) {
       return NextResponse.json(
-        { message: 'School ID is required' },
+        { message: 'school_id is required' },
         { status: 400 }
       )
     }
-
-    // Get teacher's assigned grade levels
-    let grades: any[] = []
     
-    try {
-      // If teacherId is provided, get only assigned grades
-      if (teacherId) {
-        // Get teacher's assigned classes first
-        const { data: teacherClasses, error: classError } = await supabaseAdmin
-          .from('teacher_class_assignments')
-          .select(`
-            classes!inner(
-              id,
-              grade_level_id,
-              grade_levels!inner(
-                id,
-                grade_level,
-                description,
-                school_id
-              )
-            )
-          `)
-          .eq('teacher_id', teacherId)
-        
-        if (!classError && teacherClasses) {
-          // Extract unique grade levels from teacher's classes
-          const gradeMap = new Map()
-          teacherClasses.forEach((assignment: any) => {
-            const gradeLevel = assignment.classes.grade_levels
-            if (gradeLevel && gradeLevel.school_id === schoolId) {
-              gradeMap.set(gradeLevel.id, gradeLevel)
-            }
-          })
-          grades = Array.from(gradeMap.values())
-        }
-      }
-      
-      // If no teacherId or no assignments found, try database functions
-      if (grades.length === 0) {
-        const { data: dbGrades, error: rpcError } = await supabaseAdmin
-          .rpc('get_school_grade_levels', { p_school_id: schoolId })
-        
-        if (!rpcError && dbGrades) {
-          grades = dbGrades
-        } else {
-          console.warn('Database function failed, trying direct table query:', rpcError?.message)
-          
-          // Fallback: try direct table query
-          const { data: directGrades, error: directError } = await supabaseAdmin
-            .from('grade_levels')
-            .select('*')
-            .eq('school_id', schoolId)
-          
-          if (!directError && directGrades) {
-            grades = directGrades
-          }
-        }
-      }
-      
-      // No sample data - only show real grades
-      if (grades.length === 0) {
-        console.log('No grades found for this school - admin needs to create grade levels')
-        grades = []
-      }
-      
-    } catch (dbError) {
-      console.warn('Database error:', dbError)
-      grades = []
+    // Step 1: Try Redis cache first
+    const cached = await getCachedGrades(schoolId)
+    
+    if (cached) {
+      const duration = Math.round(performance.now() - startTime)
+      console.log(`⚡ [Grades API] Cache HIT in ${duration}ms | School: ${schoolId}`)
+      return NextResponse.json(cached)
+    }
+    
+    // Step 2: Cache miss - query database
+    console.log(`❌ [Grades API] Cache MISS | Querying database for school: ${schoolId}`)
+    
+    const { data: grades, error } = await supabaseAdmin
+      .from('grade_levels')
+      .select('id, grade_level, grade_name, school_id, is_active')
+      .eq('school_id', schoolId)
+      .eq('is_active', true)
+      .order('grade_level', { ascending: true })
+    
+    const duration = Math.round(performance.now() - startTime)
+    console.log(`⚡ [Grades API] Database query completed in ${duration}ms`)
+    
+    if (error) {
+      console.error('Error fetching grades:', error.message)
+      return NextResponse.json({ 
+        grades: [], 
+        school_id: schoolId 
+      })
     }
 
-    return NextResponse.json({ grades: grades || [], school_id: schoolId })
+    const response = {
+      grades: grades || [],
+      school_id: schoolId,
+      cached_at: new Date().toISOString(),
+      source: 'database'
+    }
+
+    // Step 3: Store in Redis cache (fire-and-forget for speed)
+    setCachedGrades(schoolId, response).catch((err) => {
+      console.error('Failed to cache grades:', err)
+    })
+
+    return NextResponse.json(response)
     
   } catch (error) {
     console.error('Error fetching grades:', error)

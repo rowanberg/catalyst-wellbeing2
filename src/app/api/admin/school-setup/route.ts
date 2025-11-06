@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { invalidateSchoolInfoCache } from '@/lib/cache-invalidation-school'
 
 // Create Supabase client with fallback for build time
 function createSupabaseAdmin() {
@@ -282,6 +283,13 @@ export async function POST(request: NextRequest) {
       console.error('Error updating schools table:', schoolUpdateError)
       // Don't fail the request if this update fails, as the main data is saved
     }
+
+    // Invalidate school info cache so teachers see fresh setup data
+    invalidateSchoolInfoCache(schoolId).catch((err) => {
+      console.error('Failed to invalidate school cache:', err)
+    })
+
+    console.log('[Cache] Invalidated school info cache after setup for:', schoolId)
 
     return NextResponse.json({ 
       success: true,

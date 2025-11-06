@@ -6,10 +6,28 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify super admin authentication
-    const accessKey = request.cookies.get('super_admin_key')?.value
-    if (!accessKey || accessKey !== '4C4F52454D5F495053554D5F444F4C4F525F534954') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Verify super admin authentication via session token
+    const sessionToken = request.cookies.get('super_admin_session')?.value
+    
+    if (!sessionToken) {
+      return NextResponse.json({ error: 'Unauthorized - No session' }, { status: 401 })
+    }
+    
+    // Validate session token
+    const secretKey = process.env.SUPER_ADMIN_SECRET_KEY
+    if (!secretKey) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+    }
+    
+    try {
+      const decoded = Buffer.from(sessionToken, 'base64').toString('utf-8')
+      const hasValidPrefix = decoded.startsWith(secretKey)
+      
+      if (!hasValidPrefix) {
+        return NextResponse.json({ error: 'Unauthorized - Invalid session' }, { status: 401 })
+      }
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized - Invalid session token' }, { status: 401 })
     }
 
     // Create service role client to bypass RLS
@@ -93,10 +111,28 @@ export async function GET(request: NextRequest) {
 // Toggle key enabled/disabled status
 export async function PATCH(request: NextRequest) {
   try {
-    // Verify super admin authentication
-    const accessKey = request.cookies.get('super_admin_key')?.value
-    if (!accessKey || accessKey !== '4C4F52454D5F495053554D5F444F4C4F525F534954') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Verify super admin authentication via session token
+    const sessionToken = request.cookies.get('super_admin_session')?.value
+    
+    if (!sessionToken) {
+      return NextResponse.json({ error: 'Unauthorized - No session' }, { status: 401 })
+    }
+    
+    // Validate session token
+    const secretKey = process.env.SUPER_ADMIN_SECRET_KEY
+    if (!secretKey) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+    }
+    
+    try {
+      const decoded = Buffer.from(sessionToken, 'base64').toString('utf-8')
+      const hasValidPrefix = decoded.startsWith(secretKey)
+      
+      if (!hasValidPrefix) {
+        return NextResponse.json({ error: 'Unauthorized - Invalid session' }, { status: 401 })
+      }
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized - Invalid session token' }, { status: 401 })
     }
 
     const { keyId, isDisabled } = await request.json()

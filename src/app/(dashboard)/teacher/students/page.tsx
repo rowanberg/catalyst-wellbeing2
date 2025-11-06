@@ -139,6 +139,7 @@ function StudentSetupComponent() {
   const [loading, setLoading] = useState(true)
   const [loadingClasses, setLoadingClasses] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [loadingAssignments, setLoadingAssignments] = useState(true)
   const [currentAssignments, setCurrentAssignments] = useState<any[]>([])
 
   // Load grade levels
@@ -163,6 +164,7 @@ function StudentSetupComponent() {
   // Load current assignments
   useEffect(() => {
     const loadCurrentAssignments = async () => {
+      setLoadingAssignments(true)
       try {
         const response = await fetch('/api/teacher/class-assignments')
         if (response.ok) {
@@ -171,6 +173,8 @@ function StudentSetupComponent() {
         }
       } catch (error: any) {
         console.error('Error loading current assignments:', error)
+      } finally {
+        setLoadingAssignments(false)
       }
     }
 
@@ -265,7 +269,27 @@ function StudentSetupComponent() {
   return (
     <div className="space-y-6">
       {/* Current Assignments */}
-      {currentAssignments.length > 0 && (
+      {loadingAssignments ? (
+        <Card className="bg-gray-50 border-gray-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-gray-600">
+              <RefreshCw className="h-5 w-5 animate-spin" />
+              Loading Your Classes...
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {[1, 2].map((i) => (
+                <div key={i} className="bg-white p-3 rounded-lg border border-gray-200 animate-pulse">
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2 mb-1"></div>
+                  <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ) : currentAssignments.length > 0 ? (
         <Card className="bg-green-50 border-green-200">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-green-800">
@@ -296,7 +320,7 @@ function StudentSetupComponent() {
             </div>
           </CardContent>
         </Card>
-      )}
+      ) : null}
 
       {/* Grade Level Selection */}
       <Card>

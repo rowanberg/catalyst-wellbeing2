@@ -49,10 +49,15 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const [schoolName, setSchoolName] = useState('')
-  const [isVerifyingSchool, setIsVerifyingSchool] = useState(false)
+  const [schoolId, setSchoolId] = useState('')
   const [schoolVerified, setSchoolVerified] = useState(false)
+  const [schoolName, setSchoolName] = useState('')
   const [schoolError, setSchoolError] = useState('')
+  const [isVerifyingSchool, setIsVerifyingSchool] = useState(false)
+  const [schoolSettings, setSchoolSettings] = useState<{
+    restrictEmailDomains: boolean
+    allowedEmailDomain: string
+  } | null>(null)
   const [passwordStrength, setPasswordStrength] = useState(0)
   
   // Student welcome screen state
@@ -172,19 +177,22 @@ export default function RegisterPage() {
     }
   }, [setValue, addToast])
 
-  const schoolId = watch('schoolId')
+  const watchedSchoolId = watch('schoolId')
   const selectedRole = watch('role')
+  const watchedEmail = watch('email')
+  const [emailDomainError, setEmailDomainError] = useState<string>('')
 
   // Verify school ID when it changes
   useEffect(() => {
-    if (schoolId && schoolId.length === 12) {
-      verifySchool(schoolId)
+    if (watchedSchoolId && watchedSchoolId.length === 12) {
+      verifySchool(watchedSchoolId)
     } else {
       setSchoolVerified(false)
       setSchoolName('')
       setSchoolError('')
+      setSchoolSettings(null)
     }
-  }, [schoolId])
+  }, [watchedSchoolId])
 
   // Fetch available grade levels when school is verified
   useEffect(() => {
@@ -195,17 +203,53 @@ export default function RegisterPage() {
 
   // Load classes when school is verified and role is teacher
   useEffect(() => {
-    if (schoolVerified && selectedRole === 'teacher' && schoolId) {
-      loadAvailableClasses(schoolId)
+    if (schoolVerified && selectedRole === 'teacher' && watchedSchoolId) {
+      loadAvailableClasses(watchedSchoolId)
     }
-  }, [schoolVerified, selectedRole, schoolId])
+  }, [schoolVerified, selectedRole, watchedSchoolId])
 
   // Load classes when grade is selected for students
   useEffect(() => {
-    if (schoolVerified && selectedRole === 'student' && schoolId && selectedGradeLevel) {
-      loadAvailableClasses(schoolId, selectedGradeLevel)
+    if (schoolVerified && selectedRole === 'student' && watchedSchoolId && selectedGradeLevel) {
+      loadAvailableClasses(watchedSchoolId, selectedGradeLevel)
     }
-  }, [schoolVerified, selectedRole, schoolId, selectedGradeLevel])
+  }, [schoolVerified, selectedRole, watchedSchoolId, selectedGradeLevel])
+
+  // Validate email domain in real-time
+  useEffect(() => {
+    console.log('📧 Email validation:', { 
+      email: watchedEmail, 
+      isGoogleUser,
+      restrictEmailDomains: schoolSettings?.restrictEmailDomains,
+      allowedEmailDomain: schoolSettings?.allowedEmailDomain 
+    })
+
+    if (!watchedEmail || isGoogleUser) {
+      setEmailDomainError('')
+      return
+    }
+
+    if (schoolSettings?.restrictEmailDomains && schoolSettings.allowedEmailDomain) {
+      const emailParts = watchedEmail.split('@')
+      if (emailParts.length === 2) {
+        const emailDomain = emailParts[1].toLowerCase()
+        const allowedDomain = schoolSettings.allowedEmailDomain.toLowerCase()
+        
+        console.log('🔍 Domain check:', { emailDomain, allowedDomain, matches: emailDomain === allowedDomain })
+        
+        if (emailDomain !== allowedDomain) {
+          setEmailDomainError(`Email must be from @${allowedDomain}`)
+          console.log('❌ Invalid domain')
+        } else {
+          setEmailDomainError('')
+          console.log('✅ Valid domain')
+        }
+      }
+    } else {
+      setEmailDomainError('')
+      console.log('ℹ️ Email domain restriction not enabled')
+    }
+  }, [watchedEmail, schoolSettings, isGoogleUser])
 
   // Verify school function
   const verifySchool = async (schoolId: string) => {
@@ -244,6 +288,33 @@ export default function RegisterPage() {
       if (data.schoolName) {
         setSchoolName(data.schoolName)
         setSchoolVerified(true)
+        
+        // Fetch school settings for email domain validation
+        if (data.schoolUuid) {
+          try {
+            const settingsResponse = await fetch('/api/school-public-settings', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ schoolId: data.schoolUuid })
+            })
+            
+            if (settingsResponse.ok) {
+              const settingsData = await settingsResponse.json()
+              if (settingsData.privacy_settings) {
+                setSchoolSettings({
+                  restrictEmailDomains: settingsData.privacy_settings.restrict_email_domains || false,
+                  allowedEmailDomain: settingsData.privacy_settings.allowed_email_domain || ''
+                })
+                console.log('✅ School settings loaded:', settingsData.privacy_settings)
+              }
+            } else {
+              console.warn('⚠️ Failed to load school settings:', settingsResponse.status)
+            }
+          } catch (err) {
+            console.error('❌ Failed to fetch school settings:', err)
+          }
+        }
+        
         addToast({
           type: 'success',
           title: 'School Verified',
@@ -422,6 +493,18 @@ export default function RegisterPage() {
       console.error('❌ [REGISTRATION] School not verified')
       return
     }
+    
+    // Validate email domain if school restricts it
+    if (schoolSettings?.restrictEmailDomains && schoolSettings.allowedEmailDomain && !isGoogleUser) {
+      const emailDomain = data.email.split('@')[1]?.toLowerCase()
+      const allowedDomain = schoolSettings.allowedEmailDomain.toLowerCase()
+      
+      if (emailDomain !== allowedDomain) {
+        setSubmitError(`Email must be from @${allowedDomain}. Your school only allows registration with school email addresses.`)
+        console.error('❌ [REGISTRATION] Email domain not allowed:', emailDomain)
+        return
+      }
+    }
 
     // Validate password for non-Google users
     if (!isGoogleUser && !data.password) {
@@ -537,7 +620,13 @@ export default function RegisterPage() {
     }
   }
 
-  const canProceedToStep2 = schoolVerified && watch('firstName') && watch('lastName') && watch('email') && watch('role') && (isGoogleUser || (watch('password') && passwordStrength >= 100))
+  const canProceedToStep2 = schoolVerified && 
+    watch('firstName') && 
+    watch('lastName') && 
+    watch('email') && 
+    watch('role') && 
+    (isGoogleUser || (watch('password') && passwordStrength >= 100)) &&
+    !emailDomainError  // Block if email domain doesn't match school requirements
 
   const handleNextStep = () => {
     if (canProceedToStep2) {
@@ -1058,6 +1147,30 @@ export default function RegisterPage() {
                           {errors.email.message}
                         </p>
                       )}
+                      {emailDomainError && !isGoogleUser && (
+                        <div className="mt-2 p-2 bg-red-50 border border-red-300 rounded-lg">
+                          <p className="text-xs text-red-800 flex items-center font-medium">
+                            <AlertCircle className="h-3 w-3 mr-1.5" />
+                            {emailDomainError}
+                          </p>
+                        </div>
+                      )}
+                      {schoolSettings?.restrictEmailDomains && schoolSettings.allowedEmailDomain && !emailDomainError && watchedEmail?.includes('@') && (
+                        <div className="mt-2 p-2 bg-green-50 border border-green-300 rounded-lg">
+                          <p className="text-xs text-green-800 flex items-center font-medium">
+                            <CheckCircle className="h-3 w-3 mr-1.5" />
+                            Valid school email domain
+                          </p>
+                        </div>
+                      )}
+                      {schoolSettings?.restrictEmailDomains && schoolSettings.allowedEmailDomain && !watchedEmail && (
+                        <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                          <p className="text-xs text-blue-800 flex items-center">
+                            <Mail className="h-3 w-3 mr-1.5" />
+                            Only <span className="font-mono font-semibold mx-1">@{schoolSettings.allowedEmailDomain}</span> emails allowed
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Password Field - Hidden for Google users */}
@@ -1294,7 +1407,7 @@ export default function RegisterPage() {
                                   </SelectItem>
                                 ))
                             ) : (
-                              <SelectItem value="" disabled>
+                              <SelectItem value="no-grades" disabled>
                                 {loadingGrades ? 'Loading...' : 'No grades available'}
                               </SelectItem>
                             )}

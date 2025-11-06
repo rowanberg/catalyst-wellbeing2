@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { invalidateGrades } from '@/lib/redis'
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,6 +25,7 @@ export async function POST(request: NextRequest) {
         updated_at
       `)
       .eq('school_id', schoolId)
+      .eq('is_active', true)
       .order('grade_level', { ascending: true })
 
     if (error) {
@@ -103,6 +105,11 @@ export async function PUT(request: NextRequest) {
       )
     }
 
+    // CRITICAL: Invalidate grades cache for this school
+    // Teachers/students will see new grade level on next request
+    await invalidateGrades(schoolId)
+    console.log(`🗑️ [Grade Management] Invalidated grades cache after creating grade: ${gradeLevel.grade_level}`)
+
     return NextResponse.json({
       gradeLevel: newGradeLevel
     })
@@ -139,6 +146,11 @@ export async function DELETE(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    // CRITICAL: Invalidate grades cache for this school
+    // Teachers/students won't see deleted grade on next request
+    await invalidateGrades(schoolId)
+    console.log(`🗑️ [Grade Management] Invalidated grades cache after deleting grade: ${gradeId}`)
 
     return NextResponse.json({
       message: 'Grade level deleted successfully'

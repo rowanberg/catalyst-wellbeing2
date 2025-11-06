@@ -49,14 +49,29 @@ export async function middleware(req: NextRequest) {
     if (pathname === '/superpanel/auth') {
       response = NextResponse.next()
     } else {
-      // For dashboard and other protected routes, verify access key
-      const accessKey = req.cookies.get('super_admin_key')?.value
-      const validKey = getSecureSuperAdminKey()
-
-      // Use timing-safe comparison to prevent timing attacks
-      if (!accessKey || !timingSafeEqual(accessKey, validKey)) {
+      // For dashboard and other protected routes, verify session token
+      const sessionToken = req.cookies.get('super_admin_session')?.value
+      
+      if (!sessionToken) {
+        console.log('[Middleware] No super_admin_session cookie found, redirecting to auth')
         return NextResponse.redirect(new URL('/superpanel/auth', req.url))
       }
+      
+      // Validate session token format
+      const validKey = getSecureSuperAdminKey()
+      try {
+        const decoded = Buffer.from(sessionToken, 'base64').toString('utf-8')
+        const hasValidPrefix = decoded.startsWith(validKey)
+        
+        if (!hasValidPrefix) {
+          console.log('[Middleware] Invalid session token, redirecting to auth')
+          return NextResponse.redirect(new URL('/superpanel/auth', req.url))
+        }
+      } catch (error) {
+        console.log('[Middleware] Session token decode failed, redirecting to auth')
+        return NextResponse.redirect(new URL('/superpanel/auth', req.url))
+      }
+      
       response = NextResponse.next()
     }
   } else {

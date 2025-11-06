@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { getCachedClassRoster, setCachedClassRoster } from '@/lib/redis-rosters'
 
 export async function GET(request: NextRequest) {
+  const startTime = performance.now()
+  
   try {
     const { searchParams } = new URL(request.url)
     const schoolId = searchParams.get('school_id')
@@ -14,6 +17,18 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // STEP 1: Try Redis cache first for THIS SPECIFIC CLASS
+    const cached = await getCachedClassRoster(classId, schoolId)
+    
+    if (cached) {
+      const duration = Math.round(performance.now() - startTime)
+      console.log(`⚡ [Class Roster] Cache HIT in ${duration}ms | Class: ${classId}`)
+      return NextResponse.json(cached)
+    }
+    
+    // STEP 2: Cache miss - authenticate and query database
+    console.log(`❌ [Class Roster] Cache MISS | Querying for class: ${classId}`)
 
     // Create authenticated Supabase client for auth verification
     const supabase = await createSupabaseServerClient()
@@ -167,10 +182,24 @@ export async function GET(request: NextRequest) {
       })).filter(student => student.id)
     }
 
-    return NextResponse.json({
+    const response = {
       students: students,
-      total: students.length
+      total: students.length,
+      cached_at: new Date().toISOString(),
+      source: 'database',
+      class_id: classId,
+      school_id: schoolId
+    }
+
+    // STEP 3: Cache result for THIS SPECIFIC CLASS (fire-and-forget)
+    setCachedClassRoster(classId, schoolId, response).catch((err) => {
+      console.error('Failed to cache class roster:', err)
     })
+
+    const duration = Math.round(performance.now() - startTime)
+    console.log(`⚡ [Class Roster] Database query completed in ${duration}ms for class: ${classId}`)
+
+    return NextResponse.json(response)
 
   } catch (error: any) {
     return NextResponse.json(

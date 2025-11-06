@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,15 +9,52 @@ const supabaseAdmin = createClient(
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const teacherId = searchParams.get('teacher_id')
-
-    if (!teacherId) {
+    // Step 1: Authenticate user
+    const supabase = await createSupabaseServerClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
       return NextResponse.json(
-        { message: 'Teacher ID is required' },
-        { status: 400 }
+        { message: 'Unauthorized - Please log in' },
+        { status: 401 }
       )
     }
+
+    // Step 2: Get teacher's profile and verify role
+    const { data: teacherProfile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('id, role, school_id, first_name, last_name')
+      .eq('user_id', user.id)
+      .single()
+
+    if (profileError || !teacherProfile) {
+      return NextResponse.json(
+        { message: 'Profile not found' },
+        { status: 404 }
+      )
+    }
+
+    if (teacherProfile.role !== 'teacher') {
+      return NextResponse.json(
+        { message: 'Forbidden - Teacher access only' },
+        { status: 403 }
+      )
+    }
+
+    // Step 3: Verify teacher is accessing their own data
+    const { searchParams } = new URL(request.url)
+    const requestedTeacherId = searchParams.get('teacher_id')
+
+    // If teacher_id is provided, verify it matches authenticated user
+    if (requestedTeacherId && requestedTeacherId !== teacherProfile.id) {
+      return NextResponse.json(
+        { message: 'Forbidden - Can only access your own analytics' },
+        { status: 403 }
+      )
+    }
+
+    // Use authenticated user's ID for teacher_class_assignments (uses user_id)
+    const teacherId = user.id
 
 
     // Get teacher's assigned classes from teacher_class_assignments table

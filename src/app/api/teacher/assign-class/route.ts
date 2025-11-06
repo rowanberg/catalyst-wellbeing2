@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { invalidateTeacherAssignments } from '@/lib/redis-teachers'
+import { invalidateAttendanceCache } from '@/lib/prefetch/attendancePrefetch'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -51,6 +53,10 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      // Invalidate caches after successful assignment
+      console.log(`✅ Teacher ${teacher_id} assigned to class ${class_id}`)
+      await invalidateTeacherAssignments(teacher_id)
+      invalidateAttendanceCache(`class-assignments:${teacher_id}`)
 
     } else {
       // Remove teacher from class
@@ -67,6 +73,11 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         )
       }
+
+      // Invalidate caches after successful removal
+      console.log(`✅ Teacher ${teacher_id} removed from class ${class_id}`)
+      await invalidateTeacherAssignments(teacher_id)
+      invalidateAttendanceCache(`class-assignments:${teacher_id}`)
 
     }
 

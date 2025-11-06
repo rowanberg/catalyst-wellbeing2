@@ -19,6 +19,7 @@ const corsHeaders = {
 interface ModelConfig {
   name: string
   tableName: string
+  columnPrefix: string  // e.g., 'flash2', 'gemma_27b'
   rpmLimit: number
   rpdLimit: number
   tpmLimit: number
@@ -26,35 +27,39 @@ interface ModelConfig {
 }
 
 const MODEL_CONFIGS: Record<string, ModelConfig> = {
-  'gemini-2.5-flash-lite': {
-    name: 'gemini-2.5-flash-lite',
-    tableName: 'gemini_25_flash_lite_keys',
+  'gemini-2.0-flash': {
+    name: 'gemini-2.0-flash',
+    tableName: 'gemini_api_keys',
+    columnPrefix: 'flash2',
     rpmLimit: 15,
-    rpdLimit: 1000,
-    tpmLimit: 250000,
-    fallbackPriority: 1
-  },
-  'gemini-2.5-flash': {
-    name: 'gemini-2.5-flash',
-    tableName: 'gemini_25_flash_keys',
-    rpmLimit: 10,
-    rpdLimit: 250,
-    tpmLimit: 250000,
-    fallbackPriority: 2
-  },
-  'gemini-2.0-flash-lite': {
-    name: 'gemini-2.0-flash-lite',
-    tableName: 'gemini_20_flash_lite_keys',
-    rpmLimit: 30,
     rpdLimit: 200,
     tpmLimit: 1000000,
+    fallbackPriority: 1
+  },
+  'gemma-2-27b': {
+    name: 'gemma-2-27b',
+    tableName: 'gemini_api_keys',
+    columnPrefix: 'gemma_27b',
+    rpmLimit: 10,
+    rpdLimit: 100,
+    tpmLimit: 500000,
+    fallbackPriority: 2
+  },
+  'gemma-2-12b': {
+    name: 'gemma-2-12b',
+    tableName: 'gemini_api_keys',
+    columnPrefix: 'gemma_12b',
+    rpmLimit: 15,
+    rpdLimit: 150,
+    tpmLimit: 750000,
     fallbackPriority: 3
   },
-  'gemini-flash-2': {
-    name: 'gemini-flash-2',
+  'gemma-2-4b': {
+    name: 'gemma-2-4b',
     tableName: 'gemini_api_keys',
-    rpmLimit: 15,
-    rpdLimit: 1500,
+    columnPrefix: 'gemma_4b',
+    rpmLimit: 20,
+    rpdLimit: 200,
     tpmLimit: 1000000,
     fallbackPriority: 4
   }
@@ -112,49 +117,48 @@ async function selectAvailableKey(
     const nowISO = now.toISOString()
     const oneMinuteAgo = new Date(now.getTime() - 60000).toISOString()
     const oneDayAgo = new Date(now.getTime() - 86400000).toISOString()
+    const prefix = config.columnPrefix
+
+    // Column names based on prefix
+    const minuteCountCol = `${prefix}_minute_count`
+    const dailyCountCol = `${prefix}_daily_count`
+    const lastMinuteResetCol = `${prefix}_last_minute_reset`
+    const lastDailyResetCol = `${prefix}_last_daily_reset`
+    const isCooldownCol = `${prefix}_is_in_cooldown`
+    const cooldownExpiresCol = `${prefix}_cooldown_expires_at`
 
     // ========================================================================
-    // ON-DEMAND RESETS - Only runs when keys are being selected
+    // ON-DEMAND RESETS
     // ========================================================================
     
-    // 1. Clear expired cooldowns (inline, no separate query needed)
+    // 1. Clear expired cooldowns
     await supabase.from(tableName)
-      .update({
-        is_in_cooldown: false,
-        cooldown_expires_at: null
-      })
-      .eq('is_in_cooldown', true)
-      .lt('cooldown_expires_at', nowISO)
+      .update({ [isCooldownCol]: false, [cooldownExpiresCol]: null })
+      .eq(isCooldownCol, true)
+      .lt(cooldownExpiresCol, nowISO)
 
-    // 2. Reset RPM for keys that haven't been reset in >60 seconds
+    // 2. Reset minute counter for keys >60 seconds old
     await supabase.from(tableName)
-      .update({
-        current_rpm: 0,
-        last_rpm_reset: nowISO
-      })
-      .lt('last_rpm_reset', oneMinuteAgo)
+      .update({ [minuteCountCol]: 0, [lastMinuteResetCol]: nowISO })
+      .lt(lastMinuteResetCol, oneMinuteAgo)
 
-    // 3. Reset RPD/TPM for keys that haven't been reset in >24 hours
+    // 3. Reset daily counter for keys >24 hours old
     await supabase.from(tableName)
-      .update({
-        current_rpd: 0,
-        current_tpm: 0,
-        last_rpd_reset: nowISO
-      })
-      .lt('last_rpd_reset', oneDayAgo)
+      .update({ [dailyCountCol]: 0, [lastDailyResetCol]: nowISO })
+      .lt(lastDailyResetCol, oneDayAgo)
 
     // ========================================================================
-    // KEY SELECTION - After resets, find best available key
+    // KEY SELECTION
     // ========================================================================
     
     const { data: keys, error } = await supabase
       .from(tableName)
       .select('*')
-      .eq('status', 'active')
-      .eq('is_in_cooldown', false)
-      .lt('current_rpm', config.rpmLimit)
-      .lt('current_rpd', config.rpdLimit)
-      .order('last_used_at', { ascending: true })
+      .eq('is_disabled', false)
+      .eq(isCooldownCol, false)
+      .lt(minuteCountCol, config.rpmLimit)
+      .lt(dailyCountCol, config.rpdLimit)
+      .order('last_used_timestamp', { ascending: true })
       .limit(10)
 
     if (error) {
@@ -163,36 +167,23 @@ async function selectAvailableKey(
     }
 
     if (!keys || keys.length === 0) {
-      console.log(`No available keys in ${tableName}`)
-      return null
-    }
-
-    // Filter keys that can accommodate the estimated tokens
-    const viableKeys = keys.filter(key => 
-      key.current_rpm < config.rpmLimit &&
-      key.current_rpd < config.rpdLimit &&
-      (key.current_tpm + estimatedTokens) <= config.tpmLimit
-    )
-
-    if (viableKeys.length === 0) {
-      console.log(`No viable keys in ${tableName} for ${estimatedTokens} tokens (TPM check failed)`)
+      console.log(`No available keys in ${tableName} for ${config.name}`)
       return null
     }
 
     // Select the least recently used key
-    const selectedKey = viableKeys[0]
+    const selectedKey = keys[0]
 
     // ========================================================================
-    // ATOMIC UPDATE - Row-level locking prevents race conditions
+    // ATOMIC UPDATE
     // ========================================================================
     
     const { data: updatedKey, error: updateError } = await supabase
       .from(tableName)
       .update({
-        current_rpm: selectedKey.current_rpm + 1,
-        current_rpd: selectedKey.current_rpd + 1,
-        current_tpm: selectedKey.current_tpm + estimatedTokens,
-        last_used_at: nowISO
+        [minuteCountCol]: selectedKey[minuteCountCol] + 1,
+        [dailyCountCol]: selectedKey[dailyCountCol] + 1,
+        last_used_timestamp: nowISO
       })
       .eq('id', selectedKey.id)
       .select()
@@ -203,7 +194,7 @@ async function selectAvailableKey(
       return null
     }
 
-    return { ...updatedKey, table_name: tableName, model_name: config.name }
+    return { ...updatedKey, table_name: tableName, model_name: config.name, column_prefix: prefix }
 
   } catch (error) {
     console.error(`Error in selectAvailableKey for ${tableName}:`, error)

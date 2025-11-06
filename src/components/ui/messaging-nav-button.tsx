@@ -29,7 +29,7 @@ export function MessagingNavButton({
     switch (userRole) {
       case 'admin': return '/admin/messaging'
       case 'teacher': return '/teacher/messaging'
-      case 'parent': return '/parent/messaging'
+      case 'parent': return '/parent' // Parent messaging removed
       case 'student': return '/student/messaging'
       default: return '/messaging'
     }
@@ -54,8 +54,8 @@ export function MessagingNavButton({
       case 'parent':
         return {
           icon: MessageCircle,
-          label: 'Family Hub',
-          description: 'Connect with teachers & view child messages',
+          label: 'Dashboard',
+          description: 'View your parent dashboard',
           color: 'bg-green-500 hover:bg-green-600'
         }
       case 'student':

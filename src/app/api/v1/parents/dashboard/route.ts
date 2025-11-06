@@ -7,6 +7,11 @@ import { createClient } from '@/lib/supabase/server'
 import { ApiResponse } from '@/lib/api/response'
 import { validateQueryParams, ParentDashboardQuerySchema } from '@/lib/validations/api-schemas'
 import { handleSecureError, AuthorizationError } from '@/lib/security/error-handler'
+import { rateLimiters } from '@/lib/security/enhanced-rate-limiter'
+import { 
+  getCachedStudentDashboard, 
+  setCachedStudentDashboard 
+} from '@/lib/redis/parent-cache'
 
 export async function GET(request: NextRequest) {
   const requestId = `req-${Date.now()}-${Math.random().toString(36).substring(7)}`
@@ -67,20 +72,89 @@ export async function GET(request: NextRequest) {
       throw new AuthorizationError('You do not have permission to view this student\'s data')
     }
 
+    // Check Redis cache first
+    const cachedData = await getCachedStudentDashboard(student_id)
+    if (cachedData) {
+      console.log(`[${requestId}] CACHE HIT - Returning cached dashboard for student: ${student_id}`)
+      return ApiResponse.success(cachedData)
+    }
+
+    console.log(`[${requestId}] CACHE MISS - Fetching fresh data from database`)
+
     // Authorization verified - proceed with data fetching
-    // Get student's class IDs
-    const { data: studentClasses } = await supabase
+    // CRITICAL: student_class_assignments.student_id references auth.users.id (user_id), NOT profile_id!
+    // So we must use studentUserData.user_id, not student_id (which is profile_id)
+    const { data: studentClassAssignments, error: classAssignError } = await supabase
       .from('student_class_assignments')
       .select('class_id')
-      .eq('student_id', student_id)
+      .eq('student_id', studentUserData.user_id)  // Use user_id, not profile_id!
       .eq('is_active', true)
 
-    const classIds = studentClasses?.map(sc => sc.class_id) || []
+    console.log(`[${requestId}] Step 1 - Student class assignments:`, {
+      profileId: student_id,
+      userId: studentUserData.user_id,
+      assignmentCount: studentClassAssignments?.length || 0,
+      assignments: studentClassAssignments,
+      error: classAssignError,
+      errorDetails: classAssignError ? JSON.stringify(classAssignError) : null
+    })
+    
+    // DEBUG: Check if RLS is blocking - try with admin client to see if data exists
+    if (!studentClassAssignments || studentClassAssignments.length === 0) {
+      console.warn(`[${requestId}] No class assignments found! Checking if RLS is blocking...`)
+      
+      // Import admin client
+      const { createClient: createAdminClient } = await import('@supabase/supabase-js')
+      const supabaseAdmin = createAdminClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { persistSession: false } }
+      )
+      
+      const { data: adminCheck, error: adminError } = await supabaseAdmin
+        .from('student_class_assignments')
+        .select('*')
+        .eq('student_id', studentUserData.user_id)
+        .eq('is_active', true)
+      
+      console.log(`[${requestId}] Admin query result (bypasses RLS):`, {
+        foundWithAdmin: adminCheck?.length || 0,
+        data: adminCheck,
+        error: adminError,
+        verdict: adminCheck && adminCheck.length > 0 ? 'RLS IS BLOCKING!' : 'No data exists in table'
+      })
+    }
+
+    const classIds = studentClassAssignments?.map(sc => sc.class_id) || []
+    
+    // Fetch class details separately to ensure we get the data
+    let classDetails: { id: string; class_name: string; class_code: string } | null = null
+    if (classIds.length > 0) {
+      const { data: classData, error: classError } = await supabase
+        .from('classes')
+        .select('id, class_name, class_code')
+        .eq('id', classIds[0])
+        .single()
+      
+      console.log(`[${requestId}] Step 2 - Class details lookup:`, {
+        classId: classIds[0],
+        classData,
+        error: classError
+      })
+      
+      classDetails = classData
+    }
+    
+    console.log(`[${requestId}] Step 3 - Final class info:`, {
+      hasClassDetails: !!classDetails,
+      classId: classDetails?.id,
+      className: classDetails?.class_name,
+      classCode: classDetails?.class_code
+    })
 
     // Parallel fetch all required data
     const [
       studentProfile,
-      studentClass,
       recentGrades,
       upcomingAssignments,
       attendanceData,
@@ -92,21 +166,6 @@ export async function GET(request: NextRequest) {
         .select('id, user_id, first_name, last_name, school_id, xp, level, streak_days')
         .eq('id', student_id)
         .single(),
-
-      // Get student's class from attendance → teacher_classes (most recent)
-      supabase
-        .from('attendance')
-        .select(`
-          teacher_id,
-          teacher_classes!inner (
-            id,
-            class_name
-          )
-        `)
-        .eq('student_id', student_id)
-        .order('date', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
 
       // Recent grades (last 30 days)
       supabase
@@ -183,7 +242,7 @@ export async function GET(request: NextRequest) {
 
     const upcomingWeek = formatUpcomingWeek(upcomingAssignments.data || [])
 
-    return ApiResponse.success({
+    const dashboardData = {
       actionCenter: actionItems.length > 0 ? actionItems : [{
         type: 'info',
         priority: 'low',
@@ -199,10 +258,16 @@ export async function GET(request: NextRequest) {
         level: studentProfile.data?.level || 1
       },
       studentInfo: {
-        classId: (studentClass.data?.teacher_classes as any)?.id || null,
-        className: (studentClass.data?.teacher_classes as any)?.class_name || null
+        classId: classDetails?.id || null,
+        className: classDetails?.class_name || classDetails?.class_code || null
       }
-    })
+    }
+
+    // Cache the result for future requests (15 days TTL with auto-invalidation)
+    await setCachedStudentDashboard(student_id, dashboardData)
+    console.log(`[${requestId}] Cached dashboard data for student: ${student_id}`)
+
+    return ApiResponse.success(dashboardData)
 
   } catch (error: any) {
     return handleSecureError(error, 'ParentDashboard', requestId)

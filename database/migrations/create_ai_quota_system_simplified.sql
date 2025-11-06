@@ -9,7 +9,7 @@
 CREATE TABLE IF NOT EXISTS public.user_ai_quotas (
     user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     normal_daily_usage INTEGER NOT NULL DEFAULT 0,  -- Max 30/day (Gemini 2.0 Flash)
-    extra_daily_usage INTEGER NOT NULL DEFAULT 0,   -- Max 500/day (Other Gemini models)
+    extra_daily_usage INTEGER NOT NULL DEFAULT 0,   -- Max 45/day (Other Gemini models)
     last_reset_timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     total_requests_today INTEGER GENERATED ALWAYS AS (normal_daily_usage + extra_daily_usage) STORED,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -92,7 +92,7 @@ BEGIN
         v_quota.normal_daily_usage,
         v_quota.extra_daily_usage,
         (v_quota.normal_daily_usage < 30) AS can_use_normal,
-        (v_quota.normal_daily_usage >= 30 AND v_quota.extra_daily_usage < 500) AS can_use_extra,
+        (v_quota.normal_daily_usage >= 30 AND v_quota.extra_daily_usage < 45) AS can_use_extra,
         v_needs_reset;
 END;
 $$;
@@ -121,7 +121,7 @@ BEGIN
         SET extra_daily_usage = extra_daily_usage + 1,
             updated_at = NOW()
         WHERE user_id = p_user_id
-        AND extra_daily_usage < 500
+        AND extra_daily_usage < 45
         RETURNING TRUE INTO v_success;
     END IF;
     
@@ -162,7 +162,7 @@ CREATE TRIGGER update_user_quotas_updated_at
 -- ============================================
 -- 6. Comments for documentation
 -- ============================================
-COMMENT ON TABLE public.user_ai_quotas IS 'Tracks daily AI request quotas for users (30 normal + 500 extra)';
+COMMENT ON TABLE public.user_ai_quotas IS 'Tracks daily AI request quotas for users (30 normal + 45 extra)';
 COMMENT ON TABLE public.ai_request_logs IS 'Logs all AI requests for analytics and debugging';
 
 COMMENT ON FUNCTION public.get_or_create_user_quota IS 'Gets or creates user quota, handles daily reset';

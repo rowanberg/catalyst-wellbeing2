@@ -19,14 +19,27 @@ export async function POST(
 ) {
   try {
     const { id: schoolId } = await params
-    const body = await request.json()
-    const { action, data } = body
+    
+    // Verify super admin authentication via session token
+    const sessionToken = request.cookies.get('super_admin_session')?.value
+    const secretKey = process.env.SUPER_ADMIN_SECRET_KEY
 
-    // Verify super admin access
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader) {
+    if (!sessionToken || !secretKey) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Validate session token
+    try {
+      const decoded = Buffer.from(sessionToken, 'base64').toString('utf-8')
+      if (!decoded.startsWith(secretKey)) {
+        return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
+      }
+    } catch {
+      return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
+    }
+    
+    const body = await request.json()
+    const { action, data } = body
 
     switch (action) {
       case 'pause_school': {

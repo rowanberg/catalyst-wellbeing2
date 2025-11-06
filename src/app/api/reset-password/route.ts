@@ -59,41 +59,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Send password reset email via SendGrid
-    console.log('📨 Preparing to send password reset email via SendGrid...')
+    // Send password reset email via Supabase Edge Function
+    console.log('📨 Preparing to send password reset email...')
     try {
       const resetUrl = data.properties?.action_link || ''
       const firstName = user.user_metadata?.first_name || user.email?.split('@')[0] || 'User'
+      const userRole = user.user_metadata?.role || 'student' // Default to student if role not set
       
-      console.log('📧 Email details:', { email, firstName, hasResetUrl: !!resetUrl })
-      console.log('🔗 Reset URL:', resetUrl)
+      console.log('📧 Email details:', { email, firstName, role: userRole, hasResetUrl: !!resetUrl })
       
-      const emailResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/send-password-reset-email`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            email: email,
-            firstName: firstName,
-            resetUrl: resetUrl
-          })
+      // Call Supabase Edge Function with role-specific template
+      const { data: emailData, error: emailError } = await supabaseAdmin.functions.invoke('send-email', {
+        body: { 
+          type: 'password-reset',
+          to: email,
+          name: firstName,
+          role: userRole,
+          url: resetUrl
         }
-      )
+      })
       
-      console.log('📬 SendGrid API response status:', emailResponse.status)
-      const responseData = await emailResponse.json()
-      console.log('📬 SendGrid API response:', responseData)
-      
-      if (emailResponse.ok) {
-        console.log('✅ Password reset email sent via SendGrid to:', email)
+      if (!emailError && emailData?.success) {
+        console.log('✅ Password reset email sent to:', email)
       } else {
-        console.error('❌ Failed to send password reset email via SendGrid:', email)
-        console.error('❌ Error details:', responseData)
-        // Don't fail the request if SendGrid fails - the link was still generated
+        console.error('❌ Failed to send password reset email:', emailError || emailData?.error)
+        // Don't fail the request if email fails - the link was still generated
       }
     } catch (emailError) {
-      console.error('❌ Error sending password reset email via SendGrid:', emailError)
+      console.error('❌ Error sending password reset email:', emailError)
       // Don't fail the request if email sending fails
     }
     

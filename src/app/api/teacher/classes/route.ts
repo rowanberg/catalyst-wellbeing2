@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { dedupedRequest } from '@/lib/cache/requestDedup'
 
 // Singleton Supabase admin client
@@ -33,10 +34,48 @@ interface ClassData {
 
 export async function GET(request: NextRequest) {
   try {
+    // Step 1: Authenticate user
+    const supabase = await createSupabaseServerClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { message: 'Unauthorized - Please log in' },
+        { status: 401 }
+      )
+    }
+
+    // Step 2: Get teacher profile and verify role
+    const supabaseAdmin = getSupabaseAdmin()
+    const { data, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('id, role, school_id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (profileError || !data) {
+      return NextResponse.json(
+        { message: 'Profile not found' },
+        { status: 404 }
+      )
+    }
+
+    const teacherProfile = data as { id: string; role: string; school_id: string }
+
+    if (teacherProfile.role !== 'teacher') {
+      return NextResponse.json(
+        { message: 'Forbidden - Teacher access only' },
+        { status: 403 }
+      )
+    }
+
+    // Step 3: Parse query params and use authenticated data
     const { searchParams } = new URL(request.url)
-    const schoolId = searchParams.get('school_id')
     const gradeLevelId = searchParams.get('grade_level_id')
-    const teacherId = searchParams.get('teacher_id')
+    
+    // Use teacher's school ID and user ID (not from query params)
+    const schoolId = teacherProfile.school_id
+    const teacherId = user.id  // Use user.id for teacher_class_assignments
 
     if (!schoolId || !gradeLevelId) {
       return NextResponse.json(

@@ -68,6 +68,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Switch } from '@/components/ui/switch'
 import { Progress } from '@/components/ui/progress'
+import { ExportConfigDialog } from './ExportConfigDialog'
 import Link from 'next/link'
 
 interface User {
@@ -101,9 +102,17 @@ function UserManagementContent() {
   const [users, setUsers] = useState<User[]>([])
   const [filteredUsers, setFilteredUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<string>('all')
+  const [pagination, setPagination] = useState({
+    total: 0,
+    limit: 20,
+    offset: 0,
+    hasMore: false
+  })
   const [gradeFilter, setGradeFilter] = useState<string>('all')
   const [classFilter, setClassFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -135,6 +144,51 @@ function UserManagementContent() {
   const [messageRecipient, setMessageRecipient] = useState<User | null>(null)
   const [messageContent, setMessageContent] = useState('')
   const [messageSubject, setMessageSubject] = useState('')
+  
+  // Export configuration state
+  const [showExportConfigDialog, setShowExportConfigDialog] = useState(false)
+  const [exportFields, setExportFields] = useState<string[]>([
+    'user_id', 'first_name', 'last_name', 'email', 'role', 'created_at'
+  ])
+  const [exportRoleFilter, setExportRoleFilter] = useState<string>('all')
+  
+  // Available export fields with categories
+  const availableExportFields = [
+    { category: 'Basic Info', fields: [
+      { key: 'user_id', label: 'User ID' },
+      { key: 'first_name', label: 'First Name' },
+      { key: 'last_name', label: 'Last Name' },
+      { key: 'full_name', label: 'Full Name' },
+      { key: 'email', label: 'Email' },
+      { key: 'role', label: 'Role' },
+    ]},
+    { category: 'Contact Info', fields: [
+      { key: 'phone', label: 'Phone' },
+      { key: 'address', label: 'Address' },
+      { key: 'emergency_contact', label: 'Emergency Contact' },
+      { key: 'date_of_birth', label: 'Date of Birth' },
+    ]},
+    { category: 'Academic Info', fields: [
+      { key: 'school_id', label: 'School ID' },
+      { key: 'grade_level', label: 'Grade Level' },
+      { key: 'class_name', label: 'Class Name' },
+    ]},
+    { category: 'Gamification', fields: [
+      { key: 'current_streak', label: 'Current Streak' },
+      { key: 'total_xp', label: 'Total XP' },
+      { key: 'level', label: 'Level' },
+      { key: 'gems', label: 'Gems' },
+    ]},
+    { category: 'Account Info', fields: [
+      { key: 'status', label: 'Status' },
+      { key: 'avatar_url', label: 'Avatar URL' },
+      { key: 'created_at', label: 'Created At' },
+      { key: 'updated_at', label: 'Updated At' },
+      { key: 'last_sign_in_at', label: 'Last Sign In' },
+      { key: 'account_age', label: 'Account Age (Days)' },
+      { key: 'engagement_score', label: 'Engagement Score' },
+    ]}
+  ]
   
   // Deletion state
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -183,6 +237,14 @@ function UserManagementContent() {
     addToast(message, 'error')
   }
 
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
   // Fetch users from API with proper authentication and school context
   useEffect(() => {
     const fetchUsers = async () => {
@@ -204,8 +266,23 @@ function UserManagementContent() {
           throw new Error('School ID not found for admin user')
         }
 
+        // Build query parameters
+        const params = new URLSearchParams({
+          schoolId,
+          limit: pagination.limit.toString(),
+          offset: '0'
+        })
+        
+        if (roleFilter && roleFilter !== 'all') {
+          params.append('role', roleFilter)
+        }
+        
+        if (debouncedSearch) {
+          params.append('search', debouncedSearch)
+        }
+
         // Fetch users for this school
-        const response = await fetch(`/api/admin/users?schoolId=${schoolId}`, {
+        const response = await fetch(`/api/admin/users?${params}`, {
           headers: {
             'Content-Type': 'application/json',
           },
@@ -219,6 +296,12 @@ function UserManagementContent() {
         const data = await response.json()
         const fetchedUsers = data.users || []
         setUsers(fetchedUsers)
+        setPagination({
+          total: data.pagination.total,
+          limit: data.pagination.limit,
+          offset: data.pagination.offset,
+          hasMore: data.pagination.hasMore
+        })
         
         // Calculate comprehensive stats from real data
         const currentDate = new Date()
@@ -266,6 +349,7 @@ function UserManagementContent() {
         console.error('Error fetching users:', err)
         setError(err instanceof Error ? err.message : 'Failed to fetch users')
         setUsers([])
+        setPagination({ total: 0, limit: 20, offset: 0, hasMore: false })
         setStats({
           total: 0,
           students: 0,
@@ -285,7 +369,49 @@ function UserManagementContent() {
     }
 
     fetchUsers()
-  }, [profile])
+  }, [profile, roleFilter, debouncedSearch])
+
+  // Load more users
+  const loadMoreUsers = async () => {
+    if (!profile?.school_id || !pagination.hasMore || loadingMore) return
+
+    try {
+      setLoadingMore(true)
+      
+      const params = new URLSearchParams({
+        schoolId: profile.school_id,
+        limit: pagination.limit.toString(),
+        offset: (pagination.offset + pagination.limit).toString()
+      })
+      
+      if (roleFilter && roleFilter !== 'all') {
+        params.append('role', roleFilter)
+      }
+      
+      if (debouncedSearch) {
+        params.append('search', debouncedSearch)
+      }
+
+      const response = await fetch(`/api/admin/users?${params}`)
+      if (!response.ok) throw new Error('Failed to load more users')
+      
+      const data = await response.json()
+      const moreUsers = data.users || []
+      
+      setUsers(prev => [...prev, ...moreUsers])
+      setPagination({
+        total: data.pagination.total,
+        limit: data.pagination.limit,
+        offset: data.pagination.offset,
+        hasMore: data.pagination.hasMore
+      })
+    } catch (err: any) {
+      console.error('Error loading more users:', err)
+      addToast('Failed to load more users', 'error')
+    } finally {
+      setLoadingMore(false)
+    }
+  }
 
   // Filter and sort users
   useEffect(() => {
@@ -644,81 +770,143 @@ function UserManagementContent() {
     }
   }
 
-  // Comprehensive export function
-  const exportUsersToCSV = () => {
+  // Helper to toggle export field
+  const toggleExportField = (fieldKey: string) => {
+    setExportFields(prev => 
+      prev.includes(fieldKey) 
+        ? prev.filter(f => f !== fieldKey)
+        : [...prev, fieldKey]
+    )
+  }
+
+  // Select all fields in a category
+  const selectCategoryFields = (category: string) => {
+    const categoryData = availableExportFields.find(c => c.category === category)
+    if (!categoryData) return
+    
+    const categoryFieldKeys = categoryData.fields.map(f => f.key)
+    const allSelected = categoryFieldKeys.every(key => exportFields.includes(key))
+    
+    if (allSelected) {
+      // Deselect all in category
+      setExportFields(prevFields => prevFields.filter(f => !categoryFieldKeys.includes(f)))
+    } else {
+      // Select all in category
+      setExportFields(prevFields => {
+        const combinedFields = prevFields.concat(categoryFieldKeys)
+        const uniqueFields: string[] = []
+        combinedFields.forEach(field => {
+          if (!uniqueFields.includes(field)) {
+            uniqueFields.push(field)
+          }
+        })
+        return uniqueFields
+      })
+    }
+  }
+
+  // Get field label from key
+  const getFieldLabel = (key: string): string => {
+    for (const category of availableExportFields) {
+      const field = category.fields.find(f => f.key === key)
+      if (field) return field.label
+    }
+    return key
+  }
+
+  // Get field value from user object
+  const getFieldValue = (user: User, fieldKey: string): string | number => {
+    const createdDate = user.created_at ? new Date(user.created_at) : null
+    const updatedDate = user.updated_at ? new Date(user.updated_at) : null
+    const lastSignIn = user.last_sign_in_at ? new Date(user.last_sign_in_at) : null
+    const accountAge = createdDate ? Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24)) : 0
+    
+    // Calculate engagement score
+    let engagementScore = 0
+    if (user.total_xp) engagementScore += Math.min(user.total_xp / 1000, 50)
+    if (user.current_streak) engagementScore += Math.min(user.current_streak * 2, 30)
+    if (lastSignIn && Date.now() - lastSignIn.getTime() < 7 * 24 * 60 * 60 * 1000) engagementScore += 20
+    
+    const fieldMap: Record<string, string | number> = {
+      user_id: user.user_id || user.id || 'N/A',
+      first_name: user.first_name || '',
+      last_name: user.last_name || '',
+      full_name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'N/A',
+      email: user.email || '',
+      role: (user.role || '').charAt(0).toUpperCase() + (user.role || '').slice(1),
+      phone: user.phone || '',
+      date_of_birth: user.date_of_birth || '',
+      address: user.address || '',
+      emergency_contact: user.emergency_contact || '',
+      school_id: user.school_id || '',
+      grade_level: user.grade_level || '',
+      class_name: user.class_name || '',
+      status: user.status || 'Active',
+      current_streak: user.current_streak || 0,
+      total_xp: user.total_xp || user.xp || 0,
+      level: user.level || 0,
+      gems: user.gems || 0,
+      avatar_url: user.avatar_url || '',
+      created_at: createdDate ? createdDate.toLocaleDateString('en-US') + ' ' + createdDate.toLocaleTimeString('en-US') : '',
+      updated_at: updatedDate ? updatedDate.toLocaleDateString('en-US') + ' ' + updatedDate.toLocaleTimeString('en-US') : '',
+      last_sign_in_at: lastSignIn ? lastSignIn.toLocaleDateString('en-US') + ' ' + lastSignIn.toLocaleTimeString('en-US') : '',
+      account_age: accountAge,
+      engagement_score: Math.round(engagementScore)
+    }
+    
+    return fieldMap[fieldKey] ?? ''
+  }
+
+  // Comprehensive export function with configurable fields - fetches ALL users
+  const exportUsersToCSV = async () => {
     try {
-      if (filteredUsers.length === 0) {
-        addToast('No users to export. Try adjusting your filters.', 'error')
+      if (exportFields.length === 0) {
+        addToast('Please select at least one field to export.', 'error')
+        return
+      }
+      
+      if (!profile?.school_id) {
+        addToast('School ID not found. Cannot export users.', 'error')
         return
       }
 
-      // Define comprehensive CSV headers
-      const headers = [
-        'User ID',
-        'First Name',
-        'Last Name',
-        'Full Name',
-        'Email',
-        'Role',
-        'Phone',
-        'Date of Birth',
-        'Address',
-        'Emergency Contact',
-        'School ID',
-        'Grade Level',
-        'Class Name',
-        'Status',
-        'Current Streak',
-        'Total XP',
-        'Level',
-        'Gems',
-        'Avatar URL',
-        'Created At',
-        'Updated At',
-        'Last Sign In',
-        'Account Age (Days)',
-        'Engagement Score'
-      ]
+      // Show loading state
+      addToast('Fetching all users for export...', 'success')
+      
+      // Fetch ALL users from API (no pagination limit)
+      const params = new URLSearchParams({
+        schoolId: profile.school_id,
+        limit: '10000', // Large limit to get all users
+        offset: '0'
+      })
+      
+      if (exportRoleFilter && exportRoleFilter !== 'all') {
+        params.append('role', exportRoleFilter)
+      }
+      
+      if (debouncedSearch) {
+        params.append('search', debouncedSearch)
+      }
 
-      // Convert users to CSV format with comprehensive data
-      const csvData = filteredUsers.map(user => {
-        const createdDate = user.created_at ? new Date(user.created_at) : null
-        const updatedDate = user.updated_at ? new Date(user.updated_at) : null
-        const lastSignIn = user.last_sign_in_at ? new Date(user.last_sign_in_at) : null
-        const accountAge = createdDate ? Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24)) : 0
-        
-        // Calculate engagement score based on XP, streak, and recent activity
-        let engagementScore = 0
-        if (user.total_xp) engagementScore += Math.min(user.total_xp / 1000, 50) // Max 50 points from XP
-        if (user.current_streak) engagementScore += Math.min(user.current_streak * 2, 30) // Max 30 points from streak
-        if (lastSignIn && Date.now() - lastSignIn.getTime() < 7 * 24 * 60 * 60 * 1000) engagementScore += 20 // 20 points for recent activity
-        
-        return [
-          user.user_id || user.id || 'N/A',
-          user.first_name || '',
-          user.last_name || '',
-          `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'N/A',
-          user.email || '',
-          (user.role || '').charAt(0).toUpperCase() + (user.role || '').slice(1),
-          user.phone || '',
-          user.date_of_birth || '',
-          user.address || '',
-          user.emergency_contact || '',
-          user.school_id || '',
-          user.grade_level || '',
-          user.class_name || '',
-          user.status || 'Active',
-          user.current_streak || 0,
-          user.total_xp || user.xp || 0,
-          user.level || 0,
-          user.gems || 0,
-          user.avatar_url || '',
-          createdDate ? createdDate.toLocaleDateString('en-US') + ' ' + createdDate.toLocaleTimeString('en-US') : '',
-          updatedDate ? updatedDate.toLocaleDateString('en-US') + ' ' + updatedDate.toLocaleTimeString('en-US') : '',
-          lastSignIn ? lastSignIn.toLocaleDateString('en-US') + ' ' + lastSignIn.toLocaleTimeString('en-US') : '',
-          accountAge,
-          Math.round(engagementScore)
-        ]
+      const response = await fetch(`/api/admin/users?${params}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch users for export')
+      }
+      
+      const data = await response.json()
+      const allUsers = data.users || []
+      
+      if (allUsers.length === 0) {
+        addToast('No users found to export. Try adjusting your filters.', 'error')
+        return
+      }
+
+      // Generate headers based on selected fields
+      const headers = exportFields.map(fieldKey => getFieldLabel(fieldKey))
+
+      // Convert users to CSV format with selected fields only
+      const csvData = allUsers.map((user: User) => {
+        return exportFields.map(fieldKey => getFieldValue(user, fieldKey))
       })
 
       // Create CSV content with proper escaping
@@ -769,7 +957,7 @@ function UserManagementContent() {
         URL.revokeObjectURL(url)
         
         // Show success message with export details
-        addToast(`Successfully exported ${filteredUsers.length} users to ${filename}`, 'success')
+        addToast(`Successfully exported ${allUsers.length} users to ${filename}`, 'success')
       } else {
         throw new Error('File download not supported')
       }
@@ -898,11 +1086,11 @@ function UserManagementContent() {
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <div className="flex items-center gap-2 order-2 sm:order-1">
                 <Button 
-                  onClick={exportUsersToCSV}
+                  onClick={() => setShowExportConfigDialog(true)}
                   variant="outline" 
                   size="sm" 
                   className="bg-white/50 backdrop-blur-sm hover:bg-white/80 text-xs sm:text-sm hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 hover:border-green-300"
-                  title="Export filtered users to CSV"
+                  title="Configure and export filtered users to CSV"
                 >
                   <Download className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
                   <span className="hidden sm:inline">Export CSV</span>
@@ -1082,8 +1270,8 @@ function UserManagementContent() {
                   <Button 
                     variant="outline" 
                     className="h-20 sm:h-24 flex-col space-y-1 sm:space-y-2 bg-white/50 hover:bg-white/80 border-2 hover:border-purple-300"
-                    onClick={exportUsersToCSV}
-                    title="Export user data to CSV report"
+                    onClick={() => setShowExportConfigDialog(true)}
+                    title="Configure and export user data to CSV report"
                   >
                     <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
                     <span className="font-medium text-xs sm:text-sm">Export CSV</span>
@@ -1528,6 +1716,30 @@ function UserManagementContent() {
                       </tbody>
                     </table>
                   </div>
+                  
+                  {/* Load More Button for Table View */}
+                  {pagination.hasMore && (
+                    <div className="p-4 border-t border-gray-200">
+                      <Button
+                        onClick={loadMoreUsers}
+                        disabled={loadingMore}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        {loadingMore ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                            Loading...
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="w-4 h-4 mr-2" />
+                            Load More ({pagination.total - users.length} remaining)
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ) : (
@@ -1646,6 +1858,31 @@ function UserManagementContent() {
                     </Card>
                   </motion.div>
                 ))}
+                
+                {/* Load More Button for Grid View */}
+                {viewMode === 'grid' && pagination.hasMore && (
+                  <div className="mt-6 flex justify-center">
+                    <Button
+                      onClick={loadMoreUsers}
+                      disabled={loadingMore}
+                      variant="outline"
+                      size="lg"
+                      className="min-w-[200px]"
+                    >
+                      {loadingMore ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="w-4 h-4 mr-2" />
+                          Load More ({pagination.total - users.length} remaining)
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </TabsContent>
@@ -2134,6 +2371,19 @@ function UserManagementContent() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Export Configuration Dialog */}
+        <ExportConfigDialog
+          open={showExportConfigDialog}
+          onOpenChange={setShowExportConfigDialog}
+          availableFields={availableExportFields}
+          selectedFields={exportFields}
+          onToggleField={toggleExportField}
+          onSelectCategory={selectCategoryFields}
+          onExport={exportUsersToCSV}
+          roleFilter={exportRoleFilter}
+          onRoleFilterChange={setExportRoleFilter}
+        />
 
         {/* Toast Notifications - Mobile Optimized */}
         <div className="fixed top-4 left-4 right-4 sm:top-4 sm:right-4 sm:left-auto z-50 space-y-2">

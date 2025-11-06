@@ -5,7 +5,7 @@
  * Professional, compact design for quick event discovery
  */
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, memo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -20,6 +20,7 @@ import {
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useAppSelector } from '@/lib/redux/hooks'
+import { detectDevicePerformance, getAnimationConfig } from '@/lib/utils/devicePerformance'
 
 interface CalendarEvent {
   id: string
@@ -36,19 +37,23 @@ interface AttendanceRecord {
 }
 
 const eventTypeConfig = {
-  exam: { color: 'from-red-500 to-pink-500', icon: BookOpen, label: 'Exam', bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
-  assignment: { color: 'from-blue-500 to-cyan-500', icon: BookOpen, label: 'Assignment', bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
-  holiday: { color: 'from-green-500 to-emerald-500', icon: Trophy, label: 'Holiday', bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
-  event: { color: 'from-purple-500 to-indigo-500', icon: CalendarIcon, label: 'Event', bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
-  deadline: { color: 'from-orange-500 to-amber-500', icon: Clock, label: 'Deadline', bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
-  meeting: { color: 'from-cyan-500 to-teal-500', icon: CalendarDays, label: 'Meeting', bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-200' },
-  sports: { color: 'from-yellow-500 to-orange-500', icon: Trophy, label: 'Sports', bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200' },
-  cultural: { color: 'from-pink-500 to-rose-500', icon: Sparkles, label: 'Cultural', bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-200' }
+  exam: { color: 'from-slate-700 to-slate-800', icon: BookOpen, label: 'Exam', bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-300' },
+  assignment: { color: 'from-blue-600 to-blue-700', icon: BookOpen, label: 'Assignment', bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-300' },
+  holiday: { color: 'from-emerald-600 to-teal-600', icon: Trophy, label: 'Holiday', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-300' },
+  event: { color: 'from-indigo-600 to-indigo-700', icon: CalendarIcon, label: 'Event', bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-300' },
+  deadline: { color: 'from-amber-600 to-orange-600', icon: Clock, label: 'Deadline', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-300' },
+  meeting: { color: 'from-cyan-600 to-sky-600', icon: CalendarDays, label: 'Meeting', bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-300' },
+  sports: { color: 'from-orange-600 to-red-600', icon: Trophy, label: 'Sports', bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-300' },
+  cultural: { color: 'from-purple-600 to-pink-600', icon: Sparkles, label: 'Cultural', bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-300' }
 }
 
 export default function StudentCalendarPage() {
   const router = useRouter()
   const { profile } = useAppSelector((state) => state.auth)
+  
+  // Device performance detection
+  const devicePerf = useMemo(() => detectDevicePerformance(), [])
+  const animConfig = useMemo(() => getAnimationConfig(devicePerf.mode), [devicePerf.mode])
   
   const [currentDate, setCurrentDate] = useState(new Date())
   const [events, setEvents] = useState<CalendarEvent[]>([])
@@ -150,7 +155,7 @@ export default function StudentCalendarPage() {
   const monthName = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })
 
   return (
-    <div className="min-h-screen px-3 py-4 md:p-6" style={{ background: 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 30%, white), color-mix(in srgb, var(--theme-tertiary) 20%, white))' }}>
+    <div className="min-h-screen px-3 py-4 md:p-6 bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
       {/* Hero Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -170,7 +175,9 @@ export default function StudentCalendarPage() {
         </div>
 
         {/* Intelligent Header Card */}
-        <Card className="border-0 shadow-xl md:shadow-2xl overflow-hidden relative" style={{ background: 'linear-gradient(135deg, var(--theme-primary), var(--theme-secondary))' }}>
+        <Card className="border-0 shadow-xl md:shadow-2xl overflow-hidden relative bg-gradient-to-br from-slate-700 via-slate-600 to-blue-600">
+          {/* Professional accent line */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500" />
           <CardContent className="p-3 md:p-6 relative z-10">
             <div className="flex items-start justify-between mb-3 md:mb-4">
               <div className="flex-1 min-w-0">
@@ -191,7 +198,7 @@ export default function StudentCalendarPage() {
 
             {/* Quick Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
-              <motion.div whileTap={{ scale: 0.98 }} className="bg-white/15 backdrop-blur-sm rounded-lg p-2 md:p-3 border border-white/30 active:bg-white/20">
+              <motion.div whileTap={animConfig.enableAnimations ? { scale: 0.98 } : {}} className="bg-white/20 backdrop-blur-md rounded-xl p-2 md:p-3 border border-white/30 hover:bg-white/25 transition-colors shadow-lg">
                 <div className="flex items-center space-x-1.5 md:space-x-2">
                   <div className="p-1.5 md:p-2 rounded-lg bg-white/20">
                     <CalendarDays className="w-3.5 h-3.5 md:w-4 md:h-4 text-white" />
@@ -203,7 +210,7 @@ export default function StudentCalendarPage() {
                 </div>
               </motion.div>
 
-              <motion.div whileTap={{ scale: 0.98 }} className="bg-white/15 backdrop-blur-sm rounded-lg p-2 md:p-3 border border-white/30 active:bg-white/20">
+              <motion.div whileTap={animConfig.enableAnimations ? { scale: 0.98 } : {}} className="bg-white/20 backdrop-blur-md rounded-xl p-2 md:p-3 border border-white/30 hover:bg-white/25 transition-colors shadow-lg">
                 <div className="flex items-center space-x-1.5 md:space-x-2">
                   <div className="p-1.5 md:p-2 rounded-lg bg-white/20">
                     <Zap className="w-3.5 h-3.5 md:w-4 md:h-4 text-white" />
@@ -215,7 +222,7 @@ export default function StudentCalendarPage() {
                 </div>
               </motion.div>
 
-              <motion.div whileTap={{ scale: 0.98 }} className="bg-white/15 backdrop-blur-sm rounded-lg p-2 md:p-3 border border-white/30 active:bg-white/20">
+              <motion.div whileTap={animConfig.enableAnimations ? { scale: 0.98 } : {}} className="bg-white/20 backdrop-blur-md rounded-xl p-2 md:p-3 border border-white/30 hover:bg-white/25 transition-colors shadow-lg">
                 <div className="flex items-center space-x-1.5 md:space-x-2">
                   <div className="p-1.5 md:p-2 rounded-lg bg-white/20">
                     <Target className="w-3.5 h-3.5 md:w-4 md:h-4 text-white" />
@@ -227,7 +234,7 @@ export default function StudentCalendarPage() {
                 </div>
               </motion.div>
 
-              <motion.div whileTap={{ scale: 0.98 }} className="bg-white/15 backdrop-blur-sm rounded-lg p-2 md:p-3 border border-white/30 active:bg-white/20">
+              <motion.div whileTap={animConfig.enableAnimations ? { scale: 0.98 } : {}} className="bg-white/20 backdrop-blur-md rounded-xl p-2 md:p-3 border border-white/30 hover:bg-white/25 transition-colors shadow-lg">
                 <div className="flex items-center space-x-1.5 md:space-x-2">
                   <div className="p-1.5 md:p-2 rounded-lg bg-white/20">
                     <CheckCircle className="w-3.5 h-3.5 md:w-4 md:h-4 text-white" />
@@ -286,18 +293,15 @@ export default function StudentCalendarPage() {
                   {Object.entries(eventTypeConfig).map(([type, config]) => (
                     <motion.button
                       key={type}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+                      whileHover={animConfig.enableAnimations ? { scale: 1.05 } : {}}
+                      whileTap={animConfig.enableAnimations ? { scale: 0.95 } : {}}
                       onClick={() => toggleFilter(type)}
                       className={cn(
                         "px-4 py-2 rounded-full text-sm font-medium transition-all",
                         selectedTypes.includes(type)
-                          ? "text-white shadow-lg"
+                          ? `text-white shadow-lg bg-gradient-to-r ${config.color}`
                           : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                       )}
-                      style={selectedTypes.includes(type) ? {
-                        background: 'linear-gradient(to right, var(--theme-primary), var(--theme-secondary))'
-                      } : {}}
                     >
                       {config.label}
                     </motion.button>
@@ -338,10 +342,10 @@ export default function StudentCalendarPage() {
                     return (
                       <motion.div
                         key={event.id}
-                        initial={{ opacity: 0, x: -20 }}
+                        initial={animConfig.enableAnimations ? { opacity: 0, x: -20 } : { opacity: 1 }}
                         animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        whileTap={{ scale: 0.98 }}
+                        transition={{ delay: devicePerf.mode === 'high' ? index * 0.1 : 0 }}
+                        whileTap={animConfig.enableAnimations ? { scale: 0.98 } : {}}
                         className="bg-white rounded-lg md:rounded-xl p-3 md:p-4 shadow-md md:shadow-lg border-l-3 md:border-l-4 cursor-pointer active:shadow-lg transition-shadow"
                         style={{ borderLeftColor: 'var(--theme-accent)' }}
                       >
@@ -404,12 +408,12 @@ export default function StudentCalendarPage() {
                     return (
                       <motion.div
                         key={event.id}
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={animConfig.enableAnimations ? { opacity: 0, y: 20 } : { opacity: 1 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        whileTap={{ scale: 0.98 }}
+                        transition={{ delay: devicePerf.mode === 'high' ? index * 0.1 : 0 }}
+                        whileTap={animConfig.enableAnimations ? { scale: 0.98 } : {}}
                         className={cn(
-                          "p-3 md:p-4 rounded-lg md:rounded-xl shadow-md md:shadow-lg cursor-pointer border-2 active:shadow-lg transition-all",
+                          "p-3 md:p-4 rounded-lg md:rounded-xl shadow-md md:shadow-lg cursor-pointer border-2 hover:shadow-xl transition-all",
                           config.bg, config.border
                         )}
                       >
@@ -481,8 +485,8 @@ export default function StudentCalendarPage() {
                       return (
                         <motion.div
                           key={event.id}
-                          whileTap={{ scale: 0.98 }}
-                          className="p-2.5 md:p-3 rounded-lg active:bg-gray-50 transition-all cursor-pointer border border-gray-200 active:border-gray-300 active:shadow-sm"
+                          whileTap={animConfig.enableAnimations ? { scale: 0.98 } : {}}
+                          className="p-2.5 md:p-3 rounded-lg hover:bg-gray-50 transition-all cursor-pointer border border-gray-200 hover:border-gray-300 hover:shadow-sm"
                         >
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center space-x-2 md:space-x-3 flex-1 min-w-0">
@@ -583,21 +587,15 @@ export default function StudentCalendarPage() {
                       days.push(
                         <motion.div
                           key={day}
-                          whileTap={{ scale: 0.95 }}
+                          whileTap={animConfig.enableAnimations ? { scale: 0.95 } : {}}
                           className={cn(
                             "aspect-square flex items-center justify-center text-[11px] md:text-xs rounded-md md:rounded-lg cursor-pointer transition-all relative",
                             isToday
-                              ? "font-bold text-white shadow-sm md:shadow-md"
+                              ? "font-bold text-white shadow-sm md:shadow-md bg-gradient-to-br from-blue-600 to-blue-700"
                               : hasEvents
-                              ? "font-semibold active:shadow-sm"
-                              : "text-gray-700 active:bg-gray-100"
+                              ? "font-semibold hover:shadow-sm bg-blue-50 text-blue-700 hover:bg-blue-100"
+                              : "text-gray-700 hover:bg-gray-100"
                           )}
-                          style={isToday ? {
-                            background: 'linear-gradient(to bottom right, var(--theme-primary), var(--theme-secondary))'
-                          } : hasEvents ? {
-                            backgroundColor: 'color-mix(in srgb, var(--theme-highlight) 60%, transparent)',
-                            color: 'var(--theme-primary)'
-                          } : {}}
                         >
                           {day}
                           {hasEvents && !isToday && (
@@ -617,12 +615,12 @@ export default function StudentCalendarPage() {
                 {/* Legend */}
                 <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t flex items-center justify-center gap-2 md:gap-3 text-[11px] md:text-xs">
                   <div className="flex items-center gap-1">
-                    <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded" style={{ background: 'linear-gradient(to bottom right, var(--theme-primary), var(--theme-secondary))' }} />
-                    <span className="text-gray-600">Today</span>
+                    <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded bg-gradient-to-br from-blue-600 to-blue-700" />
+                    <span className="text-gray-600 font-medium">Today</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full" style={{ backgroundColor: 'var(--theme-accent)' }} />
-                    <span className="text-gray-600">Event</span>
+                    <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-blue-600" />
+                    <span className="text-gray-600 font-medium">Event</span>
                   </div>
                 </div>
               </CardContent>

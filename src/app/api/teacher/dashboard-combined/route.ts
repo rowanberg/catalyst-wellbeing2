@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { dedupedRequest } from '@/lib/cache/requestDedup'
 
 const supabaseAdmin = createClient(
@@ -23,15 +24,40 @@ const CACHE_TTL = 10 * 60 * 1000 // 10 minutes
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const teacherId = searchParams.get('teacher_id')
-
-    if (!teacherId) {
+    // Step 1: Authenticate user
+    const supabase = await createSupabaseServerClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
       return NextResponse.json(
-        { message: 'Teacher ID is required' },
-        { status: 400 }
+        { message: 'Unauthorized - Please log in' },
+        { status: 401 }
       )
     }
+
+    // Step 2: Get teacher profile and verify role
+    const { data: teacherProfile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('id, role, school_id, first_name, last_name')
+      .eq('user_id', user.id)
+      .single()
+
+    if (profileError || !teacherProfile) {
+      return NextResponse.json(
+        { message: 'Profile not found' },
+        { status: 404 }
+      )
+    }
+
+    if (teacherProfile.role !== 'teacher') {
+      return NextResponse.json(
+        { message: 'Forbidden - Teacher access only' },
+        { status: 403 }
+      )
+    }
+
+    // Use authenticated user's ID for teacher_class_assignments (uses user_id)
+    const teacherId = user.id
 
     // Check cache first
     const cacheKey = `teacher-dashboard-${teacherId}`
@@ -239,6 +265,14 @@ export async function GET(request: NextRequest) {
       },
       classes: classInfo
     }
+    
+    console.log('📊 [Dashboard Combined] Response:', {
+      totalStudents,
+      averageXP,
+      activeToday,
+      studentsCount: students.length,
+      classesCount: classInfo.length
+    })
 
       return responseData
     }

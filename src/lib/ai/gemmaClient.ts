@@ -128,7 +128,7 @@ Your role is to:
 
 5. **Emphasis**: Use **bold** for important terms and *italics* for emphasis
 
-Note: You are using the ${config.modelName} model as part of the extra quota system (500 requests/day after the initial 30 Gemini requests).`
+Note: You are using the ${config.modelName} model as part of the extra quota system (45 requests/day after the initial 30 Gemini requests).`
 
     // Format conversation history
     let contextMessages = ''

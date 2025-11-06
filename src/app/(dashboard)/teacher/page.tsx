@@ -38,6 +38,12 @@ const UpdateResultsSystem = dynamic(() => import('@/components/teacher/UpdateRes
 const ComprehensiveAnalytics = dynamic(() => import('@/components/teacher/ComprehensiveAnalytics'), {
   loading: () => <div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600"></div></div>
 })
+const TeacherStudentsPage = dynamic(() => import('./students/page').then(mod => ({ default: mod.default })), {
+  loading: () => <div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div></div>
+})
+const TeacherAttendancePage = dynamic(() => import('./attendance/page').then(mod => ({ default: mod.default })), {
+  loading: () => <div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div></div>
+})
 import { 
   Users, 
   TrendingUp, 
@@ -151,6 +157,39 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
   const devicePerf = useMemo(() => detectDevicePerformance(), [])
   const animConfig = useMemo(() => getAnimationConfig(devicePerf.mode), [devicePerf.mode])
   
+  // Preload attendance page and data in background for instant navigation
+  useEffect(() => {
+    // Delay preload by 2 seconds to let initial dashboard load first
+    const preloadTimer = setTimeout(async () => {
+      console.log('🚀 Preloading attendance page in background...')
+      
+      // Load component and data in parallel
+      const componentPromise = import('./attendance/page').then(() => {
+        console.log('✅ Attendance page component preloaded')
+      }).catch(err => {
+        console.warn('⚠️ Failed to preload attendance page:', err)
+      })
+      
+      // Prefetch API data
+      const dataPromise = import('@/lib/prefetch/attendancePrefetch').then(({ prefetchAttendanceData }) => {
+        if (user?.id) {
+          return prefetchAttendanceData({ 
+            userId: user.id,
+            schoolId: profile?.school_id 
+          })
+        }
+        return Promise.resolve()
+      }).catch(err => {
+        console.warn('⚠️ Failed to prefetch attendance data:', err)
+      })
+      
+      await Promise.all([componentPromise, dataPromise])
+      console.log('✅ Attendance page fully preloaded (component + data)')
+    }, 2000)
+    
+    return () => clearTimeout(preloadTimer)
+  }, [user?.id, profile?.school_id])
+  
   // Conditional Motion wrapper - memoized for performance
   const ConditionalMotion = useMemo(() => {
     const Component = memo(({ children, ...props }: any) => {
@@ -183,7 +222,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
   const [isDataFetching, setIsDataFetching] = useState(false) // Prevent concurrent API calls
   const fetchingRef = useRef(false) // More reliable concurrent call protection
   const [dataFetched, setDataFetched] = useState(false)
-  const [activeTab, setActiveTab] = useState<'analytics' | 'overview' | 'roster' | 'community' | 'incidents' | 'shoutouts' | 'interventions' | 'quests' | 'blackmarks' | 'activities' | 'communication' | 'settings' | 'results'>('overview')
+  const [activeTab, setActiveTab] = useState<'analytics' | 'overview' | 'roster' | 'attendance' | 'community' | 'incidents' | 'shoutouts' | 'interventions' | 'quests' | 'blackmarks' | 'activities' | 'communication' | 'settings' | 'results'>('overview')
   const [notifications, setNotifications] = useState<Array<{id: string, message: string, type: 'success' | 'error' | 'warning' | 'info'}>>([])
   const [realTimeData, setRealTimeData] = useState({
     newHelpRequests: 0,
@@ -521,8 +560,8 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                 key={item.id}
                 onClick={() => {
                   if (item.isLink && item.href) {
-                    // Special handling for Community: full screen on mobile, inline on desktop
-                    if (item.id === 'community') {
+                    // Special handling for Community, Students & Attendance: full screen on mobile, inline on desktop
+                    if (item.id === 'community' || item.id === 'roster' || item.id === 'attendance') {
                       const isMobile = window.innerWidth < 1024 // lg breakpoint
                       if (isMobile) {
                         window.location.href = item.href
@@ -628,20 +667,53 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                 </Button>
                 
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent truncate">
+                  <h1 className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-slate-800 via-blue-700 to-indigo-700 bg-clip-text text-transparent truncate tracking-tight" style={{ fontFamily: '\'Inter\', \'SF Pro Display\', -apple-system, BlinkMacSystemFont, system-ui, sans-serif' }}>
                     {(() => {
                       const hour = new Date().getHours()
                       const firstName = profile?.first_name || 'Teacher'
-                      if (hour < 12) return `Good Morning, ${firstName}! ☀️`
-                      if (hour < 17) return `Good Afternoon, ${firstName}! 🌤️`
-                      return `Good Evening, ${firstName}! 🌙`
+                      const greetings = [
+                        { time: 'morning', emoji: '☀️', texts: [
+                          `Rise & Shine, ${firstName}!`,
+                          `Good Morning, ${firstName}!`,
+                          `Hello Sunshine, ${firstName}!`,
+                          `Morning Champion, ${firstName}!`
+                        ]},
+                        { time: 'afternoon', emoji: '🌤️', texts: [
+                          `Great Afternoon, ${firstName}!`,
+                          `Hello ${firstName}!`,
+                          `Keep Shining, ${firstName}!`,
+                          `Crushing It, ${firstName}!`
+                        ]},
+                        { time: 'evening', emoji: '🌙', texts: [
+                          `Good Evening, ${firstName}!`,
+                          `Evening Star, ${firstName}!`,
+                          `Still Going Strong, ${firstName}!`,
+                          `Night Owl, ${firstName}!`
+                        ]}
+                      ]
+                      
+                      const timeOfDay = hour < 12 ? greetings[0] : hour < 17 ? greetings[1] : greetings[2]
+                      const randomText = timeOfDay.texts[Math.floor(Date.now() / (24 * 60 * 60 * 1000)) % timeOfDay.texts.length]
+                      return `${randomText} ${timeOfDay.emoji}`
                     })()}
                   </h1>
-                  <p className="text-xs sm:text-sm text-gray-600 font-medium flex items-center gap-2">
-                    <span className="hidden sm:inline">Ready to inspire young minds today</span>
-                    <span className="sm:hidden">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                    <span className="hidden sm:inline text-gray-400">•</span>
-                    <span className="hidden sm:inline">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+                  <p className="text-xs sm:text-sm text-slate-600 font-semibold flex items-center gap-2 tracking-wide" style={{ fontFamily: '\'Inter\', \'SF Pro Text\', -apple-system, BlinkMacSystemFont, system-ui, sans-serif' }}>
+                    <span className="hidden sm:inline bg-gradient-to-r from-amber-600 via-orange-600 to-rose-600 bg-clip-text text-transparent font-bold">{(() => {
+                      const messages = [
+                        "Empowering futures, one lesson at a time ✨",
+                        "Making magic happen in the classroom 🎯",
+                        "Shaping tomorrow's leaders today 🚀",
+                        "Where learning meets inspiration 💡",
+                        "Creating 'aha!' moments every day 🌟",
+                        "Building brilliance, brick by brick 🏗️",
+                        "Igniting curiosity & passion for learning 🔥",
+                        "Your impact echoes through generations 🌊"
+                      ]
+                      return messages[Math.floor(Date.now() / (24 * 60 * 60 * 1000)) % messages.length]
+                    })()}</span>
+                    <span className="sm:hidden text-slate-700 font-bold">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                    <span className="hidden sm:inline text-slate-400 font-bold">•</span>
+                    <span className="hidden sm:inline text-slate-700 font-bold">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
                   </p>
                 </div>
               </div>
@@ -966,20 +1038,31 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="space-y-8"
               >
-              <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border-0 p-8">
-                <div className="mb-6">
-                  <h2 className="text-2xl font-bold text-slate-800 mb-2 flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-r from-green-500 to-green-600 rounded-xl text-white">
-                      <Users className="h-6 w-6" />
-                    </div>
-                    Student Roster
-                  </h2>
-                  <p className="text-slate-600">Manage and view your students by grade level</p>
-                </div>
-                <GradeBasedStudentRoster />
-              </div>
+                <Suspense fallback={
+                  <div className="flex items-center justify-center p-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                  </div>
+                }>
+                  <TeacherStudentsPage />
+                </Suspense>
+              </motion.div>
+            )}
+
+            {activeTab === 'attendance' && (
+              <motion.div
+                key="attendance"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+              >
+                <Suspense fallback={
+                  <div className="flex items-center justify-center p-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                  </div>
+                }>
+                  <TeacherAttendancePage />
+                </Suspense>
               </motion.div>
             )}
 

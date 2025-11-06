@@ -1,28 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+)
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServerClient()
-    
-    // Verify super admin access
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
+    // Verify super admin authentication via session token
+    const sessionToken = request.cookies.get('super_admin_session')?.value
+    const secretKey = process.env.SUPER_ADMIN_SECRET_KEY
+
+    if (!sessionToken || !secretKey) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
-
-    if (profileError || !profile || profile.role !== 'super_admin') {
-      return NextResponse.json({ error: 'Super admin access required' }, { status: 403 })
+    // Validate session token
+    try {
+      const decoded = Buffer.from(sessionToken, 'base64').toString('utf-8')
+      if (!decoded.startsWith(secretKey)) {
+        return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
+      }
+    } catch {
+      return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
     }
 
     // Fetch notifications with school information
-    const { data: notifications, error: notificationsError } = await supabase
+    const { data: notifications, error: notificationsError } = await supabaseAdmin
       .from('super_admin_notifications')
       .select(`
         id,
@@ -52,7 +63,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check for new notifications that need to be created
-    await generateAutomaticNotifications(supabase)
+    await generateAutomaticNotifications(supabaseAdmin)
 
     return NextResponse.json({
       notifications: notifications || []
@@ -66,22 +77,22 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServerClient()
-    
-    // Verify super admin access
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
+    // Verify super admin authentication via session token
+    const sessionToken = request.cookies.get('super_admin_session')?.value
+    const secretKey = process.env.SUPER_ADMIN_SECRET_KEY
+
+    if (!sessionToken || !secretKey) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
-
-    if (profileError || !profile || profile.role !== 'super_admin') {
-      return NextResponse.json({ error: 'Super admin access required' }, { status: 403 })
+    // Validate session token
+    try {
+      const decoded = Buffer.from(sessionToken, 'base64').toString('utf-8')
+      if (!decoded.startsWith(secretKey)) {
+        return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
+      }
+    } catch {
+      return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -90,7 +101,7 @@ export async function POST(request: NextRequest) {
     switch (action) {
       case 'mark_read':
         if (notification_id) {
-          const { error: markReadError } = await supabase
+          const { error: markReadError } = await supabaseAdmin
             .from('super_admin_notifications')
             .update({ is_read: true })
             .eq('id', notification_id)
@@ -102,7 +113,7 @@ export async function POST(request: NextRequest) {
         break
 
       case 'mark_all_read':
-        const { error: markAllReadError } = await supabase
+        const { error: markAllReadError } = await supabaseAdmin
           .from('super_admin_notifications')
           .update({ is_read: true })
           .eq('is_read', false)
@@ -114,7 +125,7 @@ export async function POST(request: NextRequest) {
 
       case 'resolve':
         if (notification_id) {
-          const { error: resolveError } = await supabase
+          const { error: resolveError } = await supabaseAdmin
             .from('super_admin_notifications')
             .update({ 
               auto_resolved: true, 
@@ -130,7 +141,7 @@ export async function POST(request: NextRequest) {
 
       case 'bulk_resolve':
         if (notification_ids && Array.isArray(notification_ids)) {
-          const { error: bulkResolveError } = await supabase
+          const { error: bulkResolveError } = await supabaseAdmin
             .from('super_admin_notifications')
             .update({ 
               auto_resolved: true, 

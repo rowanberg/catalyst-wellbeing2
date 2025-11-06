@@ -139,6 +139,13 @@ export async function fetchTeacherDashboard(teacherId: string, forceRefresh = fa
       
       const data = await response.json()
       
+      console.log('🔍 [Dashboard API Response]:', {
+        hasAnalytics: !!data.analytics,
+        hasStudents: !!data.students,
+        studentsCount: data.students?.length || 0,
+        analytics: data.analytics
+      })
+      
       return data
     },
     { forceRefresh }

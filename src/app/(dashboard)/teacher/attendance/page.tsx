@@ -11,6 +11,7 @@ import { ClientWrapper } from '@/components/providers/ClientWrapper'
 import { Input } from '@/components/ui/input'
 import { ProfessionalLoader } from '@/components/ui/professional-loader'
 import { AttendanceLoader } from '@/components/ui/attendance-loader'
+import { getCachedAttendanceData, invalidateAttendanceCache } from '@/lib/prefetch/attendancePrefetch'
 import { 
   ArrowLeft,
   Users, 
@@ -164,6 +165,24 @@ export default function TeacherAttendancePage() {
       return
     }
     
+    // Check cache first for instant load
+    const cachedData = getCachedAttendanceData<any>(`class-assignments:${user.id}`)
+    if (cachedData) {
+      console.log('⚡ Using cached class assignments - instant load!')
+      const transformedClasses = (cachedData.assignments || []).map((assignment: any) => ({
+        id: assignment.class_id,
+        class_name: assignment.classes?.class_name || 'Unknown Class',
+        class_code: assignment.classes?.class_code || '',
+        grade_level: assignment.classes?.grade_levels?.grade_level || 'N/A',
+        is_primary: assignment.is_primary_teacher || false,
+        student_count: assignment.classes?.current_students || 0
+      }))
+      setClasses(transformedClasses)
+      setLoadingAssignedClasses(false)
+      setLoading(false)
+      return
+    }
+    
     setLoadingAssignedClasses(true)
     setError(null)
     
@@ -216,6 +235,14 @@ export default function TeacherAttendancePage() {
   const fetchGrades = async (schoolId: string) => {
     if (!schoolId) {
       setLoading(false)
+      return
+    }
+    
+    // Check cache first for instant load
+    const cachedGrades = getCachedAttendanceData<any>(`grades:${schoolId}`)
+    if (cachedGrades) {
+      console.log('⚡ Using cached grades - instant load!')
+      setGrades(cachedGrades.grades || [])
       return
     }
     

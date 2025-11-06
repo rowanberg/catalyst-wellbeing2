@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { z } from 'zod'
+import { invalidateClassRoster } from '@/lib/redis-rosters'
 
 const studentSchema = z.object({
   firstName: z.string(),
@@ -118,28 +119,48 @@ export async function POST(request: NextRequest) {
       console.error('Student record creation error:', studentError)
       // Don't fail the registration, student record can be created later
     }
+
+    // Find the class this student is joining to invalidate its roster cache
+    try {
+      const { data: studentClass } = await supabaseAdmin
+        .from('classes')
+        .select('id')
+        .eq('school_id', schoolData.id)
+        .eq('grade_level_id', validatedData.grade)
+        .limit(1)
+        .maybeSingle()
+
+      if (studentClass?.id) {
+        // Invalidate the class roster cache for THIS SPECIFIC CLASS
+        // This ensures teachers see the new student immediately on next load
+        await invalidateClassRoster(studentClass.id, schoolData.id)
+        console.log(`🗑️ [Registration] Invalidated roster for class: ${studentClass.id}`)
+      }
+    } catch (cacheError) {
+      console.error('Failed to invalidate class roster cache:', cacheError)
+      // Don't fail registration if cache invalidation fails
+    }
     
-    // Send verification email via SendGrid
+    // Send verification email via Supabase Edge Function
     try {
       const verificationUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/verify?token=${authData.user.id}&type=email`
       
-      const emailResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/send-verification-email`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            email: validatedData.email,
-            firstName: validatedData.firstName,
-            verificationUrl
-          })
+      // Call Supabase Edge Function with role-specific template
+      const { data, error } = await supabaseAdmin.functions.invoke('send-email', {
+        body: { 
+          type: 'verification',
+          to: validatedData.email,
+          name: validatedData.firstName,
+          role: 'student',
+          url: verificationUrl,
+          schoolName: schoolData?.name || undefined
         }
-      )
+      })
       
-      if (emailResponse.ok) {
-        console.log('✅ Verification email sent via SendGrid to student:', validatedData.email)
+      if (!error && data?.success) {
+        console.log('✅ Student verification email sent:', validatedData.email)
       } else {
-        console.error('❌ Failed to send verification email to student:', validatedData.email)
+        console.error('❌ Failed to send verification email:', error || data?.error)
       }
     } catch (emailError) {
       console.error('Error sending verification email:', emailError)

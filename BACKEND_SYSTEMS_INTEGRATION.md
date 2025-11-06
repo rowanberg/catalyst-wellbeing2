@@ -462,7 +462,7 @@ const channel = supabase
 
 ### 7.3 Rate Limiting
 
-**AI Endpoints**: 30 normal + 500 extra requests/day per user  
+**AI Endpoints**: 30 normal + 45 extra requests/day per user  
 **API Endpoints**: Supabase built-in rate limiting  
 **Login Attempts**: 5 attempts per 15 minutes
 

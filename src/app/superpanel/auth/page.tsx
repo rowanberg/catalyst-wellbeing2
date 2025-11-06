@@ -36,9 +36,17 @@ export default function SuperAdminAuth() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Prevent multiple submissions
+    if (isLoading) {
+      console.log('[Auth] Already processing, ignoring duplicate submit')
+      return
+    }
+    
     setIsLoading(true)
 
     try {
+      console.log('[Auth] Submitting access key...')
       // Send key to server for verification (key never stored client-side)
       const response = await fetch('/api/superpanel/verify-key', {
         method: 'POST',
@@ -52,10 +60,12 @@ export default function SuperAdminAuth() {
       const data = await response.json()
 
       if (response.ok && data.success) {
+        console.log('[Auth] ✅ Authentication successful, redirecting...')
         // Server set secure HTTP-only cookie, redirect to dashboard
-        router.push('/superpanel/dashboard')
+        window.location.href = '/superpanel/dashboard' // Use hard redirect instead of router.push
       } else {
         // Invalid key
+        console.log('[Auth] ❌ Authentication failed')
         setAttempts(prev => prev + 1)
         
         if (attempts >= 2) {
@@ -63,13 +73,14 @@ export default function SuperAdminAuth() {
         }
         
         setAccessKey('')
+        setIsLoading(false) // Re-enable form
       }
     } catch (error) {
       console.error('Authentication error:', error)
       alert('Authentication failed. Please try again.')
-    } finally {
       setIsLoading(false)
     }
+    // Don't set isLoading to false on success - let redirect happen
   }
 
   // Show loading while checking authentication

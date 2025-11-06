@@ -6,6 +6,11 @@
 import { NextRequest } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin-client'
 import { ApiResponse } from '@/lib/api/response'
+import { 
+  getCachedParentSettings, 
+  setCachedParentSettings,
+  invalidateParentSettings 
+} from '@/lib/redis/parent-cache'
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,6 +20,15 @@ export async function GET(request: NextRequest) {
     if (!parentId) {
       return ApiResponse.badRequest('Parent ID is required')
     }
+
+    // Check Redis cache first
+    const cachedData = await getCachedParentSettings(parentId)
+    if (cachedData) {
+      console.log(`🚀 CACHE HIT - Returning cached settings for parent: ${parentId}`)
+      return ApiResponse.success(cachedData)
+    }
+    
+    console.log(`💾 CACHE MISS - Fetching fresh settings from database for parent: ${parentId}`)
 
     const supabase = getSupabaseAdmin()
 
@@ -121,7 +135,7 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return ApiResponse.success({
+    const settingsData = {
       profile: {
         id: parentProfile.id,
         userId: parentProfile.user_id,
@@ -139,7 +153,13 @@ export async function GET(request: NextRequest) {
         avatarUrl: child.avatar_url || null
       })).filter(c => c.id && c.name),
       notifications: notificationPrefs
-    })
+    }
+
+    // Cache the result for future requests (15 days TTL with auto-invalidation)
+    await setCachedParentSettings(parentId, settingsData)
+    console.log(`✅ Cached settings data for parent: ${parentId}`)
+
+    return ApiResponse.success(settingsData)
 
   } catch (error: any) {
     console.error('Settings GET error:', error)
@@ -189,6 +209,10 @@ export async function PUT(request: NextRequest) {
           { onConflict: 'parent_id,notification_type' }
         )
     }
+
+    // Invalidate cache after successful update
+    await invalidateParentSettings(parentId)
+    console.log(`🗑️ Invalidated cache for parent: ${parentId}`)
 
     return ApiResponse.success({
       message: 'Settings updated successfully'

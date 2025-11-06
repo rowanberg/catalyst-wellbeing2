@@ -35,8 +35,10 @@ export interface ProfileWithSchool extends Profile {
 // In-flight request deduplication
 const pendingRequests = new Map<string, Promise<any>>()
 
-// Cache TTL - 5 minutes
-const CACHE_TTL = 5 * 60 * 1000
+// Cache TTL - 30 minutes (profiles rarely change within a session)
+const CACHE_TTL = 30 * 60 * 1000
+// Stale-while-revalidate window - 5 minutes
+const STALE_TTL = 5 * 60 * 1000
 
 // Simple in-memory cache with TTL
 class ProfileCache {
@@ -50,12 +52,21 @@ class ProfileCache {
     const entry = this.cache.get(key)
     if (!entry) return null
 
-    // Check if expired
-    if (Date.now() - entry.timestamp > CACHE_TTL) {
+    const age = Date.now() - entry.timestamp
+    
+    // Hard expiry - delete and return null
+    if (age > CACHE_TTL + STALE_TTL) {
       this.cache.delete(key)
       return null
     }
 
+    // Within TTL - return fresh data
+    if (age <= CACHE_TTL) {
+      return entry.data
+    }
+
+    // Stale but within revalidate window - return stale data
+    // Background refresh will happen automatically on next fetch
     return entry.data
   }
 
@@ -89,13 +100,22 @@ export const getCachedProfile = cache(async (userId: string): Promise<Profile | 
       .eq('user_id', userId)
       .single()
 
-    if (error) throw error
+    if (error) {
+      // PGRST116 means no rows found - expected for unauthenticated users
+      if (error.code === 'PGRST116') {
+        return null
+      }
+      throw error
+    }
 
     // Cache the result
     profileCache.set(cacheKey, data)
     return data
-  } catch (error) {
-    console.error('Error fetching profile:', error)
+  } catch (error: any) {
+    // Only log actual errors, not missing profiles
+    if (error.code !== 'PGRST116') {
+      console.error('Error fetching profile:', error)
+    }
     return null
   }
 })
@@ -127,7 +147,13 @@ export const getProfileWithSchool = cache(async (userId: string): Promise<Profil
       .eq('user_id', userId)
       .single()
 
-    if (error) throw error
+    if (error) {
+      // PGRST116 means no rows found - this is expected for unauthenticated users
+      if (error.code === 'PGRST116') {
+        return null
+      }
+      throw error
+    }
 
     // Normalize the response - schools is returned as array, convert to single object
     const normalizedData = {
@@ -139,8 +165,11 @@ export const getProfileWithSchool = cache(async (userId: string): Promise<Profil
     // Cache result
     profileCache.set(cacheKey, normalizedData)
     return normalizedData
-  } catch (error) {
-    console.error('Error fetching profile with school:', error)
+  } catch (error: any) {
+    // Only log actual errors, not missing profiles
+    if (error.code !== 'PGRST116') {
+      console.error('Error fetching profile with school:', error)
+    }
     return null
   }
 })

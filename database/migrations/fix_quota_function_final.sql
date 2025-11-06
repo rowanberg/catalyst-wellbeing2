@@ -66,7 +66,7 @@ BEGIN
         v_normal_daily_usage,
         v_extra_daily_usage,
         (v_normal_daily_usage < 30),
-        (v_normal_daily_usage >= 30 AND v_extra_daily_usage < 500),
+        (v_normal_daily_usage >= 30 AND v_extra_daily_usage < 45),
         v_needs_reset;
 END;
 $$;
@@ -99,7 +99,7 @@ BEGIN
             extra_daily_usage = uaq.extra_daily_usage + 1,
             updated_at = NOW()
         WHERE uaq.user_id = input_user_id
-        AND uaq.extra_daily_usage < 500
+        AND uaq.extra_daily_usage < 45
         RETURNING TRUE INTO v_success;
     END IF;
     

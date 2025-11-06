@@ -10,7 +10,7 @@ import { Progress } from '@/components/ui/progress'
 import { 
   Camera, Mail, MapPin, Calendar, Trophy, Star,
   Award, Target, Flame, Gift, Users, MessageCircle,
-  Settings, ChevronRight, BarChart3, GraduationCap,
+  Settings, ChevronRight, Wallet, GraduationCap,
   Clock, Sparkles, Zap, Activity, Medal, Shield, BookOpen
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -185,14 +185,14 @@ const QuickActionsCard = memo(({ router }: any) => (
             <span className="text-xs font-medium text-slate-700">Messages</span>
           </button>
           <button
-            onClick={() => router.push('/student/analytics')}
+            onClick={() => router.push('/student/wallet')}
             className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all active:scale-95"
             style={{ background: 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 20%, transparent), color-mix(in srgb, var(--theme-tertiary) 20%, transparent))', borderWidth: '1px', borderStyle: 'solid', borderColor: 'color-mix(in srgb, var(--theme-tertiary) 30%, transparent)' }}
             onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 40%, transparent), color-mix(in srgb, var(--theme-tertiary) 40%, transparent))'}
             onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 20%, transparent), color-mix(in srgb, var(--theme-tertiary) 20%, transparent))'}
           >
-            <BarChart3 className="h-6 w-6" style={{ color: 'var(--theme-accent)' }} />
-            <span className="text-xs font-medium text-slate-700">Analytics</span>
+            <Wallet className="h-6 w-6" style={{ color: 'var(--theme-accent)' }} />
+            <span className="text-xs font-medium text-slate-700">Wallet</span>
           </button>
           <button
             onClick={() => router.push('/student/quests')}
@@ -472,8 +472,8 @@ export function ProfileTab({ data, loading, error, onRefresh, profile }: Profile
           <Card className="border-0 shadow-lg rounded-2xl bg-white">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <Flame className="w-5 h-5 text-[#F8AD9D]" />
-                <span className="text-2xl font-bold text-[#F8AD9D]">{profileData.stats.streakDays}</span>
+                <Flame className="w-5 h-5" style={{ color: 'var(--theme-accent)' }} />
+                <span className="text-2xl font-bold" style={{ color: 'var(--theme-accent)' }}>{profileData.stats.streakDays}</span>
               </div>
               <p className="text-xs text-slate-600">Day Streak</p>
             </CardContent>
@@ -484,8 +484,8 @@ export function ProfileTab({ data, loading, error, onRefresh, profile }: Profile
           <Card className="border-0 shadow-lg rounded-2xl bg-white">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <Gift className="w-5 h-5 text-[#F4978E]" />
-                <span className="text-2xl font-bold text-[#F4978E]">{profileData.stats.gems}</span>
+                <Gift className="w-5 h-5" style={{ color: 'var(--theme-tertiary)' }} />
+                <span className="text-2xl font-bold" style={{ color: 'var(--theme-tertiary)' }}>{profileData.stats.gems}</span>
               </div>
               <p className="text-xs text-slate-600">Gems</p>
             </CardContent>

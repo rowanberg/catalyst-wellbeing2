@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,29 +9,51 @@ const supabaseAdmin = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    const { teacherId, createSampleClass } = await request.json()
-
-    if (!teacherId) {
+    // Step 1: Authenticate user
+    const supabase = await createSupabaseServerClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
       return NextResponse.json(
-        { error: 'Teacher ID is required' },
-        { status: 400 }
+        { error: 'Unauthorized - Please log in' },
+        { status: 401 }
       )
     }
 
-    console.log('🔍 Assigning teacher to class:', teacherId)
-
-    // Get teacher's school
-    const { data: teacher, error: teacherError } = await supabaseAdmin
+    // Step 2: Get authenticated user's profile and verify role
+    const { data, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('school_id, first_name, last_name')
-      .eq('id', teacherId)
+      .select('id, role, school_id, first_name, last_name')
+      .eq('user_id', user.id)
       .single()
 
-    if (teacherError || !teacher) {
+    if (profileError || !data) {
       return NextResponse.json(
-        { error: 'Teacher not found' },
+        { error: 'Profile not found' },
         { status: 404 }
       )
+    }
+
+    const teacherProfile = data as { id: string; role: string; school_id: string; first_name: string; last_name: string }
+
+    // Only teachers and admins can assign classes
+    if (!['teacher', 'admin'].includes(teacherProfile.role)) {
+      return NextResponse.json(
+        { error: 'Forbidden - Teacher or admin access only' },
+        { status: 403 }
+      )
+    }
+
+    // Parse request body (DO NOT accept teacherId - use authenticated user)
+    const { createSampleClass } = await request.json()
+    const teacherId = teacherProfile.id
+
+    console.log('🔍 Assigning teacher to class:', teacherId)
+
+    const teacher = {
+      school_id: teacherProfile.school_id,
+      first_name: teacherProfile.first_name,
+      last_name: teacherProfile.last_name
     }
 
     console.log('✅ Teacher found:', teacher)

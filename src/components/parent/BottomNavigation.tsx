@@ -83,8 +83,8 @@ export function DesktopNavigation({ activeTab, onTabChange, hasNotifications }: 
       <div className="flex flex-col w-full">
         {/* Header */}
         <div className="p-6 border-b border-gray-200 dark:border-gray-800">
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Catalyst Wells</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Parent Portal</p>
+          <h1 className="text-xl font-bold bg-gradient-to-r from-slate-800 via-blue-700 to-indigo-700 dark:from-slate-200 dark:via-blue-400 dark:to-indigo-400 bg-clip-text text-transparent tracking-tight" style={{ fontFamily: 'Inter, SF Pro Display, -apple-system, BlinkMacSystemFont, system-ui, sans-serif' }}>Catalyst Wells</h1>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 font-semibold tracking-wide" style={{ fontFamily: 'Inter, SF Pro Text, -apple-system, BlinkMacSystemFont, system-ui, sans-serif' }}>Parent Portal</p>
         </div>
         
         {/* Navigation items */}

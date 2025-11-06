@@ -22,20 +22,34 @@ async function createSupabaseServerClient() {
 }
 
 // GET - Get current user's profile
-// Now using centralized profileService for consistency and deduplication
+// Supports both /api/profile and /api/get-profile?userId=X use cases
 export async function GET(request: NextRequest) {
   try {
-    // Use centralized profile service with built-in caching and deduplication
-    const profile = await getCurrentUserProfile()
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get('userId')
 
-    if (!profile) {
-      return NextResponse.json({ error: 'Unauthorized or profile not found' }, { status: 401 })
+    let profile
+    
+    if (userId) {
+      // Get specific user's profile (for /api/get-profile compatibility)
+      profile = await getDedupedProfileWithSchool(userId)
+    } else {
+      // Get current authenticated user's profile
+      profile = await getCurrentUserProfile()
     }
 
-    // Return with cache headers for client-side caching
+    if (!profile) {
+      return NextResponse.json({ 
+        error: 'Unauthorized or profile not found',
+        code: 'PROFILE_NOT_FOUND'
+      }, { status: 401 })
+    }
+
+    // Return with aggressive cache headers
     const response = NextResponse.json(profile)
-    response.headers.set('Cache-Control', 'private, max-age=300, stale-while-revalidate=60')
+    response.headers.set('Cache-Control', 'private, max-age=1800, stale-while-revalidate=300')
     response.headers.set('Vary', 'Cookie')
+    response.headers.set('X-Cache-TTL', '1800')
     
     return response
 

@@ -14,6 +14,7 @@ import {
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useStudentRank } from '@/hooks/useStudentRank'
+import { detectDevicePerformance, getAnimationConfig } from '@/lib/utils/devicePerformance'
 
 interface TodayTabProps {
   data: any
@@ -30,6 +31,10 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
   const [questsExpanded, setQuestsExpanded] = useState(true)
   const [upcomingAssessments, setUpcomingAssessments] = useState<any[]>([])
   const [assessmentsLoading, setAssessmentsLoading] = useState(true)
+  
+  // Detect device performance and adjust animations
+  const devicePerf = useMemo(() => detectDevicePerformance(), [])
+  const animConfig = useMemo(() => getAnimationConfig(devicePerf.mode), [devicePerf.mode])
   
   // Fetch student rank data
   const { rankData, loading: rankLoading } = useStudentRank(profile?.id)
@@ -63,13 +68,62 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
   }, [profile?.id])
 
   // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
-  // Dynamic greeting based on time of day - memoized
-  const { greeting: memoizedGreeting, timeContext: memoizedTimeContext } = useMemo(() => {
+  // Dynamic greeting based on time of day - memoized with varied messages
+  const { greeting: memoizedGreeting, timeContext: memoizedTimeContext, timeOfDay } = useMemo(() => {
     const hour = new Date().getHours()
     const name = profile?.first_name || 'Student'
+    const dayIndex = Math.floor(Date.now() / (24 * 60 * 60 * 1000))
+    
+    const midnightGreetings = [
+      { greeting: `Midnight Scholar, ${name}! 🌌`, context: 'Burning the midnight oil? You\'re dedicated!' },
+      { greeting: `Night Warrior, ${name}! ✨`, context: 'Late night hustle = morning success!' },
+      { greeting: `Hello Night Owl, ${name}! 🦉`, context: 'The stars are cheering you on!' },
+      { greeting: `Hey ${name}! 🌠`, context: 'Making magic happen at midnight!' }
+    ]
+    
+    const morningGreetings = [
+      { greeting: `Rise & Shine, ${name}! ☀️`, context: 'Time to make today amazing!' },
+      { greeting: `Good Morning, ${name}! 🌅`, context: 'Let\'s start with some awesome learning!' },
+      { greeting: `Wakey Wakey, ${name}! 🌞`, context: 'Today is full of new adventures!' },
+      { greeting: `Hello Sunshine, ${name}! ✨`, context: 'Ready to shine bright today?' }
+    ]
+    
+    const afternoonGreetings = [
+      { greeting: `Hey ${name}! 🌤️`, context: 'Keep that energy flowing!' },
+      { greeting: `Great Afternoon, ${name}! ⚡`, context: 'You\'re doing amazing!' },
+      { greeting: `Still Rocking, ${name}! 🎯`, context: 'Keep crushing those goals!' },
+      { greeting: `Hello ${name}! 🚀`, context: 'Halfway there, keep going!' }
+    ]
+    
+    const eveningGreetings = [
+      { greeting: `Good Evening, ${name}! 🌙`, context: 'Let\'s finish strong together!' },
+      { greeting: `Hey Night Owl, ${name}! ⭐`, context: 'Almost there, you got this!' },
+      { greeting: `Evening Star, ${name}! 🌟`, context: 'End the day on a high note!' },
+      { greeting: `Hello ${name}! 🌠`, context: 'You\'re amazing, keep it up!' }
+    ]
+    
+    let greetingSet, timeOfDay
+    // Midnight: 11 PM - 5 AM
+    if (hour >= 23 || hour < 5) {
+      greetingSet = midnightGreetings
+      timeOfDay = 'midnight'
+    } else if (hour < 12) {
+      greetingSet = morningGreetings
+      timeOfDay = 'morning'
+    } else if (hour < 17) {
+      greetingSet = afternoonGreetings
+      timeOfDay = 'afternoon'
+    } else {
+      greetingSet = eveningGreetings
+      timeOfDay = 'evening'
+    }
+    
+    const selected = greetingSet[dayIndex % greetingSet.length]
+    
     return {
-      greeting: hour < 12 ? `Good morning, ${name}! ☀️` : hour < 17 ? `Good afternoon, ${name}! 🌤` : `Good evening, ${name}! 🌙`,
-      timeContext: hour < 12 ? 'Start your day with energy' : hour < 17 ? 'Keep the momentum going' : 'Let\'s finish the day strong'
+      greeting: selected.greeting,
+      timeContext: selected.context,
+      timeOfDay
     }
   }, [profile])
 
@@ -130,15 +184,611 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
 
   return (
     <div className="space-y-6 pb-8">
-      {/* Dynamic Header */}
+      {/* Dynamic Time-Reactive Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-3xl p-6 text-white shadow-2xl"
-        style={{ background: 'linear-gradient(to right, var(--theme-primary), var(--theme-secondary))' }}
+        className="rounded-3xl p-6 text-white shadow-2xl relative overflow-hidden"
+        style={{ 
+          background: timeOfDay === 'midnight'
+            ? 'linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 30%, #2d1b4e 60%, #1a0a2e 100%)'
+            : timeOfDay === 'morning' 
+            ? 'linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF6B6B 100%)'
+            : timeOfDay === 'afternoon'
+            ? 'linear-gradient(135deg, #4FC3F7 0%, #29B6F6 50%, #0288D1 100%)'
+            : 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)'
+        }}
       >
-        <h1 className="text-2xl sm:text-3xl font-bold mb-2">{greeting}</h1>
-        <p className="text-white/90 text-sm sm:text-base mb-4">{timeContext}</p>
+        {/* Animated Background Elements */}
+        {timeOfDay === 'midnight' && (
+          <>
+            {/* Deep space background - static on low-end */}
+            {animConfig.enableAnimations ? (
+              <motion.div
+                animate={{ opacity: [0.3, 0.5, 0.3] }}
+                transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute inset-0 bg-gradient-to-br from-purple-900/30 via-indigo-900/30 to-violet-900/30"
+              />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-900/30 via-indigo-900/30 to-violet-900/30" />
+            )}
+            
+            {/* Crescent moon - simplified on medium, static on low */}
+            <div className="absolute top-4 right-4">
+              {devicePerf.mode === 'high' && (
+                <motion.div
+                  animate={{
+                    scale: [1, 1.1, 1],
+                    opacity: [0.7, 1, 0.7]
+                  }}
+                  transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute inset-0 w-20 h-20 rounded-full bg-purple-300/40 blur-3xl"
+                />
+              )}
+              {devicePerf.mode === 'medium' && (
+                <div className="absolute inset-0 w-20 h-20 rounded-full bg-purple-300/30 blur-2xl" />
+              )}
+              {animConfig.enableAnimations ? (
+                <motion.div
+                  animate={{ rotate: devicePerf.mode === 'high' ? [0, 5, 0] : undefined }}
+                  transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <Moon className="w-14 h-14 text-indigo-100/70" />
+                </motion.div>
+              ) : (
+                <Moon className="w-14 h-14 text-indigo-100/70" />
+              )}
+            </div>
+            
+            {/* Magical fireflies/wisps - high only */}
+            {devicePerf.mode === 'high' && animConfig.enableParticles && [...Array(8)].map((_, i) => (
+              <motion.div
+                key={`wisp-${i}`}
+                animate={{
+                  x: [0, 30, -20, 0],
+                  y: [0, -40, 20, 0],
+                  opacity: [0.3, 0.8, 0.5, 0.3],
+                  scale: [0.8, 1.2, 0.9, 0.8]
+                }}
+                transition={{
+                  duration: 8 + i,
+                  repeat: Infinity,
+                  delay: i * 1.2,
+                  ease: "easeInOut"
+                }}
+                className="absolute"
+                style={{
+                  top: `${10 + i * 12}%`,
+                  left: `${5 + i * 11}%`
+                }}
+              >
+                <div className="w-3 h-3 rounded-full bg-gradient-to-r from-yellow-200 to-amber-300 blur-sm shadow-lg shadow-yellow-400/50" />
+              </motion.div>
+            ))}
+            
+            {/* Mystical stars - scaled by performance */}
+            {[...Array(devicePerf.mode === 'high' ? 25 : devicePerf.mode === 'medium' ? 12 : 6)].map((_, i) => {
+              const colors = ['text-purple-200', 'text-blue-200', 'text-pink-200', 'text-yellow-200', 'text-cyan-200']
+              const color = colors[i % colors.length]
+              const size = devicePerf.mode === 'high' ? (Math.random() > 0.6 ? 'w-4 h-4' : 'w-3 h-3') : 'w-3 h-3'
+              return animConfig.enableAnimations ? (
+                <motion.div
+                  key={`midnight-star-${i}`}
+                  animate={{
+                    opacity: [0.3, 1, 0.3],
+                    scale: devicePerf.mode === 'high' ? [0.7, 1.5, 0.7] : [0.8, 1.2, 0.8],
+                    rotate: devicePerf.mode === 'high' ? [0, 360] : undefined
+                  }}
+                  transition={{
+                    duration: devicePerf.mode === 'high' ? 2.5 + Math.random() * 2 : 3,
+                    repeat: Infinity,
+                    delay: Math.random() * 3,
+                    ease: "easeInOut"
+                  }}
+                  className="absolute"
+                  style={{
+                    top: `${5 + Math.random() * 85}%`,
+                    left: `${5 + Math.random() * 90}%`
+                  }}
+                >
+                  <Sparkles className={`${size} ${color}`} />
+                </motion.div>
+              ) : (
+                <div
+                  key={`midnight-star-${i}`}
+                  className="absolute"
+                  style={{
+                    top: `${5 + i * 15}%`,
+                    left: `${5 + i * 15}%`
+                  }}
+                >
+                  <Sparkles className={`w-3 h-3 ${color}`} />
+                </div>
+              )
+            })}
+            
+            {/* Shooting stars - high performance only */}
+            {devicePerf.mode === 'high' && animConfig.enableParticles && [...Array(4)].map((_, i) => (
+              <motion.div
+                key={`midnight-shooting-${i}`}
+                initial={{ opacity: 0, x: 120, y: -60 }}
+                animate={{
+                  opacity: [0, 1, 1, 0],
+                  x: [-80, -180],
+                  y: [0, 80]
+                }}
+                transition={{
+                  duration: 1.5,
+                  repeat: Infinity,
+                  delay: i * 5 + 1,
+                  ease: "linear"
+                }}
+                className="absolute"
+                style={{
+                  top: `${10 + i * 18}%`,
+                  right: `${85 + i * 3}%`
+                }}
+              >
+                <div className="relative">
+                  <div className="w-1 h-16 bg-gradient-to-b from-white via-purple-300 to-transparent transform rotate-45" />
+                  <div className="absolute top-0 w-2 h-2 rounded-full bg-white shadow-xl shadow-purple-300/70" />
+                </div>
+              </motion.div>
+            ))}
+            
+            {/* Mystical constellation - high performance only */}
+            {devicePerf.mode === 'high' && (
+              <svg className="absolute top-1/3 right-1/4 w-40 h-40 opacity-40" viewBox="0 0 120 120">
+                {/* Mystical pattern */}
+                <motion.circle
+                  cx="30" cy="30" r="2"
+                  fill="#a78bfa"
+                  animate={{ opacity: [0.4, 1, 0.4], scale: [0.8, 1.3, 0.8] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                />
+                <motion.circle
+                  cx="60" cy="25" r="2"
+                  fill="#c084fc"
+                  animate={{ opacity: [0.4, 1, 0.4], scale: [0.8, 1.3, 0.8] }}
+                  transition={{ duration: 2, delay: 0.3, repeat: Infinity }}
+                />
+                <motion.circle
+                  cx="90" cy="35" r="2"
+                  fill="#d8b4fe"
+                  animate={{ opacity: [0.4, 1, 0.4], scale: [0.8, 1.3, 0.8] }}
+                  transition={{ duration: 2, delay: 0.6, repeat: Infinity }}
+                />
+                <motion.circle
+                  cx="60" cy="60" r="2.5"
+                  fill="#e9d5ff"
+                  animate={{ opacity: [0.5, 1, 0.5], scale: [1, 1.5, 1] }}
+                  transition={{ duration: 2, delay: 0.9, repeat: Infinity }}
+                />
+                <motion.line
+                  x1="30" y1="30" x2="60" y2="25"
+                  stroke="#a78bfa" strokeWidth="0.5" opacity="0.5"
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 2 }}
+                />
+                <motion.line
+                  x1="60" y1="25" x2="90" y2="35"
+                  stroke="#c084fc" strokeWidth="0.5" opacity="0.5"
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 2, delay: 0.5, repeat: Infinity, repeatDelay: 2 }}
+                />
+                <motion.line
+                  x1="60" y1="60" x2="30" y2="30"
+                  stroke="#d8b4fe" strokeWidth="0.5" opacity="0.5"
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 2, delay: 1, repeat: Infinity, repeatDelay: 2 }}
+                />
+              </svg>
+            )}
+            
+            {/* Northern lights effect - simplified for medium, static for low */}
+            {animConfig.enableAnimations ? (
+              <>
+                <motion.div
+                  animate={{
+                    opacity: [0.15, 0.35, 0.15],
+                    x: devicePerf.mode === 'high' ? [-30, 30, -30] : undefined
+                  }}
+                  transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute top-0 left-0 right-0 h-2/3 bg-gradient-to-b from-purple-500/20 via-violet-500/15 to-transparent"
+                />
+                {devicePerf.mode === 'high' && (
+                  <motion.div
+                    animate={{ opacity: [0.2, 0.4, 0.2], x: [30, -30, 30] }}
+                    transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 3 }}
+                    className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-indigo-500/20 via-blue-500/15 to-transparent"
+                  />
+                )}
+              </>
+            ) : (
+              <div className="absolute top-0 left-0 right-0 h-2/3 bg-gradient-to-b from-purple-500/15 via-violet-500/10 to-transparent" />
+            )}
+            
+            {/* Magical particles - high only */}
+            {devicePerf.mode === 'high' && animConfig.enableParticles && [...Array(6)].map((_, i) => (
+              <motion.div
+                key={`particle-up-${i}`}
+                animate={{ y: [100, -50], opacity: [0, 0.6, 0], scale: [0.5, 1, 0.5] }}
+                transition={{ duration: 8, repeat: Infinity, delay: i * 1.5, ease: "easeOut" }}
+                className="absolute bottom-0"
+                style={{ left: `${15 + i * 15}%` }}
+              >
+                <Sparkles className="w-2 h-2 text-purple-300/60" />
+              </motion.div>
+            ))}
+            
+            {/* Milky way effect - simplified */}
+            {animConfig.enableAnimations ? (
+              <motion.div
+                animate={{ opacity: [0.15, 0.25, 0.15] }}
+                transition={{ duration: 6, repeat: Infinity }}
+                className="absolute inset-0 bg-gradient-to-tr from-purple-900/20 via-transparent to-blue-900/20"
+              />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-tr from-purple-900/15 via-transparent to-blue-900/15" />
+            )}
+            
+            {/* Deep mystical overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-purple-900/20" />
+          </>
+        )}
+        
+        {timeOfDay === 'morning' && (
+          <>
+            {/* Sun with rays */}
+            <div className="absolute top-4 right-4">
+              {/* Sun glow layers */}
+              <motion.div
+                animate={{
+                  scale: [1, 1.2, 1],
+                  opacity: [0.3, 0.5, 0.3]
+                }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute inset-0 w-24 h-24 rounded-full bg-yellow-300/40 blur-2xl"
+              />
+              <motion.div
+                animate={{
+                  scale: [1, 1.15, 1],
+                  opacity: [0.4, 0.6, 0.4]
+                }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                className="absolute inset-2 w-20 h-20 rounded-full bg-yellow-200/50 blur-xl"
+              />
+              
+              {/* Rotating sun */}
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                className="relative"
+              >
+                <Sun className="w-16 h-16 text-yellow-100/60" />
+              </motion.div>
+              
+              {/* Sun rays */}
+              {[...Array(8)].map((_, i) => (
+                <motion.div
+                  key={`ray-${i}`}
+                  animate={{
+                    opacity: [0.2, 0.5, 0.2],
+                    scale: [0.8, 1, 0.8]
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    delay: i * 0.25,
+                    ease: "easeInOut"
+                  }}
+                  className="absolute w-1 h-8 bg-gradient-to-b from-yellow-200/40 to-transparent"
+                  style={{
+                    top: '50%',
+                    left: '50%',
+                    transform: `rotate(${i * 45}deg) translateY(-40px)`,
+                    transformOrigin: 'center center'
+                  }}
+                />
+              ))}
+            </div>
+            
+            {/* Morning mist effect */}
+            <motion.div
+              animate={{ opacity: [0.1, 0.3, 0.1] }}
+              transition={{ duration: 5, repeat: Infinity }}
+              className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white/20 to-transparent"
+            />
+            
+            {/* Sparkles and particles */}
+            {[...Array(8)].map((_, i) => (
+              <motion.div
+                key={`particle-${i}`}
+                animate={{
+                  y: [-30, 30, -30],
+                  x: [0, 15, 0],
+                  opacity: [0.2, 0.7, 0.2],
+                  scale: [0.8, 1.2, 0.8]
+                }}
+                transition={{
+                  duration: 4 + i * 0.5,
+                  repeat: Infinity,
+                  delay: i * 0.6
+                }}
+                className="absolute"
+                style={{
+                  top: `${15 + i * 12}%`,
+                  right: `${8 + i * 10}%`
+                }}
+              >
+                <Sparkles className="w-3 h-3 text-yellow-200/60" />
+              </motion.div>
+            ))}
+          </>
+        )}
+        
+        {timeOfDay === 'afternoon' && (
+          <>
+            {/* Bright afternoon sun */}
+            <motion.div
+              animate={{
+                scale: [1, 1.1, 1],
+                opacity: [0.6, 0.8, 0.6]
+              }}
+              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute top-3 right-3"
+            >
+              <div className="relative">
+                {/* Sun glow */}
+                <div className="absolute inset-0 w-20 h-20 rounded-full bg-yellow-400/30 blur-2xl" />
+                <Sun className="w-14 h-14 text-white/50" />
+              </div>
+            </motion.div>
+            
+            {/* Gentle light rays */}
+            {[...Array(6)].map((_, i) => (
+              <motion.div
+                key={`afternoon-ray-${i}`}
+                animate={{
+                  opacity: [0.1, 0.25, 0.1],
+                  scaleY: [0.8, 1, 0.8]
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  delay: i * 0.5,
+                  ease: "easeInOut"
+                }}
+                className="absolute top-0 w-16 h-full bg-gradient-to-b from-white/10 to-transparent"
+                style={{
+                  right: `${10 + i * 15}%`,
+                  transform: `skewX(-${5 + i * 2}deg)`
+                }}
+              />
+            ))}
+            
+            {/* Multiple cloud layers */}
+            <motion.div
+              animate={{ x: [-120, 120] }}
+              transition={{ duration: 35, repeat: Infinity, ease: "linear" }}
+              className="absolute top-6 -right-10 opacity-25"
+            >
+              <Cloud className="w-28 h-28 text-white" />
+            </motion.div>
+            <motion.div
+              animate={{ x: [-80, 140] }}
+              transition={{ duration: 28, repeat: Infinity, ease: "linear", delay: 3 }}
+              className="absolute top-12 right-16 opacity-20"
+            >
+              <Cloud className="w-20 h-20 text-white" />
+            </motion.div>
+            <motion.div
+              animate={{ x: [-60, 100] }}
+              transition={{ duration: 32, repeat: Infinity, ease: "linear", delay: 8 }}
+              className="absolute top-20 right-5 opacity-15"
+            >
+              <Cloud className="w-16 h-16 text-white" />
+            </motion.div>
+            
+            {/* Sky sparkles */}
+            {[...Array(6)].map((_, i) => (
+              <motion.div
+                key={`afternoon-sparkle-${i}`}
+                animate={{
+                  opacity: [0.2, 0.6, 0.2],
+                  scale: [0.8, 1.3, 0.8],
+                  rotate: [0, 180, 360]
+                }}
+                transition={{
+                  duration: 3 + i * 0.5,
+                  repeat: Infinity,
+                  delay: i * 0.8
+                }}
+                className="absolute"
+                style={{
+                  top: `${20 + i * 13}%`,
+                  right: `${15 + i * 12}%`
+                }}
+              >
+                <Sparkles className="w-2.5 h-2.5 text-white/40" />
+              </motion.div>
+            ))}
+            
+            {/* Atmospheric glow */}
+            <motion.div
+              animate={{ opacity: [0.2, 0.4, 0.2] }}
+              transition={{ duration: 6, repeat: Infinity }}
+              className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent"
+            />
+          </>
+        )}
+        
+        {timeOfDay === 'evening' && (
+          <>
+            {/* Detailed Moon with glow */}
+            <div className="absolute top-3 right-3">
+              {/* Moon glow layers */}
+              <motion.div
+                animate={{
+                  scale: [1, 1.15, 1],
+                  opacity: [0.3, 0.5, 0.3]
+                }}
+                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                className="absolute inset-0 w-24 h-24 rounded-full bg-blue-200/30 blur-2xl"
+              />
+              <motion.div
+                animate={{
+                  scale: [1, 1.08, 1],
+                  opacity: [0.5, 0.7, 0.5]
+                }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                className="absolute inset-2 w-20 h-20 rounded-full bg-blue-100/40 blur-xl"
+              />
+              
+              {/* Moon */}
+              <motion.div
+                animate={{
+                  scale: [1, 1.05, 1],
+                  opacity: [0.8, 1, 0.8]
+                }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <Moon className="w-16 h-16 text-blue-50/60" />
+              </motion.div>
+            </div>
+            
+            {/* Shooting stars */}
+            {[...Array(3)].map((_, i) => (
+              <motion.div
+                key={`shooting-${i}`}
+                initial={{ opacity: 0, x: 100, y: -50 }}
+                animate={{
+                  opacity: [0, 1, 1, 0],
+                  x: [-100, -200],
+                  y: [0, 100],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  delay: i * 8 + 2,
+                  ease: "linear"
+                }}
+                className="absolute"
+                style={{
+                  top: `${15 + i * 20}%`,
+                  right: `${80 + i * 5}%`
+                }}
+              >
+                <div className="relative">
+                  <div className="w-1 h-12 bg-gradient-to-b from-white via-blue-200 to-transparent transform rotate-45" />
+                  <div className="absolute top-0 w-2 h-2 rounded-full bg-white shadow-lg shadow-blue-200/50" />
+                </div>
+              </motion.div>
+            ))}
+            
+            {/* Constellation pattern */}
+            <svg className="absolute top-1/4 left-1/4 w-32 h-32 opacity-30" viewBox="0 0 100 100">
+              {/* Connect stars to form constellation */}
+              <motion.line
+                x1="20" y1="20" x2="40" y2="30"
+                stroke="white" strokeWidth="0.5" opacity="0.4"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+                transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+              />
+              <motion.line
+                x1="40" y1="30" x2="60" y2="25"
+                stroke="white" strokeWidth="0.5" opacity="0.4"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+                transition={{ duration: 2, delay: 0.5, repeat: Infinity, repeatDelay: 3 }}
+              />
+              <motion.line
+                x1="60" y1="25" x2="70" y2="45"
+                stroke="white" strokeWidth="0.5" opacity="0.4"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+                transition={{ duration: 2, delay: 1, repeat: Infinity, repeatDelay: 3 }}
+              />
+              
+              {/* Constellation stars */}
+              {[[20, 20], [40, 30], [60, 25], [70, 45]].map(([cx, cy], i) => (
+                <motion.circle
+                  key={i}
+                  cx={cx} cy={cy} r="1.5"
+                  fill="white"
+                  animate={{ opacity: [0.4, 1, 0.4], scale: [0.8, 1.2, 0.8] }}
+                  transition={{ duration: 2, delay: i * 0.3, repeat: Infinity }}
+                />
+              ))}
+            </svg>
+            
+            {/* Twinkling stars - varied sizes */}
+            {[...Array(20)].map((_, i) => {
+              const size = Math.random() > 0.7 ? 'w-4 h-4' : Math.random() > 0.4 ? 'w-3 h-3' : 'w-2 h-2'
+              return (
+                <motion.div
+                  key={`star-${i}`}
+                  animate={{
+                    opacity: [0.2, 1, 0.2],
+                    scale: [0.6, 1.4, 0.6],
+                    rotate: [0, 180, 360]
+                  }}
+                  transition={{
+                    duration: 2 + Math.random() * 3,
+                    repeat: Infinity,
+                    delay: Math.random() * 3,
+                    ease: "easeInOut"
+                  }}
+                  className="absolute"
+                  style={{
+                    top: `${5 + Math.random() * 80}%`,
+                    right: `${5 + Math.random() * 90}%`
+                  }}
+                >
+                  <Sparkles className={`${size} text-yellow-100/70`} />
+                </motion.div>
+              )
+            })}
+            
+            {/* Aurora borealis effect */}
+            <motion.div
+              animate={{
+                opacity: [0.1, 0.3, 0.1],
+                x: [-20, 20, -20]
+              }}
+              transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute top-0 right-0 w-full h-1/2 bg-gradient-to-b from-purple-500/10 via-blue-500/10 to-transparent"
+            />
+            <motion.div
+              animate={{
+                opacity: [0.1, 0.25, 0.1],
+                x: [20, -20, 20]
+              }}
+              transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+              className="absolute top-0 right-0 w-full h-1/3 bg-gradient-to-b from-teal-500/10 via-cyan-500/10 to-transparent"
+            />
+            
+            {/* Milky way effect */}
+            <motion.div
+              animate={{ opacity: [0.15, 0.25, 0.15] }}
+              transition={{ duration: 6, repeat: Infinity }}
+              className="absolute inset-0 bg-gradient-to-tr from-purple-900/20 via-transparent to-blue-900/20"
+            />
+            
+            {/* Deep night overlay */}
+            <div className="absolute inset-0 bg-black/25" />
+          </>
+        )}
+        
+        {/* Content - relative to appear above animated elements */}
+        <div className="relative z-10">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2">{greeting}</h1>
+          <p className="text-white/90 text-sm sm:text-base mb-4">{timeContext}</p>
+        </div>
         
         {/* Contextual prompt */}
         {upcomingAssessments.length > 0 && upcomingAssessments[0].daysUntil <= 3 && (
@@ -178,23 +828,28 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
         transition={{ delay: 0.05 }}
       >
         <Card 
-          className="border-0 shadow-xl rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 cursor-pointer hover:shadow-2xl transition-all group"
+          className="border-0 shadow-xl rounded-2xl bg-gradient-to-br from-slate-700 via-slate-600 to-blue-600 cursor-pointer hover:shadow-2xl transition-all group relative overflow-hidden"
           onClick={() => router.push('/student/calendar')}
         >
+          {/* Professional accent line */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500" />
+          
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <div className="flex items-center space-x-3 mb-2">
-                  <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl group-hover:scale-110 transition-transform">
-                    <Calendar className="w-6 h-6 text-white" />
+                  <div className="p-2.5 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 backdrop-blur-sm rounded-xl group-hover:scale-110 transition-transform border border-blue-300/30">
+                    <Calendar className="w-6 h-6 text-blue-100" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-white">Calendar & Attendance</h3>
-                    <p className="text-white/90 text-sm">Track your schedule</p>
+                    <h3 className="text-lg font-bold text-white tracking-tight">Calendar & Attendance</h3>
+                    <p className="text-blue-100/80 text-sm font-medium">Track your schedule</p>
                   </div>
                 </div>
               </div>
-              <ChevronRight className="w-6 h-6 text-white group-hover:translate-x-1 transition-transform" />
+              <div className="p-2 bg-white/10 rounded-lg group-hover:bg-white/20 transition-colors">
+                <ChevronRight className="w-5 h-5 text-blue-100 group-hover:translate-x-1 transition-transform" />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -210,7 +865,14 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
           <Card className="border-0 shadow-lg rounded-2xl bg-white">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
-                <Zap className="w-5 h-5" style={{ color: 'var(--theme-primary)' }} />
+                <div className="flex items-center space-x-1.5">
+                  <Zap className="w-5 h-5" style={{ color: 'var(--theme-primary)' }} />
+                  {data?.stats?.level && (
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-700 border border-amber-200">
+                      Lv {data.stats.level}
+                    </span>
+                  )}
+                </div>
                 <span className="text-2xl font-bold" style={{ color: 'var(--theme-primary)' }}>
                   {todayData.weeklyProgress?.xp || 0}
                 </span>
@@ -543,10 +1205,10 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
           transition={{ delay: 0.5 }}
         >
           <Card className="border-0 shadow-lg h-full">
-            <CardHeader className="bg-gradient-to-r from-[#FBC4AB]/30 to-[#F8AD9D]/30 rounded-t-2xl">
+            <CardHeader className="rounded-t-2xl" style={{ background: 'linear-gradient(to right, color-mix(in srgb, var(--theme-tertiary) 30%, transparent), color-mix(in srgb, var(--theme-accent) 30%, transparent))' }}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-gradient-to-br from-[#F4978E] to-[#F8AD9D] rounded-xl shadow-sm">
+                  <div className="p-2 rounded-xl shadow-sm" style={{ background: 'linear-gradient(to bottom right, var(--theme-secondary), var(--theme-accent))' }}>
                     <Bell className="h-5 w-5 text-white" />
                   </div>
                   <CardTitle className="text-lg">School Updates</CardTitle>

@@ -6,6 +6,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const role = searchParams.get('role')
     const schoolId = searchParams.get('schoolId')
+    const search = searchParams.get('search')
+    const limit = parseInt(searchParams.get('limit') || '20')
+    const offset = parseInt(searchParams.get('offset') || '0')
 
     if (!schoolId) {
       return NextResponse.json({ error: 'School ID required' }, { status: 400 })
@@ -15,15 +18,22 @@ export async function GET(request: NextRequest) {
       .from('profiles')
       .select(`
         *,
-        schools!inner(name, school_code)
-      `)
+        schools!fk_profiles_school_id!inner(name, school_code)
+      `, { count: 'exact' })
       .eq('school_id', schoolId)
 
     if (role) {
       query = query.eq('role', role)
     }
 
-    const { data: profiles, error } = await query.order('created_at', { ascending: false })
+    // Add search functionality
+    if (search && search.trim()) {
+      query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%`)
+    }
+
+    const { data: profiles, error, count } = await query
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
 
     if (error) {
       console.error('Error fetching users:', error)
@@ -50,7 +60,15 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 Users API - Returning user IDs:', users?.map(u => ({ id: u.id, user_id: u.user_id, name: `${u.first_name} ${u.last_name}` })))
 
-    return NextResponse.json({ users })
+    return NextResponse.json({ 
+      users,
+      pagination: {
+        total: count || 0,
+        limit,
+        offset,
+        hasMore: (offset + limit) < (count || 0)
+      }
+    })
   } catch (error: any) {
     console.error('Admin users API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -3,6 +3,20 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { getCurrentUserProfile } from '@/lib/services/profileService'
 
+// Inspirational school vision quotes
+const schoolVisionQuotes = [
+  'Empowering students to reach their full potential through quality education and holistic development',
+  'Nurturing curious minds, building confident leaders, shaping tomorrow\'s innovators',
+  'Excellence in education, character, and service - developing future global citizens',
+  'Where learning meets inspiration, and every student discovers their unique brilliance',
+  'Fostering academic excellence while cultivating creativity, integrity, and compassion',
+  'Building tomorrow\'s leaders through knowledge, values, and innovative learning',
+  'Transforming lives through education, empowering dreams through dedication',
+  'Inspiring minds to explore, discover, and achieve beyond boundaries',
+  'Creating lifelong learners who make a positive difference in the world',
+  'Where tradition meets innovation in pursuit of academic excellence'
+]
+
 export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies()
@@ -81,6 +95,9 @@ export async function GET(request: NextRequest) {
     const extendedProfile = profile as any
     const extendedSchool = schoolData as any
     
+    // Select a random vision quote for variety
+    const randomVision = schoolVisionQuotes[Math.floor(Math.random() * schoolVisionQuotes.length)]
+    
     const response = NextResponse.json({
       profile: {
         first_name: profile.first_name,
@@ -100,7 +117,7 @@ export async function GET(request: NextRequest) {
           city: extendedSchool.city,
           country: extendedSchool.country,
           logo_url: schoolData.logo_url,
-          vision: 'Empowering students to reach their full potential through quality education and holistic development'
+          vision: randomVision
         } : null
       },
       stats: {

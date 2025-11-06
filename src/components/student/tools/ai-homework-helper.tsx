@@ -16,7 +16,7 @@ import { FluidThinking } from './FluidThinking'
 import { LuminexAvatar } from './LuminexAvatar'
 import { UserAvatar } from './UserAvatar'
 import { QuotaIndicator } from './QuotaIndicator'
-import { supabase } from '@/lib/supabaseClient'
+import { supabase, supabaseUrl } from '@/lib/supabaseClient'
 import AIGraphRenderer from './AIGraphRenderer'
 
 interface ChatMessage {
@@ -1311,8 +1311,8 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
         throw new Error('Authentication expired. Please refresh the page.')
       }
 
-      // Call the extended Gemini API endpoint (handles 30 normal + 500 extra quota)
-      const response = await fetch('/api/chat/gemini-extended', {
+      // Call Supabase Edge Function directly (bypasses Vercel for better performance)
+      const response = await fetch(`${supabaseUrl}/functions/v1/ai-homework-chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1362,8 +1362,13 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to get response')
+        const errorData = await response.json()
+        console.error('❌ AI Homework Helper Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        })
+        throw new Error(errorData.error || errorData.message || 'Failed to process request with Luminex AI')
       }
 
       // Handle streaming response with ultra-smooth requestAnimationFrame updates
@@ -1503,7 +1508,7 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
-  }, [inputMessage, selectedImage, messages, profile])
+  }, [inputMessage, selectedImage, messages, profile, setMessages, setInputMessage, setSelectedImage, setIsTyping, setIsStreaming, setHelpCount, messagesEndRef, fileInputRef, flashCardMode])
 
   // Move input to bottom when messages appear
   useEffect(() => {

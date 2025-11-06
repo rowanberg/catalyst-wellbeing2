@@ -31,11 +31,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
   try {
     const supabase = await createSupabaseServerClient()
     
-    // Get teacher_id from query params or use authenticated user
-    const { searchParams } = new URL(request.url)
-    let teacherId = searchParams.get('teacher_id')
-    
-    // Get authenticated user
+    // Step 1: Authenticate user
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) {
       console.log('Authentication failed:', userError)
@@ -45,21 +41,34 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       )
     }
 
-    // Use authenticated user ID if no teacher_id provided
-    if (!teacherId) {
-      teacherId = user.id
-    }
-
-    console.log('API called for teacher:', teacherId)
-
-    // Get teacher's school_id from profile
-    const { data: profile } = await supabase
+    // Step 2: Get teacher profile and verify role
+    const { data, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('school_id')
-      .eq('user_id', teacherId)
+      .select('id, role, school_id')
+      .eq('user_id', user.id)
       .single()
 
-    const schoolId = profile?.school_id
+    if (profileError || !data) {
+      return NextResponse.json(
+        { classes: [], success: false, message: 'Profile not found' },
+        { status: 404 }
+      )
+    }
+
+    const teacherProfile = data as { id: string; role: string; school_id: string }
+
+    if (teacherProfile.role !== 'teacher') {
+      return NextResponse.json(
+        { classes: [], success: false, message: 'Forbidden - Teacher access only' },
+        { status: 403 }
+      )
+    }
+
+    // Use authenticated user's ID for teacher_class_assignments (uses user_id)
+    const teacherId = user.id  // ← Use user.id, not profile.id
+    const schoolId = teacherProfile.school_id
+
+    console.log('API called for teacher:', teacherId)
 
     // Always use manual query for better reliability
     console.log('Using manual query for teacher:', teacherId)

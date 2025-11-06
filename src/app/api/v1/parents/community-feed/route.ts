@@ -8,6 +8,11 @@ import { ApiResponse } from '@/lib/api/response'
 import { validateQueryParams, ParentCommunityFeedQuerySchema } from '@/lib/validations/api-schemas'
 import { handleSecureError, AuthorizationError } from '@/lib/security/error-handler'
 import { rateLimiters } from '@/lib/security/enhanced-rate-limiter'
+import { 
+  getCachedCommunityFeedLocal, 
+  setCachedCommunityFeedLocal,
+  invalidateCommunityFeedLocal 
+} from '@/lib/redis/parent-cache'
 
 export async function GET(request: NextRequest) {
   return rateLimiters.apiGeneral(request, async () => {
@@ -81,6 +86,16 @@ export async function GET(request: NextRequest) {
       }
 
       const schoolId = studentProfile.school_id
+
+      // Calculate page number from offset/limit for cache key
+      const page = Math.floor((offset ?? 0) / (limit ?? 20)) + 1
+      const cacheKey = post_type || 'all'
+      
+      // Check local cache first (15min TTL)
+      const cachedData = getCachedCommunityFeedLocal(schoolId, page, cacheKey)
+      if (cachedData) {
+        return ApiResponse.success(cachedData)
+      }
 
     // Fetch school information for welcome message
     let schoolInfo: { id: string; name: string; logo_url: string | null } | null = null
@@ -219,7 +234,7 @@ export async function GET(request: NextRequest) {
     // Process posts
     const processedPosts = posts?.map(processPost) || []
 
-      return ApiResponse.success({
+      const responseData = {
         posts: processedPosts,
         school: schoolInfo,
         classes: classesInfo,
@@ -229,7 +244,12 @@ export async function GET(request: NextRequest) {
           totalCount: count || 0,
           hasMore: ((offset ?? 0) + (limit ?? 20)) < (count || 0)
         }
-      })
+      }
+
+      // Cache the result (15min TTL, local-only)
+      setCachedCommunityFeedLocal(schoolId, page, responseData, cacheKey)
+
+      return ApiResponse.success(responseData)
 
     } catch (error: any) {
       return handleSecureError(error, 'ParentCommunityFeed', requestId)
@@ -308,6 +328,21 @@ export async function POST(request: NextRequest) {
             onConflict: 'post_id,parent_id'
           }
         )
+
+      // Invalidate feed cache since reactions changed
+      // Get school_id from post to invalidate correct cache
+      const { data: post } = await supabase
+        .from('community_posts')
+        .select('teacher:profiles!teacher_id(school_id)')
+        .eq('id', postId)
+        .single()
+      
+      if (post) {
+        const schoolId = (post.teacher as any)?.school_id
+        if (schoolId) {
+          invalidateCommunityFeedLocal(schoolId)
+        }
+      }
 
       return ApiResponse.success(data)
 

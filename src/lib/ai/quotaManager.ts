@@ -65,7 +65,7 @@ export async function checkUserQuota(userId: string): Promise<QuotaCheckResult> 
 
     const quota = data[0]
     const remainingNormal = Math.max(0, 30 - quota.out_normal_daily_usage)
-    const remainingExtra = Math.max(0, 500 - quota.out_extra_daily_usage)
+    const remainingExtra = Math.max(0, 45 - quota.out_extra_daily_usage)
 
     // Check if user can use normal quota (Gemini)
     if (quota.out_can_use_normal) {
@@ -294,7 +294,7 @@ export async function getUserQuotaStatus(userId: string): Promise<{
           normalUsed: newData.normal_daily_usage,
           normalTotal: 30,
           extraUsed: newData.extra_daily_usage,
-          extraTotal: 500,
+          extraTotal: 45,
           totalUsedToday: newData.normal_daily_usage + newData.extra_daily_usage,
           nextResetTime: nextReset
         }
@@ -307,7 +307,7 @@ export async function getUserQuotaStatus(userId: string): Promise<{
         normalUsed: data.normal_daily_usage,
         normalTotal: 30,
         extraUsed: data.extra_daily_usage,
-        extraTotal: 500,
+        extraTotal: 45,
         totalUsedToday: data.normal_daily_usage + data.extra_daily_usage,
         nextResetTime: nextReset
       }
@@ -318,7 +318,7 @@ export async function getUserQuotaStatus(userId: string): Promise<{
       normalUsed: 0,
       normalTotal: 30,
       extraUsed: 0,
-      extraTotal: 500,
+      extraTotal: 45,
       totalUsedToday: 0,
       nextResetTime: getNextResetTime(new Date())
     }
@@ -328,7 +328,7 @@ export async function getUserQuotaStatus(userId: string): Promise<{
       normalUsed: 0,
       normalTotal: 30,
       extraUsed: 0,
-      extraTotal: 500,
+      extraTotal: 45,
       totalUsedToday: 0,
       nextResetTime: getNextResetTime(new Date())
     }

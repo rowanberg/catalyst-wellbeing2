@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getCachedTeacherAssignments, setCachedTeacherAssignments, invalidateTeacherAssignments } from '@/lib/redis-teachers'
+import { invalidateAttendanceCache } from '@/lib/prefetch/attendancePrefetch'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -7,6 +9,8 @@ const supabaseAdmin = createClient(
 )
 
 export async function GET(request: NextRequest) {
+  const startTime = performance.now()
+  
   try {
     const { searchParams } = new URL(request.url)
     let teacherId = searchParams.get('teacher_id')
@@ -28,6 +32,18 @@ export async function GET(request: NextRequest) {
 
       teacherId = user.id
     }
+
+    // STEP 1: Try Redis cache first for THIS SPECIFIC TEACHER
+    const cached = await getCachedTeacherAssignments(teacherId)
+    
+    if (cached) {
+      const duration = Math.round(performance.now() - startTime)
+      console.log(`⚡ [Class Assignments] Cache HIT in ${duration}ms | Teacher: ${teacherId}`)
+      return NextResponse.json(cached)
+    }
+    
+    // STEP 2: Cache miss - query database for THIS TEACHER
+    console.log(`❌ [Class Assignments] Cache MISS | Querying for teacher: ${teacherId}`)
 
 
     // Simple query first - get assignments
@@ -82,10 +98,22 @@ export async function GET(request: NextRequest) {
     })
 
 
-    return NextResponse.json({ 
+    const response = {
       assignments: assignmentsWithClasses,
-      success: true 
+      success: true,
+      cached_at: new Date().toISOString(),
+      source: 'database'
+    }
+
+    // STEP 3: Cache result for THIS SPECIFIC TEACHER (fire-and-forget)
+    setCachedTeacherAssignments(teacherId, response).catch((err) => {
+      console.error('Failed to cache teacher assignments:', err)
     })
+
+    const duration = Math.round(performance.now() - startTime)
+    console.log(`⚡ [Class Assignments] Database query completed in ${duration}ms for teacher: ${teacherId}`)
+
+    return NextResponse.json(response)
 
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -162,6 +190,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // CRITICAL: Invalidate BOTH Redis cache AND attendance prefetch cache
+    // This ensures ONLY this teacher's cache is cleared, not other teachers
+    invalidateTeacherAssignments(teacherId).catch((err) => {
+      console.error('Failed to invalidate teacher assignments cache:', err)
+    })
+    
+    // Also invalidate attendance page prefetch cache
+    invalidateAttendanceCache(`class-assignments:${teacherId}`)
+    
+    console.log(`[Cache] Invalidated assignments cache for teacher: ${teacherId}`)
+
     return NextResponse.json({
       success: true,
       message: 'Class assignments saved successfully'
@@ -216,6 +255,17 @@ export async function DELETE(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    // CRITICAL: Invalidate BOTH Redis cache AND attendance prefetch cache
+    // This ensures ONLY this teacher's cache is cleared, not other teachers
+    invalidateTeacherAssignments(teacher_id).catch((err) => {
+      console.error('Failed to invalidate teacher assignments cache:', err)
+    })
+    
+    // Also invalidate attendance page prefetch cache
+    invalidateAttendanceCache(`class-assignments:${teacher_id}`)
+    
+    console.log(`[Cache] Invalidated assignments cache for teacher: ${teacher_id}`)
 
     return NextResponse.json({ 
       success: true,

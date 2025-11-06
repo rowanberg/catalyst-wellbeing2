@@ -6,36 +6,45 @@ const MONTHLY_LIMIT = 7000
 
 export async function POST(request: NextRequest) {
   try {
+    // Step 1: Authenticate user
     const supabase = await createSupabaseServerClient()
-
-    // Get current user from cookies
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     
-    const { student_id, teacher_id, amount, reason } = await request.json()
-
-    // Validation
-    if (!student_id || !teacher_id || !amount || !reason) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Please log in' },
+        { status: 401 }
+      )
     }
 
-    // Use admin client for database operations (bypasses RLS)
+    // Step 2: Get authenticated user's profile and verify teacher role
     const supabaseAdmin = getSupabaseAdmin()
-    
-    // Verify teacher exists and get profile
-    const { data: teacherAuth, error: teacherError } = await supabaseAdmin
+    const { data: teacherProfile, error: teacherError } = await supabaseAdmin
       .from('profiles')
       .select('id, user_id, role, school_id, first_name, last_name')
-      .eq('user_id', teacher_id)
-      .eq('role', 'teacher')
+      .eq('user_id', user.id)
       .single()
     
-    if (teacherError || !teacherAuth) {
-      return NextResponse.json({ error: 'Teacher not found or invalid' }, { status: 401 })
+    if (teacherError || !teacherProfile) {
+      return NextResponse.json(
+        { error: 'Profile not found' },
+        { status: 404 }
+      )
     }
 
-    // If we have cookie auth, verify it matches the teacher_id
-    if (user && user.id !== teacher_id) {
-      return NextResponse.json({ error: 'Unauthorized teacher' }, { status: 403 })
+    if (teacherProfile.role !== 'teacher') {
+      return NextResponse.json(
+        { error: 'Forbidden - Teacher access only' },
+        { status: 403 }
+      )
+    }
+
+    // Step 3: Parse request body (DO NOT accept teacher_id - use authenticated user)
+    const { student_id, amount, reason } = await request.json()
+
+    // Validation
+    if (!student_id || !amount || !reason) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
     if (amount <= 0 || amount > 500) {
@@ -52,7 +61,7 @@ export async function POST(request: NextRequest) {
     const { data: monthlyTransactions, error: monthlyError } = await supabaseAdmin
       .from('gem_transactions')
       .select('amount')
-      .eq('teacher_id', teacher_id)
+      .eq('teacher_id', user.id)
       .eq('transaction_type', 'credit_issued')
       .gte('created_at', `${currentMonth}-01T00:00:00.000Z`)
       .lt('created_at', `${currentMonth === '2024-12' ? '2025-01' : currentMonth.slice(0, 5) + String(parseInt(currentMonth.slice(5), 10) + 1).padStart(2, '0')}-01T00:00:00.000Z`)
@@ -75,7 +84,7 @@ export async function POST(request: NextRequest) {
     const { data: teacherClasses, error: accessError } = await supabase
       .from('teacher_class_assignments')
       .select('class_id')
-      .eq('teacher_id', teacher_id)
+      .eq('teacher_id', user.id)
       .eq('is_active', true)
 
     if (accessError || !teacherClasses || teacherClasses.length === 0) {
@@ -113,14 +122,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Profile is not a student' }, { status: 403 })
     }
 
-    // Get teacher's school ID for comparison
-    const { data: teacherProfile } = await supabase
-      .from('profiles')
-      .select('school_id')
-      .eq('user_id', teacher_id)
-      .single()
-
-    if (studentProfile.school_id !== teacherAuth?.school_id) {
+    // Verify student is in same school as teacher
+    if (studentProfile.school_id !== teacherProfile.school_id) {
       return NextResponse.json({ error: 'Student not in same school' }, { status: 403 })
     }
 
@@ -129,7 +132,7 @@ export async function POST(request: NextRequest) {
       .from('gem_transactions')
       .insert({
         student_id: studentProfile.user_id, // Use the actual user_id from profile
-        teacher_id,
+        teacher_id: user.id, // Use authenticated teacher's ID
         amount,
         reason,
         transaction_type: 'credit_issued',

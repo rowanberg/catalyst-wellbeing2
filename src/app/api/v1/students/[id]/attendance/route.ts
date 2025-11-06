@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { getCachedAttendance, setCachedAttendance } from '@/lib/redis/parent-cache'
 
 async function createSupabaseServerClient() {
   const cookieStore = await cookies()
@@ -79,6 +80,12 @@ export async function GET(
     const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString(), 10)
     const month = parseInt(searchParams.get('month') || (new Date().getMonth() + 1).toString(), 10)
     
+    // Check local cache first (15min TTL)
+    const cachedData = getCachedAttendance(studentId, year, month)
+    if (cachedData) {
+      return NextResponse.json(cachedData)
+    }
+    
     // Calculate date range for the month
     const startDate = new Date(year, month - 1, 1)
     const endDate = new Date(year, month, 0) // Last day of month
@@ -148,7 +155,7 @@ export async function GET(
       ? Math.round(((stats.present + stats.late) / stats.total) * 100)
       : 0
 
-    return NextResponse.json({
+    const responseData = {
       success: true,
       data: {
         month: month,
@@ -161,7 +168,12 @@ export async function GET(
         },
         studentId: studentId
       }
-    })
+    }
+
+    // Cache the result (15min TTL, local-only)
+    setCachedAttendance(studentId, year, month, responseData)
+
+    return NextResponse.json(responseData)
 
   } catch (error: any) {
     console.error('Error in student attendance API:', error)

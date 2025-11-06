@@ -716,8 +716,8 @@ const StudentSettingsPage = () => {
               </div>
             </motion.div>
 
-            {/* Optimized Settings Grid - Organized Desktop Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+            {/* Optimized Settings Grid - Responsive & Organized Layout */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
               
               {/* Profile Section */}
               <motion.div
@@ -1059,7 +1059,7 @@ const StudentSettingsPage = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.5 }}
-                className="lg:col-span-2 xl:col-span-1"
+                className="md:col-span-2 xl:col-span-1"
               >
                 <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border border-[#F8AD9D]/30 rounded-2xl sm:rounded-3xl">
                   <CardHeader className="pb-3 sm:pb-6">
@@ -1207,7 +1207,7 @@ const StudentSettingsPage = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.6 }}
-                className="lg:col-span-2 xl:col-span-2"
+                className="md:col-span-2 xl:col-span-2"
               >
                 <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border border-[#F8AD9D]/30 rounded-2xl sm:rounded-3xl">
                   <CardHeader className="pb-3 sm:pb-6">

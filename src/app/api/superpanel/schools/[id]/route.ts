@@ -41,10 +41,22 @@ export async function GET(
     const resolvedParams = await params
     const schoolId = resolvedParams.id
 
-    // Check super admin access
-    const accessKey = request.cookies.get('super_admin_key')?.value
-    if (!accessKey || accessKey !== '4C4F52454D5F495053554D5F444F4C4F525F534954') {
+    // Verify super admin authentication via session token
+    const sessionToken = request.cookies.get('super_admin_session')?.value
+    const secretKey = process.env.SUPER_ADMIN_SECRET_KEY
+
+    if (!sessionToken || !secretKey) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Validate session token
+    try {
+      const decoded = Buffer.from(sessionToken, 'base64').toString('utf-8')
+      if (!decoded.startsWith(secretKey)) {
+        return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
+      }
+    } catch {
+      return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
     }
 
     // Fetch school details

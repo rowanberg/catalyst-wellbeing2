@@ -284,7 +284,7 @@ export function QuotaIndicator() {
           >
             <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
               <AlertCircle className="w-4 h-4 text-amber-400" />
-              <span className="text-xs font-medium text-amber-300">{remainingNormal} standard remaining • 500 extra available</span>
+              <span className="text-xs font-medium text-amber-300">{remainingNormal} standard remaining • 45 extra available</span>
             </div>
           </motion.div>
         )}

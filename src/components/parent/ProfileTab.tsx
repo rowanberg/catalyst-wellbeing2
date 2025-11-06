@@ -841,7 +841,7 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               transition={{ type: "spring", duration: 0.5 }}
-              className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl"
+              className="bg-white dark:bg-gray-900 rounded-3xl p-6 max-w-md w-full shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
@@ -851,27 +851,27 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
                     <Users className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900">Link Child</h3>
-                    <p className="text-xs text-gray-500">Connect your child's account</p>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Link Child</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Connect your child's account</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowLinkModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
                 >
-                  <X className="w-5 h-5 text-gray-500" />
+                  <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                 </button>
               </div>
 
               {/* Instructions */}
-              <div className="bg-blue-50 rounded-2xl p-4 mb-6">
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-4 mb-6">
                 <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                  <div className="flex-shrink-0 w-8 h-8 bg-blue-600 dark:bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
                     i
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-blue-900 mb-1">How to link your child:</p>
-                    <p className="text-xs text-blue-800">Enter both your child's Student ID and Email address to connect their account.</p>
+                    <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-1">How to link your child:</p>
+                    <p className="text-xs text-blue-800 dark:text-blue-200">Enter both your child's Student ID and Email address to connect their account.</p>
                   </div>
                 </div>
               </div>
@@ -879,7 +879,7 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
               {/* Input Fields */}
               <div className="space-y-4 mb-6">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
                     Student ID <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
@@ -891,16 +891,16 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
                         setLinkError('')
                       }}
                       placeholder="Enter Student ID"
-                      className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-2xl focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:bg-white dark:focus:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-all"
                     />
                     <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                      <User className="w-5 h-5 text-gray-400" />
+                      <User className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  <label className="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
                     Student Email <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
@@ -912,10 +912,10 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
                         setLinkError('')
                       }}
                       placeholder="student@school.edu"
-                      className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-2xl focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 focus:bg-white dark:focus:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-all"
                     />
                     <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                      <Mail className="w-5 h-5 text-gray-400" />
+                      <Mail className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                     </div>
                   </div>
                 </div>
@@ -924,9 +924,9 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
                   <motion.p
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-red-600 text-xs flex items-center gap-1"
+                    className="text-red-600 dark:text-red-400 text-xs flex items-center gap-1"
                   >
-                    <span className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center text-red-600 font-bold text-xs">!</span>
+                    <span className="w-4 h-4 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center text-red-600 dark:text-red-400 font-bold text-xs">!</span>
                     {linkError}
                   </motion.p>
                 )}
@@ -936,7 +936,7 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowLinkModal(false)}
-                  className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 font-semibold rounded-2xl hover:bg-gray-200 transition-colors"
+                  className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold rounded-2xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                 >
                   Cancel
                 </button>
@@ -962,7 +962,7 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
               {/* Success Animation Placeholder */}
               {linkLoading && (
                 <div className="mt-4 text-center">
-                  <div className="inline-flex items-center gap-2 text-sm text-gray-600">
+                  <div className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                     <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
                     <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
                     <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>

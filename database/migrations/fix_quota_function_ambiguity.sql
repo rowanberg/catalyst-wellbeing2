@@ -54,7 +54,7 @@ BEGIN
         v_quota.normal_daily_usage::INTEGER,
         v_quota.extra_daily_usage::INTEGER,
         (v_quota.normal_daily_usage < 30)::BOOLEAN,
-        (v_quota.normal_daily_usage >= 30 AND v_quota.extra_daily_usage < 500)::BOOLEAN,
+        (v_quota.normal_daily_usage >= 30 AND v_quota.extra_daily_usage < 45)::BOOLEAN,
         v_needs_reset::BOOLEAN;
 END;
 $$;
@@ -85,7 +85,7 @@ BEGIN
         SET extra_daily_usage = extra_daily_usage + 1,
             updated_at = NOW()
         WHERE user_ai_quotas.user_id = input_user_id
-        AND extra_daily_usage < 500
+        AND extra_daily_usage < 45
         RETURNING TRUE INTO v_success;
     END IF;
     

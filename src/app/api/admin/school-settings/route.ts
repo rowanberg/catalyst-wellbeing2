@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { invalidateSchoolInfoCache } from '@/lib/cache-invalidation-school'
 
 // 6-Layered Security Implementation:
 // Layer 1: Authentication Check
@@ -253,6 +254,13 @@ export async function PUT(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    // Invalidate school info cache so teachers see fresh data
+    invalidateSchoolInfoCache(schoolId).catch((err) => {
+      console.error('Failed to invalidate school cache:', err)
+    })
+
+    console.log('[Cache] Invalidated school info cache for:', schoolId)
 
     return NextResponse.json({ message: 'Settings updated successfully' })
   } catch (error) {
