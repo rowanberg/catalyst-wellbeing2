@@ -22,7 +22,7 @@ export const DarkModeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setMounted(true)
     // Load dark mode preference from localStorage only on client
     if (typeof window !== 'undefined') {
-      const savedMode = localStorage.getItem('parentPortalDarkMode')
+      const savedMode = localStorage.getItem('catalystDarkMode')
       if (savedMode === 'true') {
         setIsDarkMode(true)
         document.documentElement.classList.add('dark')
@@ -35,7 +35,7 @@ export const DarkModeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     
     const newMode = !isDarkMode
     setIsDarkMode(newMode)
-    localStorage.setItem('parentPortalDarkMode', newMode.toString())
+    localStorage.setItem('catalystDarkMode', newMode.toString())
     
     if (newMode) {
       document.documentElement.classList.add('dark')

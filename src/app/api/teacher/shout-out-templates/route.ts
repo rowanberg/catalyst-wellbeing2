@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('id, role, school_id')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single()
 
     if (profileError || !profile || profile.role !== 'teacher') {

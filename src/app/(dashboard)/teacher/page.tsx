@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AnimatedProgressBar } from '@/components/ui/animated-progress-bar'
 import { detectDevicePerformance, getAnimationConfig } from '@/lib/utils/devicePerformance'
+import { useDarkMode } from '@/contexts/DarkModeContext'
+import { TopLoader } from '@/components/ui/top-loader'
 
 // Dynamic imports for heavy components (lazy load on demand)
 const GradeBasedStudentRoster = dynamic(() => import('@/components/teacher/GradeBasedStudentRoster'), {
@@ -86,7 +88,10 @@ import {
   AlertCircle,
   FileText,
   Menu,
-  X
+  X,
+  MapPin,
+  LayoutGrid,
+  RefreshCw
 } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 import { ProfileDropdown } from '@/components/ui/profile-dropdown'
@@ -203,6 +208,11 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
   }, [animConfig.enableAnimations])
   
   const [students, setStudents] = useState<StudentOverview[]>([])
+  const [classes, setClasses] = useState<any[]>([])
+  const [selectedClassForTopic, setSelectedClassForTopic] = useState('')
+  const [dailyTopic, setDailyTopic] = useState('')
+  const [savingTopic, setSavingTopic] = useState(false)
+  const [recentTopics, setRecentTopics] = useState<any[]>([])
   const [analytics, setAnalytics] = useState<ClassAnalytics>({
     totalStudents: 0,
     averageXP: 0,
@@ -223,6 +233,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
   const fetchingRef = useRef(false) // More reliable concurrent call protection
   const [dataFetched, setDataFetched] = useState(false)
   const [activeTab, setActiveTab] = useState<'analytics' | 'overview' | 'roster' | 'attendance' | 'community' | 'incidents' | 'shoutouts' | 'interventions' | 'quests' | 'blackmarks' | 'activities' | 'communication' | 'settings' | 'results'>('overview')
+  const [isTabLoading, setIsTabLoading] = useState(false)
   const [notifications, setNotifications] = useState<Array<{id: string, message: string, type: 'success' | 'error' | 'warning' | 'info'}>>([])
   const [realTimeData, setRealTimeData] = useState({
     newHelpRequests: 0,
@@ -243,6 +254,82 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== id))
     }, 5000)
+  }
+
+  // Handle tab change with top loader
+  const handleTabChange = (tab: typeof activeTab) => {
+    setIsTabLoading(true)
+    setActiveTab(tab)
+    
+    // Simulate brief loading for smooth transition
+    setTimeout(() => {
+      setIsTabLoading(false)
+    }, 600)
+  }
+
+  // Load recent topics from API
+  useEffect(() => {
+    if (user?.id && dataFetched) {
+      fetchRecentTopics()
+    }
+  }, [user?.id, dataFetched])
+
+  const fetchRecentTopics = async () => {
+    try {
+      const response = await fetch('/api/teacher/daily-topics?days=7')
+      if (response.ok) {
+        const data = await response.json()
+        setRecentTopics(data.topics?.slice(0, 5) || [])
+      }
+    } catch (error) {
+      console.error('Error loading recent topics:', error)
+    }
+  }
+
+  // Save daily topic (with automatic upsert - replaces existing topic for today)
+  const saveDailyTopic = async () => {
+    if (!selectedClassForTopic || !dailyTopic.trim()) {
+      addNotification('Please select a class and enter a topic', 'warning')
+      return
+    }
+
+    setSavingTopic(true)
+    try {
+      const selectedClass = classes.find(c => c.id === selectedClassForTopic)
+      
+      // Save to database (automatically replaces if topic exists for today)
+      const response = await fetch('/api/teacher/daily-topics', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          class_id: selectedClassForTopic,
+          topic: dailyTopic.trim(),
+          // topic_date defaults to today in API
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to save topic')
+      }
+      
+      addNotification(`Topic saved for ${selectedClass?.class_name || 'class'}! ${result.topic.created_at !== result.topic.updated_at ? '(Updated existing)' : ''}`, 'success')
+      
+      // Refresh recent topics from API
+      await fetchRecentTopics()
+      
+      // Clear form
+      setDailyTopic('')
+      
+    } catch (error: any) {
+      console.error('Error saving topic:', error)
+      addNotification(error.message || 'Failed to save topic', 'error')
+    } finally {
+      setSavingTopic(false)
+    }
   }
 
   // Optimized data loading with aggressive client-side caching
@@ -304,6 +391,11 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
       // Set students data
       const studentsData = combinedData.students || []
       setStudents(studentsData)
+      
+      // Set classes data from cache
+      const classesData = combinedData.classes || []
+      setClasses(classesData)
+      console.log('📚 [Classes Loaded]:', classesData.length, 'classes')
       
       setDataFetched(true)
 
@@ -398,7 +490,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
       color: 'from-amber-500 to-orange-500',
       bgColor: 'from-amber-50 to-orange-50',
       iconColor: 'from-amber-400 to-orange-400',
-      action: () => setActiveTab('shoutouts'),
+      action: () => handleTabChange('shoutouts'),
       stats: '12 this week'
     },
     { 
@@ -418,7 +510,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
       color: 'from-rose-500 to-pink-600',
       bgColor: 'from-rose-50 to-pink-50',
       iconColor: 'from-rose-400 to-pink-500',
-      action: () => setActiveTab('quests'),
+      action: () => handleTabChange('quests'),
       stats: '5 active quests'
     },
     { 
@@ -428,7 +520,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
       color: 'from-red-600 to-rose-600',
       bgColor: 'from-red-50 to-rose-50',
       iconColor: 'from-red-500 to-rose-500',
-      action: () => setActiveTab('blackmarks'),
+      action: () => handleTabChange('blackmarks'),
       stats: '2 pending'
     }
   ], [])
@@ -451,43 +543,148 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
 
   if (loading) {
     return (
-      <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 min-h-screen">
-        {/* Header Skeleton */}
-        <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 shadow-sm">
-          <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
-            <div className="flex items-center justify-between">
-              <div className="space-y-2 flex-1">
-                <div className="w-48 h-8 bg-gray-200 rounded animate-pulse" />
-                <div className="w-32 h-4 bg-gray-200 rounded animate-pulse" />
+      <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative min-h-screen flex overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-indigo-500/5 to-purple-500/5" />
+        
+        {/* Sidebar Skeleton - Desktop Only */}
+        <div className="hidden lg:flex fixed lg:static inset-y-0 left-0 z-50 lg:z-20 w-64 bg-white/95 backdrop-blur-xl border-r border-white/20 shadow-2xl flex-col">
+          {/* Sidebar Header */}
+          <div className="p-6 border-b border-gray-200/50">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-200 to-indigo-200 rounded-xl animate-pulse" />
+              <div className="flex-1 space-y-2">
+                <div className="w-28 h-5 bg-gray-200 rounded animate-pulse" />
+                <div className="w-20 h-3 bg-gray-200 rounded animate-pulse" />
               </div>
+            </div>
+          </div>
+          
+          {/* Navigation Items */}
+          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+            {[...Array(12)].map((_, i) => (
+              <div key={i} className="flex items-center space-x-3 px-4 py-3.5 rounded-xl animate-pulse">
+                <div className="w-5 h-5 bg-gray-200 rounded" />
+                <div className="w-24 h-4 bg-gray-200 rounded" />
+              </div>
+            ))}
+          </nav>
+          
+          {/* User Profile Skeleton */}
+          <div className="p-4 border-t border-gray-200/50">
+            <div className="flex items-center space-x-3 px-4 py-3 rounded-xl bg-gray-50">
               <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
+              <div className="flex-1 space-y-2">
+                <div className="w-20 h-4 bg-gray-200 rounded animate-pulse" />
+                <div className="w-16 h-3 bg-gray-200 rounded animate-pulse" />
+              </div>
             </div>
           </div>
         </div>
         
-        {/* Content Skeleton */}
-        <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 h-64 animate-pulse">
-              <div className="w-40 h-6 bg-gray-200 rounded mb-4" />
-              <div className="space-y-3">
-                <div className="w-full h-4 bg-gray-200 rounded" />
-                <div className="w-full h-4 bg-gray-200 rounded" />
-                <div className="w-3/4 h-4 bg-gray-200 rounded" />
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col overflow-hidden relative z-10">
+          {/* Top Header Bar */}
+          <div className="bg-white/80 backdrop-blur-xl border-b border-gray-200 shadow-sm">
+            <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
+              <div className="flex items-center justify-between">
+                {/* Mobile Menu Button */}
+                <div className="lg:hidden w-10 h-10 bg-gray-200 rounded-lg animate-pulse" />
+                
+                {/* Title */}
+                <div className="space-y-2 flex-1 lg:flex-none">
+                  <div className="w-48 h-7 bg-gray-200 rounded animate-pulse" />
+                  <div className="w-32 h-4 bg-gray-200 rounded animate-pulse" />
+                </div>
+                
+                {/* Right Side Actions */}
+                <div className="hidden sm:flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
+                  <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
+                  <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
+                </div>
               </div>
             </div>
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 h-64 animate-pulse">
-              <div className="w-40 h-6 bg-gray-200 rounded mb-4" />
-              <div className="space-y-3">
-                <div className="w-full h-4 bg-gray-200 rounded" />
-                <div className="w-full h-4 bg-gray-200 rounded" />
-                <div className="w-3/4 h-4 bg-gray-200 rounded" />
+          </div>
+          
+          {/* Main Content */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 animate-pulse">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="w-14 h-14 bg-gradient-to-br from-blue-200 to-indigo-200 rounded-xl" />
+                      <div className="w-16 h-6 bg-gray-200 rounded-full" />
+                    </div>
+                    <div className="space-y-3">
+                      <div className="w-24 h-4 bg-gray-200 rounded" />
+                      <div className="w-16 h-8 bg-gray-200 rounded" />
+                      <div className="w-32 h-3 bg-gray-200 rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Quick Actions Section */}
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="w-40 h-6 bg-gray-200 rounded animate-pulse" />
+                  <div className="w-24 h-9 bg-gray-200 rounded-lg animate-pulse" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {[...Array(8)].map((_, i) => (
+                    <div key={i} className="group relative bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 shadow-md hover:shadow-xl transition-all duration-300 animate-pulse">
+                      <div className="w-16 h-16 bg-gradient-to-br from-blue-200 to-indigo-200 rounded-2xl mb-4" />
+                      <div className="space-y-2">
+                        <div className="w-32 h-5 bg-gray-200 rounded" />
+                        <div className="w-40 h-3 bg-gray-200 rounded" />
+                        <div className="w-24 h-4 bg-gray-200 rounded mt-3" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Additional Content Cards */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 animate-pulse">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="w-40 h-6 bg-gray-200 rounded" />
+                    <div className="w-20 h-8 bg-gray-200 rounded-lg" />
+                  </div>
+                  <div className="space-y-4">
+                    {[...Array(4)].map((_, i) => (
+                      <div key={i} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl">
+                        <div className="w-12 h-12 bg-gray-200 rounded-xl" />
+                        <div className="flex-1 space-y-2">
+                          <div className="w-32 h-4 bg-gray-200 rounded" />
+                          <div className="w-24 h-3 bg-gray-200 rounded" />
+                        </div>
+                        <div className="w-16 h-6 bg-gray-200 rounded-full" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 animate-pulse">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="w-40 h-6 bg-gray-200 rounded" />
+                    <div className="w-20 h-8 bg-gray-200 rounded-lg" />
+                  </div>
+                  <div className="space-y-4">
+                    {[...Array(4)].map((_, i) => (
+                      <div key={i} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl">
+                        <div className="w-12 h-12 bg-gray-200 rounded-full" />
+                        <div className="flex-1 space-y-2">
+                          <div className="w-32 h-4 bg-gray-200 rounded" />
+                          <div className="w-24 h-3 bg-gray-200 rounded" />
+                        </div>
+                        <div className="w-16 h-6 bg-gray-200 rounded-full" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -497,8 +694,11 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
   }
 
   return (
-    <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative min-h-screen flex overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-indigo-500/5 to-purple-500/5" />
+    <div className="bg-gray-50 dark:bg-slate-900 relative h-screen flex overflow-hidden transition-colors duration-300">
+      {/* Top Loader - Enterprise Style */}
+      <TopLoader isLoading={isTabLoading} color="#3b82f6" height={3} speed={400} />
+      
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 via-white to-indigo-50/30 dark:from-blue-900/5 dark:via-slate-900 dark:to-indigo-900/5" />
       
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
@@ -508,30 +708,34 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
         />
       )}
       
-      {/* Professional Left Sidebar */}
+      {/* Professional Left Sidebar - Fixed */}
       <div className={`${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-50 lg:z-20 w-64 sm:w-72 lg:w-64 bg-white/95 backdrop-blur-xl border-r border-white/20 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out`}>
-        {/* Sidebar Header */}
-        <div className="p-4 sm:p-6 border-b border-gray-200/50">
+      } lg:translate-x-0 fixed inset-y-0 left-0 z-50 lg:z-20 w-64 sm:w-72 lg:w-64 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border-r border-white/20 dark:border-slate-700/50 shadow-2xl flex flex-col transition-all duration-300 ease-in-out`}>
+        {/* Sidebar Header - Premium Enterprise Design */}
+        <div className="px-5 py-5 border-b border-gray-200/80 dark:border-slate-700/50">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 sm:p-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl text-white shadow-lg">
-                <GraduationCap className="h-5 w-5 sm:h-6 sm:w-6" />
+            {/* Brand Identity */}
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl blur-sm opacity-30"></div>
+                <div className="relative p-2.5 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl">
+                  <GraduationCap className="h-6 w-6 text-white" />
+                </div>
               </div>
               <div>
-                <h2 className="text-base sm:text-lg font-bold text-gray-900">Teacher Hub</h2>
-                <p className="text-xs sm:text-sm text-gray-600">Dashboard</p>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.02em' }}>Catalyst</h2>
+                <p className="text-[11px] font-semibold text-gray-600 dark:text-slate-300 uppercase" style={{ fontFamily: 'var(--font-dm-sans)', letterSpacing: '0.05em' }}>Educator Portal</p>
               </div>
             </div>
             {/* Mobile Close Button */}
             <Button
               variant="ghost"
               size="sm"
-              className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
+              className="lg:hidden p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
               onClick={() => setSidebarOpen(false)}
             >
-              <X className="h-5 w-5 text-gray-600" />
+              <X className="h-5 w-5 text-slate-400 dark:text-slate-500" />
             </Button>
           </div>
         </div>
@@ -542,6 +746,8 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
             { id: 'overview', label: 'Overview', icon: School, color: 'text-blue-600', bgColor: 'bg-blue-50' },
             { id: 'roster', label: 'Students', icon: Users, color: 'text-emerald-600', bgColor: 'bg-emerald-50', isLink: true, href: '/teacher/students' },
             { id: 'attendance', label: 'Attendance', icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-50', isLink: true, href: '/teacher/attendance' },
+            { id: 'seating', label: 'Seating', icon: LayoutGrid, color: 'text-blue-600', bgColor: 'bg-blue-50', isLink: true, href: '/teacher/seating' },
+            { id: 'examinations', label: 'Examinations', icon: GraduationCap, color: 'text-indigo-600', bgColor: 'bg-indigo-50', isLink: true, href: '/teacher/examinations' },
             { id: 'community', label: 'Community', icon: Megaphone, color: 'text-indigo-600', bgColor: 'bg-indigo-50', isLink: true, href: '/teacher/community' },
             { id: 'analytics', label: 'Analytics', icon: Activity, color: 'text-violet-600', bgColor: 'bg-violet-50' },
             { id: 'credits', label: 'Issue Credits', icon: Gem, color: 'text-purple-600', bgColor: 'bg-purple-50', isLink: true, href: '/teacher/issue-credits' },
@@ -566,39 +772,39 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                       if (isMobile) {
                         window.location.href = item.href
                       } else {
-                        setActiveTab(item.id as any)
+                        handleTabChange(item.id as any)
                         setSidebarOpen(false)
                       }
                     } else {
                       window.location.href = item.href
                     }
                   } else {
-                    setActiveTab(item.id as any)
+                    handleTabChange(item.id as any)
                     setSidebarOpen(false)
                   }
                 }}
-                whileHover={{ scale: 1.02, x: 4 }}
+                whileHover={{ scale: 1.01, x: 3 }}
                 whileTap={{ scale: 0.98 }}
-                className={`w-full flex items-center space-x-3 px-3 sm:px-4 py-3 sm:py-3.5 rounded-xl transition-all duration-300 text-left group relative overflow-hidden ${
+                className={`w-full flex items-center space-x-3 px-3 sm:px-4 py-3 rounded-xl transition-all duration-200 text-left group relative overflow-hidden ${
                   isActive
-                    ? `${item.bgColor} ${item.color} shadow-lg border border-white/50`
-                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 active:bg-gray-100'
+                    ? `bg-white dark:bg-slate-700 ${item.color} shadow-sm border border-gray-200 dark:border-slate-600`
+                    : 'text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
-                <Icon className={`h-5 w-5 sm:h-5 sm:w-5 transition-colors flex-shrink-0 ${
-                  isActive ? item.color : 'text-gray-500 group-hover:text-gray-700'
+                <Icon className={`h-5 w-5 transition-colors flex-shrink-0 ${
+                  isActive ? item.color : 'text-gray-500 dark:text-slate-400 group-hover:text-gray-700 dark:group-hover:text-slate-200'
                 }`} />
-                <span className={`font-medium transition-colors text-sm sm:text-base ${
-                  isActive ? 'text-gray-900' : 'text-gray-700 group-hover:text-gray-900'
-                }`}>
+                <span className={`font-semibold transition-colors text-sm ${
+                  isActive ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-slate-300 group-hover:text-gray-900 dark:group-hover:text-white'
+                }`} style={{ fontFamily: 'var(--font-dm-sans)' }}>
                   {item.label}
                 </span>
                 {isActive && (
                   <motion.div
                     layoutId="activeSidebarItem"
-                    className="absolute right-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-indigo-600 rounded-l-full"
+                    className="absolute right-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-600 to-indigo-600 rounded-l-full"
                     initial={false}
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                    transition={{ type: "spring", bounce: 0.15, duration: 0.4 }}
                   />
                 )}
               </motion.button>
@@ -607,13 +813,13 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
         </nav>
         
         {/* Sidebar Footer */}
-        <div className="p-3 sm:p-4 border-t border-gray-200/50 space-y-2">
+        <div className="p-3 sm:p-4 border-t border-gray-200/50 dark:border-slate-600/50 space-y-2">
           <Button 
             variant="outline" 
             size="sm" 
             className="w-full justify-start space-x-2 py-2.5 sm:py-2 text-sm"
             onClick={() => {
-              setActiveTab('settings')
+              handleTabChange('settings')
               setSidebarOpen(false)
             }}
           >
@@ -650,87 +856,132 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col relative z-10 lg:ml-0 min-w-0 overflow-hidden">
-        {/* Enhanced Header with Time-Based Greeting */}
-        <header className="bg-gradient-to-r from-white via-blue-50/30 to-white border-b border-gray-200 shadow-sm relative z-30">
-          <div className="px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+      <div className="flex-1 flex flex-col relative z-10 lg:ml-64 min-w-0 h-screen overflow-hidden">
+        {/* Premium Enterprise Header - Fixed */}
+        <header className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-gray-200 dark:border-slate-700/80 shadow-sm sticky top-0 z-30 flex-shrink-0 transition-colors duration-300">
+          <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
                 {/* Mobile Menu Button */}
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="lg:hidden p-2 hover:bg-gray-100 rounded-lg flex-shrink-0"
+                  className="lg:hidden p-2 hover:bg-slate-100 rounded-xl flex-shrink-0 transition-colors"
                   onClick={() => setSidebarOpen(!sidebarOpen)}
                 >
-                  <Menu className="h-5 w-5 text-gray-600" />
+                  <Menu className="h-5 w-5 text-slate-600 dark:text-slate-400" />
                 </Button>
                 
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-lg sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-slate-800 via-blue-700 to-indigo-700 bg-clip-text text-transparent truncate tracking-tight" style={{ fontFamily: '\'Inter\', \'SF Pro Display\', -apple-system, BlinkMacSystemFont, system-ui, sans-serif' }}>
-                    {(() => {
-                      const hour = new Date().getHours()
-                      const firstName = profile?.first_name || 'Teacher'
-                      const greetings = [
-                        { time: 'morning', emoji: '☀️', texts: [
-                          `Rise & Shine, ${firstName}!`,
-                          `Good Morning, ${firstName}!`,
-                          `Hello Sunshine, ${firstName}!`,
-                          `Morning Champion, ${firstName}!`
-                        ]},
-                        { time: 'afternoon', emoji: '🌤️', texts: [
-                          `Great Afternoon, ${firstName}!`,
-                          `Hello ${firstName}!`,
-                          `Keep Shining, ${firstName}!`,
-                          `Crushing It, ${firstName}!`
-                        ]},
-                        { time: 'evening', emoji: '🌙', texts: [
-                          `Good Evening, ${firstName}!`,
-                          `Evening Star, ${firstName}!`,
-                          `Still Going Strong, ${firstName}!`,
-                          `Night Owl, ${firstName}!`
-                        ]}
-                      ]
-                      
-                      const timeOfDay = hour < 12 ? greetings[0] : hour < 17 ? greetings[1] : greetings[2]
-                      const randomText = timeOfDay.texts[Math.floor(Date.now() / (24 * 60 * 60 * 1000)) % timeOfDay.texts.length]
-                      return `${randomText} ${timeOfDay.emoji}`
-                    })()}
-                  </h1>
-                  <p className="text-xs sm:text-sm text-slate-600 font-semibold flex items-center gap-2 tracking-wide" style={{ fontFamily: '\'Inter\', \'SF Pro Text\', -apple-system, BlinkMacSystemFont, system-ui, sans-serif' }}>
-                    <span className="hidden sm:inline bg-gradient-to-r from-amber-600 via-orange-600 to-rose-600 bg-clip-text text-transparent font-bold">{(() => {
-                      const messages = [
-                        "Empowering futures, one lesson at a time ✨",
-                        "Making magic happen in the classroom 🎯",
-                        "Shaping tomorrow's leaders today 🚀",
-                        "Where learning meets inspiration 💡",
-                        "Creating 'aha!' moments every day 🌟",
-                        "Building brilliance, brick by brick 🏗️",
-                        "Igniting curiosity & passion for learning 🔥",
-                        "Your impact echoes through generations 🌊"
-                      ]
-                      return messages[Math.floor(Date.now() / (24 * 60 * 60 * 1000)) % messages.length]
-                    })()}</span>
-                    <span className="sm:hidden text-slate-700 font-bold">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                    <span className="hidden sm:inline text-slate-400 font-bold">•</span>
-                    <span className="hidden sm:inline text-slate-700 font-bold">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
-                  </p>
+                  {/* Personalized Greeting */}
+                  <div className="flex items-baseline gap-3 mb-1">
+                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-gray-900 dark:text-slate-100 truncate" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.03em' }}>
+                      {(() => {
+                        const hour = new Date().getHours()
+                        const firstName = profile?.first_name || 'Educator'
+                        const day = new Date().getDay()
+                        
+                        // Early Morning (5 AM - 7 AM)
+                        if (hour >= 5 && hour < 7) {
+                          const greetings = [
+                            `Early bird, ${firstName}!`,
+                            `Rise and shine, ${firstName}!`,
+                            `Starting strong, ${firstName}!`
+                          ]
+                          return greetings[day % greetings.length]
+                        }
+                        
+                        // Morning (7 AM - 12 PM)
+                        if (hour >= 7 && hour < 12) {
+                          const greetings = [
+                            `Good morning, ${firstName}!`,
+                            `Great morning, ${firstName}!`,
+                            `Hello ${firstName}!`,
+                            `Morning champion, ${firstName}!`
+                          ]
+                          return greetings[day % greetings.length]
+                        }
+                        
+                        // Afternoon (12 PM - 5 PM)
+                        if (hour >= 12 && hour < 17) {
+                          const greetings = [
+                            `Good afternoon, ${firstName}!`,
+                            `Hello ${firstName}!`,
+                            `Great to see you, ${firstName}!`,
+                            `Welcome back, ${firstName}!`
+                          ]
+                          return greetings[day % greetings.length]
+                        }
+                        
+                        // Evening (5 PM - 9 PM)
+                        if (hour >= 17 && hour < 21) {
+                          const greetings = [
+                            `Good evening, ${firstName}!`,
+                            `Evening, ${firstName}!`,
+                            `Still going strong, ${firstName}!`,
+                            `Wrapping up, ${firstName}?`
+                          ]
+                          return greetings[day % greetings.length]
+                        }
+                        
+                        // Night (9 PM - 5 AM)
+                        const greetings = [
+                          `Working late, ${firstName}?`,
+                          `Night owl, ${firstName}!`,
+                          `Burning the midnight oil, ${firstName}?`,
+                          `Good night, ${firstName}!`
+                        ]
+                        return greetings[day % greetings.length]
+                      })()}
+                    </h1>
+                    <span className="hidden sm:inline text-2xl" style={{ marginTop: '-2px' }}>
+                      {(() => {
+                        const hour = new Date().getHours()
+                        if (hour >= 5 && hour < 7) return '🌅'
+                        if (hour >= 7 && hour < 12) return '☀️'
+                        if (hour >= 12 && hour < 17) return '👋'
+                        if (hour >= 17 && hour < 21) return '🌙'
+                        return '🌃'
+                      })()}
+                    </span>
+                  </div>
+                  
+                  {/* Date & Time Info */}
+                  <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+                    <div className="flex items-center gap-1.5 text-gray-600 dark:text-slate-400 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>
+                      <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-400 dark:text-slate-500" />
+                      <span className="hidden sm:inline">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                      <span className="sm:hidden">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                    </div>
+                    <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 dark:from-blue-950/50 dark:to-blue-950/50 rounded-lg border border-blue-200 dark:border-blue-800/50">
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs font-semibold text-blue-700 dark:text-blue-300" style={{ fontFamily: 'var(--font-dm-sans)', letterSpacing: '0.02em' }}>Live Dashboard</span>
+                    </div>
+                  </div>
                 </div>
               </div>
               
               <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                {/* Compact Stats - Mobile & Desktop */}
-                <div className="hidden sm:flex items-center gap-3 px-3 py-1.5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200/50">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-semibold text-gray-700">{analytics.activeToday}</span>
-                    <span className="text-xs text-gray-600">active</span>
+                {/* Real-time Stats Card */}
+                <div className="hidden md:flex items-center gap-4 px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200/80 dark:border-slate-700/80 transition-colors duration-300">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg">
+                      <Users className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600 dark:text-slate-400 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>Active</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-slate-100" style={{ fontFamily: 'var(--font-jakarta)' }}>{analytics.activeToday}</p>
+                    </div>
                   </div>
-                  <div className="w-px h-4 bg-blue-300"></div>
-                  <div className="flex items-center gap-1.5">
-                    <Bell className="h-3.5 w-3.5 text-amber-600" />
-                    <span className="text-sm font-semibold text-gray-700">{analytics.helpRequests}</span>
-                    <span className="text-xs text-gray-600">requests</span>
+                  <div className="w-px h-8 bg-slate-300 dark:bg-slate-600"></div>
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-amber-100 dark:bg-amber-900/50 rounded-lg">
+                      <Bell className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-600 dark:text-slate-400 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>Requests</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-slate-100" style={{ fontFamily: 'var(--font-jakarta)' }}>{analytics.helpRequests}</p>
+                    </div>
                   </div>
                 </div>
                 
@@ -740,8 +991,8 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
           </div>
         </header>
         
-        {/* Content Area */}
-        <div className="flex-1 p-4 sm:p-5 lg:p-6 overflow-auto bg-gradient-to-br from-slate-50/50 via-blue-50/30 to-indigo-50/50">
+        {/* Content Area - Scrollable */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden bg-white/30 dark:from-slate-900/50 dark:via-slate-900/30 dark:to-slate-950/50 transition-colors duration-300">
 
 
           {/* Tab Content */}
@@ -754,7 +1005,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                 animate={animConfig.enableAnimations ? { opacity: 1, y: 0 } : false}
                 exit={animConfig.enableAnimations ? { opacity: 0, y: -20 } : false}
                 transition={{ duration: animConfig.animationDuration }}
-                className="space-y-4 sm:space-y-6 lg:space-y-8"
+                className="space-y-4 sm:space-y-6 lg:space-y-8 p-4 sm:p-5 lg:p-6"
               >
                 {/* Optimized Analytics Cards - Mobile 2x2 Layout */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
@@ -767,29 +1018,29 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                       animate={animConfig.enableAnimations ? { opacity: 1, y: 0 } : false}
                       transition={{ delay: animConfig.enableAnimations ? index * 0.05 : 0, duration: animConfig.animationDuration }}
                     >
-                      <Card className="bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-xl border border-white/20 shadow-2xl hover:shadow-3xl transition-all duration-700 overflow-hidden relative group">
-                        <div className={`absolute inset-0 bg-gradient-to-br ${stat.bgColor} opacity-50 group-hover:opacity-70 transition-opacity duration-500`} />
-                        <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
+                      <Card className="bg-white dark:bg-slate-800/90 border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden relative group">
+                        <div className={`absolute inset-0 bg-gradient-to-br ${stat.bgColor} opacity-30 dark:opacity-20 group-hover:opacity-40 dark:group-hover:opacity-30 transition-opacity duration-300`} />
+                        <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-0 group-hover:opacity-5 dark:group-hover:opacity-10 transition-opacity duration-300`} />
                         <CardContent className="p-3 sm:p-4 lg:p-6 relative z-10">
                           {/* Mobile 2x2 Optimized Layout */}
                           <div className="lg:hidden">
                             <div className="text-center space-y-2">
-                              <div className={`w-10 h-10 mx-auto rounded-xl bg-gradient-to-r ${stat.iconBg} text-white shadow-lg flex items-center justify-center`}>
+                              <div className={`w-10 h-10 mx-auto rounded-xl bg-gradient-to-r ${stat.iconBg} text-white shadow-md flex items-center justify-center`}>
                                 <Icon className="h-5 w-5" />
                               </div>
                               
                               <div>
-                                <p className="text-xl sm:text-2xl font-bold text-gray-900">
+                                <p className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-slate-100" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.02em' }}>
                                   {stat.value}
                                 </p>
-                                <p className="text-xs font-semibold text-gray-700 truncate">{stat.label}</p>
-                                <p className="text-xs text-gray-500 truncate leading-tight">{stat.description}</p>
+                                <p className="text-xs font-semibold text-gray-700 dark:text-slate-300 truncate" style={{ fontFamily: 'var(--font-dm-sans)' }}>{stat.label}</p>
+                                <p className="text-xs text-gray-600 dark:text-slate-500 truncate leading-tight" style={{ fontFamily: 'var(--font-dm-sans)' }}>{stat.description}</p>
                               </div>
                               
                               <div className={`inline-flex px-2 py-1 rounded-full text-xs font-bold ${
                                 stat.trend.startsWith('+') 
-                                  ? 'bg-emerald-100 text-emerald-700' 
-                                  : 'bg-rose-100 text-rose-700'
+                                  ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400' 
+                                  : 'bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-400'
                               }`}>
                                 {stat.trend}
                               </div>
@@ -799,23 +1050,23 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                           {/* Desktop Layout */}
                           <div className="hidden lg:block">
                             <div className="flex items-start justify-between mb-3 sm:mb-4">
-                              <div className={`p-2 sm:p-3 rounded-2xl bg-gradient-to-r ${stat.iconBg} text-white shadow-lg group-hover:shadow-2xl transition-all duration-300`}>
-                                <Icon className="h-5 w-5 sm:h-7 sm:w-7" />
+                              <div className={`p-2 sm:p-3 rounded-xl bg-gradient-to-r ${stat.iconBg} text-white shadow-md group-hover:shadow-lg transition-all duration-300`}>
+                                <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
                               </div>
                               <div className={`px-2 py-1 rounded-full text-xs font-semibold backdrop-blur-sm ${
                                   stat.trend.startsWith('+') 
-                                    ? 'bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 border border-emerald-200' 
-                                    : 'bg-gradient-to-r from-rose-100 to-red-100 text-rose-700 border border-rose-200'
+                                    ? 'bg-gradient-to-r from-emerald-100 to-green-100 dark:from-emerald-900/50 dark:to-green-900/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' 
+                                    : 'bg-gradient-to-r from-rose-100 to-red-100 dark:from-rose-900/50 dark:to-red-900/50 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
                                 }`}>
                                 {stat.trend}
                               </div>
                             </div>
                             <div className="space-y-1 sm:space-y-2">
-                              <p className="text-xs sm:text-sm font-medium text-gray-600">{stat.label}</p>
-                              <p className="text-2xl sm:text-3xl font-bold text-gray-900">
+                              <p className="text-xs sm:text-sm font-semibold text-gray-600 dark:text-slate-400" style={{ fontFamily: 'var(--font-dm-sans)' }}>{stat.label}</p>
+                              <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-slate-100" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.02em' }}>
                                 {stat.value}
                               </p>
-                              <p className="text-xs text-gray-500">{stat.description}</p>
+                              <p className="text-xs text-gray-600 dark:text-slate-500" style={{ fontFamily: 'var(--font-dm-sans)' }}>{stat.description}</p>
                             </div>
                           </div>
                         </CardContent>
@@ -838,28 +1089,28 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                       transition={{ delay: 0.3 + index * 0.05 }}
                       whileHover={animConfig.enableAnimations ? { scale: 1.02 } : undefined}
                       whileTap={animConfig.enableAnimations ? { scale: 0.98 } : undefined}
-                      className="p-3 sm:p-4 lg:p-6 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 text-left group relative overflow-hidden"
+                      className="p-3 sm:p-4 lg:p-6 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 text-left group relative overflow-hidden"
                     >
-                      <div className={`absolute inset-0 bg-gradient-to-br ${action.bgColor} opacity-50 group-hover:opacity-70 transition-opacity duration-300`} />
+                      <div className={`absolute inset-0 bg-gradient-to-br ${action.bgColor} opacity-50 dark:opacity-30 group-hover:opacity-70 dark:group-hover:opacity-50 transition-opacity duration-300`} />
                       <div className="relative z-10">
                         <div className="flex items-start justify-between mb-3">
-                          <div className={`p-2 sm:p-2.5 rounded-xl bg-gradient-to-r ${action.iconColor} text-white shadow-md transition-shadow duration-200 group-hover:shadow-lg`}>
+                          <div className={`p-2 sm:p-2.5 rounded-xl bg-gradient-to-r ${action.iconColor} text-white shadow-sm transition-shadow duration-200 group-hover:shadow-md`}>
                             <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
                           </div>
-                          <div className="text-xs text-gray-600 font-medium bg-white/80 px-2 py-1 rounded-full border border-gray-200">
+                          <div className="text-xs text-gray-600 dark:text-slate-400 font-semibold bg-gray-50/80 dark:bg-slate-700/80 px-2 py-1 rounded-full border border-gray-200 dark:border-slate-600" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                             {action.stats}
                           </div>
                         </div>
                         <div className="space-y-1">
-                          <h3 className="text-sm sm:text-base font-semibold text-gray-900">
+                          <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-slate-100" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
                             {action.label}
                           </h3>
-                          <p className="text-xs text-gray-600 line-clamp-2">
+                          <p className="text-xs text-gray-600 dark:text-slate-400 line-clamp-2" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                             {action.description}
                           </p>
                         </div>
                         <div className="mt-2 sm:mt-3 flex items-center justify-end">
-                          <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all duration-200" />
+                          <ArrowRight className="h-4 w-4 text-gray-400 dark:text-slate-500 group-hover:text-gray-600 dark:group-hover:text-slate-300 group-hover:translate-x-1 transition-all duration-200" />
                         </div>
                       </div>
                     </motion.button>
@@ -867,123 +1118,179 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                 })}
               </div>
 
-              {/* Recent Activity & Insights */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
-                <Card className="bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-xl border border-white/20 shadow-2xl hover:shadow-3xl transition-all duration-700 overflow-hidden relative group">
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
-                  <CardHeader className="bg-gradient-to-r from-blue-500/10 to-indigo-500/10 rounded-t-lg pb-3 sm:pb-4 relative z-10">
-                    <CardTitle className="text-lg sm:text-xl font-bold bg-gradient-to-r from-slate-800 to-blue-800 bg-clip-text text-transparent flex items-center gap-2 sm:gap-3">
-                      <motion.div 
-                        className="p-1.5 sm:p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl text-white shadow-lg"
-                        whileHover={{ rotate: 360 }}
-                        transition={{ duration: 0.6 }}
-                      >
-                        <Activity className="h-5 w-5 sm:h-6 sm:w-6" />
-                      </motion.div>
-                      Recent Activity
+              {/* Today's Schedule & Daily Topics */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                {/* Today's Classes Schedule */}
+                <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden relative group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-900/10 dark:to-indigo-900/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <CardHeader className="bg-gray-50 dark:bg-slate-700/50 border-b border-gray-200 dark:border-slate-600 pb-3 sm:pb-4 relative z-10">
+                    <CardTitle className="text-lg sm:text-xl font-bold text-gray-900 dark:text-slate-100 flex items-center gap-2 sm:gap-3">
+                      <div className="p-2 sm:p-2.5 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl text-white shadow-md flex-shrink-0">
+                        <Calendar className="h-4 w-4 sm:h-5 sm:w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-lg sm:text-xl font-bold truncate" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>Today's Schedule</div>
+                        <div className="text-xs sm:text-sm font-medium text-gray-600 dark:text-slate-400 mt-0.5 truncate" style={{ fontFamily: 'var(--font-dm-sans)' }}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</div>
+                      </div>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-4 sm:p-6 relative z-10">
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       {[
-                        { type: 'quest', student: 'Emma Wilson', action: 'completed Math Quest', time: '2 min ago', color: 'text-emerald-600', bgColor: 'from-emerald-50 to-green-50', icon: Trophy },
-                        { type: 'help', student: 'James Chen', action: 'requested help with Science', time: '5 min ago', color: 'text-amber-600', bgColor: 'from-amber-50 to-orange-50', icon: AlertCircle },
-                        { type: 'shoutout', student: 'Sarah Davis', action: 'received Leadership badge', time: '10 min ago', color: 'text-yellow-600', bgColor: 'from-yellow-50 to-amber-50', icon: Star },
-                        { type: 'mood', student: 'Alex Johnson', action: 'updated mood to excited', time: '15 min ago', color: 'text-blue-600', bgColor: 'from-blue-50 to-indigo-50', icon: Heart }
-                      ].map((activity, index) => (
+                        { class: 'Mathematics Grade 10', time: '09:00 AM', room: 'Room 205', students: 28, status: 'completed', color: 'emerald' },
+                        { class: 'Science Grade 9', time: '10:30 AM', room: 'Room 301', students: 25, status: 'current', color: 'blue' },
+                        { class: 'Mathematics Grade 11', time: '01:00 PM', room: 'Room 205', students: 30, status: 'upcoming', color: 'amber' },
+                        { class: 'Advanced Physics', time: '02:30 PM', room: 'Lab 402', students: 22, status: 'upcoming', color: 'purple' }
+                      ].map((classItem, index) => (
                         <motion.div
                           key={index}
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: index * 0.1 }}
-                          className="flex items-center space-x-3 p-3 rounded-xl bg-gradient-to-r from-white/60 to-white/40 backdrop-blur-sm border border-white/30 hover:shadow-lg transition-all duration-300 group"
+                          className={`p-3 sm:p-4 rounded-xl border transition-all duration-300 ${
+                            classItem.status === 'current' 
+                              ? 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/40 dark:to-indigo-900/40 border-blue-200 dark:border-blue-600 shadow-md ring-2 ring-blue-100 dark:ring-blue-700/50' 
+                              : classItem.status === 'completed'
+                              ? 'bg-gray-50/50 dark:bg-slate-700/40 border-gray-200 dark:border-slate-600 opacity-70'
+                              : 'bg-white dark:bg-slate-700/30 border-gray-200 dark:border-slate-600 hover:border-blue-200 dark:hover:border-blue-600 hover:shadow-md hover:bg-blue-50/30 dark:hover:bg-blue-900/20'
+                          }`}
                         >
-                          <motion.div 
-                            className={`p-2 rounded-lg bg-gradient-to-r ${activity.bgColor} border border-white/50`}
-                            whileHover={{ scale: 1.1, rotate: 5 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            <activity.icon className={`h-4 w-4 ${activity.color}`} />
-                          </motion.div>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900 group-hover:text-gray-800 transition-colors">
-                              <span className={`font-semibold ${activity.color}`}>{activity.student}</span> {activity.action}
-                            </p>
-                            <p className="text-xs text-gray-500 group-hover:text-gray-600 transition-colors">{activity.time}</p>
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                                <h4 className="font-bold text-gray-900 dark:text-slate-100 text-sm sm:text-base truncate" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>{classItem.class}</h4>
+                                {classItem.status === 'current' && (
+                                  <span className="px-2 sm:px-2.5 py-0.5 sm:py-1 bg-blue-500 text-white text-[10px] sm:text-xs font-semibold rounded-full animate-pulse shadow-sm whitespace-nowrap">Live</span>
+                                )}
+                                {classItem.status === 'completed' && (
+                                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500 flex-shrink-0" />
+                                )}
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600 dark:text-slate-400">
+                                <span className="flex items-center gap-1 sm:gap-1.5 font-medium">
+                                  <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500 flex-shrink-0" />
+                                  {classItem.time}
+                                </span>
+                                <span className="hidden sm:block w-px h-4 bg-gray-300 dark:bg-slate-500"></span>
+                                <span className="flex items-center gap-1 sm:gap-1.5 font-medium">
+                                  <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-purple-500 flex-shrink-0" />
+                                  {classItem.room}
+                                </span>
+                                <span className="hidden sm:block w-px h-4 bg-gray-300 dark:bg-slate-500"></span>
+                                <span className="flex items-center gap-1 sm:gap-1.5 font-medium">
+                                  <Users className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500 flex-shrink-0" />
+                                  <span className="hidden sm:inline">{classItem.students} students</span>
+                                  <span className="sm:hidden">{classItem.students}</span>
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="w-1 h-8 bg-gradient-to-b from-transparent via-gray-200 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                         </motion.div>
                       ))}
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-white/80 to-white/60 backdrop-blur-xl border border-white/20 shadow-2xl hover:shadow-3xl transition-all duration-700 overflow-hidden relative group">
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-pink-50 opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
-                  <CardHeader className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-t-lg pb-4 relative z-10">
-                    <CardTitle className="text-xl font-bold bg-gradient-to-r from-slate-800 to-purple-800 bg-clip-text text-transparent flex items-center gap-3">
-                      <motion.div 
-                        className="p-2 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl text-white shadow-lg"
-                        whileHover={{ scale: 1.1, rotate: [0, -10, 10, 0] }}
-                        transition={{ duration: 0.5 }}
-                      >
-                        <Brain className="h-6 w-6" />
-                      </motion.div>
-                      AI Insights
+                {/* Daily Topics Card */}
+                <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden relative group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 to-pink-50/50 dark:from-purple-900/10 dark:to-pink-900/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <CardHeader className="bg-gray-50 dark:bg-slate-700/50 border-b border-gray-200 dark:border-slate-600 pb-3 sm:pb-4 relative z-10">
+                    <CardTitle className="text-lg sm:text-xl font-bold text-gray-900 dark:text-slate-100 flex items-center gap-2 sm:gap-3">
+                      <div className="p-2 sm:p-2.5 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl text-white shadow-md flex-shrink-0">
+                        <BookOpen className="h-4 w-4 sm:h-5 sm:w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-lg sm:text-xl font-bold truncate" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>Daily Topics</div>
+                        <div className="text-xs sm:text-sm font-medium text-gray-600 dark:text-slate-400 mt-0.5 truncate" style={{ fontFamily: 'var(--font-dm-sans)' }}>Record what you taught today</div>
+                      </div>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="p-6 relative z-10">
+                  <CardContent className="p-4 sm:p-6 relative z-10">
                     <div className="space-y-4">
-                      <motion.div 
-                        className="p-4 bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl border border-emerald-200/50 backdrop-blur-sm hover:shadow-lg transition-all duration-300 group"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                      >
-                        <div className="flex items-start space-x-3">
-                          <motion.div 
-                            className="p-2 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full shadow-lg"
-                            whileHover={{ scale: 1.1, rotate: 360 }}
-                            transition={{ duration: 0.4 }}
-                          >
-                            <TrendingUp className="h-4 w-4 text-white" />
-                          </motion.div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-emerald-800 group-hover:text-emerald-900 transition-colors">Positive Trend Detected</h4>
-                            <p className="text-sm text-emerald-700 group-hover:text-emerald-800 transition-colors">Math engagement up 23% this week across your classes.</p>
-                            <div className="mt-2 h-1 bg-emerald-100 rounded-full overflow-hidden">
-                              <motion.div 
-                                className="h-full bg-gradient-to-r from-emerald-400 to-green-500 rounded-full"
-                                initial={{ width: 0 }}
-                                animate={{ width: "75%" }}
-                                transition={{ delay: 0.5, duration: 1 }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                      
-                      <div className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl border border-yellow-200">
-                        <div className="flex items-start space-x-3">
-                          <div className="p-1 bg-yellow-500 rounded-full">
-                            <AlertCircle className="h-4 w-4 text-white" />
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-yellow-800">Attention Needed</h4>
-                            <p className="text-sm text-yellow-700">3 students may need extra support</p>
-                          </div>
-                        </div>
+                      {/* Class Selector */}
+                      <div>
+                        <label className="block text-xs sm:text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">Select Class</label>
+                        <select 
+                          value={selectedClassForTopic}
+                          onChange={(e) => setSelectedClassForTopic(e.target.value)}
+                          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white dark:bg-slate-700/80 border border-gray-300 dark:border-slate-500 rounded-xl focus:border-purple-500 dark:focus:border-purple-400 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-700/50 transition-all duration-200 text-sm font-medium text-gray-700 dark:text-slate-100 shadow-sm hover:border-gray-400 dark:hover:border-slate-400"
+                        >
+                          <option value="">Choose a class...</option>
+                          {classes.map((cls) => (
+                            <option key={cls.id} value={cls.id}>
+                              {cls.class_name} - {cls.subject} {cls.room_number ? `(Room ${cls.room_number})` : ''}
+                            </option>
+                          ))}
+                        </select>
                       </div>
-                      
-                      <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
-                        <div className="flex items-start space-x-3">
-                          <div className="p-1 bg-blue-500 rounded-full">
-                            <Lightbulb className="h-4 w-4 text-white" />
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-blue-800">Suggestion</h4>
-                            <p className="text-sm text-blue-700">Consider group activities for collaboration</p>
-                          </div>
+
+                      {/* Topic Input */}
+                      <div>
+                        <label className="block text-xs sm:text-sm font-bold text-gray-700 dark:text-slate-300 mb-2">Today's Topic</label>
+                        <textarea
+                          value={dailyTopic}
+                          onChange={(e) => setDailyTopic(e.target.value)}
+                          placeholder="What did you teach today? (e.g., Quadratic Equations, Newton's Laws, etc.)"
+                          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white dark:bg-slate-700/80 border border-gray-300 dark:border-slate-500 rounded-xl focus:border-purple-500 dark:focus:border-purple-400 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-700/50 transition-all duration-200 text-sm resize-none font-medium text-gray-700 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-slate-400 shadow-sm hover:border-gray-400 dark:hover:border-slate-400"
+                          rows={4}
+                        />
+                      </div>
+
+                      {/* Save Button */}
+                      <motion.button
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                        onClick={saveDailyTopic}
+                        disabled={savingTopic || !selectedClassForTopic || !dailyTopic.trim()}
+                        className="w-full px-4 sm:px-5 py-3 sm:py-3.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 flex items-center justify-center gap-2 sm:gap-2.5 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {savingTopic ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+                            Save Topic
+                          </>
+                        )}
+                      </motion.button>
+
+                      {/* Recent Topics */}
+                      <div className="pt-3 sm:pt-4 border-t border-gray-200 dark:border-slate-600">
+                        <p className="text-xs sm:text-sm font-bold text-gray-700 dark:text-slate-300 mb-2 sm:mb-3 flex items-center gap-1.5 sm:gap-2">
+                          <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-gray-500 dark:text-slate-400" />
+                          Recent Topics
+                        </p>
+                        <div className="space-y-2">
+                          {recentTopics.length > 0 ? (
+                            recentTopics.map((topic, index) => {
+                              const isToday = topic.topic_date === new Date().toISOString().split('T')[0]
+                              return (
+                                <div key={topic.id || index} className={`text-xs sm:text-sm text-gray-700 dark:text-slate-300 ${isToday ? 'bg-purple-100 dark:bg-purple-900/50' : 'bg-purple-50 dark:bg-purple-950/30'} px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg border ${isToday ? 'border-purple-200 dark:border-purple-700' : 'border-purple-100 dark:border-purple-800/50'}`}>
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <span className="font-bold text-purple-600 dark:text-purple-400">{topic.class_name}:</span> {topic.topic}
+                                    </div>
+                                    {isToday && (
+                                      <span className="flex-shrink-0 text-[10px] font-bold text-purple-600 dark:text-purple-400 bg-purple-200 dark:bg-purple-800 px-1.5 py-0.5 rounded">
+                                        Today
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-[10px] sm:text-xs text-gray-500 dark:text-slate-500 mt-1">
+                                    {new Date(topic.topic_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                    {topic.subject && ` • ${topic.subject}`}
+                                  </div>
+                                </div>
+                              )
+                            })
+                          ) : (
+                            <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400 italic text-center py-2">
+                              No recent topics yet. Add your first topic above!
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -991,44 +1298,6 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                 </Card>
               </div>
 
-              {/* Class Overview Chart */}
-              <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-500">
-                <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-t-lg pb-4">
-                  <CardTitle className="text-xl font-bold text-slate-800 flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl text-white">
-                      <BarChart3 className="h-6 w-6" />
-                    </div>
-                    Class Performance Overview
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl">
-                      <div className="text-3xl font-bold text-blue-600 mb-2">85%</div>
-                      <div className="text-sm font-medium text-blue-800">Average Completion Rate</div>
-                      <div className="mt-2 h-2 bg-blue-200 rounded-full">
-                        <div className="h-full w-4/5 bg-blue-500 rounded-full"></div>
-                      </div>
-                    </div>
-                    
-                    <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-2xl">
-                      <div className="text-3xl font-bold text-green-600 mb-2">92%</div>
-                      <div className="text-sm font-medium text-green-800">Positive Mood Rating</div>
-                      <div className="mt-2 h-2 bg-green-200 rounded-full">
-                        <div className="h-full w-11/12 bg-green-500 rounded-full"></div>
-                      </div>
-                    </div>
-                    
-                    <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl">
-                      <div className="text-3xl font-bold text-purple-600 mb-2">78%</div>
-                      <div className="text-sm font-medium text-purple-800">Participation Rate</div>
-                      <div className="mt-2 h-1 bg-purple-200 rounded-full">
-                        <div className="h-full w-3/4 bg-purple-500 rounded-full"></div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
               </ConditionalMotion>
             )}
 
@@ -1072,6 +1341,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
+                className="p-4 sm:p-5 lg:p-6"
               >
                 <ShoutOutsSystem />
               </motion.div>
@@ -1083,7 +1353,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="space-y-4 sm:space-y-8"
+                className="p-4 sm:p-5 lg:p-6"
               >
                 <UpdateResultsSystem />
               </motion.div>
@@ -1095,7 +1365,6 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="space-y-4 sm:space-y-8"
               >
                 <TeacherCommunityPage />
               </motion.div>
@@ -1107,7 +1376,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="space-y-4 sm:space-y-8"
+                className="p-4 sm:p-5 lg:p-6"
               >
               <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border-0 p-8">
                 <div className="mb-8">
@@ -1148,7 +1417,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                           variant="outline" 
                           size="sm" 
                           className="w-full hover:bg-gradient-to-r hover:from-green-50 hover:to-blue-50 hover:border-green-300 transition-all duration-200"
-                          onClick={() => setActiveTab('activities')}
+                          onClick={() => handleTabChange('activities')}
                         >
                           <Play className="h-4 w-4 mr-2" />
                           Start Activity
@@ -1167,7 +1436,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="space-y-4 sm:space-y-8"
+                className="p-4 sm:p-5 lg:p-6"
               >
                 <div>
                   <QuestBadgeCreator />
@@ -1181,6 +1450,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
+                className="p-4 sm:p-5 lg:p-6"
               >
                 <BlackMarkSystem />
               </motion.div>
@@ -1193,7 +1463,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="space-y-4 sm:space-y-8"
+                className="space-y-4 sm:space-y-8 p-4 sm:p-5 lg:p-6"
               >
               <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border-0 p-8">
                 <div className="mb-8">
@@ -1266,6 +1536,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
+              className="p-4 sm:p-5 lg:p-6"
             >
               <ComprehensiveAnalytics />
             </motion.div>
@@ -1277,6 +1548,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
+              className="p-4 sm:p-5 lg:p-6"
             >
               <ParentCommunicationSystem />
             </motion.div>
@@ -1288,6 +1560,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
+              className="p-4 sm:p-5 lg:p-6"
             >
               <div>
                 <InteractiveActivitiesSystem />

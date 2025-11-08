@@ -326,7 +326,7 @@ export default function ShoutOutsSystem() {
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
       {/* Professional Header Section */}
-      <div className="bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 rounded-2xl shadow-2xl p-4 sm:p-6 lg:p-8 text-white relative overflow-hidden mb-6 sm:mb-8">
+      <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 rounded-2xl shadow-2xl p-4 sm:p-6 lg:p-8 text-white relative overflow-hidden mb-6 sm:mb-8">
         <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-50" />
         <div className="relative z-10">
           {/* Title Section */}

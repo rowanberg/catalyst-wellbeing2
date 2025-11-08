@@ -545,7 +545,7 @@ export default function TeacherAttendancePage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <div className="text-center">
           <AttendanceLoader />
-          <p className="mt-4 text-sm text-gray-600">
+          <p className="mt-4 text-sm text-gray-600 dark:text-slate-300">
             {!authChecked ? 'Checking authentication...' : 'Loading attendance data...'}
           </p>
         </div>
@@ -561,7 +561,7 @@ export default function TeacherAttendancePage() {
           <CardContent className="text-center">
             <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
             <h2 className="text-xl font-semibold mb-2">Authentication Required</h2>
-            <p className="text-gray-600 mb-4">Please log in to access the attendance page.</p>
+            <p className="text-gray-600 dark:text-slate-300 mb-4">Please log in to access the attendance page.</p>
             <Button onClick={() => router.push('/login')}>Go to Login</Button>
           </CardContent>
         </Card>
@@ -571,7 +571,7 @@ export default function TeacherAttendancePage() {
 
   return (
     <ClientWrapper>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 pb-20">
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Success Banner */}
           {attendanceSaved && (
@@ -579,15 +579,15 @@ export default function TeacherAttendancePage() {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg shadow-sm"
+              className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg shadow-sm"
             >
               <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-6 h-6 text-green-600" />
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
+                  <CheckCircle className="h-6 w-6 text-white" />
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-green-900">Attendance Saved Successfully!</h3>
-                  <p className="text-sm text-green-700 mt-0.5">
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-gray-100" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.02em' }}>Attendance Saved Successfully!</h1>
+                  <p className="text-sm text-blue-700 mt-0.5 dark:text-blue-400">
                     Marked attendance for {savedStudentCount} students in {selectedClass?.class_name} on {new Date(selectedDate).toLocaleDateString()}
                   </p>
                 </div>
@@ -607,12 +607,13 @@ export default function TeacherAttendancePage() {
                       fetchStudents(selectedClass.id)
                     }
                   }}
-                  className="px-4 py-3 border border-gray-300 rounded-lg text-sm w-full sm:w-auto focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg text-sm w-full sm:w-auto focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400"
                 />
                 <Button
                   onClick={saveAttendance}
                   disabled={saving}
-                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 w-full sm:w-auto px-6 py-3"
+                  className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 w-full sm:w-auto px-6 py-3 font-semibold"
+                  style={{ fontFamily: 'var(--font-dm-sans)' }}
                   size="default"
                 >
                   {saving ? (
@@ -644,11 +645,11 @@ export default function TeacherAttendancePage() {
           >
             {/* Class Selection */}
             {currentView === 'classes' && (
-              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+              <Card className="bg-white/80 dark:bg-slate-800 backdrop-blur-sm border-0 shadow-xl">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <BookOpen className="h-5 w-5 text-indigo-600" />
-                    Your Assigned Classes
+                    <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <span style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>Your Assigned Classes</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -658,12 +659,12 @@ export default function TeacherAttendancePage() {
                     </div>
                   ) : error ? (
                     <div className="text-center py-12">
-                      <AlertCircle className="h-16 w-16 text-red-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Classes</h3>
-                      <p className="text-red-600 mb-4">{error}</p>
+                      <AlertCircle className="h-16 w-16 text-red-400 mx-auto mb-4 dark:text-red-500" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2 dark:text-gray-100">Error Loading Classes</h3>
+                      <p className="text-red-600 mb-4 dark:text-red-500">{error}</p>
                       <Button
                         onClick={loadAssignedClasses}
-                        className="bg-red-600 hover:bg-red-700 text-white"
+                        className="bg-red-600 hover:bg-red-700 text-white dark:bg-red-500 dark:hover:bg-red-600"
                       >
                         <RefreshCw className="h-4 w-4 mr-2" />
                         Try Again
@@ -678,12 +679,12 @@ export default function TeacherAttendancePage() {
                           whileTap={{ scale: 0.98 }}
                         >
                           <Card 
-                            className="cursor-pointer hover:shadow-lg transition-all duration-300 border-2 hover:border-indigo-300 bg-gradient-to-br from-white to-indigo-50"
+                            className="cursor-pointer hover:shadow-md transition-all duration-200 border border-gray-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-600 bg-white dark:bg-slate-800"
                             onClick={() => handleClassSelect(classItem)}
                           >
                             <CardContent className="p-4 sm:p-6">
                               <div className="flex items-center justify-between mb-4">
-                                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
+                                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-sm">
                                   <BookOpen className="h-6 w-6 text-white" />
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -691,19 +692,19 @@ export default function TeacherAttendancePage() {
                                     {classItem.current_students || classItem.total_students || 0} students
                                   </Badge>
                                   {classItem.is_primary_teacher && (
-                                    <Badge className="text-xs bg-green-100 text-green-700">
+                                    <Badge className="text-xs bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 font-semibold">
                                       Primary
                                     </Badge>
                                   )}
                                 </div>
                               </div>
-                              <h3 className="font-semibold text-gray-900 mb-2">
+                              <h3 className="font-bold text-gray-900 mb-2 dark:text-gray-100" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
                                 {classItem.class_name || `Class ${classItem.class_code || 'Unknown'}`}
                               </h3>
-                              <p className="text-sm text-gray-600 mb-1">{classItem.grade_name || `Grade ${classItem.grade_level || 'Unknown'}`}</p>
-                              <p className="text-sm text-gray-600 mb-2">{classItem.subject || 'General Education'}</p>
+                              <p className="text-sm text-gray-600 mb-1 font-medium dark:text-gray-400" style={{ fontFamily: 'var(--font-dm-sans)' }}>{classItem.grade_name || `Grade ${classItem.grade_level || 'Unknown'}`}</p>
+                              <p className="text-sm text-gray-600 mb-2 font-medium dark:text-gray-400" style={{ fontFamily: 'var(--font-dm-sans)' }}>{classItem.subject || 'General Education'}</p>
                               {classItem.room_number && (
-                                <p className="text-xs text-gray-500">{classItem.room_number}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{classItem.room_number}</p>
                               )}
                             </CardContent>
                           </Card>
@@ -712,9 +713,9 @@ export default function TeacherAttendancePage() {
                     </div>
                   ) : (
                     <div className="text-center py-12">
-                      <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Classes Assigned</h3>
-                      <p className="text-gray-600">
+                      <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4 dark:text-gray-500" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2 dark:text-gray-100">No Classes Assigned</h3>
+                      <p className="text-gray-600 dark:text-gray-400">
                         You haven't been assigned to any classes yet. Contact your administrator to set up your class assignments.
                       </p>
                     </div>
@@ -731,14 +732,14 @@ export default function TeacherAttendancePage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6 }}
-                  className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border-0 p-6 sm:p-8"
+                  className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-600 p-6 sm:p-8"
                 >
                   <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center gap-2">
-                      <BarChart3 className="h-5 w-5 text-indigo-600" />
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2 dark:text-gray-100" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
+                      <BarChart3 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                       Attendance Overview
                     </h3>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-gray-600 dark:text-slate-300 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                       {new Date(selectedDate).toLocaleDateString('en-US', { 
                         weekday: 'long', 
                         year: 'numeric', 
@@ -755,13 +756,13 @@ export default function TeacherAttendancePage() {
                       transition={{ delay: 0.1, duration: 0.4 }}
                       className="text-center"
                     >
-                      <div className="relative inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white mb-3 shadow-lg">
+                      <div className="relative inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white mb-3 shadow-sm">
                         <Users className="h-5 w-5 sm:h-6 sm:w-6" />
                         <div className="absolute -top-1 -right-1 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
                           <span className="text-xs font-bold text-blue-700">{attendanceStats.total}</span>
                         </div>
                       </div>
-                      <div className="text-xs sm:text-sm font-medium text-gray-600">Total Students</div>
+                      <div className="text-xs sm:text-sm font-medium text-gray-600 dark:text-slate-400">Total Students</div>
                     </motion.div>
                     
                     <motion.div
@@ -770,13 +771,13 @@ export default function TeacherAttendancePage() {
                       transition={{ delay: 0.2, duration: 0.4 }}
                       className="text-center"
                     >
-                      <div className="relative inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 text-white mb-3 shadow-lg">
+                      <div className="relative inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 text-white mb-3 shadow-sm">
                         <UserCheck className="h-5 w-5 sm:h-6 sm:w-6" />
                         <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
                           <span className="text-xs font-bold text-green-700">{attendanceStats.present}</span>
                         </div>
                       </div>
-                      <div className="text-xs sm:text-sm font-medium text-gray-600">Present</div>
+                      <div className="text-xs sm:text-sm font-medium text-gray-600 dark:text-slate-400">Present</div>
                       <div className="text-xs text-green-600 font-semibold">
                         {attendanceStats.total > 0 ? Math.round((attendanceStats.present / attendanceStats.total) * 100) : 0}%
                       </div>
@@ -788,13 +789,13 @@ export default function TeacherAttendancePage() {
                       transition={{ delay: 0.3, duration: 0.4 }}
                       className="text-center"
                     >
-                      <div className="relative inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-red-500 to-red-600 text-white mb-3 shadow-lg">
+                      <div className="relative inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-xl bg-gradient-to-br from-red-500 to-red-600 text-white mb-3 shadow-sm">
                         <UserX className="h-5 w-5 sm:h-6 sm:w-6" />
                         <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-100 rounded-full flex items-center justify-center">
                           <span className="text-xs font-bold text-red-700">{attendanceStats.absent}</span>
                         </div>
                       </div>
-                      <div className="text-xs sm:text-sm font-medium text-gray-600">Absent</div>
+                      <div className="text-xs sm:text-sm font-medium text-gray-600 dark:text-slate-400">Absent</div>
                       <div className="text-xs text-red-600 font-semibold">
                         {attendanceStats.total > 0 ? Math.round((attendanceStats.absent / attendanceStats.total) * 100) : 0}%
                       </div>
@@ -806,13 +807,13 @@ export default function TeacherAttendancePage() {
                       transition={{ delay: 0.4, duration: 0.4 }}
                       className="text-center"
                     >
-                      <div className="relative inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-yellow-500 to-amber-600 text-white mb-3 shadow-lg">
+                      <div className="relative inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-xl bg-gradient-to-br from-yellow-500 to-amber-600 text-white mb-3 shadow-sm">
                         <Clock className="h-5 w-5 sm:h-6 sm:w-6" />
                         <div className="absolute -top-1 -right-1 w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center">
                           <span className="text-xs font-bold text-yellow-700">{attendanceStats.late}</span>
                         </div>
                       </div>
-                      <div className="text-xs sm:text-sm font-medium text-gray-600">Late</div>
+                      <div className="text-xs sm:text-sm font-medium text-gray-600 dark:text-slate-400">Late</div>
                       <div className="text-xs text-yellow-600 font-semibold">
                         {attendanceStats.total > 0 ? Math.round((attendanceStats.late / attendanceStats.total) * 100) : 0}%
                       </div>
@@ -824,13 +825,13 @@ export default function TeacherAttendancePage() {
                       transition={{ delay: 0.5, duration: 0.4 }}
                       className="text-center"
                     >
-                      <div className="relative inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-purple-500 to-violet-600 text-white mb-3 shadow-lg">
+                      <div className="relative inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 text-white mb-3 shadow-sm">
                         <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6" />
                         <div className="absolute -top-1 -right-1 w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center">
                           <span className="text-xs font-bold text-purple-700">{attendanceStats.excused}</span>
                         </div>
                       </div>
-                      <div className="text-xs sm:text-sm font-medium text-gray-600">Excused</div>
+                      <div className="text-xs sm:text-sm font-medium text-gray-600 dark:text-slate-400">Excused</div>
                       <div className="text-xs text-purple-600 font-semibold">
                         {attendanceStats.total > 0 ? Math.round((attendanceStats.excused / attendanceStats.total) * 100) : 0}%
                       </div>
@@ -840,12 +841,12 @@ export default function TeacherAttendancePage() {
                   {/* Progress Bar */}
                   <div className="mt-6 pt-6 border-t border-gray-200">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-700">Attendance Rate</span>
-                      <span className="text-sm font-bold text-gray-900">
+                      <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Attendance Rate</span>
+                      <span className="text-sm font-bold text-gray-900 dark:text-white">
                         {attendanceStats.total > 0 ? Math.round(((attendanceStats.present + attendanceStats.late + attendanceStats.excused) / attendanceStats.total) * 100) : 0}%
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ 
@@ -854,7 +855,7 @@ export default function TeacherAttendancePage() {
                             : '0%'
                         }}
                         transition={{ delay: 0.8, duration: 1, ease: "easeOut" }}
-                        className="bg-gradient-to-r from-green-500 to-emerald-600 h-2 rounded-full"
+                        className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2 rounded-full"
                       />
                     </div>
                   </div>
@@ -867,7 +868,7 @@ export default function TeacherAttendancePage() {
                         setCurrentView('history')
                       }}
                       variant="outline"
-                      className="w-full bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200 text-indigo-700 hover:from-indigo-100 hover:to-purple-100 hover:border-indigo-300 transition-all duration-200"
+                      className="w-full bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 hover:border-blue-300 dark:hover:border-blue-600 transition-all duration-200"
                     >
                       <History className="h-4 w-4 mr-2" />
                       <span className="font-medium">Previous Attendance</span>
@@ -877,12 +878,12 @@ export default function TeacherAttendancePage() {
                 </motion.div>
 
                 {/* Controls */}
-                <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+                <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
                   <CardHeader className="pb-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                        <Users className="h-5 w-5 text-purple-600" />
-                        <span className="truncate">{selectedClass?.class_name} Attendance</span>
+                        <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        <span className="truncate font-bold" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>{selectedClass?.class_name} Attendance</span>
                       </CardTitle>
                       <Button
                         onClick={() => setCurrentView('classes')}
@@ -913,10 +914,10 @@ export default function TeacherAttendancePage() {
                         <motion.div
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 shadow-sm"
+                          className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-4 shadow-sm"
                         >
                           <div className="flex items-center justify-between mb-4">
-                            <p className="text-sm font-semibold text-blue-800 flex items-center gap-2">
+                            <p className="text-sm font-semibold text-blue-800 dark:text-blue-300 flex items-center gap-2">
                               <Target className="h-4 w-4" />
                               {selectedStudents.length} student{selectedStudents.length > 1 ? 's' : ''} selected
                             </p>
@@ -1428,7 +1429,7 @@ export default function TeacherAttendancePage() {
                       </Button>
                     </div>
                     <div className="mt-2">
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-gray-600 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                         {new Date(selectedHistoryDate).toLocaleDateString('en-US', {
                           weekday: 'long',
                           year: 'numeric',

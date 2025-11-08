@@ -270,9 +270,9 @@ function StudentSetupComponent() {
     <div className="space-y-6">
       {/* Current Assignments */}
       {loadingAssignments ? (
-        <Card className="bg-gray-50 border-gray-200">
+        <Card className="bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-gray-600">
+            <CardTitle className="flex items-center gap-2 text-gray-600 dark:text-slate-300">
               <RefreshCw className="h-5 w-5 animate-spin" />
               Loading Your Classes...
             </CardTitle>
@@ -280,19 +280,19 @@ function StudentSetupComponent() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {[1, 2].map((i) => (
-                <div key={i} className="bg-white p-3 rounded-lg border border-gray-200 animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2 mb-1"></div>
-                  <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                <div key={i} className="bg-white dark:bg-slate-700 p-3 rounded-lg border border-gray-200 dark:border-slate-600 animate-pulse">
+                  <div className="h-4 bg-gray-200 dark:bg-slate-600 rounded w-3/4 mb-2"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-slate-600 rounded w-1/2 mb-1"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-slate-600 rounded w-2/3"></div>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
       ) : currentAssignments.length > 0 ? (
-        <Card className="bg-green-50 border-green-200">
+        <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-green-800">
+            <CardTitle className="flex items-center gap-2 text-green-800 dark:text-green-300">
               <UserCheck className="h-5 w-5" />
               Your Current Classes
             </CardTitle>
@@ -300,14 +300,14 @@ function StudentSetupComponent() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {currentAssignments.map((assignment) => (
-                <div key={assignment.id} className="bg-white p-3 rounded-lg border border-green-200">
+                <div key={assignment.id} className="bg-white dark:bg-slate-800 p-3 rounded-lg border border-green-200 dark:border-green-700">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-semibold text-gray-900">
+                      <h4 className="font-semibold text-gray-900 dark:text-white">
                         Grade {assignment.classes.grade_levels.grade_level} - {assignment.classes.class_name}
                       </h4>
-                      <p className="text-sm text-gray-600">{assignment.classes.subject}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-sm text-gray-600 dark:text-slate-300">{assignment.classes.subject}</p>
+                      <p className="text-xs text-gray-500 dark:text-slate-400">
                         {assignment.classes.current_students} students • Room {assignment.classes.room_number}
                       </p>
                     </div>
@@ -378,8 +378,8 @@ function StudentSetupComponent() {
             {classes.length > 0 ? (
               <div className="space-y-4">
                 <div className="space-y-2 mb-4">
-                  <p className="text-sm font-medium text-gray-700">Select classes and mark one as primary</p>
-                  <p className="text-xs text-gray-500">Primary class will be displayed on the attendance page</p>
+                  <p className="text-sm font-medium text-gray-700 dark:text-slate-300">Select classes and mark one as primary</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400">Primary class will be displayed on the attendance page</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {classes.map((cls) => (
@@ -387,22 +387,22 @@ function StudentSetupComponent() {
                       key={cls.id}
                       className={`p-4 rounded-lg border-2 transition-all ${
                         selectedClasses.includes(cls.id)
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-600'
+                          : 'border-gray-200 dark:border-slate-600 hover:border-gray-300 dark:hover:border-slate-500'
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <h4 className="font-semibold text-gray-900">{cls.class_name}</h4>
+                            <h4 className="font-semibold text-gray-900 dark:text-white">{cls.class_name}</h4>
                             {cls.class_code && (
                               <Badge variant="secondary" className="text-xs">
                                 {cls.class_code}
                               </Badge>
                             )}
                           </div>
-                          <p className="text-sm text-gray-600 mb-1">{cls.subject}</p>
-                          <div className="flex items-center gap-4 text-xs text-gray-500">
+                          <p className="text-sm text-gray-600 dark:text-slate-300 mb-1">{cls.subject}</p>
+                          <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-slate-400">
                             <span>{cls.current_students}/{cls.max_students} students</span>
                             {cls.room_number && <span>Room {cls.room_number}</span>}
                           </div>
@@ -413,7 +413,7 @@ function StudentSetupComponent() {
                             className={`w-6 h-6 rounded border-2 flex items-center justify-center cursor-pointer ${
                               selectedClasses.includes(cls.id)
                                 ? 'border-blue-500 bg-blue-500'
-                                : 'border-gray-300'
+                                : 'border-gray-300 dark:border-slate-500'
                             }`}
                             onClick={() => handleClassToggle(cls.id)}
                           >
@@ -427,7 +427,7 @@ function StudentSetupComponent() {
                               className={`w-6 h-6 rounded-full border-2 flex items-center justify-center cursor-pointer ${
                                 primaryClass === cls.id
                                   ? 'border-green-500 bg-green-500'
-                                  : 'border-gray-400 hover:border-green-400'
+                                  : 'border-gray-400 dark:border-slate-500 hover:border-green-400'
                               }`}
                               onClick={() => setPrimaryClass(cls.id)}
                               title="Set as primary class"
@@ -440,7 +440,7 @@ function StudentSetupComponent() {
                         </div>
                       </div>
                       {selectedClasses.includes(cls.id) && primaryClass === cls.id && (
-                        <div className="mt-2 text-xs text-green-600 font-medium flex items-center gap-1">
+                        <div className="mt-2 text-xs text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
                           <Star className="w-3 h-3 fill-green-600" />
                           Primary Class - Shows on Attendance
                         </div>
@@ -452,7 +452,7 @@ function StudentSetupComponent() {
                 {selectedClasses.length > 0 && (
                   <div className="pt-4 border-t">
                     <div className="flex items-center justify-between">
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-gray-600 dark:text-slate-300">
                         {selectedClasses.length} class{selectedClasses.length !== 1 ? 'es' : ''} selected
                       </div>
                       <Button 
@@ -548,13 +548,14 @@ export default function TeacherStudentsPage() {
   // Initial view setup: Show appropriate starting view
   useEffect(() => {
     if (!loading) {
-      // Only auto-navigate on initial load, not when user explicitly navigates
+      // Only auto-navigate on initial load when explicitly on assigned-classes view
+      // Don't navigate if user has manually navigated elsewhere
       if (currentView === 'assigned-classes' && assignedClasses.length === 0 && grades.length > 0) {
         // If no assigned classes, show grades view to let teacher assign classes
         setCurrentView('grades')
       }
     }
-  }, [loading, assignedClasses.length, grades.length])
+  }, [loading, assignedClasses.length, grades.length, currentView])
 
   // Helper functions - memoized for performance
   const handleClassSelect = useCallback(async (classId: string) => {
@@ -776,14 +777,14 @@ export default function TeacherStudentsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           {/* Minimal spinner */}
           <div className="relative">
             <div className="w-10 h-10 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
           </div>
           {/* Simple text */}
-          <p className="text-sm text-gray-500 font-medium">Loading...</p>
+          <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">Loading...</p>
         </div>
       </div>
     )
@@ -794,16 +795,16 @@ export default function TeacherStudentsPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="text-red-500 text-lg mb-2">⚠️ Error</div>
-          <p className="text-gray-600">{error}</p>
+          <p className="text-gray-600 dark:text-slate-300">{error}</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
       {/* Enhanced Navigation Header */}
-      <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-sm">
+      <div className="sticky top-0 z-50 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border-b border-gray-200 dark:border-slate-700 shadow-sm">
         <div className="px-3 sm:px-4 lg:px-6 py-2 sm:py-3">
           {/* Mobile Navigation Row */}
           <div className="sm:hidden">
@@ -818,7 +819,7 @@ export default function TeacherStudentsPage() {
                     currentView === 'classes' ? handleBackToGrades :
                     handleBackToAssignedClasses
                   }
-                  className="p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                  className="p-2 hover:bg-blue-50 dark:hover:bg-slate-700 rounded-lg transition-colors"
                 >
                   <ArrowLeft className="h-4 w-4 text-blue-600" />
                 </Button>
@@ -826,7 +827,7 @@ export default function TeacherStudentsPage() {
               
               {/* Mobile Current Page Title */}
               <div className="flex-1 min-w-0 mx-2">
-                <h1 className="text-lg font-semibold text-gray-900 truncate">
+                <h1 className="text-lg font-bold text-gray-900 dark:text-slate-200 truncate" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
                   {currentView === 'assigned-classes' && 'My Classes'}
                   {currentView === 'grades' && 'All Grades'}
                   {currentView === 'classes' && `Grade ${grades.find(g => g.id === selectedGrade)?.grade_level || selectedGrade}`}
@@ -837,7 +838,7 @@ export default function TeacherStudentsPage() {
                   )}
                 </h1>
                 {currentView === 'students' && (
-                  <p className="text-xs text-gray-500 truncate">
+                  <p className="text-xs text-gray-600 dark:text-slate-400 truncate" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                     Grade {grades.find(g => g.id === selectedGrade)?.grade_level || selectedGrade} • {filteredAndSortedStudents.length} students
                   </p>
                 )}
@@ -848,7 +849,7 @@ export default function TeacherStudentsPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="p-2 hover:bg-gray-100 rounded-lg"
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg"
                   title="Refresh"
                 >
                   <RefreshCw className="h-3 w-3" />
@@ -856,7 +857,7 @@ export default function TeacherStudentsPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="p-2 hover:bg-gray-100 rounded-lg"
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg"
                   title="More options"
                 >
                   <MoreVertical className="h-3 w-3" />
@@ -878,7 +879,7 @@ export default function TeacherStudentsPage() {
                     currentView === 'classes' ? handleBackToGrades :
                     handleBackToAssignedClasses
                   }
-                  className="p-2 hover:bg-blue-50 rounded-full transition-colors"
+                  className="p-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-full transition-colors"
                 >
                   <ArrowLeft className="h-4 w-4 text-blue-600" />
                 </Button>
@@ -890,11 +891,12 @@ export default function TeacherStudentsPage() {
                   variant="ghost"
                   size="sm"
                   onClick={handleBackToAssignedClasses}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
                     currentView === 'assigned-classes' 
-                      ? 'bg-green-100 text-green-700 shadow-sm' 
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      ? 'bg-blue-50 dark:bg-slate-700 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-slate-600' 
+                      : 'text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-slate-200'
                   }`}
+                  style={{ fontFamily: 'var(--font-dm-sans)' }}
                 >
                   <UserCheck className="h-4 w-4 mr-1.5" />
                   My Classes
@@ -902,15 +904,15 @@ export default function TeacherStudentsPage() {
 
                 {(currentView === 'grades' || currentView === 'classes' || currentView === 'students') && (
                   <>
-                    <ChevronRight className="h-3 w-3 text-gray-400" />
+                    <ChevronRight className="h-3 w-3 text-gray-400 dark:text-slate-500" />
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={handleBackToGrades}
                       className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                         currentView === 'grades' 
-                          ? 'bg-blue-100 text-blue-700 shadow-sm' 
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                          ? 'bg-blue-100 dark:bg-slate-700 text-blue-700 dark:text-blue-400 shadow-sm' 
+                          : 'text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-slate-200'
                       }`}
                     >
                       <GraduationCap className="h-4 w-4 mr-1.5" />
@@ -921,15 +923,15 @@ export default function TeacherStudentsPage() {
                 
                 {selectedGrade && (
                   <>
-                    <ChevronRight className="h-3 w-3 text-gray-400" />
+                    <ChevronRight className="h-3 w-3 text-gray-400 dark:text-slate-500" />
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={handleBackToClasses}
                       className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                         currentView === 'classes' 
-                          ? 'bg-purple-100 text-purple-700 shadow-sm' 
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                          ? 'bg-purple-100 dark:bg-slate-700 text-purple-700 dark:text-purple-400 shadow-sm' 
+                          : 'text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-slate-200'
                       }`}
                     >
                       <BookOpen className="h-4 w-4 mr-1.5" />
@@ -940,8 +942,8 @@ export default function TeacherStudentsPage() {
                 
                 {selectedClass && (
                   <>
-                    <ChevronRight className="h-3 w-3 text-gray-400" />
-                    <div className="px-3 py-1.5 rounded-lg text-sm font-medium bg-green-100 text-green-700 shadow-sm">
+                    <ChevronRight className="h-3 w-3 text-gray-400 dark:text-slate-500" />
+                    <div className="px-3 py-1.5 rounded-lg text-sm font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 shadow-sm">
                       <Users className="h-4 w-4 mr-1.5 inline" />
                       {(() => {
                         const currentClass = classes.find(c => c.id === selectedClass) || assignedClasses.find(c => c.id === selectedClass)
@@ -989,7 +991,7 @@ export default function TeacherStudentsPage() {
                     placeholder="Search students..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2.5 text-sm border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/80 backdrop-blur-sm"
+                    className="pl-10 pr-4 py-2.5 text-sm border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent bg-white dark:bg-slate-700/80 dark:text-white backdrop-blur-sm"
                   />
                   {searchTerm && (
                     <Button
@@ -1175,30 +1177,31 @@ export default function TeacherStudentsPage() {
       </div>
 
       {/* Main Content Area */}
-      <div className="px-4 py-6 sm:px-6">
+      <div className="py-6">
         <AnimatePresence>
-          {currentView === 'assigned-classes' && (
+          {currentView === 'assigned-classes' && assignedClasses.length > 0 && (
             <motion.div
               key="assigned-classes"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
+              className="px-4 sm:px-6 lg:px-8"
             >
               <div className="mb-8">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md">
                         <UserCheck className="h-6 w-6 text-white" />
                       </div>
                       <div>
-                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">
+                        <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mb-1" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.02em' }}>
                           My Assigned Classes
                         </h1>
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-slate-300" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                           <div className="flex items-center gap-1">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                             <span>Active Classes</span>
                           </div>
                           <span>•</span>
@@ -1209,15 +1212,15 @@ export default function TeacherStudentsPage() {
                     
                     {/* Quick Stats */}
                     <div className="flex items-center gap-4 sm:gap-6">
-                      <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg border border-green-200">
-                        <Users className="h-4 w-4 text-green-600" />
-                        <span className="text-sm font-medium text-green-700">
+                      <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
+                        <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <span className="text-sm font-semibold text-blue-700 dark:text-blue-300" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                           {assignedClasses.reduce((total, cls) => total + (cls.total_students || cls.current_students || 0), 0)} Total Students
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200">
-                        <BookOpen className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm font-medium text-blue-700">
+                      <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg border border-indigo-200 dark:border-indigo-700">
+                        <BookOpen className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                        <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-300" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                           {new Set(assignedClasses.map(cls => cls.grade_level)).size} Grade Levels
                         </span>
                       </div>
@@ -1230,8 +1233,8 @@ export default function TeacherStudentsPage() {
                       onClick={handleToggleManageMode}
                       className={`px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 ${
                         showManageMode 
-                          ? 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200' 
-                          : 'bg-white hover:bg-gray-50 text-gray-700 border-gray-200'
+                          ? 'bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700' 
+                          : 'bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300 border-gray-200 dark:border-slate-600'
                       }`}
                     >
                       {showManageMode ? (
@@ -1250,7 +1253,8 @@ export default function TeacherStudentsPage() {
                     </Button>
                     <Button
                       onClick={handleAddMoreClasses}
-                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                      className="bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition-all duration-200"
+                      style={{ fontFamily: 'var(--font-dm-sans)', fontWeight: 600 }}
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       <span className="hidden sm:inline">Add More Classes</span>
@@ -1263,8 +1267,8 @@ export default function TeacherStudentsPage() {
                 {error && (
                 <div className="text-center py-12">
                   <AlertTriangle className="h-16 w-16 text-red-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Classes</h3>
-                  <p className="text-red-600 mb-4">{error}</p>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Error Loading Classes</h3>
+                  <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
                   <Button
                     onClick={() => refreshData()}
                     className="bg-red-600 hover:bg-red-700 text-white"
@@ -1302,8 +1306,8 @@ export default function TeacherStudentsPage() {
                         transition={{ delay: 0.5 }}
                         className="space-y-2"
                       >
-                        <h3 className="text-lg font-semibold text-gray-700">Loading Your Classes</h3>
-                        <p className="text-sm text-gray-500">Fetching your assigned classes and student details...</p>
+                        <h3 className="text-lg font-semibold text-gray-700 dark:text-slate-300">Loading Your Classes</h3>
+                        <p className="text-sm text-gray-500 dark:text-slate-400">Fetching your assigned classes and student details...</p>
                       </motion.div>
                     </motion.div>
                   </div>
@@ -1313,17 +1317,17 @@ export default function TeacherStudentsPage() {
                     {[1, 2, 3].map((index) => (
                       <div
                         key={index}
-                        className="bg-white rounded-lg shadow-sm border border-gray-200 p-4"
+                        className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-4"
                       >
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-gray-200 rounded-xl animate-pulse"></div>
+                          <div className="w-12 h-12 bg-gray-200 dark:bg-slate-600 rounded-xl animate-pulse"></div>
                           <div className="flex-1 space-y-2">
-                            <div className="h-4 bg-gray-200 rounded animate-pulse w-1/3"></div>
-                            <div className="h-3 bg-gray-200 rounded animate-pulse w-1/4"></div>
+                            <div className="h-4 bg-gray-200 dark:bg-slate-600 rounded animate-pulse w-1/3"></div>
+                            <div className="h-3 bg-gray-200 dark:bg-slate-600 rounded animate-pulse w-1/4"></div>
                           </div>
                           <div className="flex gap-4">
-                            <div className="h-3 bg-gray-200 rounded animate-pulse w-16"></div>
-                            <div className="h-3 bg-gray-200 rounded animate-pulse w-16"></div>
+                            <div className="h-3 bg-gray-200 dark:bg-slate-600 rounded animate-pulse w-16"></div>
+                            <div className="h-3 bg-gray-200 dark:bg-slate-600 rounded animate-pulse w-16"></div>
                           </div>
                         </div>
                       </div>
@@ -1333,7 +1337,7 @@ export default function TeacherStudentsPage() {
               )}
 
               {/* Show assigned classes with enhanced animations */}
-              {!loading && !error && assignedClasses.length > 0 ? (
+              {assignedClasses.length > 0 ? (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -1356,7 +1360,7 @@ export default function TeacherStudentsPage() {
                           className="group"
                         >
                           <Card 
-                            className={`transition-all duration-300 hover:shadow-lg border border-gray-200 bg-white hover:bg-gray-50 overflow-hidden ${
+                            className={`transition-all duration-200 hover:shadow-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 overflow-hidden ${
                               !showManageMode ? 'cursor-pointer' : ''
                             }`}
                             onClick={!showManageMode ? () => {
@@ -1371,10 +1375,10 @@ export default function TeacherStudentsPage() {
                                 <div className="flex items-center gap-4">
                                   {/* Class Avatar */}
                                   <div className="relative">
-                                    <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-md">
+                                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm">
                                       {cls.class_code || cls.class_name.charAt(cls.class_name.length - 1)}
                                     </div>
-                                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold text-gray-800 shadow-sm border border-white">
+                                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center text-xs font-bold text-blue-700 dark:text-blue-300 shadow-sm border border-white dark:border-slate-700">
                                       {cls.grade_level || cls.grade_name?.replace('Grade ', '') || 'K'}
                                     </div>
                                   </div>
@@ -1382,10 +1386,10 @@ export default function TeacherStudentsPage() {
                                   {/* Class Details */}
                                   <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-3 mb-1">
-                                      <h3 className="font-semibold text-lg text-gray-900 truncate">
+                                      <h3 className="font-bold text-lg text-gray-900 dark:text-white truncate" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
                                         {cls.class_name || cls.name || `Class ${cls.class_code || cls.id?.substring(0, 8) || 'Unknown'}`}
                                       </h3>
-                                      <Badge className={`text-xs font-medium ${cls.is_primary_teacher ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                                      <Badge className={`text-xs font-semibold ${cls.is_primary_teacher ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700' : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 border border-gray-200 dark:border-slate-600'}`}>
                                         {cls.is_primary_teacher ? 'Primary' : 'Assigned'}
                                       </Badge>
                                       {!cls.is_primary_teacher && (
@@ -1417,8 +1421,8 @@ export default function TeacherStudentsPage() {
                                         </span>
                                       )}
                                     </div>
-                                    <p className="text-sm text-gray-600">{cls.grade_name || `Grade ${cls.grade_level || 'Unknown'}`}</p>
-                                    <p className="text-xs text-gray-500 mt-1">{cls.subject || 'General Education'}</p>
+                                    <p className="text-sm text-gray-600 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>{cls.grade_name || `Grade ${cls.grade_level || 'Unknown'}`}</p>
+                                    <p className="text-xs text-gray-500 mt-1" style={{ fontFamily: 'var(--font-dm-sans)' }}>{cls.subject || 'General Education'}</p>
                                   </div>
                                 </div>
 
@@ -1447,7 +1451,8 @@ export default function TeacherStudentsPage() {
                                         <Button
                                           variant="ghost"
                                           size="sm"
-                                          className="h-8 px-3 text-xs bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded-lg"
+                                          className="h-8 px-3 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg"
+                                          style={{ fontFamily: 'var(--font-dm-sans)', fontWeight: 600 }}
                                           onClick={(e) => {
                                             e.stopPropagation()
                                             // Handle quick message
@@ -1572,7 +1577,7 @@ export default function TeacherStudentsPage() {
                           className="group"
                         >
                         <Card 
-                          className={`transition-all duration-500 hover:shadow-2xl border-0 bg-gradient-to-br from-white via-green-50/30 to-emerald-50/50 backdrop-blur-lg shadow-xl hover:shadow-green-200/50 overflow-hidden relative ${
+                          className={`transition-all duration-300 hover:shadow-md border border-gray-200 bg-white shadow-sm overflow-hidden relative ${
                             !showManageMode ? 'cursor-pointer' : ''
                           }`}
                           onClick={!showManageMode ? () => {
@@ -1582,8 +1587,8 @@ export default function TeacherStudentsPage() {
                           } : () => {}}
                         >
                         {/* Premium Header with Gradient */}
-                        <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 p-4 relative overflow-hidden">
-                          <div className="absolute inset-0 bg-gradient-to-r from-green-600/90 via-emerald-600/90 to-teal-600/90"></div>
+                        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 p-4 relative overflow-hidden">
+                          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 via-indigo-600/90 to-blue-700/90"></div>
                           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
                           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12"></div>
                           
@@ -1591,31 +1596,31 @@ export default function TeacherStudentsPage() {
                             <div className="flex items-center gap-3">
                               {/* Enhanced Class Avatar */}
                               <div className="relative">
-                                <div className="w-14 h-14 bg-gradient-to-br from-white/20 to-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-lg border border-white/20 group-hover:scale-110 transition-transform duration-300">
+                                <div className="w-14 h-14 bg-gradient-to-br from-white/20 to-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-md border border-white/20 group-hover:scale-105 transition-transform duration-300">
                                   {cls.class_code || cls.class_name.charAt(cls.class_name.length - 1)}
                                 </div>
                                 {/* Grade Level Badge */}
-                                <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold text-gray-800 shadow-md border-2 border-white">
+                                <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs font-bold text-blue-700 shadow-md border-2 border-white">
                                   {cls.grade_level || cls.grade_name?.replace('Grade ', '') || 'K'}
                                 </div>
                               </div>
                               
                               {/* Class Info */}
                               <div className="text-white min-w-0 flex-1">
-                                <h3 className="font-bold text-lg mb-1 group-hover:text-green-100 transition-colors truncate">
+                                <h3 className="font-bold text-lg mb-1 transition-colors truncate" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
                                   {cls.class_name || cls.name || `Class ${cls.class_code || cls.id?.substring(0, 8) || 'Unknown'}`}
                                 </h3>
-                                <p className="text-green-100 text-sm opacity-90 truncate">{cls.grade_name || `Grade ${cls.grade_level || 'Unknown'}`}</p>
+                                <p className="text-blue-100 text-sm opacity-90 truncate" style={{ fontFamily: 'var(--font-dm-sans)' }}>{cls.grade_name || `Grade ${cls.grade_level || 'Unknown'}`}</p>
                               </div>
                             </div>
 
                             {/* Status Badge */}
                             <div className="flex flex-col items-end">
-                              <Badge className="bg-white/20 text-white border border-white/30 backdrop-blur-sm text-xs font-medium mb-2">
+                              <Badge className="bg-white/20 text-white border border-white/30 backdrop-blur-sm text-xs font-semibold mb-2">
                                 {cls.is_primary_teacher ? 'Primary' : 'Assigned'}
                               </Badge>
                               <div className="text-right">
-                                <div className="text-xs text-green-100 opacity-75">Grade</div>
+                                <div className="text-xs text-blue-100 opacity-75" style={{ fontFamily: 'var(--font-dm-sans)' }}>Grade</div>
                                 <div className="text-sm font-semibold text-white">{cls.grade_level || cls.grade_name?.replace('Grade ', '') || 'K'}</div>
                               </div>
                             </div>
@@ -1626,26 +1631,26 @@ export default function TeacherStudentsPage() {
                         <CardContent className="p-5">
                           {/* Student Statistics */}
                           <div className="grid grid-cols-2 gap-4 mb-4">
-                            <div className="text-center bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-3 border border-green-100">
-                              <div className="w-10 h-10 mx-auto mb-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                            <div className="text-center bg-blue-50 rounded-xl p-3 border border-blue-200">
+                              <div className="w-10 h-10 mx-auto mb-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-sm">
                                 <Users className="h-5 w-5 text-white" />
                               </div>
-                              <div className="font-bold text-lg text-gray-900">{cls.total_students || cls.current_students || 0}</div>
-                              <div className="text-xs text-gray-500 font-medium">Students</div>
-                              <div className="text-xs text-green-600 mt-1">
+                              <div className="font-bold text-lg text-gray-900" style={{ fontFamily: 'var(--font-jakarta)' }}>{cls.total_students || cls.current_students || 0}</div>
+                              <div className="text-xs text-gray-600 font-semibold" style={{ fontFamily: 'var(--font-dm-sans)' }}>Students</div>
+                              <div className="text-xs text-blue-600 mt-1" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                                 Max: {cls.max_students || 'N/A'}
                               </div>
                             </div>
                             
-                            <div className="text-center bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-3 border border-blue-100">
-                              <div className="w-10 h-10 mx-auto mb-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                            <div className="text-center bg-indigo-50 rounded-xl p-3 border border-indigo-200">
+                              <div className="w-10 h-10 mx-auto mb-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-sm">
                                 <MapPin className="h-5 w-5 text-white" />
                               </div>
-                              <div className="font-bold text-lg text-gray-900">
+                              <div className="font-bold text-lg text-gray-900" style={{ fontFamily: 'var(--font-jakarta)' }}>
                                 {cls.room_number || '--'}
                               </div>
-                              <div className="text-xs text-gray-500 font-medium">Room</div>
-                              <div className="text-xs text-blue-600 mt-1">Location</div>
+                              <div className="text-xs text-gray-600 font-semibold" style={{ fontFamily: 'var(--font-dm-sans)' }}>Room</div>
+                              <div className="text-xs text-indigo-600 mt-1" style={{ fontFamily: 'var(--font-dm-sans)' }}>Location</div>
                             </div>
                           </div>
 
@@ -1675,7 +1680,8 @@ export default function TeacherStudentsPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="flex-1 h-9 text-xs bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 rounded-lg"
+                                  className="flex-1 h-9 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg font-semibold"
+                                  style={{ fontFamily: 'var(--font-dm-sans)' }}
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     // Handle quick message
@@ -1687,7 +1693,8 @@ export default function TeacherStudentsPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="flex-1 h-9 text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg"
+                                  className="flex-1 h-9 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg font-semibold"
+                                  style={{ fontFamily: 'var(--font-dm-sans)' }}
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     window.location.href = '/teacher/attendance'
@@ -1766,7 +1773,16 @@ export default function TeacherStudentsPage() {
                     </div>
                   </div>
                 </motion.div>
-              ) : (
+              ) : !loading && !error && assignedClasses.length === 0 && grades.length > 0 ? (
+                // Show loading spinner when we're about to auto-navigate to grades
+                <div className="flex items-center justify-center py-12 mt-8">
+                  <div className="text-center">
+                    <div className="w-10 h-10 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin mx-auto mb-3"></div>
+                    <p className="text-sm text-gray-500">Redirecting...</p>
+                  </div>
+                </div>
+              ) : !loading && !error && assignedClasses.length === 0 && grades.length === 0 ? (
+                // Only show empty state when there are truly NO grades available
                 <motion.div 
                   className="text-center py-12 mt-8"
                   initial={{ opacity: 0, y: 20 }}
@@ -1784,18 +1800,6 @@ export default function TeacherStudentsPage() {
                   <p className="text-gray-600 mb-6 max-w-md mx-auto">
                     You haven't been assigned to any classes yet. Contact your administrator or browse available classes to get started.
                   </p>
-                  
-                  {/* Loading indicator for initial data fetch */}
-                  {loading && (
-                    <motion.div 
-                      className="flex items-center justify-center space-x-2 mb-4"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                    >
-                      <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />
-                      <span className="text-sm text-gray-500">Checking for class assignments...</span>
-                    </motion.div>
-                  )}
                   
                   <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
                     <Button
@@ -1815,25 +1819,26 @@ export default function TeacherStudentsPage() {
                     </Button>
                   </div>
                 </motion.div>
-              )}
+              ) : null}
               </div>
             </motion.div>
           )}
 
-          {currentView === 'grades' && (
+          {(currentView === 'grades' || (currentView === 'assigned-classes' && assignedClasses.length === 0 && !loading)) && (
             <motion.div
               key="grades"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
+              className="px-4 sm:px-6 lg:px-8"
             >
               <div>
                 <div className="mb-6">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mb-2" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.02em' }}>
                     Select Grade Level
                   </h1>
-                  <p className="text-gray-600">
+                  <p className="text-gray-600" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                     Choose a grade to view classes and students
                   </p>
                 </div>
@@ -1847,17 +1852,17 @@ export default function TeacherStudentsPage() {
                     transition={{ delay: index * 0.1 }}
                   >
                     <Card 
-                      className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 border-2 hover:border-blue-300 bg-white/70 backdrop-blur-sm"
+                      className="cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-102 border border-gray-200 hover:border-blue-300 bg-white"
                       onClick={() => handleGradeSelect(grade.id)}
                     >
                       <CardContent className="p-4 text-center">
-                        <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                        <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-sm">
                           {grade.grade_level}
                         </div>
-                        <h3 className="font-semibold text-gray-900 mb-1">
+                        <h3 className="font-bold text-gray-900 mb-1" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
                           Grade {grade.grade_level}
                         </h3>
-                        <p className="text-xs text-gray-500 mb-2">{grade.grade_name}</p>
+                        <p className="text-xs text-gray-600 mb-2" style={{ fontFamily: 'var(--font-dm-sans)' }}>{grade.grade_name}</p>
                         <div className="flex items-center justify-center text-blue-600">
                           <ChevronRight className="h-4 w-4" />
                         </div>
@@ -1877,15 +1882,23 @@ export default function TeacherStudentsPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
+              className="px-4 sm:px-6 lg:px-8"
             >
               <div>
                 <div className="mb-6">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                    SELECT OR ASSIGN YOUR CLASSES OF GRADE {getSelectedGradeObject()?.grade_level || 'Unknown'}
-                  </h1>
-                  <p className="text-gray-600">
-                    Select a class to view students or assign yourself to new classes
-                  </p>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-sm">
+                      <BookOpen className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.02em' }}>
+                        Grade {getSelectedGradeObject()?.grade_level || 'Unknown'} Classes
+                      </h1>
+                      <p className="text-sm text-gray-600" style={{ fontFamily: 'var(--font-dm-sans)' }}>
+                        Select a class to view students or assign yourself
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 {loadingGradeClasses ? (
@@ -1903,7 +1916,7 @@ export default function TeacherStudentsPage() {
                       transition={{ delay: index * 0.1 }}
                     >
                       <Card 
-                        className="relative cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 border-2 hover:border-purple-300 bg-white/70 backdrop-blur-sm"
+                        className="relative cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-102 border border-gray-200 hover:border-blue-300 bg-white"
                         onClick={() => handleClassSelect(cls.id)}
                       >
                         <CardContent className="p-6">
@@ -1917,11 +1930,12 @@ export default function TeacherStudentsPage() {
                                 handleAssignTeacherToClass(cls.id, cls.is_assigned)
                               }}
                               disabled={assigningClass === cls.id}
-                              className={`h-8 px-3 text-xs transition-all duration-200 ${
+                              className={`h-8 px-3 text-xs font-semibold transition-all duration-200 ${
                                 cls.is_assigned 
-                                  ? 'bg-green-600 hover:bg-green-700 text-white border-green-600' 
-                                  : 'bg-white hover:bg-purple-50 text-purple-600 border-purple-200 hover:border-purple-300'
+                                  ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600' 
+                                  : 'bg-white hover:bg-blue-50 text-blue-600 border-blue-200 hover:border-blue-300'
                               }`}
+                              style={{ fontFamily: 'var(--font-dm-sans)' }}
                               title={cls.is_assigned ? 'Remove from my classes' : 'Add to my classes'}
                             >
                               {assigningClass === cls.id ? (
@@ -1941,7 +1955,7 @@ export default function TeacherStudentsPage() {
                           </div>
 
                           <div className="flex items-center justify-between mb-4">
-                            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center text-white font-bold">
+                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold shadow-sm">
                               {cls.class_code || (cls.class_name || cls.name || cls.id)?.charAt((cls.class_name || cls.name || cls.id)?.length - 1) || 'C'}
                             </div>
                             {cls.class_code && (
@@ -1951,10 +1965,10 @@ export default function TeacherStudentsPage() {
                             )}
                           </div>
                           
-                          <h3 className="font-semibold text-gray-900 mb-2">
+                          <h3 className="font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
                             {cls.class_name || cls.name || `Class ${cls.class_code || cls.id?.substring(0, 8) || 'Unknown'}`}
                           </h3>
-                          <p className="text-sm text-gray-600 mb-4">{cls.subject || 'General'}</p>
+                          <p className="text-sm text-gray-600 mb-4 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>{cls.subject || 'General'}</p>
                           
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-4 text-sm text-gray-500">
@@ -1996,46 +2010,54 @@ export default function TeacherStudentsPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
+              className="px-4 sm:px-6 lg:px-8"
             >
               <div>
                 <div className="mb-6">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                    {(() => {
-                      // First check in classes array (from grades/classes flow)
-                      const classFromClasses = classes.find(c => c.id === selectedClass)
-                      if (classFromClasses) {
-                        return `${classFromClasses.class_name || classFromClasses.name || `Class ${classFromClasses.class_code || 'Unknown'}`} Students`
-                      }
-                      
-                      // Then check in assignedClasses array (from assigned classes flow)
-                      const classFromAssigned = assignedClasses.find(c => c.id === selectedClass)
-                      if (classFromAssigned) {
-                        return `${classFromAssigned.class_name || classFromAssigned.name || `Class ${classFromAssigned.class_code || 'Unknown'}`} Students`
-                      }
-                      
-                      // Fallback
-                      return `Class ${selectedClass?.substring(0, 8) || 'Unknown'} Students`
-                    })()}
-                  </h1>
-                  <p className="text-gray-600">
-                    Grade {(() => {
-                      // First try to get grade from selected grade object
-                      const gradeFromSelected = getSelectedGradeObject()?.grade_level
-                      if (gradeFromSelected) return gradeFromSelected
-                      
-                      // Then try to get grade from classes array
-                      const classFromClasses = classes.find(c => c.id === selectedClass)
-                      if (classFromClasses?.grade_level) return classFromClasses.grade_level
-                      
-                      // Then try to get grade from assignedClasses array
-                      const classFromAssigned = assignedClasses.find(c => c.id === selectedClass)
-                      if (classFromAssigned?.grade_level) return classFromAssigned.grade_level
-                      if (classFromAssigned?.grade_name) return classFromAssigned.grade_name.replace('Grade ', '')
-                      
-                      return 'Unknown'
-                    })()} • {filteredAndSortedStudents.length} student{filteredAndSortedStudents.length !== 1 ? 's' : ''}
-                    {searchTerm && ` matching "${searchTerm}"`}
-                  </p>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-sm">
+                      <Users className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mb-1 truncate" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.02em' }}>
+                        {(() => {
+                          // First check in classes array (from grades/classes flow)
+                          const classFromClasses = classes.find(c => c.id === selectedClass)
+                          if (classFromClasses) {
+                            return `${classFromClasses.class_name || classFromClasses.name || `Class ${classFromClasses.class_code || 'Unknown'}`} Students`
+                          }
+                          
+                          // Then check in assignedClasses array (from assigned classes flow)
+                          const classFromAssigned = assignedClasses.find(c => c.id === selectedClass)
+                          if (classFromAssigned) {
+                            return `${classFromAssigned.class_name || classFromAssigned.name || `Class ${classFromAssigned.class_code || 'Unknown'}`} Students`
+                          }
+                          
+                          // Fallback
+                          return `Class ${selectedClass?.substring(0, 8) || 'Unknown'} Students`
+                        })()}
+                      </h1>
+                      <p className="text-sm text-gray-600" style={{ fontFamily: 'var(--font-dm-sans)' }}>
+                        Grade {(() => {
+                          // First try to get grade from selected grade object
+                          const gradeFromSelected = getSelectedGradeObject()?.grade_level
+                          if (gradeFromSelected) return gradeFromSelected
+                          
+                          // Then try to get grade from classes array
+                          const classFromClasses = classes.find(c => c.id === selectedClass)
+                          if (classFromClasses?.grade_level) return classFromClasses.grade_level
+                          
+                          // Then try to get grade from assignedClasses array
+                          const classFromAssigned = assignedClasses.find(c => c.id === selectedClass)
+                          if (classFromAssigned?.grade_level) return classFromAssigned.grade_level
+                          if (classFromAssigned?.grade_name) return classFromAssigned.grade_name.replace('Grade ', '')
+                          
+                          return 'Unknown'
+                        })()} • {filteredAndSortedStudents.length} student{filteredAndSortedStudents.length !== 1 ? 's' : ''}
+                        {searchTerm && ` matching "${searchTerm}"`}
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 {studentsLoading ? (
@@ -2052,7 +2074,7 @@ export default function TeacherStudentsPage() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.03 }}
                     >
-                      <Card className="group cursor-pointer transition-all duration-200 border border-gray-200 bg-white hover:border-gray-300 hover:shadow-md overflow-hidden">
+                      <Card className="group cursor-pointer transition-all duration-200 border border-gray-200 bg-white hover:border-blue-300 hover:shadow-md overflow-hidden">
                         <CardContent className="p-0">
                           {/* Compact Row - Always Visible */}
                           <div 
@@ -2061,7 +2083,7 @@ export default function TeacherStudentsPage() {
                           >
                             {/* Avatar */}
                             <div className="relative flex-shrink-0">
-                              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center text-white font-bold text-sm sm:text-base shadow-sm">
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-sm sm:text-base shadow-sm">
                                 {(student.first_name || student.last_name || 'U').charAt(0).toUpperCase()}
                               </div>
                               <div className={`absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
@@ -2076,12 +2098,12 @@ export default function TeacherStudentsPage() {
                             {/* Student Info - Flexible Layout */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-semibold text-gray-900 text-sm sm:text-base truncate">
+                                <h3 className="font-bold text-gray-900 text-sm sm:text-base truncate" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
                                   {`${student.first_name || ''} ${student.last_name || ''}`.trim() || 'Unknown Student'}
                                 </h3>
                                 <span className="text-lg flex-shrink-0">{moodEmojis[student.current_mood] || '😐'}</span>
                               </div>
-                              <p className="text-xs sm:text-sm text-gray-500 truncate">{student.email || 'No email'}</p>
+                              <p className="text-xs sm:text-sm text-gray-600 truncate font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>{student.email || 'No email'}</p>
                             </div>
 
                             {/* Quick Stats - Desktop */}

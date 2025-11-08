@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { getCurrentUserProfile } from '@/lib/services/profileService'
+import { unstable_cache } from 'next/cache'
 
 // Inspirational school vision quotes
 const schoolVisionQuotes = [
@@ -16,6 +17,45 @@ const schoolVisionQuotes = [
   'Creating lifelong learners who make a positive difference in the world',
   'Where tradition meets innovation in pursuit of academic excellence'
 ]
+
+// Cache student-specific data for 2 minutes (reduces DB load)
+const getCachedStudentData = unstable_cache(
+  async (studentId: string, supabase: any) => {
+    // Optimized parallel queries with indexes
+    const [achievementsRes, activityRes, rankRes] = await Promise.allSettled([
+      supabase
+        .from('student_achievements')
+        .select('id,achievement_name,icon,xp_reward,earned_at')
+        .eq('student_id', studentId)
+        .order('earned_at', { ascending: false })
+        .limit(8),
+      
+      supabase
+        .from('student_activity')
+        .select('title,activity_type,timestamp,xp_gained')
+        .eq('student_id', studentId)
+        .order('timestamp', { ascending: false })
+        .limit(5),
+      
+      supabase
+        .from('student_progress')
+        .select('class_rank')
+        .eq('student_id', studentId)
+        .maybeSingle()
+    ])
+
+    return {
+      achievements: achievementsRes.status === 'fulfilled' ? achievementsRes.value.data || [] : [],
+      activity: activityRes.status === 'fulfilled' ? activityRes.value.data || [] : [],
+      rankData: rankRes.status === 'fulfilled' ? rankRes.value.data : null
+    }
+  },
+  ['student-data'],
+  {
+    revalidate: 120, // 2 minutes
+    tags: ['student-profile']
+  }
+)
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,49 +72,24 @@ export async function GET(request: NextRequest) {
       }
     )
 
-    // Use centralized profile service with built-in caching and deduplication
+    // Use centralized profile service with built-in caching
     const profile = await getCurrentUserProfile()
     
     if (!profile) {
       return NextResponse.json({ message: 'Unauthorized or profile not found' }, { status: 401 })
     }
 
-    // School info is already included in profile.school from profileService
+    // School info is already included in profile.school
     const schoolData = profile.school
 
-    // Parallel fetch student-specific data (achievements, activity, rank)
-    const [achievementsRes, activityRes, rankRes] = await Promise.allSettled([
-      supabase
-        .from('student_achievements')
-        .select('*')
-        .eq('student_id', profile.id)
-        .order('earned_at', { ascending: false })
-        .limit(8),
-      
-      supabase
-        .from('student_activity')
-        .select('*')
-        .eq('student_id', profile.id)
-        .order('timestamp', { ascending: false })
-        .limit(5),
-      
-      supabase
-        .from('student_progress')
-        .select('class_rank')
-        .eq('student_id', profile.id)
-        .single()
-    ])
-
-    // Process results
-    const achievements = achievementsRes.status === 'fulfilled' ? achievementsRes.value.data || [] : []
-    const activity = activityRes.status === 'fulfilled' ? activityRes.value.data || [] : []
-    const rankData = rankRes.status === 'fulfilled' ? rankRes.value.data : null
+    // Fetch cached student-specific data
+    const { achievements, activity, rankData } = await getCachedStudentData(profile.id, supabase)
 
     // Calculate next level XP
     const currentLevel = (profile as any).level || 1
     const nextLevelXP = currentLevel * 100
 
-    // Format achievements
+    // Format achievements (data already minimal from query)
     const formattedAchievements = achievements.map(ach => ({
       id: ach.id,
       name: ach.achievement_name,
@@ -83,10 +98,10 @@ export async function GET(request: NextRequest) {
       earnedAt: ach.earned_at
     }))
 
-    // Format activity
+    // Format activity (data already minimal from query)
     const formattedActivity = activity.map(act => ({
       title: act.title,
-      type: act.activity_type, // 'quest', 'achievement', 'test', etc.
+      type: act.activity_type,
       timestamp: act.timestamp,
       xp: act.xp_gained || null
     }))
@@ -134,7 +149,8 @@ export async function GET(request: NextRequest) {
       recentActivity: formattedActivity
     })
     
-    response.headers.set('Cache-Control', 'private, max-age=120, stale-while-revalidate=30')
+    // Aggressive caching: 3 minutes cache, 1 minute stale-while-revalidate
+    response.headers.set('Cache-Control', 'private, max-age=180, stale-while-revalidate=60, must-revalidate')
     return response
 
   } catch (error: any) {

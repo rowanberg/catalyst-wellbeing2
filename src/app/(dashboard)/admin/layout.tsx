@@ -126,12 +126,14 @@ export default function AdminLayout({
   }
 
   // Only render admin content if user is authenticated and has admin role
+  const isMainAdminPage = pathname === '/admin'
+  
   return (
     <div className="flex flex-col min-h-screen">
       <div className="flex-1">
         {children}
       </div>
-      <ProfessionalFooter />
+      {isMainAdminPage && <ProfessionalFooter />}
     </div>
   )
 }

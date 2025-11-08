@@ -311,20 +311,25 @@ export default function BlackMarkSystem() {
       <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-4">
           <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <h1 className="text-base sm:text-xl font-bold text-gray-900">Black Marks</h1>
-              <p className="text-[10px] sm:text-sm text-gray-500">{filteredBlackMarks.length} filtered • {blackMarks.length} total</p>
+            <div className="min-w-0 flex-1 flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                <AlertTriangle className="h-5 w-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-xl font-extrabold text-gray-900" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.02em' }}>Black Marks</h1>
+                <p className="text-[10px] sm:text-sm text-gray-600 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>{filteredBlackMarks.length} filtered • {blackMarks.length} total</p>
+              </div>
             </div>
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-blue-600 hover:bg-blue-700 h-8 sm:h-10 px-2.5 sm:px-4 flex-shrink-0">
+                <Button className="bg-blue-600 hover:bg-blue-700 h-8 sm:h-10 px-2.5 sm:px-4 flex-shrink-0 font-semibold" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                   <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
                   <span className="hidden sm:inline text-sm">New Record</span>
                 </Button>
               </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
             <DialogHeader>
-              <DialogTitle className="text-lg sm:text-xl">Issue New Black Mark</DialogTitle>
+              <DialogTitle className="text-lg sm:text-xl font-bold" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>Issue New Black Mark</DialogTitle>
             </DialogHeader>
             
             <form onSubmit={handleCreateBlackMark} className="space-y-4">
@@ -484,41 +489,41 @@ export default function BlackMarkSystem() {
           <aside className="lg:col-span-3 space-y-4 mb-6 lg:mb-0">
             
             {/* Compact Stats */}
-            <div className="bg-white rounded-lg border border-gray-200 p-3">
+            <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
               <div className="grid grid-cols-2 lg:grid-cols-1 gap-2">
                 <div className="flex items-center justify-between p-2 rounded hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-red-500" />
-                    <span className="text-xs text-gray-600">Active</span>
+                    <span className="text-xs text-gray-600 font-semibold" style={{ fontFamily: 'var(--font-dm-sans)' }}>Active</span>
                   </div>
-                  <span className="text-sm font-bold text-gray-900">{blackMarks.filter(bm => bm.status === 'active').length}</span>
+                  <span className="text-sm font-bold text-gray-900" style={{ fontFamily: 'var(--font-jakarta)' }}>{blackMarks.filter(bm => bm.status === 'active').length}</span>
                 </div>
                 <div className="flex items-center justify-between p-2 rounded hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-yellow-500" />
-                    <span className="text-xs text-gray-600">Progress</span>
+                    <span className="text-xs text-gray-600 font-semibold" style={{ fontFamily: 'var(--font-dm-sans)' }}>Progress</span>
                   </div>
-                  <span className="text-sm font-bold text-gray-900">{blackMarks.filter(bm => bm.status === 'in_progress').length}</span>
+                  <span className="text-sm font-bold text-gray-900" style={{ fontFamily: 'var(--font-jakarta)' }}>{blackMarks.filter(bm => bm.status === 'in_progress').length}</span>
                 </div>
                 <div className="flex items-center justify-between p-2 rounded hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-blue-500" />
-                    <span className="text-xs text-gray-600">Completed</span>
+                    <span className="text-xs text-gray-600 font-semibold" style={{ fontFamily: 'var(--font-dm-sans)' }}>Completed</span>
                   </div>
-                  <span className="text-sm font-bold text-gray-900">{blackMarks.filter(bm => bm.status === 'completed').length}</span>
+                  <span className="text-sm font-bold text-gray-900" style={{ fontFamily: 'var(--font-jakarta)' }}>{blackMarks.filter(bm => bm.status === 'completed').length}</span>
                 </div>
                 <div className="flex items-center justify-between p-2 rounded hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-green-500" />
-                    <span className="text-xs text-gray-600">Resolved</span>
+                    <span className="text-xs text-gray-600 font-semibold" style={{ fontFamily: 'var(--font-dm-sans)' }}>Resolved</span>
                   </div>
-                  <span className="text-sm font-bold text-gray-900">{blackMarks.filter(bm => bm.status === 'resolved').length}</span>
+                  <span className="text-sm font-bold text-gray-900" style={{ fontFamily: 'var(--font-jakarta)' }}>{blackMarks.filter(bm => bm.status === 'resolved').length}</span>
                 </div>
               </div>
             </div>
 
             {/* Filters */}
-            <div className="bg-white rounded-lg border border-gray-200 p-3">
+            <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
               <div className="space-y-2.5">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -565,11 +570,11 @@ export default function BlackMarkSystem() {
             <div className="space-y-3">
               {filteredBlackMarks.length === 0 ? (
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-12 text-center">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <AlertTriangle className="h-8 w-8 text-gray-400" />
+                  <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <AlertTriangle className="h-8 w-8 text-blue-600" />
                   </div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-2">No Records Found</h3>
-                  <p className="text-sm text-gray-500 max-w-xs mx-auto">
+                  <h3 className="text-base font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>No Records Found</h3>
+                  <p className="text-sm text-gray-600 max-w-xs mx-auto font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                     {blackMarks.length === 0 
                       ? "No disciplinary records yet. Click Issue to create one."
                       : "Try adjusting your filters to see more results."
@@ -589,7 +594,7 @@ export default function BlackMarkSystem() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.2 }}
                       whileTap={{ scale: 0.99 }}
-                      className="bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-all"
+                      className="bg-white rounded-xl border border-gray-200 hover:border-blue-200 transition-all shadow-sm"
                     >
                       <div className="flex gap-2.5 p-2.5 sm:p-3">
                         {/* Enhanced Status Indicator Stripe */}
@@ -612,7 +617,7 @@ export default function BlackMarkSystem() {
                                 {blackMark.category === 'conduct' && <User className="h-3.5 w-3.5 text-orange-500" />}
                                 {blackMark.category === 'safety' && <AlertCircle className="h-3.5 w-3.5 text-yellow-500" />}
                               </div>
-                              <h3 className="text-xs sm:text-sm font-semibold text-gray-900 line-clamp-1 flex-1 leading-tight">{blackMark.title}</h3>
+                              <h3 className="text-xs sm:text-sm font-bold text-gray-900 line-clamp-1 flex-1 leading-tight" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>{blackMark.title}</h3>
                             </div>
                             {severity && (
                               <Badge className={`${severity.color} text-[9px] sm:text-[10px] px-1.5 py-0 h-4 sm:h-5 font-medium flex-shrink-0`}>
@@ -624,7 +629,7 @@ export default function BlackMarkSystem() {
                           {/* Student & Date - Compact */}
                           <div className="flex items-center gap-1.5 text-[10px] sm:text-xs text-gray-600">
                             <User className="h-3 w-3 text-gray-400" />
-                            <span className="font-medium text-gray-700 truncate">{blackMark.student_name}</span>
+                            <span className="font-semibold text-gray-700 truncate" style={{ fontFamily: 'var(--font-dm-sans)' }}>{blackMark.student_name}</span>
                             <span className="text-gray-400 hidden sm:inline">•</span>
                             <div className="items-center gap-0.5 hidden sm:flex">
                               <Calendar className="h-2.5 w-2.5 text-gray-400" />
@@ -647,7 +652,8 @@ export default function BlackMarkSystem() {
                                 setSelectedBlackMark(blackMark)
                                 setIsViewDialogOpen(true)
                               }}
-                              className="h-7 px-2 sm:px-3 text-[10px] sm:text-xs hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                              className="h-7 px-2 sm:px-3 text-[10px] sm:text-xs hover:bg-blue-50 hover:text-blue-600 transition-colors font-semibold"
+                              style={{ fontFamily: 'var(--font-dm-sans)' }}
                             >
                               <Eye className="h-3 w-3 sm:mr-1" />
                               <span className="hidden sm:inline">View</span>
@@ -659,7 +665,8 @@ export default function BlackMarkSystem() {
                                 setSelectedBlackMark(blackMark)
                                 setIsUpdateDialogOpen(true)
                               }}
-                              className="h-7 px-2 sm:px-3 text-[10px] sm:text-xs hover:bg-green-50 hover:text-green-600 transition-colors"
+                              className="h-7 px-2 sm:px-3 text-[10px] sm:text-xs hover:bg-green-50 hover:text-green-600 transition-colors font-semibold"
+                              style={{ fontFamily: 'var(--font-dm-sans)' }}
                             >
                               <Edit className="h-3 w-3 sm:mr-1" />
                               <span className="hidden sm:inline">Update</span>
@@ -701,7 +708,7 @@ export default function BlackMarkSystem() {
                       {selectedBlackMark.category === 'safety' && <AlertCircle className="h-5 w-5 text-yellow-500" />}
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-base font-bold text-gray-900 leading-tight">{selectedBlackMark.title}</h3>
+                      <h3 className="text-base font-bold text-gray-900 leading-tight" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>{selectedBlackMark.title}</h3>
                       <div className="flex items-center gap-2 mt-2">
                         <Badge className={getStatusColor(selectedBlackMark.status)}>
                           <span className="text-[10px] font-medium">{selectedBlackMark.status.replace('_', ' ')}</span>
@@ -720,7 +727,7 @@ export default function BlackMarkSystem() {
                 <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                   <div className="flex items-center gap-2 text-sm">
                     <User className="h-4 w-4 text-gray-500" />
-                    <span className="font-semibold text-gray-900">{selectedBlackMark.student_name}</span>
+                    <span className="font-bold text-gray-900" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>{selectedBlackMark.student_name}</span>
                   </div>
                   <div className="flex items-center gap-3 mt-2 text-xs text-gray-600">
                     <div className="flex items-center gap-1">
@@ -738,17 +745,17 @@ export default function BlackMarkSystem() {
 
                 {/* Description */}
                 <div>
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Description</h4>
-                  <p className="text-sm text-gray-700 leading-relaxed">{selectedBlackMark.description}</p>
+                  <h4 className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5" style={{ fontFamily: 'var(--font-dm-sans)' }}>Description</h4>
+                  <p className="text-sm text-gray-700 leading-relaxed font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>{selectedBlackMark.description}</p>
                 </div>
 
                 {/* Remedy Details */}
                 <div className="bg-gradient-to-br from-orange-50 to-red-50 border-l-4 border-orange-500 rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">
                     <AlertCircle className="h-4 w-4 text-orange-600" />
-                    <h4 className="text-xs font-bold text-orange-900 uppercase tracking-wide">Remedial Action</h4>
+                    <h4 className="text-xs font-bold text-orange-900 uppercase tracking-wide" style={{ fontFamily: 'var(--font-dm-sans)' }}>Remedial Action</h4>
                   </div>
-                  <p className="text-sm text-orange-900 mb-2 leading-relaxed">{selectedBlackMark.remedy_description}</p>
+                  <p className="text-sm text-orange-900 mb-2 leading-relaxed font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>{selectedBlackMark.remedy_description}</p>
                   <div className="flex items-center gap-2">
                     <Badge className="bg-orange-100 text-orange-800 border-orange-300">
                       <span className="text-[10px] font-medium">{REMEDY_TYPES.find(r => r.value === selectedBlackMark.remedy_type)?.label}</span>

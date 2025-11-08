@@ -22,18 +22,35 @@ export function QuotaIndicator() {
 
   useEffect(() => {
     fetchQuotaStatus()
-    const interval = setInterval(fetchQuotaStatus, 30000) // Refresh every 30 seconds
     
-    // Listen for custom event to refresh immediately after sending a message
-    const handleRefresh = () => {
-      console.log('[QuotaIndicator] Manual refresh triggered')
-      fetchQuotaStatus()
+    // Listen for custom event to decrement quota locally (no API call)
+    const handleLocalDecrement = () => {
+      console.log('[QuotaIndicator] Decrementing quota locally (offline)')
+      setQuotaStatus(prev => {
+        if (!prev) return prev
+        
+        // Decrement from normal quota first, then extra
+        if (prev.normalUsed < prev.normalTotal) {
+          return {
+            ...prev,
+            normalUsed: prev.normalUsed + 1,
+            totalUsedToday: prev.totalUsedToday + 1
+          }
+        } else if (prev.extraUsed < prev.extraTotal) {
+          return {
+            ...prev,
+            extraUsed: prev.extraUsed + 1,
+            totalUsedToday: prev.totalUsedToday + 1
+          }
+        }
+        
+        return prev // Already exhausted
+      })
     }
-    window.addEventListener('refresh-quota', handleRefresh)
+    window.addEventListener('refresh-quota', handleLocalDecrement)
     
     return () => {
-      clearInterval(interval)
-      window.removeEventListener('refresh-quota', handleRefresh)
+      window.removeEventListener('refresh-quota', handleLocalDecrement)
     }
   }, [])
 

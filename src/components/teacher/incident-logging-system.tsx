@@ -170,13 +170,19 @@ export const IncidentLoggingSystem = ({ students, onIncidentCreated }: IncidentL
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Incident Logs</h2>
-          <p className="text-gray-600">Secure documentation for student observations</p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-sm">
+            <AlertTriangle className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-extrabold text-gray-900" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.02em' }}>Incident Logs</h2>
+            <p className="text-gray-600 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>Secure documentation for student observations</p>
+          </div>
         </div>
         <Button 
           onClick={() => setIsCreateModalOpen(true)}
-          className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+          className="bg-blue-600 hover:bg-blue-700 font-semibold"
+          style={{ fontFamily: 'var(--font-dm-sans)' }}
         >
           <Plus className="w-4 h-4 mr-2" />
           New Incident
@@ -184,7 +190,7 @@ export const IncidentLoggingSystem = ({ students, onIncidentCreated }: IncidentL
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="border-gray-200 shadow-sm">
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
@@ -236,10 +242,13 @@ export const IncidentLoggingSystem = ({ students, onIncidentCreated }: IncidentL
             <p className="text-gray-500 mt-2">Loading incidents...</p>
           </div>
         ) : filteredIncidents.length === 0 ? (
-          <Card>
+          <Card className="border-gray-200 shadow-sm">
             <CardContent className="text-center py-8">
-              <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No incidents found</p>
+              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FileText className="w-8 h-8 text-blue-600" />
+              </div>
+              <h3 className="text-base font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>No Incidents Found</h3>
+              <p className="text-sm text-gray-600 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>No incidents match your current filters</p>
             </CardContent>
           </Card>
         ) : (
@@ -297,12 +306,12 @@ const IncidentCard = ({ incident }: { incident: IncidentLog }) => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow"
+      className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md hover:border-blue-200 transition-all shadow-sm"
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
-            <h3 className="font-semibold text-gray-900">{incident.title}</h3>
+            <h3 className="font-bold text-gray-900" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>{incident.title}</h3>
             <Badge className={getTypeColor(incident.incident_type)}>
               {incident.incident_type}
             </Badge>
@@ -310,7 +319,7 @@ const IncidentCard = ({ incident }: { incident: IncidentLog }) => {
               {incident.severity_level}
             </Badge>
           </div>
-          <div className="flex items-center gap-4 text-sm text-gray-600">
+          <div className="flex items-center gap-4 text-sm text-gray-600 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>
             <div className="flex items-center gap-1">
               <User className="w-4 h-4" />
               {incident.student_name} ({incident.grade_level})
@@ -334,12 +343,12 @@ const IncidentCard = ({ incident }: { incident: IncidentLog }) => {
         )}
       </div>
       
-      <p className="text-gray-700 mb-4">{incident.description}</p>
+      <p className="text-gray-700 mb-4 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>{incident.description}</p>
       
       {incident.action_taken && (
         <div className="bg-blue-50 rounded-lg p-3">
-          <p className="text-sm font-medium text-blue-900 mb-1">Action Taken:</p>
-          <p className="text-sm text-blue-800">{incident.action_taken}</p>
+          <p className="text-sm font-bold text-blue-900 mb-1" style={{ fontFamily: 'var(--font-dm-sans)' }}>Action Taken:</p>
+          <p className="text-sm text-blue-800 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>{incident.action_taken}</p>
         </div>
       )}
     </motion.div>

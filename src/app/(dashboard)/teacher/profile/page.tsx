@@ -26,7 +26,18 @@ import {
   Camera,
   Shield,
   Clock,
-  Star
+  Star,
+  Briefcase,
+  Building2,
+  FileText,
+  Target,
+  TrendingUp,
+  Heart,
+  AlertCircle,
+  UserCircle,
+  Trophy,
+  Sparkles,
+  Contact
 } from 'lucide-react'
 import { AdvancedProfilePictureUpload } from '@/components/ui/advanced-profile-picture-upload'
 
@@ -136,9 +147,9 @@ const TeacherProfilePage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
         <div className="relative">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-white/20 border-t-blue-400"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-gray-200 dark:border-slate-700 border-t-blue-500"></div>
         </div>
       </div>
     )
@@ -146,10 +157,9 @@ const TeacherProfilePage = () => {
 
   return (
     <UnifiedAuthGuard requiredRole="teacher">
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 relative overflow-hidden">
-        {/* Background Elements */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-indigo-500/10 to-purple-500/10" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_2px_2px,rgba(59,130,246,0.15)_1px,transparent_0)] bg-[length:32px_32px]" />
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_2px_2px,rgba(59,130,246,0.03)_1px,transparent_0)] dark:bg-[radial-gradient(circle_at_2px_2px,rgba(59,130,246,0.08)_1px,transparent_0)] bg-[length:32px_32px]" />
         
         <div className="relative z-10 p-4 sm:p-6 lg:p-8">
           <div className="max-w-4xl mx-auto">
@@ -161,25 +171,25 @@ const TeacherProfilePage = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 shadow-2xl p-3 sm:p-6">
+              <div className="bg-white dark:bg-slate-800/95 rounded-2xl border border-gray-200 dark:border-slate-700/50 shadow-sm p-3 sm:p-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
                     <Button
                       onClick={() => router.back()}
                       variant="ghost"
                       size="sm"
-                      className="text-white/80 hover:text-white hover:bg-white/10 rounded-xl p-2 flex-shrink-0"
+                      className="text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl p-2 flex-shrink-0"
                     >
                       <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
                     </Button>
                     <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
-                      <div className="p-2 sm:p-3 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 rounded-xl shadow-lg flex-shrink-0">
-                        <User className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                      <div className="p-2 sm:p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-md flex-shrink-0">
+                        <UserCircle className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-white truncate">Teacher Profile</h1>
-                        <p className="text-white/80 text-xs sm:text-sm hidden sm:block">Manage your professional information</p>
-                        <p className="text-white/80 text-xs sm:hidden">Manage your info</p>
+                        <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-slate-100 truncate" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>Teacher Profile</h1>
+                        <p className="text-gray-600 dark:text-slate-400 text-xs sm:text-sm hidden sm:block" style={{ fontFamily: 'var(--font-dm-sans)' }}>Manage your professional information</p>
+                        <p className="text-gray-600 dark:text-slate-400 text-xs sm:hidden" style={{ fontFamily: 'var(--font-dm-sans)' }}>Manage your info</p>
                       </div>
                     </div>
                   </div>
@@ -191,7 +201,7 @@ const TeacherProfilePage = () => {
                           onClick={() => setEditing(false)}
                           variant="ghost"
                           size="sm"
-                          className="text-white/80 hover:text-white hover:bg-white/10 rounded-xl flex-1 sm:flex-none"
+                          className="text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl flex-1 sm:flex-none"
                         >
                           <X className="h-4 w-4 sm:mr-1" />
                           <span className="hidden sm:inline">Cancel</span>
@@ -200,10 +210,10 @@ const TeacherProfilePage = () => {
                           onClick={handleSave}
                           disabled={saving}
                           size="sm"
-                          className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-xl flex-1 sm:flex-none"
+                          className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl flex-1 sm:flex-none shadow-sm"
                         >
                           {saving ? (
-                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white sm:mr-1" />
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white sm:mr-1" />
                           ) : (
                             <Save className="h-4 w-4 sm:mr-1" />
                           )}
@@ -214,7 +224,7 @@ const TeacherProfilePage = () => {
                       <Button
                         onClick={() => setEditing(true)}
                         size="sm"
-                        className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-xl w-full sm:w-auto"
+                        className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl w-full sm:w-auto shadow-sm"
                       >
                         <Edit3 className="h-4 w-4 sm:mr-1" />
                         <span className="hidden sm:inline">Edit Profile</span>
@@ -235,7 +245,7 @@ const TeacherProfilePage = () => {
                 transition={{ duration: 0.6, delay: 0.1 }}
                 className="lg:col-span-1"
               >
-                <Card className="bg-white/10 backdrop-blur-xl shadow-2xl border border-white/20 rounded-2xl h-fit">
+                <Card className="bg-white dark:bg-slate-800/95 shadow-sm border border-gray-200 dark:border-slate-700/50 rounded-2xl h-fit">
                   <CardContent className="p-4 sm:p-6">
                     <div className="text-center">
                       <div className="mb-4 sm:mb-6">
@@ -258,7 +268,7 @@ const TeacherProfilePage = () => {
                               />
                             ) : (
                               <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center border-4 border-white/20 shadow-lg mx-auto">
-                                <span className="text-xl sm:text-2xl font-bold text-white">
+                                <span className="text-xl sm:text-2xl font-bold text-white" style={{ fontFamily: 'var(--font-jakarta)' }}>
                                   {profile?.first_name?.[0]}{profile?.last_name?.[0]}
                                 </span>
                               </div>
@@ -267,21 +277,25 @@ const TeacherProfilePage = () => {
                         )}
                       </div>
                       
-                      <h2 className="text-lg sm:text-xl font-bold text-white mb-1 truncate px-2">
+                      <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-slate-100 mb-1 truncate px-2" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
                         {profile?.first_name} {profile?.last_name}
                       </h2>
-                      <p className="text-blue-300 font-medium mb-2 text-sm sm:text-base truncate px-2">{profile?.department || 'Teacher'}</p>
-                      <p className="text-white/60 text-xs sm:text-sm truncate px-2">{profile?.subject_specialization}</p>
+                      <p className="text-blue-600 dark:text-blue-400 font-semibold mb-2 text-sm sm:text-base truncate px-2" style={{ fontFamily: 'var(--font-dm-sans)' }}>{profile?.department || 'Teacher'}</p>
+                      <p className="text-gray-600 dark:text-slate-400 text-xs sm:text-sm truncate px-2" style={{ fontFamily: 'var(--font-dm-sans)' }}>{profile?.subject_specialization}</p>
                       
                       <div className="mt-4 sm:mt-6 space-y-2 sm:space-y-3">
-                        <div className="flex items-center justify-center space-x-2 text-white/80 px-2">
-                          <Mail className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                          <span className="text-xs sm:text-sm truncate">{profile?.email || user?.email || 'No email provided'}</span>
+                        <div className="flex items-center justify-center space-x-2 px-2">
+                          <div className="p-1.5 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-lg">
+                            <Mail className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 text-white" />
+                          </div>
+                          <span className="text-xs sm:text-sm truncate text-gray-700 dark:text-slate-300 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>{profile?.email || user?.email || 'No email provided'}</span>
                         </div>
                         {profile?.phone && (
-                          <div className="flex items-center justify-center space-x-2 text-white/80 px-2">
-                            <Phone className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                            <span className="text-xs sm:text-sm">{profile.phone}</span>
+                          <div className="flex items-center justify-center space-x-2 px-2">
+                            <div className="p-1.5 bg-gradient-to-br from-emerald-400 to-green-500 rounded-lg">
+                              <Phone className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 text-white" />
+                            </div>
+                            <span className="text-xs sm:text-sm text-gray-700 dark:text-slate-300 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>{profile.phone}</span>
                           </div>
                         )}
                       </div>
@@ -290,25 +304,40 @@ const TeacherProfilePage = () => {
                 </Card>
 
                 {/* Quick Stats */}
-                <Card className="bg-white/10 backdrop-blur-xl shadow-2xl border border-white/20 rounded-2xl mt-4 sm:mt-6">
+                <Card className="bg-white dark:bg-slate-800/95 shadow-sm border border-gray-200 dark:border-slate-700/50 rounded-2xl mt-4 sm:mt-6">
                   <CardHeader className="pb-3 sm:pb-6">
-                    <CardTitle className="flex items-center space-x-2 text-white text-sm sm:text-base">
-                      <Award className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400" />
+                    <CardTitle className="flex items-center space-x-2 text-gray-900 dark:text-slate-100 text-sm sm:text-base" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
+                      <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
                       Professional Summary
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 sm:space-y-4 pt-0">
-                    <div className="flex items-center justify-between">
-                      <span className="text-white/80 text-xs sm:text-sm">Experience</span>
-                      <span className="text-white font-medium text-xs sm:text-sm">{profile?.years_experience || 0} years</span>
+                    <div className="flex items-center justify-between p-2 sm:p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-xl border border-blue-100 dark:border-blue-900/30">
+                      <div className="flex items-center space-x-2">
+                        <div className="p-1.5 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg">
+                          <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
+                        </div>
+                        <span className="text-gray-700 dark:text-slate-300 text-xs sm:text-sm font-semibold" style={{ fontFamily: 'var(--font-dm-sans)' }}>Experience</span>
+                      </div>
+                      <span className="text-gray-900 dark:text-slate-100 font-bold text-xs sm:text-sm" style={{ fontFamily: 'var(--font-dm-sans)' }}>{profile?.years_experience || 0} years</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-white/80 text-xs sm:text-sm">Education</span>
-                      <span className="text-white font-medium text-xs truncate max-w-[120px] sm:max-w-none">{profile?.education_level || 'Not specified'}</span>
+                    <div className="flex items-center justify-between p-2 sm:p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-xl border border-green-100 dark:border-green-900/30">
+                      <div className="flex items-center space-x-2">
+                        <div className="p-1.5 bg-gradient-to-br from-emerald-400 to-green-600 rounded-lg">
+                          <GraduationCap className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
+                        </div>
+                        <span className="text-gray-700 dark:text-slate-300 text-xs sm:text-sm font-semibold" style={{ fontFamily: 'var(--font-dm-sans)' }}>Education</span>
+                      </div>
+                      <span className="text-gray-900 dark:text-slate-100 font-bold text-xs truncate max-w-[120px] sm:max-w-none" style={{ fontFamily: 'var(--font-dm-sans)' }}>{profile?.education_level || 'Not specified'}</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-white/80 text-xs sm:text-sm">Hire Date</span>
-                      <span className="text-white font-medium text-xs">
+                    <div className="flex items-center justify-between p-2 sm:p-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 rounded-xl border border-purple-100 dark:border-purple-900/30">
+                      <div className="flex items-center space-x-2">
+                        <div className="p-1.5 bg-gradient-to-br from-purple-400 to-pink-600 rounded-lg">
+                          <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
+                        </div>
+                        <span className="text-gray-700 dark:text-slate-300 text-xs sm:text-sm font-semibold" style={{ fontFamily: 'var(--font-dm-sans)' }}>Hire Date</span>
+                      </div>
+                      <span className="text-gray-900 dark:text-slate-100 font-bold text-xs" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                         {profile?.hire_date ? new Date(profile.hire_date).toLocaleDateString() : 'Not specified'}
                       </span>
                     </div>
@@ -325,141 +354,150 @@ const TeacherProfilePage = () => {
               >
                 
                 {/* Personal Information */}
-                <Card className="bg-white/10 backdrop-blur-xl shadow-2xl border border-white/20 rounded-2xl">
+                <Card className="bg-white dark:bg-slate-800/95 shadow-sm border border-gray-200 dark:border-slate-700/50 rounded-2xl">
                   <CardHeader className="pb-4 sm:pb-6">
-                    <CardTitle className="flex items-center space-x-2 text-white text-base sm:text-lg">
-                      <User className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400" />
+                    <CardTitle className="flex items-center space-x-2 text-gray-900 dark:text-slate-100 text-base sm:text-lg" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
+                      <Contact className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
                       Personal Information
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-0">
                     <div>
-                      <label className="text-white/80 text-xs sm:text-sm font-medium block mb-1.5 sm:mb-2">First Name</label>
+                      <label className="text-gray-700 dark:text-slate-300 text-xs sm:text-sm font-semibold block mb-1.5 sm:mb-2" style={{ fontFamily: 'var(--font-dm-sans)' }}>First Name</label>
                       {editing ? (
                         <Input
                           value={editedProfile.first_name || ''}
                           onChange={(e) => setEditedProfile(prev => ({ ...prev, first_name: e.target.value }))}
-                          className="bg-white/10 border-white/20 text-white rounded-lg text-sm sm:text-base h-10 sm:h-auto"
+                          className="bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-slate-100 rounded-lg text-sm sm:text-base h-10 sm:h-auto"
+                          style={{ fontFamily: 'var(--font-dm-sans)' }}
                         />
                       ) : (
-                        <p className="text-white bg-white/5 p-2.5 sm:p-3 rounded-lg text-sm sm:text-base">{profile?.first_name || 'Not specified'}</p>
+                        <p className="text-gray-900 dark:text-slate-100 bg-gray-50 dark:bg-slate-800/50 p-2.5 sm:p-3 rounded-lg text-sm sm:text-base border border-gray-200 dark:border-slate-700" style={{ fontFamily: 'var(--font-dm-sans)' }}>{profile?.first_name || 'Not specified'}</p>
                       )}
                     </div>
                     
                     <div>
-                      <label className="text-white/80 text-xs sm:text-sm font-medium block mb-1.5 sm:mb-2">Last Name</label>
+                      <label className="text-gray-700 dark:text-slate-300 text-xs sm:text-sm font-semibold block mb-1.5 sm:mb-2" style={{ fontFamily: 'var(--font-dm-sans)' }}>Last Name</label>
                       {editing ? (
                         <Input
                           value={editedProfile.last_name || ''}
                           onChange={(e) => setEditedProfile(prev => ({ ...prev, last_name: e.target.value }))}
-                          className="bg-white/10 border-white/20 text-white rounded-lg text-sm sm:text-base h-10 sm:h-auto"
+                          className="bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-slate-100 rounded-lg text-sm sm:text-base h-10 sm:h-auto"
+                          style={{ fontFamily: 'var(--font-dm-sans)' }}
                         />
                       ) : (
-                        <p className="text-white bg-white/5 p-2.5 sm:p-3 rounded-lg text-sm sm:text-base">{profile?.last_name || 'Not specified'}</p>
+                        <p className="text-gray-900 dark:text-slate-100 bg-gray-50 dark:bg-slate-800/50 p-2.5 sm:p-3 rounded-lg text-sm sm:text-base border border-gray-200 dark:border-slate-700" style={{ fontFamily: 'var(--font-dm-sans)' }}>{profile?.last_name || 'Not specified'}</p>
                       )}
                     </div>
 
                     <div>
-                      <label className="text-white/80 text-xs sm:text-sm font-medium block mb-1.5 sm:mb-2">Email Address</label>
+                      <label className="text-gray-700 dark:text-slate-300 text-xs sm:text-sm font-semibold block mb-1.5 sm:mb-2" style={{ fontFamily: 'var(--font-dm-sans)' }}>Email Address</label>
                       {editing ? (
                         <Input
                           type="email"
                           value={editedProfile.email || user?.email || ''}
                           onChange={(e) => setEditedProfile(prev => ({ ...prev, email: e.target.value }))}
-                          className="bg-white/10 border-white/20 text-white rounded-lg text-sm sm:text-base h-10 sm:h-auto"
+                          className="bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-slate-100 rounded-lg text-sm sm:text-base h-10 sm:h-auto"
+                          style={{ fontFamily: 'var(--font-dm-sans)' }}
                           placeholder="Enter your email address"
                         />
                       ) : (
-                        <p className="text-white bg-white/5 p-2.5 sm:p-3 rounded-lg text-sm sm:text-base truncate">{profile?.email || user?.email || 'Not specified'}</p>
+                        <p className="text-gray-900 dark:text-slate-100 bg-gray-50 dark:bg-slate-800/50 p-2.5 sm:p-3 rounded-lg text-sm sm:text-base truncate border border-gray-200 dark:border-slate-700" style={{ fontFamily: 'var(--font-dm-sans)' }}>{profile?.email || user?.email || 'Not specified'}</p>
                       )}
                     </div>
 
                     <div>
-                      <label className="text-white/80 text-xs sm:text-sm font-medium block mb-1.5 sm:mb-2">Phone Number</label>
+                      <label className="text-gray-700 dark:text-slate-300 text-xs sm:text-sm font-semibold block mb-1.5 sm:mb-2" style={{ fontFamily: 'var(--font-dm-sans)' }}>Phone Number</label>
                       {editing ? (
                         <Input
                           value={editedProfile.phone || ''}
                           onChange={(e) => setEditedProfile(prev => ({ ...prev, phone: e.target.value }))}
-                          className="bg-white/10 border-white/20 text-white rounded-lg text-sm sm:text-base h-10 sm:h-auto"
+                          className="bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-slate-100 rounded-lg text-sm sm:text-base h-10 sm:h-auto"
+                          style={{ fontFamily: 'var(--font-dm-sans)' }}
                         />
                       ) : (
-                        <p className="text-white bg-white/5 p-2.5 sm:p-3 rounded-lg text-sm sm:text-base">{profile?.phone || 'Not specified'}</p>
+                        <p className="text-gray-900 dark:text-slate-100 bg-gray-50 dark:bg-slate-800/50 p-2.5 sm:p-3 rounded-lg text-sm sm:text-base border border-gray-200 dark:border-slate-700" style={{ fontFamily: 'var(--font-dm-sans)' }}>{profile?.phone || 'Not specified'}</p>
                       )}
                     </div>
 
                     <div>
-                      <label className="text-white/80 text-xs sm:text-sm font-medium block mb-1.5 sm:mb-2">Date of Birth</label>
+                      <label className="text-gray-700 dark:text-slate-300 text-xs sm:text-sm font-semibold block mb-1.5 sm:mb-2" style={{ fontFamily: 'var(--font-dm-sans)' }}>Date of Birth</label>
                       {editing ? (
                         <Input
                           type="date"
                           value={editedProfile.date_of_birth || ''}
                           onChange={(e) => setEditedProfile(prev => ({ ...prev, date_of_birth: e.target.value }))}
-                          className="bg-white/10 border-white/20 text-white rounded-lg text-sm sm:text-base h-10 sm:h-auto"
+                          className="bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-slate-100 rounded-lg text-sm sm:text-base h-10 sm:h-auto"
+                          style={{ fontFamily: 'var(--font-dm-sans)' }}
                         />
                       ) : (
-                        <p className="text-white bg-white/5 p-2.5 sm:p-3 rounded-lg text-sm sm:text-base">
+                        <p className="text-gray-900 dark:text-slate-100 bg-gray-50 dark:bg-slate-800/50 p-2.5 sm:p-3 rounded-lg text-sm sm:text-base border border-gray-200 dark:border-slate-700" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                           {profile?.date_of_birth ? new Date(profile.date_of_birth).toLocaleDateString() : 'Not specified'}
                         </p>
                       )}
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="text-white/80 text-xs sm:text-sm font-medium block mb-1.5 sm:mb-2">Address</label>
+                      <label className="text-gray-700 dark:text-slate-300 text-xs sm:text-sm font-semibold block mb-1.5 sm:mb-2" style={{ fontFamily: 'var(--font-dm-sans)' }}>Address</label>
                       {editing ? (
                         <Input
                           value={editedProfile.address || ''}
                           onChange={(e) => setEditedProfile(prev => ({ ...prev, address: e.target.value }))}
-                          className="bg-white/10 border-white/20 text-white rounded-lg text-sm sm:text-base h-10 sm:h-auto"
+                          className="bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-slate-100 rounded-lg text-sm sm:text-base h-10 sm:h-auto"
+                          style={{ fontFamily: 'var(--font-dm-sans)' }}
                         />
                       ) : (
-                        <p className="text-white bg-white/5 p-2.5 sm:p-3 rounded-lg text-sm sm:text-base">{profile?.address || 'Not specified'}</p>
+                        <p className="text-gray-900 dark:text-slate-100 bg-gray-50 dark:bg-slate-800/50 p-2.5 sm:p-3 rounded-lg text-sm sm:text-base border border-gray-200 dark:border-slate-700" style={{ fontFamily: 'var(--font-dm-sans)' }}>{profile?.address || 'Not specified'}</p>
                       )}
                     </div>
                   </CardContent>
                 </Card>
 
                 {/* Professional Information */}
-                <Card className="bg-white/10 backdrop-blur-xl shadow-2xl border border-white/20 rounded-2xl">
+                <Card className="bg-white dark:bg-slate-800/95 shadow-sm border border-gray-200 dark:border-slate-700/50 rounded-2xl">
                   <CardHeader className="pb-4 sm:pb-6">
-                    <CardTitle className="flex items-center space-x-2 text-white text-base sm:text-lg">
-                      <GraduationCap className="h-4 w-4 sm:h-5 sm:w-5 text-green-400" />
+                    <CardTitle className="flex items-center space-x-2 text-gray-900 dark:text-slate-100 text-base sm:text-lg" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
+                      <Briefcase className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500" />
                       Professional Information
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-0">
                     <div>
-                      <label className="text-white/80 text-sm font-medium block mb-2">Department</label>
+                      <label className="text-gray-700 dark:text-slate-300 text-sm font-semibold block mb-2" style={{ fontFamily: 'var(--font-dm-sans)' }}>Department</label>
                       {editing ? (
                         <Input
                           value={editedProfile.department || ''}
                           onChange={(e) => setEditedProfile(prev => ({ ...prev, department: e.target.value }))}
-                          className="bg-white/10 border-white/20 text-white rounded-lg"
+                          className="bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-slate-100 rounded-lg"
+                          style={{ fontFamily: 'var(--font-dm-sans)' }}
                         />
                       ) : (
-                        <p className="text-white bg-white/5 p-3 rounded-lg">{profile?.department || 'Not specified'}</p>
+                        <p className="text-gray-900 dark:text-slate-100 bg-gray-50 dark:bg-slate-800/50 p-3 rounded-lg border border-gray-200 dark:border-slate-700" style={{ fontFamily: 'var(--font-dm-sans)' }}>{profile?.department || 'Not specified'}</p>
                       )}
                     </div>
 
                     <div>
-                      <label className="text-white/80 text-sm font-medium block mb-2">Subject Specialization</label>
+                      <label className="text-gray-700 dark:text-slate-300 text-sm font-semibold block mb-2" style={{ fontFamily: 'var(--font-dm-sans)' }}>Subject Specialization</label>
                       {editing ? (
                         <Input
                           value={editedProfile.subject_specialization || ''}
                           onChange={(e) => setEditedProfile(prev => ({ ...prev, subject_specialization: e.target.value }))}
-                          className="bg-white/10 border-white/20 text-white rounded-lg"
+                          className="bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-slate-100 rounded-lg"
+                          style={{ fontFamily: 'var(--font-dm-sans)' }}
                         />
                       ) : (
-                        <p className="text-white bg-white/5 p-3 rounded-lg">{profile?.subject_specialization || 'Not specified'}</p>
+                        <p className="text-gray-900 dark:text-slate-100 bg-gray-50 dark:bg-slate-800/50 p-3 rounded-lg border border-gray-200 dark:border-slate-700" style={{ fontFamily: 'var(--font-dm-sans)' }}>{profile?.subject_specialization || 'Not specified'}</p>
                       )}
                     </div>
 
                     <div>
-                      <label className="text-white/80 text-sm font-medium block mb-2">Education Level</label>
+                      <label className="text-gray-700 dark:text-slate-300 text-sm font-semibold block mb-2" style={{ fontFamily: 'var(--font-dm-sans)' }}>Education Level</label>
                       {editing ? (
                         <select
                           value={editedProfile.education_level || ''}
                           onChange={(e) => setEditedProfile(prev => ({ ...prev, education_level: e.target.value }))}
-                          className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+                          className="w-full p-3 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-slate-100"
+                          style={{ fontFamily: 'var(--font-dm-sans)' }}
                         >
                           <option value="">Select Education Level</option>
                           <option value="Bachelor's Degree">Bachelor's Degree</option>
@@ -468,36 +506,38 @@ const TeacherProfilePage = () => {
                           <option value="Teaching Certificate">Teaching Certificate</option>
                         </select>
                       ) : (
-                        <p className="text-white bg-white/5 p-3 rounded-lg">{profile?.education_level || 'Not specified'}</p>
+                        <p className="text-gray-900 dark:text-slate-100 bg-gray-50 dark:bg-slate-800/50 p-3 rounded-lg border border-gray-200 dark:border-slate-700" style={{ fontFamily: 'var(--font-dm-sans)' }}>{profile?.education_level || 'Not specified'}</p>
                       )}
                     </div>
 
                     <div>
-                      <label className="text-white/80 text-sm font-medium block mb-2">Years of Experience</label>
+                      <label className="text-gray-700 dark:text-slate-300 text-sm font-semibold block mb-2" style={{ fontFamily: 'var(--font-dm-sans)' }}>Years of Experience</label>
                       {editing ? (
                         <Input
                           type="number"
                           value={editedProfile.years_experience || ''}
                           onChange={(e) => setEditedProfile(prev => ({ ...prev, years_experience: parseInt(e.target.value) || 0 }))}
-                          className="bg-white/10 border-white/20 text-white rounded-lg"
+                          className="bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-slate-100 rounded-lg"
+                          style={{ fontFamily: 'var(--font-dm-sans)' }}
                         />
                       ) : (
-                        <p className="text-white bg-white/5 p-3 rounded-lg">{profile?.years_experience || 0} years</p>
+                        <p className="text-gray-900 dark:text-slate-100 bg-gray-50 dark:bg-slate-800/50 p-3 rounded-lg border border-gray-200 dark:border-slate-700" style={{ fontFamily: 'var(--font-dm-sans)' }}>{profile?.years_experience || 0} years</p>
                       )}
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="text-white/80 text-sm font-medium block mb-2">Bio</label>
+                      <label className="text-gray-700 dark:text-slate-300 text-sm font-semibold block mb-2" style={{ fontFamily: 'var(--font-dm-sans)' }}>Bio</label>
                       {editing ? (
                         <textarea
                           value={editedProfile.bio || ''}
                           onChange={(e) => setEditedProfile(prev => ({ ...prev, bio: e.target.value }))}
                           rows={3}
-                          className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white resize-none"
+                          className="w-full p-3 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-slate-100 resize-none"
+                          style={{ fontFamily: 'var(--font-dm-sans)' }}
                           placeholder="Tell us about yourself..."
                         />
                       ) : (
-                        <p className="text-white bg-white/5 p-3 rounded-lg min-h-[80px]">
+                        <p className="text-gray-900 dark:text-slate-100 bg-gray-50 dark:bg-slate-800/50 p-3 rounded-lg min-h-[80px] border border-gray-200 dark:border-slate-700" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                           {profile?.bio || 'No bio provided'}
                         </p>
                       )}
@@ -506,37 +546,39 @@ const TeacherProfilePage = () => {
                 </Card>
 
                 {/* Emergency Contact */}
-                <Card className="bg-white/10 backdrop-blur-xl shadow-2xl border border-white/20 rounded-2xl">
+                <Card className="bg-white dark:bg-slate-800/95 shadow-sm border border-gray-200 dark:border-slate-700/50 rounded-2xl">
                   <CardHeader className="pb-4 sm:pb-6">
-                    <CardTitle className="flex items-center space-x-2 text-white text-base sm:text-lg">
-                      <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-red-400" />
+                    <CardTitle className="flex items-center space-x-2 text-gray-900 dark:text-slate-100 text-base sm:text-lg" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
+                      <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-rose-500" />
                       Emergency Contact
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-0">
                     <div>
-                      <label className="text-white/80 text-sm font-medium block mb-2">Contact Name</label>
+                      <label className="text-gray-700 dark:text-slate-300 text-sm font-semibold block mb-2" style={{ fontFamily: 'var(--font-dm-sans)' }}>Contact Name</label>
                       {editing ? (
                         <Input
                           value={editedProfile.emergency_contact_name || ''}
                           onChange={(e) => setEditedProfile(prev => ({ ...prev, emergency_contact_name: e.target.value }))}
-                          className="bg-white/10 border-white/20 text-white rounded-lg"
+                          className="bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-slate-100 rounded-lg"
+                          style={{ fontFamily: 'var(--font-dm-sans)' }}
                         />
                       ) : (
-                        <p className="text-white bg-white/5 p-3 rounded-lg">{profile?.emergency_contact_name || 'Not specified'}</p>
+                        <p className="text-gray-900 dark:text-slate-100 bg-gray-50 dark:bg-slate-800/50 p-3 rounded-lg border border-gray-200 dark:border-slate-700" style={{ fontFamily: 'var(--font-dm-sans)' }}>{profile?.emergency_contact_name || 'Not specified'}</p>
                       )}
                     </div>
 
                     <div>
-                      <label className="text-white/80 text-sm font-medium block mb-2">Contact Phone</label>
+                      <label className="text-gray-700 dark:text-slate-300 text-sm font-semibold block mb-2" style={{ fontFamily: 'var(--font-dm-sans)' }}>Contact Phone</label>
                       {editing ? (
                         <Input
                           value={editedProfile.emergency_contact_phone || ''}
                           onChange={(e) => setEditedProfile(prev => ({ ...prev, emergency_contact_phone: e.target.value }))}
-                          className="bg-white/10 border-white/20 text-white rounded-lg"
+                          className="bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-900 dark:text-slate-100 rounded-lg"
+                          style={{ fontFamily: 'var(--font-dm-sans)' }}
                         />
                       ) : (
-                        <p className="text-white bg-white/5 p-3 rounded-lg">{profile?.emergency_contact_phone || 'Not specified'}</p>
+                        <p className="text-gray-900 dark:text-slate-100 bg-gray-50 dark:bg-slate-800/50 p-3 rounded-lg border border-gray-200 dark:border-slate-700" style={{ fontFamily: 'var(--font-dm-sans)' }}>{profile?.emergency_contact_phone || 'Not specified'}</p>
                       )}
                     </div>
                   </CardContent>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
@@ -37,7 +37,14 @@ import {
   RefreshCw,
   Upload,
   FileSpreadsheet,
-  Database
+  Database,
+  School,
+  Home,
+  X,
+  Menu,
+  ChevronRight,
+  Lightbulb,
+  Rocket
 } from 'lucide-react'
 import { useAppSelector } from '@/lib/redux/hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -45,10 +52,10 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ExamCard } from '@/components/examination/ExamCard'
 import { ExamCreator } from '@/components/examination/ExamCreator'
 import { ExamAnalytics } from '@/components/examination/ExamAnalytics'
+import { TopLoader } from '@/components/ui/top-loader'
 
 interface Exam {
   id: string
@@ -81,6 +88,8 @@ export default function TeacherExaminations() {
   const [selectedStatus, setSelectedStatus] = useState('all')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedExamForAnalytics, setSelectedExamForAnalytics] = useState<string | null>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isTabLoading, setIsTabLoading] = useState(false)
   const [teacherStats, setTeacherStats] = useState({
     total_exams: 0,
     active_exams: 0,
@@ -253,7 +262,8 @@ export default function TeacherExaminations() {
     }
   }
 
-  const getFilteredExams = () => {
+  // Memoized filtered exams for performance
+  const filteredExams = useMemo(() => {
     return exams.filter(exam => {
       const matchesSearch = exam.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            exam.subject.toLowerCase().includes(searchTerm.toLowerCase())
@@ -264,7 +274,7 @@ export default function TeacherExaminations() {
       
       return matchesSearch && matchesSubject && matchesStatus
     })
-  }
+  }, [exams, searchTerm, selectedSubject, selectedStatus])
 
   const getUniqueSubjects = () => {
     const subjectSet = new Set(exams.map(exam => exam.subject))
@@ -273,6 +283,17 @@ export default function TeacherExaminations() {
   }
 
   const [activeTab, setActiveTab] = useState('overview')
+
+  // Handle tab change with top loader
+  const handleTabChange = (tab: string) => {
+    setIsTabLoading(true)
+    setActiveTab(tab)
+    
+    // Simulate brief loading for smooth transition
+    setTimeout(() => {
+      setIsTabLoading(false)
+    }, 400)
+  }
 
   // Show loading while auth is being checked
   if (authLoading || loading) {
@@ -315,55 +336,183 @@ export default function TeacherExaminations() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Sticky Professional Header */}
-      <div className="sticky top-0 z-40 backdrop-blur-xl bg-white/80 border-b border-white/20 shadow-lg">
-        <div className="px-4 sm:px-6 py-3 sm:py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex items-center space-x-3 sm:space-x-4"
-            >
-              <div className="p-2 sm:p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
-                <GraduationCap className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+    <div className="bg-gray-50 dark:bg-slate-900 relative h-screen flex overflow-hidden transition-colors duration-300">
+      {/* Top Loader - Enterprise Style */}
+      <TopLoader isLoading={isTabLoading} color="#3b82f6" height={3} speed={400} />
+      
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 via-white to-indigo-50/30 dark:from-blue-900/5 dark:via-slate-900 dark:to-indigo-900/5" />
+      
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      
+      {/* Professional Left Sidebar - Fixed */}
+      <div className={`${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      } lg:translate-x-0 fixed inset-y-0 left-0 z-50 lg:z-20 w-64 sm:w-72 lg:w-64 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border-r border-white/20 dark:border-slate-700/50 shadow-2xl flex flex-col transition-all duration-300 ease-in-out`}>
+        {/* Sidebar Header - Premium Enterprise Design */}
+        <div className="px-5 py-5 border-b border-gray-200/80 dark:border-slate-700/50">
+          <div className="flex items-center justify-between">
+            {/* Brand Identity */}
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl blur-sm opacity-30"></div>
+                <div className="relative p-2.5 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl">
+                  <GraduationCap className="h-6 w-6 text-white" />
+                </div>
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                  Examination System
-                </h1>
-                <p className="text-sm sm:text-base text-gray-600 mt-1 hidden sm:block">Comprehensive assessment management and analytics</p>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.02em' }}>Examinations</h2>
+                <p className="text-[11px] font-semibold text-gray-600 dark:text-slate-300 uppercase" style={{ fontFamily: 'var(--font-dm-sans)', letterSpacing: '0.05em' }}>Assessment Hub</p>
               </div>
-            </motion.div>
-            
-            <div className="flex items-center gap-2 sm:gap-3">
-              <Button 
+            </div>
+            {/* Mobile Close Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="lg:hidden p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <X className="h-5 w-5 text-slate-400 dark:text-slate-500" />
+            </Button>
+          </div>
+        </div>
+        
+        {/* Navigation Menu */}
+        <nav className="flex-1 p-3 sm:p-4 space-y-1.5 sm:space-y-2 overflow-y-auto">
+          <motion.button
+            onClick={() => router.push('/teacher')}
+            whileHover={{ scale: 1.01, x: 3 }}
+            whileTap={{ scale: 0.98 }}
+            className="w-full flex items-center space-x-3 px-3 sm:px-4 py-3 rounded-xl transition-all duration-200 text-left group relative overflow-hidden hover:bg-gray-100 dark:hover:bg-slate-700"
+          >
+            <Home className="h-5 w-5 text-gray-600 dark:text-slate-400" />
+            <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Back to Dashboard</span>
+            <ChevronRight className="h-4 w-4 text-gray-400 dark:text-slate-500 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+          </motion.button>
+          
+          <div className="h-px bg-gray-200 dark:bg-slate-700 my-4"></div>
+          
+          {[
+            { id: 'overview', label: 'Overview', icon: BarChart3, color: 'text-blue-600', bgColor: 'bg-blue-50' },
+            { id: 'exams', label: 'All Exams', icon: BookOpen, color: 'text-emerald-600', bgColor: 'bg-emerald-50' },
+            { id: 'questions', label: 'Question Bank', icon: Database, color: 'text-purple-600', bgColor: 'bg-purple-50' },
+            { id: 'analytics', label: 'Analytics', icon: PieChart, color: 'text-indigo-600', bgColor: 'bg-indigo-50' },
+            { id: 'settings', label: 'Settings', icon: Settings, color: 'text-slate-600', bgColor: 'bg-slate-50' }
+          ].map((item) => {
+            const Icon = item.icon
+            const isActive = activeTab === item.id
+            return (
+              <motion.button
+                key={item.id}
                 onClick={() => {
-                  setLoading(true)
-                  fetchExams()
-                  fetchTeacherStats()
+                  handleTabChange(item.id)
+                  setSidebarOpen(false)
                 }}
-                variant="outline" 
-                size="sm" 
-                className="bg-white/50 backdrop-blur-sm hover:bg-white/80 text-xs sm:text-sm"
+                whileHover={{ scale: 1.01, x: 3 }}
+                whileTap={{ scale: 0.98 }}
+                className={`w-full flex items-center space-x-3 px-3 sm:px-4 py-3 rounded-xl transition-all duration-200 text-left group relative overflow-hidden ${
+                  isActive
+                    ? `bg-white dark:bg-slate-700 ${item.color} shadow-sm border border-gray-200 dark:border-slate-600`
+                    : `text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700`
+                }`}
               >
-                <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Refresh</span>
-              </Button>
-              <Button 
-                onClick={() => setShowCreateModal(true)} 
-                size="sm"
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-xs sm:text-sm"
-              >
-                <Plus className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
-                <span className="hidden xs:inline">Create Exam</span>
-              </Button>
+                <div className={`p-2 rounded-lg ${isActive ? item.bgColor : 'bg-gray-100 dark:bg-slate-700'} transition-all duration-200 group-hover:scale-110`}>
+                  <Icon className={`h-4 w-4 ${isActive ? item.color : 'text-gray-500 dark:text-slate-400'}`} />
+                </div>
+                <span className={`text-sm font-medium ${isActive ? 'font-semibold' : ''}`} style={{ fontFamily: 'var(--font-jakarta)' }}>
+                  {item.label}
+                </span>
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="absolute inset-y-2 left-0 w-1 bg-gradient-to-b from-blue-600 to-indigo-600 rounded-r-full"
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  />
+                )}
+              </motion.button>
+            )
+          })}
+        </nav>
+        
+        {/* Quick Stats Footer */}
+        <div className="p-4 border-t border-gray-200/50 dark:border-slate-700/50 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-slate-800/50 dark:to-slate-900/50">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="text-center p-3 bg-white dark:bg-slate-700 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{teacherStats.total_exams}</div>
+              <div className="text-[10px] text-gray-600 dark:text-slate-400 uppercase" style={{ fontFamily: 'var(--font-dm-sans)', letterSpacing: '0.05em' }}>Exams</div>
+            </div>
+            <div className="text-center p-3 bg-white dark:bg-slate-700 rounded-lg">
+              <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{teacherStats.active_exams}</div>
+              <div className="text-[10px] text-gray-600 dark:text-slate-400 uppercase" style={{ fontFamily: 'var(--font-dm-sans)', letterSpacing: '0.05em' }}>Active</div>
             </div>
           </div>
         </div>
       </div>
-
-      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+      
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden relative z-10 lg:ml-64">
+        {/* Enterprise Header Bar */}
+        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-b border-gray-200 dark:border-slate-700 shadow-sm">
+          <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
+            <div className="flex items-center justify-between">
+              {/* Mobile Menu Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="lg:hidden p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="h-5 w-5 text-gray-600 dark:text-slate-400" />
+              </Button>
+              
+              {/* Page Title */}
+              <div className="flex-1 lg:flex-none">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.02em' }}>
+                  Examination System
+                </h1>
+                <p className="text-sm text-gray-600 dark:text-slate-400 mt-0.5 hidden sm:block" style={{ fontFamily: 'var(--font-dm-sans)' }}>
+                  Comprehensive assessment management and analytics
+                </p>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Button
+                  onClick={() => {
+                    setLoading(true)
+                    fetchExams()
+                    fetchTeacherStats()
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="hidden sm:flex items-center gap-2"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  <span>Refresh</span>
+                </Button>
+                <Button
+                  onClick={() => setShowCreateModal(true)}
+                  size="sm"
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Create Exam</span>
+                  <span className="sm:hidden">Create</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Main Scrollable Content */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
+            
         {/* Enhanced Statistics - Gradient Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
@@ -451,109 +600,243 @@ export default function TeacherExaminations() {
           </motion.div>
         </div>
 
-        {/* Professional Tab Navigation */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 bg-white border border-gray-200 shadow-lg rounded-xl p-2 mb-6 h-auto min-h-[48px] sm:min-h-[56px]">
-            <TabsTrigger 
-              value="overview" 
-              className="text-xs sm:text-sm font-medium px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-all duration-200 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-blue-600 flex items-center justify-center whitespace-nowrap"
+        {/* Content Area - Controlled by Sidebar Navigation */}
+        <AnimatePresence mode="wait">
+          {activeTab === 'overview' && (
+            <motion.div
+              key="overview"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
             >
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger 
-              value="exams"
-              className="text-xs sm:text-sm font-medium px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-all duration-200 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-blue-600 flex items-center justify-center whitespace-nowrap"
-            >
-              <BookOpen className="w-4 h-4 mr-2" />
-              Exams
-            </TabsTrigger>
-            <TabsTrigger 
-              value="questions"
-              className="text-xs sm:text-sm font-medium px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-all duration-200 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-blue-600 flex items-center justify-center whitespace-nowrap"
-            >
-              <Database className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Question Bank</span>
-              <span className="sm:hidden">Questions</span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="analytics"
-              className="text-xs sm:text-sm font-medium px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-all duration-200 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-blue-600 flex items-center justify-center whitespace-nowrap"
-            >
-              <PieChart className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Analytics</span>
-              <span className="sm:hidden">Stats</span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="settings"
-              className="text-xs sm:text-sm font-medium px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-all duration-200 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-blue-600 flex items-center justify-center whitespace-nowrap"
-            >
-              <Settings className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Settings</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="space-y-4 sm:space-y-6">
-            <Card className="bg-white/80 backdrop-blur-sm border border-gray-200 shadow-xl">
-              <CardContent className="p-8 sm:p-12 text-center">
-                <Activity className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg sm:text-xl font-medium text-gray-900 mb-2">
-                  Dashboard Overview
-                </h3>
-                <p className="text-gray-600 text-sm sm:text-base mb-6">
-                  Comprehensive examination statistics and recent activity.
-                </p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="exams" className="space-y-4 sm:space-y-6">
-            {/* Filters and Search */}
-            <Card className="bg-white/80 backdrop-blur-sm border border-gray-200 shadow-lg">
+            {/* Welcome Message */}
+            <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-lg">
               <CardContent className="p-4 sm:p-6">
-                <div className="flex flex-wrap gap-3 sm:gap-4">
-                  <div className="flex-1 min-w-[200px]">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        placeholder="Search exams..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                      />
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="p-2 sm:p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg sm:rounded-xl flex-shrink-0">
+                    <GraduationCap className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-1" style={{ fontFamily: 'var(--font-jakarta)' }}>
+                      Welcome to Your Assessment Hub
+                    </h3>
+                    <p className="text-xs sm:text-sm text-gray-600 mb-3">
+                      Create engaging examinations, track student performance, and gain valuable insights - all in one place.
+                    </p>
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                      <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200">
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        AI-Powered Questions
+                      </Badge>
+                      <Badge className="bg-green-100 text-green-700 hover:bg-green-200">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Instant Analytics
+                      </Badge>
+                      <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-200">
+                        <Users className="h-3 w-3 mr-1" />
+                        Student Insights
+                      </Badge>
                     </div>
                   </div>
-                  
-                  <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-                    <SelectTrigger className="w-[180px] bg-white border-gray-300">
-                      <SelectValue placeholder="All Subjects" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Subjects</SelectItem>
-                      {getUniqueSubjects().map(subject => (
-                        <SelectItem key={subject} value={subject}>{subject}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                    <SelectTrigger className="w-[140px] bg-white border-gray-300">
-                      <SelectValue placeholder="All Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="published">Published</SelectItem>
-                      <SelectItem value="draft">Draft</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
               </CardContent>
             </Card>
 
+            {/* Quick Actions */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-blue-200 active:scale-95 group"
+                    onClick={() => handleTabChange('exams')}>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="p-2.5 sm:p-3 bg-blue-50 rounded-lg sm:rounded-xl group-hover:bg-blue-100 transition-colors flex-shrink-0">
+                      <Plus className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="font-semibold text-sm sm:text-base text-gray-900 mb-0.5 sm:mb-1" style={{ fontFamily: 'var(--font-jakarta)' }}>Create New Exam</h4>
+                      <p className="text-xs text-gray-600 truncate">Start with AI or from scratch</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-emerald-200 active:scale-95 group"
+                    onClick={() => handleTabChange('questions')}>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="p-2.5 sm:p-3 bg-emerald-50 rounded-lg sm:rounded-xl group-hover:bg-emerald-100 transition-colors flex-shrink-0">
+                      <Database className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-600" />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="font-semibold text-sm sm:text-base text-gray-900 mb-0.5 sm:mb-1" style={{ fontFamily: 'var(--font-jakarta)' }}>Question Bank</h4>
+                      <p className="text-xs text-gray-600 truncate">Reusable question library</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-purple-200 active:scale-95 group"
+                    onClick={() => handleTabChange('analytics')}>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="p-2.5 sm:p-3 bg-purple-50 rounded-lg sm:rounded-xl group-hover:bg-purple-100 transition-colors flex-shrink-0">
+                      <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="font-semibold text-sm sm:text-base text-gray-900 mb-0.5 sm:mb-1" style={{ fontFamily: 'var(--font-jakarta)' }}>View Analytics</h4>
+                      <p className="text-xs text-gray-600 truncate">Performance insights</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Recent Activity & Tips */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Recent Exams */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg" style={{ fontFamily: 'var(--font-jakarta)' }}>
+                    <Clock className="h-5 w-5 text-blue-600" />
+                    Recent Exams
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {exams.length > 0 ? (
+                    <div className="space-y-3">
+                      {exams.slice(0, 3).map((exam) => (
+                        <div key={exam.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                             onClick={() => handleTabChange('exams')}>
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${exam.is_published ? 'bg-green-100' : 'bg-yellow-100'}`}>
+                              <BookOpen className={`h-4 w-4 ${exam.is_published ? 'text-green-600' : 'text-yellow-600'}`} />
+                            </div>
+                            <div>
+                              <p className="font-medium text-sm text-gray-900">{exam.title}</p>
+                              <p className="text-xs text-gray-500">{exam.subject} • {exam.total_questions} questions</p>
+                            </div>
+                          </div>
+                          <Badge variant={exam.is_published ? "default" : "secondary"} className="text-xs">
+                            {exam.is_published ? 'Published' : 'Draft'}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-sm text-gray-500 mb-3">No exams created yet</p>
+                      <Button size="sm" onClick={() => setShowCreateModal(true)} className="bg-blue-600 hover:bg-blue-700">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create Your First Exam
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Pro Tips */}
+              <Card className="bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg" style={{ fontFamily: 'var(--font-jakarta)' }}>
+                    <Lightbulb className="h-5 w-5 text-yellow-500" />
+                    Pro Tips
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex gap-3">
+                    <div className="flex-shrink-0">
+                      <div className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">1</div>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 mb-1">Use AI Question Generation</p>
+                      <p className="text-xs text-gray-600">Save hours by letting AI create quality questions based on your topics</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="flex-shrink-0">
+                      <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold">2</div>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 mb-1">Build a Question Bank</p>
+                      <p className="text-xs text-gray-600">Create reusable questions to quickly assemble future exams</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="flex-shrink-0">
+                      <div className="w-6 h-6 rounded-full bg-purple-500 text-white flex items-center justify-center text-xs font-bold">3</div>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 mb-1">Check Analytics Regularly</p>
+                      <p className="text-xs text-gray-600">Monitor student performance to identify learning gaps early</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'exams' && (
+            <motion.div
+              key="exams"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+            >
+            {/* Filters and Search - Sticky */}
+            <div className="sticky top-0 z-10 pb-3 sm:pb-4">
+            <Card className="bg-white/95 backdrop-blur-xl border border-gray-200 shadow-lg">
+              <CardContent className="p-3 sm:p-4 lg:p-6">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 lg:gap-4">
+                  <div className="flex-1 w-full sm:min-w-[200px]">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                      <Input
+                        placeholder="Search exams..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 h-11 sm:h-10 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-base sm:text-sm"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2 sm:gap-3">
+                    <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                      <SelectTrigger className="flex-1 sm:w-[180px] h-11 sm:h-10 bg-white border-gray-300 text-base sm:text-sm">
+                        <SelectValue placeholder="All Subjects" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Subjects</SelectItem>
+                        {getUniqueSubjects().map(subject => (
+                          <SelectItem key={subject} value={subject}>{subject}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                      <SelectTrigger className="flex-1 sm:w-[140px] h-11 sm:h-10 bg-white border-gray-300 text-base sm:text-sm">
+                        <SelectValue placeholder="All Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="published">Published</SelectItem>
+                        <SelectItem value="draft">Draft</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            </div>
+
             {/* Exams Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
               <AnimatePresence>
-                {getFilteredExams().map((exam) => (
+                {filteredExams.map((exam) => (
                   <motion.div
                     key={exam.id}
                     layout
@@ -574,102 +857,372 @@ export default function TeacherExaminations() {
             </div>
 
             {/* Empty state */}
-            {getFilteredExams().length === 0 && !loading && (
+            {filteredExams.length === 0 && !loading && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-center py-12"
+                className="py-8"
               >
-                <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200">
+                <Card className="bg-gradient-to-br from-blue-50 via-white to-indigo-50 border-blue-200 shadow-xl">
                   <CardContent className="p-8 sm:p-12">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-200 flex items-center justify-center">
-                      <BookOpen className="w-8 h-8 text-gray-400" />
-                    </div>
-                    <h3 className="text-lg sm:text-xl font-medium text-gray-900 mb-2">
-                      {searchTerm || selectedSubject !== 'all' || selectedStatus !== 'all' 
-                        ? 'No exams match your filters' 
-                        : 'No exams created yet'}
-                    </h3>
-                    <p className="text-gray-600 text-sm sm:text-base mb-6">
-                      {searchTerm || selectedSubject !== 'all' || selectedStatus !== 'all'
-                        ? 'Try adjusting your search criteria'
-                        : 'Create your first examination to get started'}
-                    </p>
-                    <Button
-                      onClick={() => setShowCreateModal(true)}
-                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create Your First Exam
-                    </Button>
+                    {searchTerm || selectedSubject !== 'all' || selectedStatus !== 'all' ? (
+                      // Filtered empty state
+                      <>
+                        <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
+                          <Search className="w-10 h-10 text-blue-600" />
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-jakarta)' }}>
+                          No Exams Found
+                        </h3>
+                        <p className="text-gray-600 text-sm sm:text-base mb-6 max-w-md mx-auto">
+                          We couldn't find any exams matching your search criteria. Try adjusting your filters or search term.
+                        </p>
+                        <div className="flex flex-wrap gap-3 justify-center">
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setSearchTerm('')
+                              setSelectedSubject('all')
+                              setSelectedStatus('all')
+                            }}
+                          >
+                            <X className="w-4 h-4 mr-2" />
+                            Clear Filters
+                          </Button>
+                          <Button
+                            onClick={() => setShowCreateModal(true)}
+                            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Create New Exam
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      // First-time empty state with guidance
+                      <>
+                        <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-6 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                          <Rocket className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
+                        </div>
+                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 sm:mb-3 px-4" style={{ fontFamily: 'var(--font-jakarta)' }}>
+                          Let's Create Your First Exam!
+                        </h3>
+                        <p className="text-gray-600 text-sm sm:text-base mb-6 sm:mb-8 max-w-2xl mx-auto px-4">
+                          Start assessing your students with our powerful examination tools. You can create exams manually or use AI to generate questions instantly.
+                        </p>
+
+                        {/* Quick Start Steps */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8 max-w-3xl mx-auto px-4">
+                          <div className="text-center">
+                            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-blue-100 flex items-center justify-center">
+                              <span className="text-xl font-bold text-blue-600">1</span>
+                            </div>
+                            <h4 className="font-semibold text-sm text-gray-900 mb-2">Set Up Details</h4>
+                            <p className="text-xs text-gray-600">Add title, subject, and duration</p>
+                          </div>
+                          <div className="text-center">
+                            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-emerald-100 flex items-center justify-center">
+                              <span className="text-xl font-bold text-emerald-600">2</span>
+                            </div>
+                            <h4 className="font-semibold text-sm text-gray-900 mb-2">Add Questions</h4>
+                            <p className="text-xs text-gray-600">Create manually or use AI</p>
+                          </div>
+                          <div className="text-center">
+                            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-purple-100 flex items-center justify-center">
+                              <span className="text-xl font-bold text-purple-600">3</span>
+                            </div>
+                            <h4 className="font-semibold text-sm text-gray-900 mb-2">Publish & Share</h4>
+                            <p className="text-xs text-gray-600">Make it available to students</p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-3 justify-center items-stretch sm:items-center px-4">
+                          <Button
+                            onClick={() => setShowCreateModal(true)}
+                            size="lg"
+                            className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg min-h-[48px]"
+                          >
+                            <Sparkles className="w-5 h-5 mr-2" />
+                            <span className="truncate">Create Your First Exam</span>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="lg"
+                            onClick={() => handleTabChange('questions')}
+                            className="w-full sm:w-auto min-h-[48px]"
+                          >
+                            <Database className="w-5 h-5 mr-2" />
+                            <span className="truncate">Explore Question Bank</span>
+                          </Button>
+                        </div>
+
+                        {/* Feature Highlights */}
+                        <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-gray-200 px-4">
+                          <p className="text-xs text-gray-500 mb-4 uppercase tracking-wide font-semibold">What You Can Do</p>
+                          <div className="flex flex-wrap gap-3 justify-center">
+                            <Badge className="bg-white border border-blue-200 text-blue-700 hover:bg-blue-50">
+                              <Sparkles className="h-3 w-3 mr-1" />
+                              AI Question Generator
+                            </Badge>
+                            <Badge className="bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+                              <Target className="h-3 w-3 mr-1" />
+                              Multiple Choice & Essay
+                            </Badge>
+                            <Badge className="bg-white border border-purple-200 text-purple-700 hover:bg-purple-50">
+                              <TrendingUp className="h-3 w-3 mr-1" />
+                              Instant Analytics
+                            </Badge>
+                            <Badge className="bg-white border border-orange-200 text-orange-700 hover:bg-orange-50">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Timed Exams
+                            </Badge>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
             )}
-          </TabsContent>
+            </motion.div>
+          )}
 
-          <TabsContent value="questions" className="space-y-4 sm:space-y-6">
-            <Card className="bg-white/80 backdrop-blur-sm border border-gray-200 shadow-xl">
-              <CardContent className="p-8 sm:p-12 text-center">
-                <Database className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg sm:text-xl font-medium text-gray-900 mb-2">
-                  Question Bank
-                </h3>
-                <p className="text-gray-600 text-sm sm:text-base mb-6">
-                  Manage reusable questions and create question templates.
-                </p>
-                <Button className="bg-gradient-to-r from-blue-600 to-indigo-600">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Questions
-                </Button>
+          {activeTab === 'questions' && (
+            <motion.div
+              key="questions"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+            >
+            <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200 shadow-xl">
+              <CardContent className="p-8 sm:p-12">
+                <div className="text-center mb-8">
+                  <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
+                    <Database className="w-10 h-10 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-jakarta)' }}>
+                    Question Bank
+                  </h3>
+                  <p className="text-gray-600 text-sm sm:text-base max-w-2xl mx-auto">
+                    Build a library of reusable questions to save time and maintain consistency across your exams.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                  <div className="bg-white rounded-xl p-6 shadow-sm">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <FileText className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900">Create Questions</h4>
+                    </div>
+                    <p className="text-sm text-gray-600">Build questions you can reuse in multiple exams</p>
+                  </div>
+                  <div className="bg-white rounded-xl p-6 shadow-sm">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 bg-purple-100 rounded-lg">
+                        <Copy className="h-5 w-5 text-purple-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900">Organize by Topic</h4>
+                    </div>
+                    <p className="text-sm text-gray-600">Categorize questions by subject and difficulty</p>
+                  </div>
+                  <div className="bg-white rounded-xl p-6 shadow-sm">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 bg-emerald-100 rounded-lg">
+                        <Zap className="h-5 w-5 text-emerald-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900">Quick Assembly</h4>
+                    </div>
+                    <p className="text-sm text-gray-600">Drag and drop questions into new exams</p>
+                  </div>
+                </div>
+
+                <div className="text-center">
+                  <Button className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg" size="lg">
+                    <Plus className="w-5 h-5 mr-2" />
+                    Start Building Question Bank
+                  </Button>
+                  <p className="text-xs text-gray-500 mt-4">Coming Soon: Import questions from CSV or existing exams</p>
+                </div>
               </CardContent>
             </Card>
-          </TabsContent>
+            </motion.div>
+          )}
 
-          <TabsContent value="analytics" className="space-y-4 sm:space-y-6">
-            <Card className="bg-white/80 backdrop-blur-sm border border-gray-200 shadow-xl">
-              <CardContent className="p-8 sm:p-12 text-center">
-                <PieChart className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg sm:text-xl font-medium text-gray-900 mb-2">
-                  Performance Analytics
-                </h3>
-                <p className="text-gray-600 text-sm sm:text-base">
-                  Detailed insights into exam performance and student progress.
-                </p>
+          {activeTab === 'analytics' && (
+            <motion.div
+              key="analytics"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+            >
+            <Card className="bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200 shadow-xl">
+              <CardContent className="p-8 sm:p-12">
+                <div className="text-center mb-8">
+                  <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                    <PieChart className="w-10 h-10 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-jakarta)' }}>
+                    Performance Analytics
+                  </h3>
+                  <p className="text-gray-600 text-sm sm:text-base max-w-2xl mx-auto">
+                    Track student performance, identify learning gaps, and make data-driven decisions to improve outcomes.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                  <div className="bg-white rounded-xl p-6 shadow-sm text-center">
+                    <TrendingUp className="h-8 w-8 text-blue-600 mx-auto mb-3" />
+                    <h4 className="text-2xl font-bold text-gray-900 mb-1">{teacherStats.average_completion_rate.toFixed(0)}%</h4>
+                    <p className="text-xs text-gray-600">Completion Rate</p>
+                  </div>
+                  <div className="bg-white rounded-xl p-6 shadow-sm text-center">
+                    <Users className="h-8 w-8 text-emerald-600 mx-auto mb-3" />
+                    <h4 className="text-2xl font-bold text-gray-900 mb-1">{teacherStats.total_students}</h4>
+                    <p className="text-xs text-gray-600">Total Students</p>
+                  </div>
+                  <div className="bg-white rounded-xl p-6 shadow-sm text-center">
+                    <Award className="h-8 w-8 text-purple-600 mx-auto mb-3" />
+                    <h4 className="text-2xl font-bold text-gray-900 mb-1">{teacherStats.total_questions_created}</h4>
+                    <p className="text-xs text-gray-600">Questions Created</p>
+                  </div>
+                  <div className="bg-white rounded-xl p-6 shadow-sm text-center">
+                    <Sparkles className="h-8 w-8 text-pink-600 mx-auto mb-3" />
+                    <h4 className="text-2xl font-bold text-gray-900 mb-1">{teacherStats.ai_questions_generated}</h4>
+                    <p className="text-xs text-gray-600">AI Generated</p>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl p-6 shadow-sm">
+                  <h4 className="font-semibold text-gray-900 mb-4">Available Analytics</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <span className="text-sm text-gray-700">Per-exam performance reports</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <span className="text-sm text-gray-700">Question difficulty analysis</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <span className="text-sm text-gray-700">Student comparison charts</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <span className="text-sm text-gray-700">Time-based trends</span>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
-          </TabsContent>
+            </motion.div>
+          )}
 
-          <TabsContent value="settings" className="space-y-4 sm:space-y-6">
-            <Card className="bg-white/80 backdrop-blur-sm border border-gray-200 shadow-xl">
-              <CardContent className="p-8 sm:p-12 text-center">
-                <Settings className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg sm:text-xl font-medium text-gray-900 mb-2">
-                  Examination Settings
-                </h3>
-                <p className="text-gray-600 text-sm sm:text-base">
-                  Configure default exam settings and preferences.
-                </p>
+          {activeTab === 'settings' && (
+            <motion.div
+              key="settings"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+            >
+            <Card className="bg-gradient-to-br from-slate-50 to-gray-50 border-gray-200 shadow-xl">
+              <CardContent className="p-8 sm:p-12">
+                <div className="text-center mb-8">
+                  <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-slate-500 to-gray-600 flex items-center justify-center shadow-lg">
+                    <Settings className="w-10 h-10 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'var(--font-jakarta)' }}>
+                    Examination Settings
+                  </h3>
+                  <p className="text-gray-600 text-sm sm:text-base max-w-2xl mx-auto">
+                    Configure default settings and preferences to streamline your exam creation process.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card className="border-2">
+                    <CardContent className="p-6">
+                      <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <Clock className="h-5 w-5 text-blue-600" />
+                        Default Settings
+                      </h4>
+                      <div className="space-y-3 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Default Duration</span>
+                          <span className="font-medium">60 minutes</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Default Marks</span>
+                          <span className="font-medium">100 points</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Passing Grade</span>
+                          <span className="font-medium">60%</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-2">
+                    <CardContent className="p-6">
+                      <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-purple-600" />
+                        AI Preferences
+                      </h4>
+                      <div className="space-y-3 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Question Style</span>
+                          <span className="font-medium">Balanced</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Difficulty Mix</span>
+                          <span className="font-medium">Auto</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Language</span>
+                          <span className="font-medium">English</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="mt-6 text-center">
+                  <p className="text-sm text-gray-500">Settings management coming soon</p>
+                </div>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
+          </div>
+        </div>
       </div>
 
-      {/* Create Exam Modal */}
+      {/* Create Exam Modal - Mobile Optimized */}
       <AnimatePresence>
         {showCreateModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-0 sm:p-4"
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-6xl max-h-[90vh] overflow-y-auto"
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="w-full h-full sm:h-auto sm:max-w-6xl sm:max-h-[90vh] overflow-y-auto sm:rounded-2xl shadow-2xl"
             >
               <ExamCreator
                 onSave={handleCreateExam}

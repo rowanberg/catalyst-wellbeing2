@@ -259,10 +259,10 @@ function TeacherCommunityContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading classes...</p>
+          <p className="text-gray-600 dark:text-slate-400">Loading classes...</p>
         </div>
       </div>
     )
@@ -271,16 +271,23 @@ function TeacherCommunityContent() {
   // Class Selection View
   if (!selectedClass) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-        <div className="max-w-7xl mx-auto p-4 lg:p-6">
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+        <div className="p-4 lg:p-6">
           {/* Header */}
           <div className="mb-6">
-            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Community
-            </h1>
-            <p className="text-sm lg:text-base text-gray-600 dark:text-gray-400">
-              Select a class to view and share updates with students
-            </p>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-sm">
+                <Users className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl lg:text-3xl font-extrabold text-gray-900 dark:text-white" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.02em' }}>
+                  Community
+                </h1>
+                <p className="text-sm lg:text-base text-gray-600 dark:text-slate-400 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>
+                  Select a class to view and share updates with students
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Classes Grid */}
@@ -291,27 +298,27 @@ function TeacherCommunityContent() {
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setSelectedClass(classItem)}
-                className="bg-white dark:bg-gray-800 rounded-lg lg:rounded-xl p-4 lg:p-5 shadow-sm hover:shadow-md border border-gray-200 dark:border-gray-700 cursor-pointer transition-all"
+                className="bg-white dark:bg-slate-800 rounded-xl p-4 lg:p-5 shadow-sm hover:shadow-md border border-gray-200 dark:border-slate-700 cursor-pointer transition-all duration-200"
               >
                 <div className="flex items-start justify-between mb-3">
-                  <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-sm">
                     <BookOpen className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
                   </div>
-                  <div className="flex items-center space-x-1.5 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 px-2 py-1 rounded-lg">
+                  <div className="flex items-center space-x-1.5 text-xs text-gray-500 dark:text-slate-400 bg-gray-50 dark:bg-slate-700/50 px-2 py-1 rounded-lg">
                     <Users className="w-3.5 h-3.5" />
                     <span className="font-semibold">{classItem.total_students}</span>
                   </div>
                 </div>
                 
-                <h3 className="text-base lg:text-lg font-bold text-gray-900 dark:text-white mb-1 truncate">
+                <h3 className="text-base lg:text-lg font-bold text-gray-900 dark:text-white mb-1 truncate" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
                   {classItem.class_name}
                 </h3>
-                <p className="text-xs lg:text-sm text-gray-600 dark:text-gray-400 mb-3 truncate">
+                <p className="text-xs lg:text-sm text-gray-600 dark:text-slate-400 mb-3 truncate font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                   {classItem.subject} • {classItem.grade_level}
                 </p>
                 
-                <div className="flex items-center justify-between pt-2.5 border-t border-gray-100 dark:border-gray-700">
-                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                <div className="flex items-center justify-between pt-2.5 border-t border-gray-100 dark:border-slate-700">
+                  <span className="text-xs font-medium text-gray-500 dark:text-slate-400">
                     Room {classItem.room_number}
                   </span>
                   <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
@@ -325,7 +332,7 @@ function TeacherCommunityContent() {
           {classes.length === 0 && (
             <div className="text-center py-12">
               <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600 dark:text-gray-400">No classes assigned yet</p>
+              <p className="text-gray-600 dark:text-slate-400">No classes assigned yet</p>
             </div>
           )}
         </div>
@@ -335,23 +342,23 @@ function TeacherCommunityContent() {
 
   // Simplified Feed View
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+      <div>
         {/* Simplified Header */}
-        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30">
+        <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 sticky top-0 z-30">
           <div className="p-4 flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => setSelectedClass(null)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full transition-colors"
               >
-                <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-slate-300" />
               </button>
               <div>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
                   {selectedClass.class_name}
                 </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-gray-600 dark:text-slate-400 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                   {selectedClass.total_students} students • {selectedClass.subject}
                 </p>
               </div>
@@ -363,7 +370,7 @@ function TeacherCommunityContent() {
         <div className="fixed bottom-6 right-6 z-40">
           <button
             onClick={() => setShowNewPost(true)}
-            className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-full shadow-2xl hover:shadow-3xl hover:scale-110 transition-all duration-200 flex items-center justify-center"
+            className="w-16 h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center justify-center"
           >
             <Plus className="w-8 h-8" />
           </button>
@@ -392,11 +399,11 @@ function TeacherCommunityContent() {
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: 100, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
-                className="bg-white dark:bg-gray-800 rounded-t-3xl sm:rounded-2xl w-full sm:max-w-lg max-h-[85vh] overflow-hidden flex flex-col"
+                className="bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-2xl w-full sm:max-w-lg max-h-[85vh] overflow-hidden flex flex-col"
               >
                 {/* Header */}
-                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
                     Share with Class
                   </h3>
                   <button
@@ -410,9 +417,9 @@ function TeacherCommunityContent() {
                       }
                     }}
                     disabled={creating}
-                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors disabled:opacity-50"
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full transition-colors disabled:opacity-50"
                   >
-                    <X className="w-5 h-5 text-gray-500" />
+                    <X className="w-5 h-5 text-gray-500 dark:text-slate-400" />
                   </button>
                 </div>
 
@@ -429,14 +436,14 @@ function TeacherCommunityContent() {
                   {/* Photo Upload - Primary Action */}
                   {!selectedImage && !uploadingImage && (
                     <label className="block cursor-pointer">
-                      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-2xl p-12 text-center hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all">
+                      <div className="border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-xl p-12 text-center hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all">
                         <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                           <ImageIcon className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                         </div>
-                        <p className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                        <p className="text-lg font-bold text-gray-900 dark:text-white mb-1" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
                           Add a Photo
                         </p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <p className="text-sm text-gray-600 dark:text-slate-400 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                           Tap to choose from your device
                         </p>
                       </div>
@@ -480,7 +487,7 @@ function TeacherCommunityContent() {
 
                   {/* Caption */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                       Add a caption (optional)
                     </label>
                     <textarea
@@ -498,7 +505,8 @@ function TeacherCommunityContent() {
                   <button
                     onClick={handleCreatePost}
                     disabled={!newPostContent.trim() || creating || uploadingImage}
-                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg flex items-center justify-center space-x-2"
+                    className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm flex items-center justify-center space-x-2"
+                    style={{ fontFamily: 'var(--font-dm-sans)' }}
                   >
                     {creating ? (
                       <>
@@ -548,7 +556,7 @@ function TeacherCommunityContent() {
                   key={post.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-white dark:bg-gray-800 rounded-lg lg:rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm"
+                  className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm"
                 >
                   {/* Post Image - Full Width */}
                   {post.image_url && (
@@ -567,14 +575,14 @@ function TeacherCommunityContent() {
                   {/* Post Content */}
                   <div className="p-4">
                     <div className="flex items-start space-x-3 mb-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-sm">
                         <span className="text-white font-bold text-sm">
                           {post.teacher_name[0]}
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-2">
-                          <p className="font-bold text-gray-900 dark:text-white">
+                          <p className="font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
                             {post.teacher_name}
                           </p>
                           {post.is_pinned && (
@@ -584,7 +592,7 @@ function TeacherCommunityContent() {
                             </div>
                           )}
                         </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <p className="text-sm text-gray-600 dark:text-gray-400 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                           {new Date(post.created_at).toLocaleDateString('en-US', { 
                             month: 'short', 
                             day: 'numeric',
@@ -596,7 +604,7 @@ function TeacherCommunityContent() {
                     </div>
                     
                     {post.content && (
-                      <p className="text-gray-900 dark:text-white whitespace-pre-wrap leading-relaxed">
+                      <p className="text-gray-900 dark:text-white whitespace-pre-wrap leading-relaxed" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                         {post.content}
                       </p>
                     )}
@@ -623,15 +631,16 @@ function TeacherCommunityContent() {
                   <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                     <ImageIcon className="w-10 h-10 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
                     No Posts Yet
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-6">
+                  <p className="text-gray-600 dark:text-gray-400 mb-6 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                     Share your first classroom moment with students!
                   </p>
                   <button
                     onClick={() => setShowNewPost(true)}
-                    className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full text-lg font-bold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                    className="px-8 py-3 bg-blue-600 text-white rounded-full text-lg font-bold hover:bg-blue-700 transition-all shadow-sm hover:shadow-md transform hover:scale-105"
+                    style={{ fontFamily: 'var(--font-dm-sans)' }}
                   >
                     Share a Photo
                   </button>

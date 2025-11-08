@@ -51,14 +51,14 @@ const StatCard = ({ icon: Icon, label, value, change, trend, colorClass }: {
   }[colorClass] || 'text-blue-900 dark:text-blue-100'
 
   return (
-    <div className={`${gradientClasses} rounded-lg p-4 border`}>
-      <div className="flex items-center justify-between mb-2">
-        <span className={`text-xs font-medium ${textColors} uppercase tracking-wider`}>{label}</span>
-        <Icon className={`w-4 h-4 ${iconColors}`} strokeWidth={2} />
+    <div className={`${gradientClasses} rounded-lg p-3 lg:p-4 border`}>
+      <div className="flex items-center justify-between mb-1.5 lg:mb-2">
+        <span className={`text-[10px] lg:text-xs font-medium ${textColors} uppercase tracking-wider`}>{label}</span>
+        <Icon className={`w-3.5 h-3.5 lg:w-4 lg:h-4 ${iconColors}`} strokeWidth={2} />
       </div>
-      <div className={`text-2xl font-bold ${valueColors} mb-1`}>{value}</div>
+      <div className={`text-xl lg:text-2xl font-bold ${valueColors} mb-0.5 lg:mb-1`}>{value}</div>
       {change && trend && (
-        <div className={`text-xs font-medium ${
+        <div className={`text-[10px] lg:text-xs font-medium ${
           trend === 'up' ? 'text-emerald-600 dark:text-emerald-400' : 
           trend === 'down' ? 'text-red-600 dark:text-red-400' : 
           'text-slate-600 dark:text-slate-400'
@@ -84,23 +84,23 @@ const GPATrendChart = ({ data, timeRange, onTimeRangeChange }: {
   }).join(' ')
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border border-slate-200 dark:border-slate-800">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-base font-semibold text-slate-900 dark:text-white">GPA Trend</h3>
+    <div className="bg-white dark:bg-slate-900 rounded-lg p-3 lg:p-4 border border-slate-200 dark:border-slate-800">
+      <div className="flex items-center justify-between mb-3 lg:mb-4">
+        <h3 className="text-sm lg:text-base font-semibold text-slate-900 dark:text-white">GPA Trend</h3>
         <select
           value={timeRange}
           onChange={(e) => onTimeRangeChange(e.target.value)}
-          className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white font-medium"
+          className="px-2 lg:px-3 py-1 lg:py-1.5 text-[10px] lg:text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white font-medium"
         >
-          <option value="1week">Last Week</option>
-          <option value="1month">Last Month</option>
-          <option value="3months">Last 3 Months</option>
-          <option value="6months">Last 6 Months</option>
-          <option value="1year">Last Year</option>
+          <option value="1week">1W</option>
+          <option value="1month">1M</option>
+          <option value="3months">3M</option>
+          <option value="6months">6M</option>
+          <option value="1year">1Y</option>
         </select>
       </div>
       
-      <div className="relative h-64">
+      <div className="relative h-48 lg:h-64">
         <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
           <line x1="0" y1="25" x2="100" y2="25" stroke="currentColor" className="text-slate-200 dark:text-slate-800" strokeWidth="0.5" />
           <line x1="0" y1="50" x2="100" y2="50" stroke="currentColor" className="text-slate-200 dark:text-slate-800" strokeWidth="0.5" />
@@ -129,7 +129,7 @@ const GPATrendChart = ({ data, timeRange, onTimeRangeChange }: {
           </defs>
         </svg>
         
-        <div className="absolute -left-8 top-0 flex flex-col justify-between h-full text-xs text-slate-500 dark:text-slate-400">
+        <div className="absolute -left-6 lg:-left-8 top-0 flex flex-col justify-between h-full text-[10px] lg:text-xs text-slate-500 dark:text-slate-400">
           <span>4.0</span>
           <span>3.0</span>
           <span>2.0</span>
@@ -137,7 +137,7 @@ const GPATrendChart = ({ data, timeRange, onTimeRangeChange }: {
         </div>
       </div>
       
-      <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 mt-2">
+      <div className="flex justify-between text-[10px] lg:text-xs text-slate-500 dark:text-slate-400 mt-2">
         {data.map((item, index) => (
           index % Math.ceil(data.length / 6) === 0 && (
             <span key={index}>{item.label}</span>
@@ -150,24 +150,24 @@ const GPATrendChart = ({ data, timeRange, onTimeRangeChange }: {
 
 // Subject Performance with Dark Mode
 const SubjectPerformance = ({ subjects }: { subjects: any[] }) => (
-  <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border border-slate-200 dark:border-slate-800">
-    <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Subject Performance</h3>
-    <div className="space-y-4">
+  <div className="bg-white dark:bg-slate-900 rounded-lg p-3 lg:p-4 border border-slate-200 dark:border-slate-800">
+    <h3 className="text-sm lg:text-base font-semibold text-slate-900 dark:text-white mb-3 lg:mb-4">Subject Performance</h3>
+    <div className="space-y-3 lg:space-y-4">
       {subjects.map((subject, index) => (
         <div key={subject.name}>
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate pr-2">{subject.name}</span>
-            <span className="text-sm font-semibold text-slate-900 dark:text-white flex-shrink-0">{subject.score}%</span>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs lg:text-sm font-medium text-slate-700 dark:text-slate-300 truncate pr-2">{subject.name}</span>
+            <span className="text-xs lg:text-sm font-semibold text-slate-900 dark:text-white flex-shrink-0">{subject.score}%</span>
           </div>
-          <div className="relative h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+          <div className="relative h-1.5 lg:h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
             <div
               className={`absolute top-0 left-0 h-full rounded-full transition-all duration-500 ${subject.color}`}
               style={{ width: `${subject.score}%` }}
             />
           </div>
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-xs text-slate-500 dark:text-slate-400 truncate pr-2">{subject.assignments} assignments</span>
-            <span className={`text-xs font-medium flex-shrink-0 ${
+          <div className="flex items-center justify-between mt-0.5 lg:mt-1">
+            <span className="text-[10px] lg:text-xs text-slate-500 dark:text-slate-400 truncate pr-2">{subject.assignments} assignments</span>
+            <span className={`text-[10px] lg:text-xs font-medium flex-shrink-0 ${
               subject.trend === 'up' ? 'text-emerald-600 dark:text-emerald-400' : subject.trend === 'down' ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400'
             }`}>
               {subject.trend === 'up' ? '↑' : subject.trend === 'down' ? '↓' : '—'} {subject.change}
@@ -298,11 +298,11 @@ const AssignmentCompletionChart = ({ completed, pending, overdue, total }: {
   const overdueAngle = (overduePercent / 100) * 360
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border border-slate-200 dark:border-slate-800">
-      <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Assignment Status</h3>
+    <div className="bg-white dark:bg-slate-900 rounded-lg p-3 lg:p-4 border border-slate-200 dark:border-slate-800">
+      <h3 className="text-sm lg:text-base font-semibold text-slate-900 dark:text-white mb-3 lg:mb-4">Assignment Status</h3>
       
-      <div className="flex flex-col lg:flex-row items-center gap-6">
-        <div className="relative w-40 h-40 flex-shrink-0">
+      <div className="flex flex-col lg:flex-row items-center gap-4 lg:gap-6">
+        <div className="relative w-32 h-32 lg:w-40 lg:h-40 flex-shrink-0">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
             <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" className="text-slate-100 dark:text-slate-800" strokeWidth="12" />
             
@@ -326,34 +326,34 @@ const AssignmentCompletionChart = ({ completed, pending, overdue, total }: {
           </svg>
           
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <p className="text-3xl font-bold text-slate-900 dark:text-white">{total}</p>
-            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Total</p>
+            <p className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white">{total}</p>
+            <p className="text-xs lg:text-sm text-slate-500 dark:text-slate-400 font-medium">Total</p>
           </div>
         </div>
         
-        <div className="flex-1 w-full space-y-2.5">
-          <div className="flex items-center justify-between p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-900/30 rounded-lg">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-3 h-3 rounded-full bg-emerald-500 flex-shrink-0" />
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">Completed</span>
+        <div className="flex-1 w-full space-y-2 lg:space-y-2.5">
+          <div className="flex items-center justify-between p-2 lg:p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-900/30 rounded-lg">
+            <div className="flex items-center gap-2 lg:gap-2.5 min-w-0">
+              <div className="w-2.5 h-2.5 lg:w-3 lg:h-3 rounded-full bg-emerald-500 flex-shrink-0" />
+              <span className="text-xs lg:text-sm font-medium text-slate-700 dark:text-slate-300 truncate">Completed</span>
             </div>
-            <span className="text-lg font-semibold text-slate-900 dark:text-white flex-shrink-0 ml-2">{completed}</span>
+            <span className="text-base lg:text-lg font-semibold text-slate-900 dark:text-white flex-shrink-0 ml-2">{completed}</span>
           </div>
           
-          <div className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/30 rounded-lg">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-3 h-3 rounded-full bg-amber-500 flex-shrink-0" />
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">Pending</span>
+          <div className="flex items-center justify-between p-2 lg:p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/30 rounded-lg">
+            <div className="flex items-center gap-2 lg:gap-2.5 min-w-0">
+              <div className="w-2.5 h-2.5 lg:w-3 lg:h-3 rounded-full bg-amber-500 flex-shrink-0" />
+              <span className="text-xs lg:text-sm font-medium text-slate-700 dark:text-slate-300 truncate">Pending</span>
             </div>
-            <span className="text-lg font-semibold text-slate-900 dark:text-white flex-shrink-0 ml-2">{pending}</span>
+            <span className="text-base lg:text-lg font-semibold text-slate-900 dark:text-white flex-shrink-0 ml-2">{pending}</span>
           </div>
           
-          <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 rounded-lg">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-3 h-3 rounded-full bg-red-500 flex-shrink-0" />
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">Overdue</span>
+          <div className="flex items-center justify-between p-2 lg:p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 rounded-lg">
+            <div className="flex items-center gap-2 lg:gap-2.5 min-w-0">
+              <div className="w-2.5 h-2.5 lg:w-3 lg:h-3 rounded-full bg-red-500 flex-shrink-0" />
+              <span className="text-xs lg:text-sm font-medium text-slate-700 dark:text-slate-300 truncate">Overdue</span>
             </div>
-            <span className="text-lg font-semibold text-slate-900 dark:text-white flex-shrink-0 ml-2">{overdue}</span>
+            <span className="text-base lg:text-lg font-semibold text-slate-900 dark:text-white flex-shrink-0 ml-2">{overdue}</span>
           </div>
         </div>
       </div>
@@ -529,38 +529,38 @@ export default function AnalyticsTab({ studentId, studentName }: AnalyticsTabPro
 
   if (loading) {
     return (
-      <div className="space-y-6 w-full">
-        <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border border-slate-200 dark:border-slate-800 h-20 animate-pulse" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="space-y-4 lg:space-y-6 w-full pb-4 lg:pb-0">
+        <div className="bg-white dark:bg-slate-900 rounded-lg p-3 lg:p-4 border border-slate-200 dark:border-slate-800 h-16 lg:h-20 animate-pulse" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 h-24 animate-pulse" />
+            <div key={i} className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 h-20 lg:h-24 animate-pulse" />
           ))}
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 h-80 animate-pulse" />
-          <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 h-80 animate-pulse" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+          <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 h-60 lg:h-80 animate-pulse" />
+          <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 h-60 lg:h-80 animate-pulse" />
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6 w-full">
-      {/* Child Info Header */}
-      <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border border-slate-200 dark:border-slate-800">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-            <User className="h-6 w-6 text-blue-600 dark:text-blue-400" strokeWidth={2} />
+    <div className="space-y-4 lg:space-y-6 w-full pb-4 lg:pb-0">
+      {/* Child Info Header - Mobile Optimized */}
+      <div className="bg-white dark:bg-slate-900 rounded-lg p-3 lg:p-4 border border-slate-200 dark:border-slate-800">
+        <div className="flex items-center gap-2.5 lg:gap-3">
+          <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+            <User className="h-5 w-5 lg:h-6 lg:w-6 text-blue-600 dark:text-blue-400" strokeWidth={2} />
           </div>
           <div className="min-w-0">
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">Student Analytics</p>
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white truncate">{studentName || 'Student'}</h2>
+            <p className="text-[10px] lg:text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">Student Analytics</p>
+            <h2 className="text-base lg:text-lg font-semibold text-slate-900 dark:text-white truncate">{studentName || 'Student'}</h2>
           </div>
         </div>
       </div>
 
-      {/* Overview Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Overview Stats Cards - Responsive Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
         <StatCard
           icon={Target}
           label="Current GPA"
@@ -595,8 +595,8 @@ export default function AnalyticsTab({ studentId, studentName }: AnalyticsTabPro
         />
       </div>
 
-      {/* GPA Trend & Subject Performance */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* GPA Trend & Subject Performance - Mobile First */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         <GPATrendChart
           data={mockData?.gpaTrend || []}
           timeRange={timeRange}
@@ -613,32 +613,32 @@ export default function AnalyticsTab({ studentId, studentName }: AnalyticsTabPro
         total={mockData?.assignments?.total || 0}
       />
 
-      {/* Monthly Attendance Calendar with Navigation */}
-      <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border border-slate-200 dark:border-slate-800">
-        <div className="flex items-center justify-between mb-4">
+      {/* Monthly Attendance Calendar - Touch Optimized */}
+      <div className="bg-white dark:bg-slate-900 rounded-lg p-3 lg:p-4 border border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between mb-3 lg:mb-4">
           <div className="min-w-0">
-            <h3 className="text-base font-semibold text-slate-900 dark:text-white">Monthly Attendance</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+            <h3 className="text-sm lg:text-base font-semibold text-slate-900 dark:text-white">Monthly Attendance</h3>
+            <p className="text-[10px] lg:text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
               Viewing: {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </p>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1.5 lg:gap-2 flex-shrink-0">
             <button
               onClick={() => changeMonth('prev')}
-              className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-colors"
+              className="w-9 h-9 lg:w-10 lg:h-10 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 flex items-center justify-center transition-all touch-manipulation"
               aria-label="Previous month"
             >
-              <ChevronLeft className="h-4 w-4 text-slate-600 dark:text-slate-300" />
+              <ChevronLeft className="h-4 w-4 lg:h-5 lg:w-5 text-slate-600 dark:text-slate-300" />
             </button>
-            <div className="w-10 h-10 rounded-lg bg-emerald-500 flex items-center justify-center">
-              <Calendar className="h-5 w-5 text-white" strokeWidth={2} />
+            <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-lg bg-emerald-500 flex items-center justify-center">
+              <Calendar className="h-4 w-4 lg:h-5 lg:w-5 text-white" strokeWidth={2} />
             </div>
             <button
               onClick={() => changeMonth('next')}
-              className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-colors"
+              className="w-9 h-9 lg:w-10 lg:h-10 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 flex items-center justify-center transition-all touch-manipulation"
               aria-label="Next month"
             >
-              <ChevronRight className="h-4 w-4 text-slate-600 dark:text-slate-300" />
+              <ChevronRight className="h-4 w-4 lg:h-5 lg:w-5 text-slate-600 dark:text-slate-300" />
             </button>
           </div>
         </div>

@@ -291,6 +291,14 @@ export function useTeacherData(options: UseTeacherDataOptions = {}): UseTeacherD
 
       const result = await response.json()
       
+      console.log('📊 Students API Response:', {
+        studentsCount: result.students?.length || 0,
+        total: result.total,
+        source: result.source,
+        classId: result.class_id,
+        firstStudent: result.students?.[0]
+      })
+      
       if (result.students) {
         // Update only the students data without affecting other data
         setData(prevData => ({

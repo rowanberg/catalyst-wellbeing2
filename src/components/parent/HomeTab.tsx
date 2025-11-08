@@ -115,9 +115,9 @@ const ActionItem = memo(({ item, onDismiss }: { item: ActionItem, onDismiss: () 
 
 ActionItem.displayName = 'ActionItem'
 
-// Enterprise GPA Chart
+// Professional Growth Tracker Chart for Desktop
 const GPAChart = memo(({ metrics }: { metrics: GrowthMetrics }) => {
-  // Generate simple trend line data
+  // Generate realistic trend line data
   const baseValue = parseFloat(metrics.avgPercentage) || 75
   const chartData = Array.from({ length: 7 }, (_, i) => ({
     day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
@@ -125,76 +125,201 @@ const GPAChart = memo(({ metrics }: { metrics: GrowthMetrics }) => {
   }))
 
   const maxValue = 100
-  const minValue = 0
+  const minValue = 50
+
+  const getTrendIcon = () => {
+    if (metrics.trend === 'up') return <TrendingUp className="h-4 w-4 text-emerald-500" />
+    if (metrics.trend === 'down') return <TrendingDown className="h-4 w-4 text-red-500" />
+    return null
+  }
+
+  const getTrendColor = () => {
+    if (metrics.trend === 'up') return 'text-emerald-600 dark:text-emerald-400'
+    if (metrics.trend === 'down') return 'text-red-600 dark:text-red-400'
+    return 'text-slate-600 dark:text-slate-400'
+  }
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border border-slate-200 dark:border-slate-800">
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <h3 className="text-base font-semibold text-slate-900 dark:text-white">Academic Performance</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Weekly trend</p>
+    <div className="space-y-6">
+      {/* Desktop: Metrics Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* GPA Card */}
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 rounded-xl p-5 border border-blue-200 dark:border-blue-800/50">
+          <div className="flex items-start justify-between mb-2">
+            <div className="p-2 bg-blue-500 rounded-lg">
+              <BookOpen className="h-5 w-5 text-white" />
+            </div>
+            {getTrendIcon()}
+          </div>
+          <p className="text-3xl font-bold text-blue-900 dark:text-blue-100 mb-1">{metrics.gpa}</p>
+          <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Current GPA</p>
+          <p className={`text-xs font-semibold mt-1 ${getTrendColor()}`}>
+            {metrics.trend === 'up' && '↑'} {metrics.trend === 'down' && '↓'} {metrics.trendValue}
+          </p>
         </div>
-        <div className="text-right bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-lg border border-blue-200 dark:border-blue-800">
-          <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{metrics.gpa}</p>
-          <p className="text-xs font-medium text-blue-600 dark:text-blue-400">Current GPA</p>
+
+        {/* Day Streak Card */}
+        <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/50 dark:to-amber-950/50 rounded-xl p-5 border border-orange-200 dark:border-orange-800/50">
+          <div className="flex items-start justify-between mb-2">
+            <div className="p-2 bg-orange-500 rounded-lg">
+              <Clock className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-lg">🔥</span>
+          </div>
+          <p className="text-3xl font-bold text-orange-900 dark:text-orange-100 mb-1">{metrics.dayStreak}</p>
+          <p className="text-sm font-medium text-orange-700 dark:text-orange-300">Day Streak</p>
+          <p className="text-xs font-semibold text-orange-600 dark:text-orange-400 mt-1">Keep it up!</p>
+        </div>
+
+        {/* Weekly XP Card */}
+        <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-pink-950/50 rounded-xl p-5 border border-purple-200 dark:border-purple-800/50">
+          <div className="flex items-start justify-between mb-2">
+            <div className="p-2 bg-purple-500 rounded-lg">
+              <TrendingUp className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-lg">⚡</span>
+          </div>
+          <p className="text-3xl font-bold text-purple-900 dark:text-purple-100 mb-1">{metrics.weeklyXP}</p>
+          <p className="text-sm font-medium text-purple-700 dark:text-purple-300">Weekly XP</p>
+          <p className="text-xs font-semibold text-purple-600 dark:text-purple-400 mt-1">Level {metrics.level}</p>
+        </div>
+
+        {/* Assignments Card */}
+        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/50 dark:to-teal-950/50 rounded-xl p-5 border border-emerald-200 dark:border-emerald-800/50">
+          <div className="flex items-start justify-between mb-2">
+            <div className="p-2 bg-emerald-500 rounded-lg">
+              <FileText className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-lg">📚</span>
+          </div>
+          <p className="text-3xl font-bold text-emerald-900 dark:text-emerald-100 mb-1">{metrics.totalAssignments}</p>
+          <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Assignments</p>
+          <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mt-1">{metrics.avgPercentage}% Avg</p>
         </div>
       </div>
 
-      {/* Simple Line Chart */}
-      <div className="h-32 relative">
-        <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
-          {/* Grid lines */}
-          <line x1="0" y1="0" x2="100" y2="0" stroke="currentColor" className="text-slate-200 dark:text-slate-800" strokeWidth="0.5" />
-          <line x1="0" y1="50" x2="100" y2="50" stroke="currentColor" className="text-slate-200 dark:text-slate-800" strokeWidth="0.5" />
-          <line x1="0" y1="100" x2="100" y2="100" stroke="currentColor" className="text-slate-200 dark:text-slate-800" strokeWidth="0.5" />
-          
-          {/* Gradient area fill */}
-          <defs>
-            <linearGradient id="chartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.2} />
-              <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          
-          {/* Area fill */}
-          <polygon
-            points={`0,100 ${chartData.map((d, i) => 
-              `${(i / 6) * 100},${100 - ((d.value - minValue) / (maxValue - minValue)) * 100}`
-            ).join(' ')} 100,100`}
-            fill="url(#chartGradient)"
-          />
-          
-          {/* Line */}
-          <polyline
-            points={chartData.map((d, i) => 
-              `${(i / 6) * 100},${100 - ((d.value - minValue) / (maxValue - minValue)) * 100}`
-            ).join(' ')}
-            fill="none"
-            stroke="#2563eb"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          
-          {/* Dots */}
-          {chartData.map((d, i) => (
-            <circle
-              key={i}
-              cx={(i / 6) * 100}
-              cy={100 - ((d.value - minValue) / (maxValue - minValue)) * 100}
-              r="2.5"
-              fill="#2563eb"
-              stroke="white"
-              strokeWidth="1.5"
+      {/* Desktop: Enhanced Performance Chart */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl p-6 border border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Performance Trend</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">7-day academic progress overview</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-sm">
+              <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+              <span className="text-slate-600 dark:text-slate-400">Average: {metrics.avgPercentage}%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Professional Line Chart with Enhanced Styling */}
+        <div className="h-64 lg:h-80 relative">
+          <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
+            {/* Grid lines - horizontal */}
+            {[0, 25, 50, 75, 100].map((y) => (
+              <line 
+                key={y} 
+                x1="0" 
+                y1={y} 
+                x2="100" 
+                y2={y} 
+                stroke="currentColor" 
+                className="text-slate-100 dark:text-slate-800" 
+                strokeWidth="0.3" 
+                strokeDasharray="2,2"
+              />
+            ))}
+            
+            {/* Gradient definitions */}
+            <defs>
+              <linearGradient id="professionalGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} />
+                <stop offset="50%" stopColor="#3b82f6" stopOpacity={0.15} />
+                <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+              </linearGradient>
+              <filter id="shadow">
+                <feDropShadow dx="0" dy="2" stdDeviation="2" floodOpacity="0.1"/>
+              </filter>
+            </defs>
+            
+            {/* Area fill with gradient */}
+            <polygon
+              points={`0,100 ${chartData.map((d, i) => 
+                `${(i / 6) * 100},${100 - ((d.value - minValue) / (maxValue - minValue)) * 100}`
+              ).join(' ')} 100,100`}
+              fill="url(#professionalGradient)"
             />
-          ))}
-        </svg>
-        
-        {/* X-axis labels */}
-        <div className="flex justify-between mt-2">
-          {chartData.map((d, i) => (
-            <span key={i} className="text-[10px] text-slate-500 dark:text-slate-400">{d.day}</span>
-          ))}
+            
+            {/* Main trend line */}
+            <polyline
+              points={chartData.map((d, i) => 
+                `${(i / 6) * 100},${100 - ((d.value - minValue) / (maxValue - minValue)) * 100}`
+              ).join(' ')}
+              fill="none"
+              stroke="#2563eb"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              filter="url(#shadow)"
+            />
+            
+            {/* Data points with animation effect */}
+            {chartData.map((d, i) => (
+              <g key={i}>
+                {/* Outer glow circle */}
+                <circle
+                  cx={(i / 6) * 100}
+                  cy={100 - ((d.value - minValue) / (maxValue - minValue)) * 100}
+                  r="4"
+                  fill="#2563eb"
+                  opacity="0.2"
+                />
+                {/* Main data point */}
+                <circle
+                  cx={(i / 6) * 100}
+                  cy={100 - ((d.value - minValue) / (maxValue - minValue)) * 100}
+                  r="2.5"
+                  fill="#2563eb"
+                  stroke="white"
+                  strokeWidth="2"
+                />
+              </g>
+            ))}
+          </svg>
+          
+          {/* Y-axis labels */}
+          <div className="absolute left-0 top-0 bottom-6 flex flex-col justify-between text-xs text-slate-400 dark:text-slate-500 font-medium">
+            <span>100%</span>
+            <span>75%</span>
+            <span>50%</span>
+          </div>
+          
+          {/* X-axis labels with enhanced styling */}
+          <div className="flex justify-between mt-3 px-8">
+            {chartData.map((d, i) => (
+              <div key={i} className="flex flex-col items-center">
+                <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">{d.day}</span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">{Math.round(d.value)}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Summary Stats Below Chart */}
+        <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-200 dark:border-slate-800">
+          <div className="text-center">
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{Math.round(baseValue)}%</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Weekly Average</p>
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{Math.max(...chartData.map(d => Math.round(d.value)))}%</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Highest Score</p>
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{metrics.totalAssignments}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Total Tasks</p>
+          </div>
         </div>
       </div>
     </div>

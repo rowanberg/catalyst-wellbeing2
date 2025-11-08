@@ -9,7 +9,8 @@ import { usePerformanceOptimizer } from '@/hooks/usePerformanceOptimizer'
 import { 
   Brain, Send, Lightbulb, Target, CheckCircle2, Clock, Sparkles,
   Paperclip, Plus, MessageCircle, Copy, Check, X, Menu, History,
-  CreditCard, ChevronLeft, ChevronRight, RotateCw, Maximize, Minimize
+  CreditCard, ChevronLeft, ChevronRight, RotateCw, Maximize, Minimize,
+  BookOpen, CalendarCheck
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FluidThinking } from './FluidThinking'
@@ -1129,6 +1130,9 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
   const [resetDate, setResetDate] = useState<Date>(new Date())
   const [flashCardMode, setFlashCardMode] = useState(false)
   const [currentCardIndex, setCurrentCardIndex] = useState(0)
+  const [todayTopics, setTodayTopics] = useState<any[]>([])
+  const [loadingTopics, setLoadingTopics] = useState(true)
+  const [showTopicsSidebar, setShowTopicsSidebar] = useState(false)
   const profile = useAppSelector((state) => state.auth.profile)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
@@ -1142,6 +1146,27 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
     return settings.maxMessagesInView
   }, [settings.maxMessagesInView])
   
+  // Fetch today's topics
+  useEffect(() => {
+    const fetchTodayTopics = async () => {
+      try {
+        const response = await fetch('/api/student/daily-topics')
+        if (response.ok) {
+          const data = await response.json()
+          setTodayTopics(data.todayTopics || [])
+        }
+      } catch (error) {
+        console.error('Error fetching daily topics:', error)
+      } finally {
+        setLoadingTopics(false)
+      }
+    }
+    
+    if (profile?.id) {
+      fetchTodayTopics()
+    }
+  }, [profile?.id])
+
   // Debug profile data
   useEffect(() => {
     console.log('[AI Helper] Profile data:', profile)
@@ -2332,6 +2357,80 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
                     </h2>
                     <p className="text-slate-400 max-w-md mx-auto">Ask me anything about your homework, and I'll guide you through it step by step.</p>
                   </motion.div>
+
+                  {/* Today's Topics Section */}
+                  {!loadingTopics && todayTopics.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3, duration: 0.4 }}
+                      className="mb-8 max-w-2xl mx-auto"
+                    >
+                      <div className="bg-gradient-to-br from-blue-900/30 via-purple-900/30 to-pink-900/30 backdrop-blur-xl rounded-2xl border-2 border-purple-500/30 shadow-2xl p-4 sm:p-6">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="p-2 bg-purple-500/20 rounded-lg">
+                            <CalendarCheck className="h-5 w-5 text-purple-400" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                              📚 Today's Class Topics
+                            </h3>
+                            <p className="text-xs text-slate-400">What your teacher covered today</p>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          {todayTopics.map((topic: any, index: number) => {
+                            const teacherName = topic.profiles ? `${topic.profiles.first_name} ${topic.profiles.last_name}` : 'Teacher'
+                            const className = topic.classes?.class_name || 'Class'
+                            const subject = topic.classes?.subject || ''
+                            
+                            return (
+                              <motion.div
+                                key={index}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.4 + index * 0.1 }}
+                                className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-purple-500/20 hover:border-purple-500/40 transition-all group"
+                              >
+                                <div className="flex items-start justify-between gap-3 mb-2">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <BookOpen className="h-4 w-4 text-purple-400" />
+                                      <span className="text-sm font-semibold text-purple-300">
+                                        {subject || className}
+                                      </span>
+                                    </div>
+                                    <p className="text-white font-medium leading-relaxed">
+                                      {topic.topic}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center justify-between text-xs text-slate-400 mt-2 pt-2 border-t border-slate-700/50">
+                                  <span>👨‍🏫 {teacherName}</span>
+                                  <button
+                                    onClick={() => {
+                                      setInputMessage(`Can you help me understand "${topic.topic}"?`)
+                                      textareaRef.current?.focus()
+                                    }}
+                                    className="px-3 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-lg transition-all text-xs font-semibold"
+                                  >
+                                    Ask about this →
+                                  </button>
+                                </div>
+                              </motion.div>
+                            )
+                          })}
+                        </div>
+                        
+                        <div className="mt-4 pt-3 border-t border-slate-700/50">
+                          <p className="text-xs text-slate-400 text-center">
+                            💡 Click "Ask about this" for personalized help with today's lessons
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
                 </div>
                 {renderCenteredInput()}
               </motion.div>

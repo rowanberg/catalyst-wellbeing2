@@ -23,7 +23,8 @@ import {
   EyeOff,
   Edit,
   Trash2,
-  Settings
+  Settings,
+  X
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -281,88 +282,100 @@ export default function ParentCommunicationSystem() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-sm text-gray-600 dark:text-slate-400 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>Loading Parent Hub...</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-8">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-4 mb-4">
-              <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl text-white">
-                <MessageSquare className="h-8 w-8" />
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+      {/* Sticky Header - Mobile Optimized */}
+      <div className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 shadow-sm">
+        <div className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+          <div className="flex items-center justify-between">
+            {/* Header Title - Compact on mobile */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 sm:p-2.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg sm:rounded-xl text-white">
+                <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Parent Communication</h1>
-                <p className="text-lg text-gray-600">Connect with parents through secure messaging and announcements</p>
+                <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.02em' }}>Parent Hub</h1>
+                <p className="hidden sm:block text-xs sm:text-sm text-gray-600 dark:text-slate-400 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>Secure family communication</p>
               </div>
             </div>
-          </div>
-          <motion.button
-            onClick={() => setShowCreateModal(true)}
-            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 flex items-center shadow-lg hover:shadow-xl"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            Create {activeTab === 'messages' ? 'Message' : activeTab === 'announcements' ? 'Announcement' : 'Meeting Slot'}
-          </motion.button>
-        </div>
-      </div>
-
-      {/* Tab Navigation */}
-      <div className="flex space-x-3 mb-8">
-        {[
-          { id: 'messages', label: 'Messages', icon: MessageSquare, count: messages.length },
-          { id: 'announcements', label: 'Announcements', icon: Megaphone, count: announcements.length },
-          { id: 'meetings', label: 'Meetings', icon: Calendar, count: meetingSlots.length },
-          { id: 'notifications', label: 'Notifications', icon: Bell, count: 0 }
-        ].map((tab) => {
-          const Icon = tab.icon
-          return (
+            
+            {/* Create Button - Icon only on mobile */}
             <motion.button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-6 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center gap-2 ${
-                activeTab === tab.id
-                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
-                  : 'bg-white text-gray-700 hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300'
-              }`}
+              onClick={() => setShowCreateModal(true)}
+              className="px-3 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-500 dark:to-purple-500 text-white rounded-lg sm:rounded-xl hover:from-blue-700 hover:to-purple-700 dark:hover:from-blue-600 dark:hover:to-purple-600 transition-all duration-200 flex items-center shadow-md hover:shadow-lg"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <Icon className="h-5 w-5" />
-              {tab.label}
-              {tab.count > 0 && (
-                <Badge variant="secondary" className="ml-1">
-                  {tab.count}
-                </Badge>
-              )}
+              <Plus className="h-5 w-5" />
+              <span className="hidden sm:inline ml-2">New {activeTab === 'messages' ? 'Message' : activeTab === 'announcements' ? 'Announcement' : 'Slot'}</span>
             </motion.button>
-          )
-        })}
+          </div>
+        </div>
       </div>
 
-      {/* Search and Filter */}
-      <div className="flex gap-4 mb-6">
+      {/* Tab Navigation - Mobile Optimized with Horizontal Scroll */}
+      <div className="sticky top-[57px] sm:top-[65px] z-30 bg-gray-50 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
+        <div className="px-4 sm:px-6 lg:px-8 py-3">
+          <div className="flex overflow-x-auto gap-2 sm:gap-3 scrollbar-hide">
+            {[
+              { id: 'messages', label: 'Messages', icon: MessageSquare, count: messages.length },
+              { id: 'announcements', label: 'Announcements', icon: Megaphone, count: announcements.length },
+              { id: 'meetings', label: 'Meetings', icon: Calendar, count: meetingSlots.length },
+              { id: 'notifications', label: 'Notifications', icon: Bell, count: 0 }
+            ].map((tab) => {
+              const Icon = tab.icon
+              return (
+                <motion.button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex-shrink-0 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base transition-all duration-200 flex items-center gap-1.5 sm:gap-2 ${
+                    activeTab === tab.id
+                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-500 dark:to-purple-500 text-white shadow-md'
+                      : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 border border-gray-200 dark:border-slate-600'
+                  }`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  style={{ fontFamily: 'var(--font-dm-sans)' }}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                  <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
+                  {tab.count > 0 && (
+                    <Badge variant="secondary" className="ml-0.5 text-xs px-1.5 py-0.5">
+                      {tab.count}
+                    </Badge>
+                  )}
+                </motion.button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Search and Filter - Mobile Optimized */}
+      <div className="px-4 sm:px-6 lg:px-8 py-4 space-y-3 sm:space-y-0 sm:flex sm:gap-4">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
             placeholder={`Search ${activeTab}...`}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-10 dark:bg-slate-800 dark:border-slate-600 dark:text-white dark:placeholder:text-slate-400"
           />
         </div>
         <select
           value={filterPriority}
           onChange={(e) => setFilterPriority(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          className="w-full sm:w-auto px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-sm"
         >
           <option value="">All Priorities</option>
           <option value="urgent">Urgent</option>
@@ -372,54 +385,65 @@ export default function ParentCommunicationSystem() {
         </select>
       </div>
 
-      {/* Content */}
-      <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-8">
+      {/* Content - Mobile Optimized */}
+      <div className="px-4 sm:px-6 lg:px-8 pb-6">
         {activeTab === 'messages' && (
           <div className="space-y-4">
             {filteredMessages.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
+              <div className="text-center py-12 text-gray-500 dark:text-slate-400">
                 <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <h3 className="text-lg font-medium mb-2">No Messages Yet</h3>
-                <p className="text-sm">Start communicating with parents by sending your first message</p>
+                <h3 className="text-lg font-medium mb-2 dark:text-slate-300" style={{ fontFamily: 'var(--font-jakarta)' }}>No Messages Yet</h3>
+                <p className="text-sm" style={{ fontFamily: 'var(--font-dm-sans)' }}>Start communicating with parents by sending your first message</p>
               </div>
             ) : (
               filteredMessages.map((message) => (
                 <motion.div
                   key={message.id}
-                  className="bg-white/80 backdrop-blur-sm border border-white/30 rounded-xl p-6 hover:shadow-xl transition-all duration-300"
-                  whileHover={{ scale: 1.01, y: -2 }}
+                  className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-4 sm:p-6 hover:shadow-lg dark:hover:shadow-slate-900/50 transition-all duration-200"
+                  whileHover={{ scale: 1.005 }}
+                  whileTap={{ scale: 0.995 }}
                 >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold text-lg text-gray-900">{message.subject}</h3>
-                        <Badge className={getPriorityColor(message.priority)}>
+                  <div className="space-y-3">
+                    {/* Header */}
+                    <div className="flex flex-wrap items-start gap-2">
+                      <h3 className="flex-1 font-semibold text-base sm:text-lg text-gray-900 dark:text-white" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>{message.subject}</h3>
+                      <div className="flex gap-2">
+                        <Badge className={`text-xs ${getPriorityColor(message.priority)} dark:border-slate-600`}>
                           {message.priority}
                         </Badge>
                         {!message.is_read && (
-                          <Badge variant="destructive">Unread</Badge>
+                          <Badge variant="destructive" className="text-xs">New</Badge>
                         )}
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
-                        <span className="flex items-center gap-1">
-                          <User className="h-4 w-4" />
-                          {message.parent.full_name}
-                        </span>
-                        <span>Student: {message.student.full_name}</span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          {new Date(message.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <p className="text-gray-700 mb-3">{message.message}</p>
-                      {message.reply_count > 0 && (
-                        <p className="text-sm text-blue-600">{message.reply_count} replies</p>
-                      )}
                     </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        <Mail className="h-4 w-4 mr-1" />
-                        Reply
+                    
+                    {/* Meta Info - Stack on mobile */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600 dark:text-slate-400" style={{ fontFamily: 'var(--font-dm-sans)' }}>
+                      <span className="flex items-center gap-1">
+                        <User className="h-3.5 w-3.5" />
+                        {message.parent.full_name}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <User className="h-3.5 w-3.5" />
+                        {message.student.full_name}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3.5 w-3.5" />
+                        {new Date(message.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    
+                    {/* Message */}
+                    <p className="text-sm sm:text-base text-gray-700 dark:text-slate-300 line-clamp-2" style={{ fontFamily: 'var(--font-dm-sans)' }}>{message.message}</p>
+                    
+                    {/* Footer */}
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-slate-700">
+                      {message.reply_count > 0 && (
+                        <p className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 font-medium">{message.reply_count} {message.reply_count === 1 ? 'reply' : 'replies'}</p>
+                      )}
+                      <Button variant="outline" size="sm" className="ml-auto dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700">
+                        <Mail className="h-4 w-4" />
+                        <span className="hidden sm:inline ml-2">Reply</span>
                       </Button>
                     </div>
                   </div>
@@ -571,34 +595,41 @@ export default function ParentCommunicationSystem() {
         )}
       </div>
 
-      {/* Create Modal */}
+      {/* Create Modal - Mobile Optimized */}
       <AnimatePresence>
         {showCreateModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-black/70 dark:bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center z-50"
             onClick={() => setShowCreateModal(false)}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6"
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 100, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-2xl max-w-2xl w-full max-h-[90vh] sm:max-h-[85vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900">
-                  Create {activeTab === 'messages' ? 'Message' : activeTab === 'announcements' ? 'Announcement' : 'Meeting Slot'}
-                </h2>
-                <button
-                  onClick={() => setShowCreateModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ✕
-                </button>
+              {/* Modal Header - Sticky on mobile */}
+              <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 px-4 sm:px-6 py-4 z-10">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
+                    Create {activeTab === 'messages' ? 'Message' : activeTab === 'announcements' ? 'Announcement' : 'Meeting Slot'}
+                  </h2>
+                  <button
+                    onClick={() => setShowCreateModal(false)}
+                    className="p-2 text-gray-400 dark:text-slate-400 hover:text-gray-600 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
+
+              {/* Modal Body */}
+              <div className="px-4 sm:px-6 py-4">
 
               {activeTab === 'messages' && (
                 <div className="space-y-4">
@@ -662,20 +693,22 @@ export default function ParentCommunicationSystem() {
                 </div>
               )}
 
-              <div className="flex justify-end space-x-3 mt-6">
+              <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-slate-700">
                 <Button
                   variant="outline"
                   onClick={() => setShowCreateModal(false)}
+                  className="dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700 order-2 sm:order-1"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={activeTab === 'messages' ? sendMessage : activeTab === 'announcements' ? createAnnouncement : createMeetingSlot}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-500 dark:to-purple-500 hover:from-blue-700 hover:to-purple-700 dark:hover:from-blue-600 dark:hover:to-purple-600 order-1 sm:order-2"
                 >
                   <Send className="h-4 w-4 mr-2" />
                   {activeTab === 'messages' ? 'Send Message' : activeTab === 'announcements' ? 'Create Announcement' : 'Create Slot'}
                 </Button>
+              </div>
               </div>
             </motion.div>
           </motion.div>

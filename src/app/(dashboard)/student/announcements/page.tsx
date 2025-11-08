@@ -9,6 +9,7 @@ import { ArrowLeft, Bell, BarChart3, Calendar, AlertCircle, Users, Clock, X, Che
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/toast'
 import { Input } from '@/components/ui/input'
+import { ThemeLoader } from '@/components/student/ThemeLoader'
 
 interface Announcement {
   id: string
@@ -323,8 +324,10 @@ export default function StudentAnnouncementsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 relative">
-      <style jsx global>{`
+    <>
+      <ThemeLoader />
+      <div className="min-h-screen relative" style={{ background: 'linear-gradient(to bottom, var(--theme-highlight), #ffffff)' }}>
+        <style jsx global>{`
         .scrollbar-hide {
           -ms-overflow-style: none;
           scrollbar-width: none;
@@ -338,61 +341,84 @@ export default function StudentAnnouncementsPage() {
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
-      `}</style>
+        `}</style>
 
-      {/* Simple Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-        <div className="px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <Button 
-              onClick={() => router.push('/student')} 
-              variant="ghost" 
-              size="sm"
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
-            >
-              <ArrowLeft className="h-5 w-5 text-gray-600" />
-            </Button>
-            <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">
-              School Hub
-            </h1>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="px-3 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-6xl mx-auto relative z-10">
-        {/* Tab Navigation */}
-        <div className="mb-6">
-          <div className="bg-white rounded-lg p-1 shadow-sm border border-gray-200 max-w-md mx-auto lg:mx-0">
-            <div className="grid grid-cols-2 gap-1">
-              <Button
-                onClick={() => setActiveTab('announcements')}
-                variant="ghost"
-                className={`h-10 rounded-md transition-colors duration-200 ${
-                  activeTab === 'announcements'
-                    ? 'bg-blue-500 text-white'
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}
+        {/* Themed Header */}
+        <motion.header
+          initial={{ y: -60 }}
+          animate={{ y: 0 }}
+          transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+          className="sticky top-0 z-50 shadow-sm backdrop-blur-sm"
+          style={{ 
+            background: 'linear-gradient(to right, var(--theme-highlight), var(--theme-tertiary))',
+            borderBottom: '1px solid color-mix(in srgb, var(--theme-accent) 30%, transparent)'
+          }}
+        >
+          <div className="px-4 py-4 sm:px-6">
+            <div className="flex items-center gap-3">
+              <Button 
+                onClick={() => router.push('/student')} 
+                variant="ghost" 
+                size="sm"
+                className="p-2 rounded-lg transition-all duration-200"
+                style={{ 
+                  color: 'var(--theme-primary)',
+                  background: 'rgba(255, 255, 255, 0.5)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.8)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.5)'
+                }}
               >
-                <Bell className="h-4 w-4 mr-2" />
-                <span className="font-medium">Announcements</span>
+                <ArrowLeft className="h-5 w-5" />
               </Button>
-              
-              <Button
-                onClick={() => setActiveTab('polls')}
-                variant="ghost"
-                className={`h-10 rounded-md transition-colors duration-200 ${
-                  activeTab === 'polls'
-                    ? 'bg-blue-500 text-white'
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                <BarChart3 className="h-4 w-4 mr-2" />
-                <span className="font-medium">Polls</span>
-              </Button>
+              <h1 className="text-xl sm:text-2xl font-bold" style={{ color: 'var(--theme-primary)' }}>
+                School Hub
+              </h1>
             </div>
           </div>
-        </div>
+        </motion.header>
+
+        {/* Main Content */}
+        <div className="px-3 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-6xl mx-auto relative z-10">
+          {/* Themed Tab Navigation */}
+          <div className="mb-6">
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl p-1 shadow-lg max-w-md mx-auto lg:mx-0" style={{ border: '1px solid color-mix(in srgb, var(--theme-accent) 20%, transparent)' }}>
+              <div className="grid grid-cols-2 gap-1">
+                <Button
+                  onClick={() => setActiveTab('announcements')}
+                  variant="ghost"
+                  className="h-10 rounded-lg transition-all duration-200 font-medium"
+                  style={{
+                    background: activeTab === 'announcements' 
+                      ? 'linear-gradient(135deg, var(--theme-primary), var(--theme-secondary))'
+                      : 'transparent',
+                    color: activeTab === 'announcements' ? 'white' : 'var(--theme-primary)'
+                  }}
+                >
+                  <Bell className="h-4 w-4 mr-2" />
+                  <span>Announcements</span>
+                </Button>
+                
+                <Button
+                  onClick={() => setActiveTab('polls')}
+                  variant="ghost"
+                  className="h-10 rounded-lg transition-all duration-200 font-medium"
+                  style={{
+                    background: activeTab === 'polls' 
+                      ? 'linear-gradient(135deg, var(--theme-primary), var(--theme-secondary))'
+                      : 'transparent',
+                    color: activeTab === 'polls' ? 'white' : 'var(--theme-primary)'
+                  }}
+                >
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  <span>Polls</span>
+                </Button>
+              </div>
+            </div>
+          </div>
 
         {/* Content Area */}
         <AnimatePresence mode="wait">
@@ -403,7 +429,13 @@ export default function StudentAnnouncementsPage() {
               exit={{ opacity: 0 }}
               className="text-center py-12"
             >
-              <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full mx-auto mb-4 animate-spin" />
+              <div 
+                className="w-8 h-8 border-2 rounded-full mx-auto mb-4 animate-spin" 
+                style={{ 
+                  borderColor: 'color-mix(in srgb, var(--theme-primary) 30%, transparent)',
+                  borderTopColor: 'var(--theme-primary)'
+                }}
+              />
               <p className="text-gray-600 text-sm">Loading...</p>
             </motion.div>
           ) : (
@@ -689,9 +721,9 @@ export default function StudentAnnouncementsPage() {
             </>
           )}
         </AnimatePresence>
-      </div>
+        </div>
 
-      {/* Mobile-Optimized Poll Response Modal */}
+        {/* Mobile-Optimized Poll Response Modal */}
       {showPollModal && selectedPoll && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
           <motion.div 
@@ -851,7 +883,7 @@ export default function StudentAnnouncementsPage() {
           </motion.div>
         </div>
       )}
-
-    </div>
+      </div>
+    </>
   )
 }

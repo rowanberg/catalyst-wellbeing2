@@ -24,37 +24,39 @@ import { useAppSelector } from '@/lib/redux/hooks'
 
 // Memoized skeleton loader for performance
 const SkeletonLoader = memo(() => (
-  <div className="space-y-6">
-    {/* Header skeleton */}
-    <div className="flex justify-between items-center">
-      <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
-      <div className="h-10 w-24 bg-gray-200 rounded animate-pulse" />
-    </div>
-    
-    {/* Stats grid skeleton */}
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {[1, 2, 3, 4].map((i) => (
-        <div key={i} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-          <div className="flex justify-between items-start">
-            <div className="space-y-3 flex-1">
-              <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
-              <div className="h-8 w-16 bg-gray-200 rounded animate-pulse" />
-              <div className="h-3 w-20 bg-gray-200 rounded animate-pulse" />
+  <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+    <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
+      {/* Header skeleton */}
+      <div className="flex justify-between items-center">
+        <div className="h-6 sm:h-8 w-40 sm:w-48 bg-gray-200 dark:bg-slate-700 rounded animate-pulse" />
+        <div className="h-8 sm:h-10 w-20 sm:w-24 bg-gray-200 dark:bg-slate-700 rounded animate-pulse" />
+      </div>
+      
+      {/* Stats grid skeleton */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg sm:rounded-xl p-4 sm:p-6 shadow-sm">
+            <div className="flex justify-between items-start">
+              <div className="space-y-2 sm:space-y-3 flex-1">
+                <div className="h-3 sm:h-4 w-20 sm:w-24 bg-gray-200 dark:bg-slate-600 rounded animate-pulse" />
+                <div className="h-6 sm:h-8 w-12 sm:w-16 bg-gray-200 dark:bg-slate-600 rounded animate-pulse" />
+                <div className="h-2.5 sm:h-3 w-16 sm:w-20 bg-gray-200 dark:bg-slate-600 rounded animate-pulse" />
+              </div>
+              <div className="h-10 w-10 sm:h-12 sm:w-12 bg-gray-100 dark:bg-slate-700 rounded-lg animate-pulse" />
             </div>
-            <div className="h-12 w-12 bg-gray-100 rounded-lg animate-pulse" />
           </div>
-        </div>
-      ))}
-    </div>
-    
-    {/* Charts skeleton */}
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {[1, 2].map((i) => (
-        <div key={i} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-          <div className="h-6 w-32 bg-gray-200 rounded animate-pulse mb-4" />
-          <div className="h-48 bg-gray-100 rounded animate-pulse" />
-        </div>
-      ))}
+        ))}
+      </div>
+      
+      {/* Charts skeleton */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        {[1, 2].map((i) => (
+          <div key={i} className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg sm:rounded-xl p-4 sm:p-6 shadow-sm">
+            <div className="h-5 sm:h-6 w-28 sm:w-32 bg-gray-200 dark:bg-slate-600 rounded animate-pulse mb-4" />
+            <div className="h-40 sm:h-48 bg-gray-100 dark:bg-slate-700 rounded animate-pulse" />
+          </div>
+        ))}
+      </div>
     </div>
   </div>
 ))
@@ -79,19 +81,19 @@ const MetricCard = memo(({ title, value, subtitle, icon: Icon, iconBg, iconColor
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay: delay * 0.1, duration: 0.3 }}
   >
-    <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 h-full">
-      <CardContent className="p-6">
+    <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-md dark:hover:shadow-slate-900/50 transition-all duration-300 h-full">
+      <CardContent className="p-4 sm:p-6">
         <div className="flex justify-between items-start">
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-gray-600">{title}</p>
-            <p className="text-3xl font-bold text-gray-900">{value}</p>
+          <div className="space-y-1.5 sm:space-y-2 flex-1">
+            <p className="text-xs sm:text-sm font-semibold text-gray-600 dark:text-slate-400" style={{ fontFamily: 'var(--font-dm-sans)' }}>{title}</p>
+            <p className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.02em' }}>{value}</p>
             <div className="flex items-center gap-2">
-              <p className="text-xs text-gray-500">{subtitle}</p>
+              <p className="text-xs text-gray-600 dark:text-slate-400 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>{subtitle}</p>
               {trend && (
                 <span className={`inline-flex items-center ${
-                  trend === 'up' ? 'text-green-600' :
-                  trend === 'down' ? 'text-red-600' :
-                  'text-gray-500'
+                  trend === 'up' ? 'text-green-600 dark:text-green-400' :
+                  trend === 'down' ? 'text-red-600 dark:text-red-400' :
+                  'text-gray-500 dark:text-slate-400'
                 }`}>
                   {trend === 'up' && <TrendingUp className="h-3 w-3" />}
                   {trend === 'down' && <TrendingDown className="h-3 w-3" />}
@@ -100,8 +102,8 @@ const MetricCard = memo(({ title, value, subtitle, icon: Icon, iconBg, iconColor
               )}
             </div>
           </div>
-          <div className={`p-3 ${iconBg} rounded-xl`}>
-            <Icon className={`h-6 w-6 ${iconColor}`} />
+          <div className={`p-2.5 sm:p-3 ${iconBg} dark:opacity-90 rounded-lg sm:rounded-xl shadow-sm`}>
+            <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${iconColor}`} />
           </div>
         </div>
       </CardContent>
@@ -129,14 +131,14 @@ const MoodIndicator = memo(({ mood, count, index }: { mood: string; count: numbe
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: index * 0.05 }}
-      className={`flex items-center justify-between p-3 rounded-lg ${config.bg} hover:shadow-sm transition-all duration-200 cursor-default`}
+      className={`flex items-center justify-between p-2.5 sm:p-3 rounded-lg ${config.bg} dark:bg-opacity-10 hover:shadow-sm transition-all duration-200 cursor-default`}
     >
-      <div className="flex items-center gap-3">
-        <span className="text-2xl">{config.emoji}</span>
-        <span className="text-sm font-medium capitalize text-gray-700">{mood}</span>
+      <div className="flex items-center gap-2 sm:gap-3">
+        <span className="text-xl sm:text-2xl">{config.emoji}</span>
+        <span className="text-xs sm:text-sm font-semibold capitalize text-gray-700 dark:text-slate-300" style={{ fontFamily: 'var(--font-dm-sans)' }}>{mood}</span>
       </div>
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-bold text-gray-900">{count}</span>
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        <span className="text-sm font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'var(--font-jakarta)' }}>{count}</span>
         <div className={`w-2 h-2 rounded-full ${config.color}`} />
       </div>
     </motion.div>
@@ -267,15 +269,18 @@ function ComprehensiveAnalytics() {
 
   if (error || !data) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
-        <p className="text-gray-600 mb-4">{error || 'Failed to load analytics'}</p>
-        <button 
-          onClick={() => fetchAnalytics()}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Retry
-        </button>
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+        <div className="flex flex-col items-center justify-center py-12 px-4">
+          <AlertTriangle className="h-12 w-12 text-red-500 dark:text-red-400 mb-4" />
+          <p className="text-gray-600 dark:text-slate-400 mb-4 text-center" style={{ fontFamily: 'var(--font-dm-sans)' }}>{error || 'Failed to load analytics'}</p>
+          <button 
+            onClick={() => fetchAnalytics()}
+            className="px-6 py-2.5 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors font-semibold text-sm shadow-sm"
+            style={{ fontFamily: 'var(--font-dm-sans)' }}
+          >
+            Retry
+          </button>
+        </div>
       </div>
     )
   }
@@ -283,22 +288,35 @@ function ComprehensiveAnalytics() {
   const { overview, wellbeing, engagement, topPerformers, insights } = data
 
   return (
-    <div className="space-y-6 bg-gray-50 -m-6 p-6">
-      {/* Header with Refresh */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Class Analytics</h2>
-          <p className="text-sm text-gray-600 mt-1">Real-time insights from your students</p>
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+      {/* Sticky Header with Refresh - Mobile Optimized */}
+      <div className="sticky top-0 z-30 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 shadow-sm">
+        <div className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-lg sm:text-2xl font-extrabold text-gray-900 dark:text-white truncate" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.02em' }}>Analytics</h2>
+                <p className="hidden sm:block text-xs sm:text-sm text-gray-600 dark:text-slate-400 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>Real-time insights</p>
+              </div>
+            </div>
+            <button
+              onClick={() => fetchAnalytics(true)}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-lg sm:rounded-xl hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors shadow-sm disabled:opacity-50 font-semibold flex-shrink-0"
+              style={{ fontFamily: 'var(--font-dm-sans)' }}
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''} text-gray-700 dark:text-slate-300`} />
+              <span className="hidden sm:inline text-sm font-medium text-gray-700 dark:text-slate-300">Refresh</span>
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() => fetchAnalytics(true)}
-          disabled={refreshing}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50"
-        >
-          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-          <span className="text-sm font-medium">Refresh</span>
-        </button>
       </div>
+
+      {/* Main Content */}
+      <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
 
       {/* Priority Insights with better design */}
       <AnimatePresence>
@@ -311,10 +329,10 @@ function ComprehensiveAnalytics() {
           >
             {insights.map((insight, index) => {
               const config = {
-                alert: { bg: 'bg-red-50', border: 'border-red-500', text: 'text-red-900', icon: AlertTriangle, iconColor: 'text-red-600' },
-                warning: { bg: 'bg-yellow-50', border: 'border-yellow-500', text: 'text-yellow-900', icon: AlertTriangle, iconColor: 'text-yellow-600' },
-                success: { bg: 'bg-green-50', border: 'border-green-500', text: 'text-green-900', icon: CheckCircle2, iconColor: 'text-green-600' },
-                info: { bg: 'bg-blue-50', border: 'border-blue-500', text: 'text-blue-900', icon: Zap, iconColor: 'text-blue-600' }
+                alert: { bg: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-500 dark:border-red-600', text: 'text-red-900 dark:text-red-200', icon: AlertTriangle, iconColor: 'text-red-600 dark:text-red-400' },
+                warning: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', border: 'border-yellow-500 dark:border-yellow-600', text: 'text-yellow-900 dark:text-yellow-200', icon: AlertTriangle, iconColor: 'text-yellow-600 dark:text-yellow-400' },
+                success: { bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-500 dark:border-green-600', text: 'text-green-900 dark:text-green-200', icon: CheckCircle2, iconColor: 'text-green-600 dark:text-green-400' },
+                info: { bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-500 dark:border-blue-600', text: 'text-blue-900 dark:text-blue-200', icon: Zap, iconColor: 'text-blue-600 dark:text-blue-400' }
               }[insight.type]
               
               const Icon = config.icon
@@ -325,14 +343,14 @@ function ComprehensiveAnalytics() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className={`${config.bg} ${config.border} border-l-4 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200`}
+                  className={`${config.bg} ${config.border} border-l-4 rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-200`}
                 >
-                  <div className="flex items-start gap-3">
-                    <Icon className={`h-5 w-5 ${config.iconColor} flex-shrink-0 mt-0.5`} />
-                    <div className="flex-1">
-                      <p className={`text-sm font-semibold ${config.text}`}>{insight.message}</p>
+                  <div className="flex items-start gap-2 sm:gap-3">
+                    <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${config.iconColor} flex-shrink-0 mt-0.5`} />
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs sm:text-sm font-semibold ${config.text}`} style={{ fontFamily: 'var(--font-dm-sans)' }}>{insight.message}</p>
                       {insight.action && (
-                        <p className="text-xs text-gray-600 mt-1">{insight.action}</p>
+                        <p className="text-xs text-gray-600 dark:text-slate-400 mt-1">{insight.action}</p>
                       )}
                     </div>
                   </div>
@@ -344,7 +362,7 @@ function ComprehensiveAnalytics() {
       </AnimatePresence>
 
       {/* Key Metrics - Using memoized MetricCard */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <MetricCard
           title="Total Students"
           value={overview.totalStudents}
@@ -387,12 +405,12 @@ function ComprehensiveAnalytics() {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Mood Distribution */}
-        <Card className="bg-white border border-gray-200 shadow-sm">
+        <Card className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <Heart className="h-5 w-5 text-pink-600" />
+            <CardTitle className="text-base sm:text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
+              <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-pink-600 dark:text-pink-400" />
               Mood Overview
             </CardTitle>
           </CardHeader>
@@ -402,11 +420,11 @@ function ComprehensiveAnalytics() {
                 <MoodIndicator key={mood} mood={mood} count={count as number} index={index} />
               ))}
             </div>
-            <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-700 space-y-3">
               <div>
                 <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600 font-medium">Energy</span>
-                  <span className="font-semibold text-green-600">{wellbeing.avgEnergy}%</span>
+                  <span className="text-gray-600 dark:text-slate-400 font-semibold" style={{ fontFamily: 'var(--font-dm-sans)' }}>Energy</span>
+                  <span className="font-bold text-green-600 dark:text-green-400" style={{ fontFamily: 'var(--font-jakarta)' }}>{wellbeing.avgEnergy}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <motion.div
@@ -419,8 +437,8 @@ function ComprehensiveAnalytics() {
               </div>
               <div>
                 <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600 font-medium">Stress</span>
-                  <span className="font-semibold text-orange-600">{wellbeing.avgStress}%</span>
+                  <span className="text-gray-600 font-semibold" style={{ fontFamily: 'var(--font-dm-sans)' }}>Stress</span>
+                  <span className="font-bold text-orange-600" style={{ fontFamily: 'var(--font-jakarta)' }}>{wellbeing.avgStress}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <motion.div
@@ -438,7 +456,7 @@ function ComprehensiveAnalytics() {
         {/* Engagement Metrics */}
         <Card className="bg-white border border-gray-200 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
               <Target className="h-5 w-5 text-green-600" />
               Engagement
             </CardTitle>
@@ -500,8 +518,8 @@ function ComprehensiveAnalytics() {
                     <Sparkles className="h-5 w-5 text-yellow-500" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-xs text-gray-600 font-medium">Kindness Acts This Week</p>
-                    <p className="text-lg font-bold text-gray-900">{engagement.weeklyKindnessActs} acts of kindness</p>
+                    <p className="text-xs text-gray-600 font-semibold" style={{ fontFamily: 'var(--font-dm-sans)' }}>Kindness Acts This Week</p>
+                    <p className="text-lg font-bold text-gray-900" style={{ fontFamily: 'var(--font-jakarta)' }}>{engagement.weeklyKindnessActs} acts of kindness</p>
                   </div>
                 </motion.div>
               </div>
@@ -510,9 +528,9 @@ function ComprehensiveAnalytics() {
         </Card>
 
         {/* Top Performers */}
-        <Card className="bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200 shadow-sm">
+        <Card className="bg-white border border-gray-200 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
               <Trophy className="h-5 w-5 text-yellow-600" />
               Top Performers
             </CardTitle>
@@ -541,11 +559,11 @@ function ComprehensiveAnalytics() {
                     >
                       <div className="text-2xl">{medals[index] || '⭐'}</div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{student.name}</p>
+                        <p className="text-sm font-bold text-gray-900 truncate" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>{student.name}</p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-xs text-gray-600">Level {student.level}</span>
+                          <span className="text-xs text-gray-600 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>Level {student.level}</span>
                           <span className="text-xs text-gray-400">•</span>
-                          <span className="text-xs font-medium text-blue-600">{student.xp} XP</span>
+                          <span className="text-xs font-semibold text-blue-600" style={{ fontFamily: 'var(--font-dm-sans)' }}>{student.xp} XP</span>
                         </div>
                       </div>
                       <div className="p-2 bg-white rounded-lg shadow-sm">
@@ -575,18 +593,18 @@ function ComprehensiveAnalytics() {
         <Card className="bg-white border border-gray-200 shadow-sm">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
                 <TrendingUp className="h-5 w-5 text-blue-600" />
                 7-Day Wellbeing Trend
               </CardTitle>
               <div className="flex items-center gap-3 text-xs">
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 rounded-full bg-green-500" />
-                  <span className="text-gray-600">Energy</span>
+                  <span className="text-gray-600 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>Energy</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 rounded-full bg-orange-500" />
-                  <span className="text-gray-600">Stress</span>
+                  <span className="text-gray-600 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>Stress</span>
                 </div>
               </div>
             </div>
@@ -609,9 +627,9 @@ function ComprehensiveAnalytics() {
                   >
                     <div className="flex items-center gap-4">
                       <div className="w-24 flex-shrink-0">
-                        <p className={`text-sm font-medium ${
+                        <p className={`text-sm font-semibold ${
                           isToday ? 'text-blue-600' : 'text-gray-700'
-                        }`}>
+                        }`} style={{ fontFamily: 'var(--font-dm-sans)' }}>
                           {date.toLocaleDateString('en-US', { weekday: 'short' })}
                         </p>
                         <p className="text-xs text-gray-500">
@@ -668,6 +686,7 @@ function ComprehensiveAnalytics() {
           </CardContent>
         </Card>
       )}
+      </div>
     </div>
   )
 }

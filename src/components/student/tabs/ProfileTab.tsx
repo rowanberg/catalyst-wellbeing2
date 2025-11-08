@@ -11,12 +11,14 @@ import {
   Camera, Mail, MapPin, Calendar, Trophy, Star,
   Award, Target, Flame, Gift, Users, MessageCircle,
   Settings, ChevronRight, Wallet, GraduationCap,
-  Clock, Sparkles, Zap, Activity, Medal, Shield, BookOpen
+  Clock, Sparkles, Zap, Activity, Medal, Shield, BookOpen,
+  LayoutGrid
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { RankCard, RankCardSkeleton } from '@/components/student/RankCard'
 import { useStudentRank } from '@/hooks/useStudentRank'
+import { SeatingViewer } from '@/components/student/SeatingViewer'
 
 interface ProfileTabProps {
   data: any
@@ -27,7 +29,7 @@ interface ProfileTabProps {
 }
 
 // Memoized Profile Info Card
-const ProfileInfoCard = memo(({ profileData, imageError, setImageError, uploading, uploadProgress, fileInputRef, handleProfilePictureUpload }: any) => (
+const ProfileInfoCard = memo(({ profileData, imageError, setImageError, uploading, uploadProgress, fileInputRef, handleProfilePictureUpload, onSeatingClick }: any) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -137,6 +139,18 @@ const ProfileInfoCard = memo(({ profileData, imageError, setImageError, uploadin
                   </div>
                 </div>
               )}
+              {/* Seating Arrangement Button */}
+              <button
+                onClick={onSeatingClick}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all hover:scale-105 active:scale-95"
+                style={{ background: 'linear-gradient(to right, color-mix(in srgb, var(--theme-accent) 30%, transparent), color-mix(in srgb, var(--theme-highlight) 30%, transparent))', borderWidth: '1px', borderStyle: 'solid', borderColor: 'color-mix(in srgb, var(--theme-primary) 20%, transparent)' }}
+              >
+                <LayoutGrid className="h-4 w-4" style={{ color: 'var(--theme-primary)' }} />
+                <div className="text-left">
+                  <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">My Seat</p>
+                  <p className="text-sm font-bold leading-tight" style={{ color: 'var(--theme-primary)' }}>View</p>
+                </div>
+              </button>
             </div>
           </div>
         </div>
@@ -215,6 +229,7 @@ export function ProfileTab({ data, loading, error, onRefresh, profile }: Profile
   const router = useRouter()
   const [imageError, setImageError] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [showSeatingModal, setShowSeatingModal] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [errors, setErrors] = useState(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -502,6 +517,7 @@ export function ProfileTab({ data, loading, error, onRefresh, profile }: Profile
         uploadProgress={uploadProgress}
         fileInputRef={fileInputRef}
         handleProfilePictureUpload={handleProfilePictureUpload}
+        onSeatingClick={() => setShowSeatingModal(true)}
       />
 
       {/* Quick Actions */}
@@ -527,6 +543,12 @@ export function ProfileTab({ data, loading, error, onRefresh, profile }: Profile
           </Card>
         )}
       </motion.div>
+
+      {/* Seating Viewer Modal */}
+      <SeatingViewer
+        isOpen={showSeatingModal}
+        onClose={() => setShowSeatingModal(false)}
+      />
     </div>
   )
 }

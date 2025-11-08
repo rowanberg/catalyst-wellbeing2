@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { 
   Heart, Smile, Frown, Meh, Angry, Laugh, Shield, AlertCircle, 
   Wind, Sparkles, Moon, Droplets, Brain, HelpCircle, ChevronRight,
-  Activity, Clock, TrendingUp, Star, Send, MessageSquare
+  Activity, Clock, TrendingUp, Star, Send, MessageSquare, Lock, CheckCircle2
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -35,6 +35,10 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
   const [selectedMood, setSelectedMood] = useState<string | null>(null)
   const [moodLocked, setMoodLocked] = useState(false)
   const [petAnimation, setPetAnimation] = useState('idle')
+  const [showToast, setShowToast] = useState(false)
+  const [toastMessage, setToastMessage] = useState({ title: '', description: '', type: 'success' as 'success' | 'error' | 'warning' })
+  const [showConfetti, setShowConfetti] = useState(false)
+  const [greeting, setGreeting] = useState({ title: 'Your Well-being Matters 💙', message: 'You\'re amazing just as you are. Let\'s take care of your heart and mind together 🌟' })
   const controls = useAnimation()
 
   // Prepare data before hooks
@@ -46,13 +50,72 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
   }
 
   const moodOptions = [
-    { id: 'happy', emoji: '😊', label: 'Happy', color: 'from-yellow-100 to-orange-100' },
-    { id: 'excited', emoji: '🤩', label: 'Excited', color: 'from-pink-100 to-purple-100' },
-    { id: 'calm', emoji: '😌', label: 'Calm', color: 'from-blue-100 to-indigo-100' },
-    { id: 'sad', emoji: '😢', label: 'Sad', color: 'from-gray-100 to-blue-100' },
-    { id: 'angry', emoji: '😠', label: 'Angry', color: 'from-red-100 to-orange-100' },
-    { id: 'anxious', emoji: '😰', label: 'Anxious', color: 'from-purple-100 to-pink-100' }
+    { id: 'happy', emoji: '😊', label: 'Happy', color: '#10b981, #14b8a6' },
+    { id: 'excited', emoji: '🤩', label: 'Excited', color: '#f97316, #ec4899' },
+    { id: 'calm', emoji: '😌', label: 'Calm', color: '#0ea5e9, #3b82f6' },
+    { id: 'sad', emoji: '😢', label: 'Sad', color: '#6366f1, #8b5cf6' },
+    { id: 'angry', emoji: '😠', label: 'Angry', color: '#ef4444, #dc2626' },
+    { id: 'anxious', emoji: '😰', label: 'Anxious', color: '#8b5cf6, #ec4899' }
   ]
+
+  // Set time-reactive greeting (persists for session)
+  useEffect(() => {
+    const hour = new Date().getHours()
+    const firstName = profile?.full_name?.split(' ')[0] || 'friend'
+    
+    const greetings = {
+      morning: [
+        { title: 'Good Morning, Sunshine! ☀️', message: `Hey ${firstName}! You're starting a new day full of possibilities. Let's make it amazing together! 🌟` },
+        { title: 'Rise & Shine! 🌅', message: `Morning, ${firstName}! You're capable of incredible things today. Let's take care of your beautiful mind! 💙` },
+        { title: 'Fresh Start! 🌸', message: `Good morning, ${firstName}! Every day is a chance to be your best self. We're here to support you! ✨` },
+        { title: 'New Day, New You! 🦋', message: `Hey ${firstName}! Your feelings matter, and so do you. Let's make today wonderful! 🌈` }
+      ],
+      afternoon: [
+        { title: 'You\'re Doing Great! 🌟', message: `Hey ${firstName}! Halfway through the day and you're doing amazing. Keep being awesome! 💪` },
+        { title: 'Keep Shining! ✨', message: `Hi ${firstName}! Remember, you're braver than you believe and stronger than you seem. We believe in you! 💙` },
+        { title: 'You Matter! 💙', message: `Afternoon, ${firstName}! Your well-being is important to us. Let's check in on how you're feeling! 🌸` },
+        { title: 'Stay Strong! 🌈', message: `Hey ${firstName}! You're making progress every single day. We're proud of you! ⭐` }
+      ],
+      evening: [
+        { title: 'You Did Amazing! 🌙', message: `Evening, ${firstName}! Take a moment to appreciate everything you accomplished today. You're incredible! ✨` },
+        { title: 'Wind Down Time! 🌆', message: `Hi ${firstName}! It's okay to rest now. You've earned it. Let's reflect on your day together! 💙` },
+        { title: 'You\'re Enough! 💫', message: `Good evening, ${firstName}! Remember, you're perfect just as you are. Let's take care of your heart! 🌟` },
+        { title: 'Proud of You! 🌸', message: `Hey ${firstName}! Another day of growth and learning. You should be proud of yourself! 🦋` }
+      ]
+    }
+    
+    let timeOfDay: 'morning' | 'afternoon' | 'evening'
+    if (hour < 12) {
+      timeOfDay = 'morning'
+    } else if (hour < 17) {
+      timeOfDay = 'afternoon'
+    } else {
+      timeOfDay = 'evening'
+    }
+    
+    // Check if we have a stored greeting for this time period
+    const storedGreeting = sessionStorage.getItem('wellbeing-greeting')
+    const storedTimePeriod = sessionStorage.getItem('wellbeing-time-period')
+    
+    if (storedGreeting && storedTimePeriod === timeOfDay) {
+      // Use stored greeting if same time period
+      setGreeting(JSON.parse(storedGreeting))
+    } else {
+      // Pick new random greeting and store it
+      const greetingOptions = greetings[timeOfDay]
+      const randomGreeting = greetingOptions[Math.floor(Math.random() * greetingOptions.length)]
+      setGreeting(randomGreeting)
+      sessionStorage.setItem('wellbeing-greeting', JSON.stringify(randomGreeting))
+      sessionStorage.setItem('wellbeing-time-period', timeOfDay)
+    }
+  }, [profile])
+
+  // Helper function to show toast
+  const showToastMessage = useCallback((title: string, description: string, type: 'success' | 'error' | 'warning') => {
+    setToastMessage({ title, description, type })
+    setShowToast(true)
+    setTimeout(() => setShowToast(false), 4000)
+  }, [])
 
   // ALL HOOKS BEFORE CONDITIONAL RETURNS
   const handleMoodUpdate = useCallback(async (moodId: string) => {
@@ -60,7 +123,12 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
     
     // Check if mood is already locked for today
     if (wellbeingData.mood?.lockedDate === today) {
-      alert('🌅 You\'ve already set your mood for today! Mood tracking resets tomorrow morning.')
+      const firstName = profile?.full_name?.split(' ')[0] || 'there'
+      showToastMessage(
+        '🌅 Already Logged!',
+        `Hey ${firstName}, you've already shared your mood today. See you tomorrow! 💫`,
+        'warning'
+      )
       return
     }
 
@@ -86,19 +154,44 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
           navigator.vibrate([10, 50, 10])
         }
         
-        // Show success message
-        alert('✅ Mood saved successfully! Your mood is now locked for today.')
+        // Show celebration confetti
+        setShowConfetti(true)
+        setTimeout(() => setShowConfetti(false), 3000)
+        
+        // Show success toast with personalized message
+        const moodLabel = moodOptions.find(m => m.id === moodId)?.label || 'Mood'
+        const firstName = profile?.full_name?.split(' ')[0] || 'there'
+        const encouragingPhrases = [
+          `Great job checking in, ${firstName}! 🌟`,
+          `Thanks for sharing, ${firstName}! 💙`,
+          `Awesome, ${firstName}! Keep tracking your feelings! 🎯`,
+          `Proud of you for sharing, ${firstName}! ✨`
+        ]
+        const randomPhrase = encouragingPhrases[Math.floor(Math.random() * encouragingPhrases.length)]
+        showToastMessage(
+          '✅ Mood Logged!',
+          `You're feeling ${moodLabel.toLowerCase()} today. ${randomPhrase}`,
+          'success'
+        )
         
         onRefresh()
       } else {
         const errorData = await response.json()
-        alert(errorData.error || 'Failed to update mood. Please try again.')
+        showToastMessage(
+          '❌ Oops!',
+          errorData.error || 'Failed to save mood. Please try again.',
+          'error'
+        )
       }
     } catch (error) {
       console.error('Failed to update mood:', error)
-      alert('Failed to update mood. Please try again.')
+      showToastMessage(
+        '❌ Connection Error',
+        'Could not save mood. Check your internet connection.',
+        'error'
+      )
     }
-  }, [wellbeingData.mood?.lockedDate, onRefresh])
+  }, [wellbeingData.mood?.lockedDate, onRefresh, moodOptions, showToastMessage])
 
   const handlePetInteraction = useCallback(() => {
     setPetAnimation('happy')
@@ -139,8 +232,72 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
   }
 
   return (
-    <div className="space-y-6 pb-8">
-      {/* Header - Gradient Hero */}
+    <div className="space-y-6 pb-8 relative">
+      {/* Toast Notification - Mobile-optimized */}
+      <AnimatePresence>
+        {showToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -30, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.9 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+            className="fixed top-16 sm:top-20 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] sm:max-w-md mx-auto px-2"
+          >
+            <div 
+              className="relative rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-2xl overflow-hidden"
+              style={toastMessage.type === 'success' ? {
+                background: 'linear-gradient(135deg, #10b981, #14b8a6)'
+              } : toastMessage.type === 'warning' ? {
+                background: 'linear-gradient(135deg, #f59e0b, #f97316)'
+              } : {
+                background: 'linear-gradient(135deg, #ef4444, #dc2626)'
+              }}
+            >
+              {/* Decorative glow effect */}
+              <div className="absolute inset-0 bg-white/10 backdrop-blur-sm" />
+              
+              <div className="relative flex items-start gap-2.5 sm:gap-3">
+                <motion.div 
+                  className="text-2xl sm:text-3xl flex-shrink-0"
+                  animate={toastMessage.type === 'success' ? { 
+                    scale: [1, 1.2, 1],
+                    rotate: [0, 10, -10, 0]
+                  } : {}}
+                  transition={{ duration: 0.5 }}
+                >
+                  {toastMessage.type === 'success' && '🎉'}
+                  {toastMessage.type === 'error' && '⚠️'}
+                  {toastMessage.type === 'warning' && '💭'}
+                </motion.div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-sm sm:text-base mb-0.5 text-white truncate" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
+                    {toastMessage.title}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-white/95 leading-snug" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.15)' }}>
+                    {toastMessage.description}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowToast(false)}
+                  className="text-white/70 hover:text-white transition-colors p-0.5 sm:p-1 hover:bg-white/10 rounded-lg flex-shrink-0"
+                >
+                  <span className="text-lg sm:text-xl leading-none">×</span>
+                </button>
+              </div>
+
+              {/* Progress bar */}
+              <motion.div
+                initial={{ width: '100%' }}
+                animate={{ width: '0%' }}
+                transition={{ duration: 4, ease: 'linear' }}
+                className="absolute bottom-0 left-0 h-0.5 sm:h-1 bg-white/30"
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Header - Gradient Hero with Time-Reactive Greeting */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -148,10 +305,10 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
         style={{ background: 'linear-gradient(to right, var(--theme-primary), var(--theme-secondary))' }}
       >
         <h1 className="text-2xl sm:text-3xl font-bold mb-2">
-          Well-being Center
+          {greeting.title}
         </h1>
-        <p className="text-white/90 text-sm sm:text-base">
-          Take care of your mind and body 🌟
+        <p className="text-white/95 text-sm sm:text-base leading-relaxed">
+          {greeting.message}
         </p>
       </motion.div>
 
@@ -181,7 +338,44 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
               </div>
             </CardHeader>
             <CardContent className="pt-6">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {/* Confetti Effect */}
+              <AnimatePresence>
+                {showConfetti && (
+                  <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
+                    {[...Array(20)].map((_, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ 
+                          y: '50%', 
+                          x: `${50 + (Math.random() - 0.5) * 20}%`,
+                          opacity: 1,
+                          scale: 1
+                        }}
+                        animate={{ 
+                          y: '-20%',
+                          x: `${50 + (Math.random() - 0.5) * 100}%`,
+                          opacity: 0,
+                          scale: 0,
+                          rotate: Math.random() * 360
+                        }}
+                        transition={{ 
+                          duration: 2 + Math.random(),
+                          ease: 'easeOut'
+                        }}
+                        className="absolute"
+                        style={{
+                          left: `${Math.random() * 100}%`,
+                          fontSize: '24px'
+                        }}
+                      >
+                        {['🎉', '✨', '⭐', '💫', '🌟'][Math.floor(Math.random() * 5)]}
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </AnimatePresence>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                 {moodOptions.map((mood, index) => {
                   const isSelected = selectedMood === mood.id || wellbeingData.mood?.current === mood.id
                   const today = new Date().toISOString().split('T')[0]
@@ -191,48 +385,77 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
                     <motion.button
                       key={mood.id}
                       initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
+                      animate={{ 
+                        opacity: 1, 
+                        scale: 1,
+                        ...(isLocked && !isSelected ? { opacity: 0.4 } : {})
+                      }}
                       transition={{ delay: index * 0.05 }}
-                      whileHover={{ scale: isLocked ? 1 : 1.05, y: -2 }}
-                      whileTap={{ scale: isLocked ? 1 : 0.95 }}
+                      whileHover={{ scale: isLocked && !isSelected ? 1 : 1.08, y: isLocked && !isSelected ? 0 : -4 }}
+                      whileTap={{ scale: isLocked && !isSelected ? 1 : 0.92 }}
                       disabled={isLocked && !isSelected}
                       onClick={() => !isLocked && handleMoodUpdate(mood.id)}
                       className={cn(
-                        "p-4 rounded-xl text-center transition-all min-h-[100px] flex flex-col justify-center",
+                        "relative p-3 rounded-xl text-center transition-all h-[105px] flex flex-col justify-center items-center touch-manipulation",
                         isSelected
-                          ? "shadow-lg"
+                          ? "shadow-lg ring-2 ring-offset-1"
                           : isLocked
-                          ? "bg-slate-100 opacity-50 cursor-not-allowed"
-                          : "bg-white border-2 border-slate-200 hover:shadow-md active:shadow-sm"
+                          ? "bg-slate-50 cursor-not-allowed"
+                          : "bg-white border-2 border-slate-200 hover:shadow-md hover:border-slate-300 active:shadow-sm"
                       )}
                       style={isSelected ? {
-                        background: `linear-gradient(to bottom right, ${mood.color})`,
-                        borderWidth: '2px',
-                        borderColor: 'var(--theme-accent)'
+                        background: `linear-gradient(135deg, ${mood.color})`,
+                        borderWidth: '0px',
+                        borderColor: 'transparent'
                       } : {}}
-                      onMouseEnter={(e) => !isSelected && !isLocked && (e.currentTarget.style.borderColor = 'var(--theme-accent)')}
-                      onMouseLeave={(e) => !isSelected && !isLocked && (e.currentTarget.style.borderColor = 'rgb(226, 232, 240)')}
                     >
+                      {/* Lock Icon for Locked Non-Selected Cards */}
+                      {isLocked && !isSelected && (
+                        <div className="absolute top-1.5 right-1.5">
+                          <Lock className="h-3 w-3 text-slate-400" />
+                        </div>
+                      )}
+
+                      {/* Emoji with pulse animation for unselected */}
                       <motion.div 
-                        className="text-4xl mb-2"
-                        animate={isSelected ? { scale: [1, 1.2, 1] } : {}}
-                        transition={{ duration: 0.3 }}
+                        className="text-4xl mb-1.5"
+                        animate={isSelected ? { 
+                          scale: [1, 1.2, 1],
+                          rotate: [0, -5, 5, 0]
+                        } : !isLocked ? {
+                          scale: [1, 1.05, 1]
+                        } : {}}
+                        transition={{ 
+                          duration: isSelected ? 0.5 : 2,
+                          repeat: !isLocked && !isSelected ? Infinity : 0,
+                          repeatType: 'reverse'
+                        }}
                       >
                         {mood.emoji}
                       </motion.div>
-                      <div className={cn(
-                        "text-sm font-medium",
-                        isSelected ? "text-white" : "text-slate-700"
-                      )}>
+                      
+                      {/* Label */}
+                      <div 
+                        className={cn(
+                          "text-sm font-extrabold",
+                          isSelected ? "text-white" : "text-slate-700"
+                        )}
+                        style={isSelected ? { textShadow: '0 2px 4px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.6)' } : {}}
+                      >
                         {mood.label}
                       </div>
+                      
+                      {/* Selected Badge - Absolutely positioned to prevent layout shift */}
                       {isSelected && (
                         <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          className="text-xs mt-1 font-semibold text-white"
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                          className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex items-center gap-0.5 text-[10px] font-extrabold text-white bg-black/40 px-2 py-0.5 rounded-full backdrop-blur-sm whitespace-nowrap"
+                          style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}
                         >
-                          ✓ {isLocked ? 'Logged' : 'Selected'}
+                          <CheckCircle2 className="h-2.5 w-2.5" />
+                          <span>Today</span>
                         </motion.div>
                       )}
                     </motion.button>
@@ -243,9 +466,9 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="text-center text-sm text-slate-500 mt-4 bg-slate-50 p-2 rounded-lg"
+                  className="text-center text-xs text-slate-500 mt-3 bg-slate-50 px-3 py-1.5 rounded-lg"
                 >
-                  🌅 Mood tracking resets tomorrow morning
+                  🌅 Resets tomorrow morning
                 </motion.p>
               )}
             </CardContent>

@@ -194,10 +194,9 @@ const TabButton = memo(({ tab, isActive, isLoading, onClick }: any) => {
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.8 }}
-          className="absolute top-1 left-1/2 w-12 h-1 rounded-full shadow-sm"
+          className="absolute top-1 left-0 right-0 mx-auto w-12 h-1 rounded-full shadow-sm"
           style={{
-            background: 'linear-gradient(to right, var(--theme-primary), var(--theme-secondary))',
-            transform: 'translateX(-50%)'
+            background: 'linear-gradient(to right, var(--theme-primary), var(--theme-secondary))'
           }}
           transition={{ 
             duration: 0.2,
