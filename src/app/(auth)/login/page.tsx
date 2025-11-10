@@ -349,12 +349,12 @@ export default function LoginPage() {
               <GraduationCap className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              {showResetForm ? 'Reset Password' : 'Welcome to Catalyst'}
+              {showResetForm ? 'Reset Password' : 'Welcome to Catalyst Wells'}
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
               {showResetForm 
                 ? 'Enter your email to receive reset instructions'
-                : "Your school's well-being platform"
+                : "Empowering student success through holistic well-being and academic excellence"
               }
             </p>
           </div>

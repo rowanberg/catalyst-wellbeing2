@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('id, role, school_id, first_name, last_name')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single()
 
     if (profileError || !profile || profile.role !== 'teacher') {
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       .from('student_shout_outs')
       .insert({
         student_id: studentId,
-        teacher_id: user.id,
+        teacher_id: profile.id,
         school_id: profile.school_id,
         category: category || 'effort',
         message: message.trim(),
@@ -87,48 +87,46 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', studentId)
 
-    // Create notification for student
-    await supabase
-      .from('student_notifications')
-      .insert({
-        student_id: studentId,
-        type: 'shout_out_received',
-        title: 'You received a shout-out! 🌟',
-        message: `${profile.first_name} ${profile.last_name} recognized you: "${message.trim()}"`,
-        priority: 'medium',
-        school_id: profile.school_id,
-        xp_reward: xpReward
-      })
-
-    // If public, create announcement for class
-    if (isPublic) {
+    // Create notification for student (optional - won't fail if table doesn't exist)
+    try {
       await supabase
-        .from('class_announcements')
+        .from('student_notifications')
         .insert({
+          student_id: studentId,
+          type: 'shout_out_received',
+          title: 'You received a shout-out! 🌟',
+          message: `${profile.first_name} ${profile.last_name} recognized you: "${message.trim()}"`,
+          priority: 'medium',
           school_id: profile.school_id,
-          teacher_id: user.id,
-          title: `🌟 Shout-out for ${student.first_name}!`,
-          content: `${student.first_name} ${student.last_name} was recognized for ${category}: "${message.trim()}"`,
-          type: 'recognition',
-          target_audience: 'class',
-          is_pinned: false
+          xp_reward: xpReward
         })
+    } catch (notifError) {
+      // Notification creation is optional, continue if it fails
+      console.log('Notification not created (table may not exist)')
     }
 
-    // Update student's recognition stats
-    await supabase
-      .from('student_recognition_stats')
-      .upsert({
-        student_id: studentId,
-        school_id: profile.school_id,
-        total_shout_outs: 1,
-        last_recognition_date: new Date().toISOString(),
-        categories_received: [category],
-        updated_at: new Date().toISOString()
-      }, {
-        onConflict: 'student_id',
-        ignoreDuplicates: false
-      })
+    // If public, create announcement for class (optional)
+    if (isPublic) {
+      try {
+        await supabase
+          .from('class_announcements')
+          .insert({
+            school_id: profile.school_id,
+            teacher_id: profile.id,
+            title: `🌟 Shout-out for ${student.first_name}!`,
+            content: `${student.first_name} ${student.last_name} was recognized for ${category}: "${message.trim()}"`,
+            type: 'recognition',
+            target_audience: 'class',
+            is_pinned: false
+          })
+      } catch (announcementError) {
+        // Announcement creation is optional, continue if it fails
+        console.log('Announcement not created (table may not exist)')
+      }
+    }
+
+    // Note: student_recognition_stats table not implemented yet
+    // Will be added in future update for analytics
 
     return NextResponse.json({ 
       message: 'Shout-out sent successfully',

@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAppSelector } from '@/lib/redux/hooks'
+import { toast } from 'sonner'
 import { 
   Star, 
   Heart, 
@@ -78,6 +79,66 @@ interface ShoutOutTemplate {
   icon: string
 }
 
+// Memoized ShoutOut Card for better performance
+const ShoutOutCard = memo(({ shoutOut, getCategoryColor, getCategoryIcon }: {
+  shoutOut: ShoutOut
+  getCategoryColor: (category: string) => string
+  getCategoryIcon: (category: string) => JSX.Element
+}) => {
+  const formattedDate = useMemo(() => {
+    const date = new Date(shoutOut.createdAt)
+    const now = new Date()
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60)
+    
+    if (diffInHours < 24) {
+      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    } else if (diffInHours < 48) {
+      return 'Yesterday'
+    } else {
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    }
+  }, [shoutOut.createdAt])
+
+  return (
+    <div className="border border-gray-200 rounded-xl p-4 sm:p-6 hover:shadow-md hover:border-gray-300 transition-all duration-200 bg-white">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border ${getCategoryColor(shoutOut.category)}`}>
+            {getCategoryIcon(shoutOut.category)}
+            <span className="ml-1.5 capitalize">{shoutOut.category}</span>
+          </div>
+          {shoutOut.badge && (
+            <span className="text-lg" title={shoutOut.badge}>{shoutOut.badge}</span>
+          )}
+          {shoutOut.isPublic && (
+            <span className="inline-flex items-center px-2 py-0.5 bg-green-100 text-green-700 rounded-md text-xs font-medium">
+              <CheckCircle className="h-3 w-3 mr-1" />
+              Public
+            </span>
+          )}
+        </div>
+        <div className="flex items-center text-gray-500 text-xs sm:text-sm">
+          <Clock className="h-3.5 w-3.5 mr-1.5" />
+          {formattedDate}
+        </div>
+      </div>
+      
+      <h3 className="font-bold text-base sm:text-lg text-gray-900 mb-2">{shoutOut.studentName}</h3>
+      <p className="text-gray-700 text-sm sm:text-base mb-3 leading-relaxed line-clamp-3">{shoutOut.message}</p>
+      
+      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+        <span className="text-xs sm:text-sm text-gray-600 font-medium truncate mr-2">by {shoutOut.teacherName}</span>
+        <div className="flex items-center text-red-500 bg-red-50 px-2.5 py-1 rounded-full flex-shrink-0">
+          <Heart className="h-3.5 w-3.5 mr-1 fill-red-500" />
+          <span className="text-xs sm:text-sm font-semibold">{shoutOut.reactions || 0}</span>
+        </div>
+      </div>
+    </div>
+  )
+})
+
+ShoutOutCard.displayName = 'ShoutOutCard'
+
 export default function ShoutOutsSystem() {
   const [students, setStudents] = useState<Student[]>([])
   const [shoutOuts, setShoutOuts] = useState<ShoutOut[]>([])
@@ -96,66 +157,46 @@ export default function ShoutOutsSystem() {
   const [sending, setSending] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [modalStep, setModalStep] = useState<'classes' | 'students' | 'create'>('classes')
-
-  useEffect(() => {
-    fetchStudents()
-    fetchShoutOuts()
-    fetchTemplates()
-  }, [])
+  const [displayLimit, setDisplayLimit] = useState(10)
 
   // Get user from Redux (same pattern as other teacher components)
   const { user } = useAppSelector((state) => state.auth)
 
-  const fetchTeacherClasses = async () => {
+  const fetchTeacherClasses = useCallback(async () => {
     try {
       setLoadingClasses(true)
       
       if (!user?.id) {
-        console.error('❌ No authenticated user found')
+        toast.error('Please log in to view classes')
         setLoadingClasses(false)
         return
       }
       
-      console.log('🔍 Fetching teacher classes for user:', user.id)
-
-      
-      // Fetch class assignments (API gets teacher_id from session)
       const response = await fetch(`/api/teacher/class-assignments`)
-      
-      console.log('📋 Response status:', response.status)
-      console.log('📋 Response headers:', Object.fromEntries(response.headers.entries()))
       
       if (response.ok) {
         const data = await response.json()
-        console.log('✅ Classes data received:', data)
-        console.log('📊 Number of assignments:', data.assignments?.length || 0)
-        console.log('📋 Assignment details:', data.assignments)
         setTeacherClasses(data.assignments || [])
       } else {
-        const errorText = await response.text()
-        console.error('❌ Class assignments API error:', response.status, errorText)
-        console.error('❌ Error response body:', errorText)
+        toast.error('Failed to load classes')
       }
     } catch (error: any) {
-      console.error('❌ Error fetching teacher classes:', error)
-      // Show user-friendly error
-      alert('Unable to load classes. Please make sure you are logged in as a teacher.')
+      toast.error('Unable to load classes. Please try again.')
     } finally {
       setLoadingClasses(false)
     }
-  }
+  }, [user?.id])
 
-  const fetchStudentsByClass = async (classId: string, schoolId: string) => {
+  const fetchStudentsByClass = useCallback(async (classId: string, schoolId: string) => {
     try {
       setLoadingStudents(true)
-      console.log('🔍 Fetching students for class:', { classId, schoolId })
       
-      const response = await fetch(`/api/teacher/students?school_id=${schoolId}&class_id=${classId}`)
-      console.log('📋 Response status:', response.status)
+      const response = await fetch(`/api/teacher/students?school_id=${schoolId}&class_id=${classId}`, {
+        next: { revalidate: 30 }
+      })
       
       if (response.ok) {
         const data = await response.json()
-        console.log('✅ Students data received:', data)
         
         if (data.students && Array.isArray(data.students)) {
           const formattedStudents = data.students.map((student: any) => ({
@@ -168,64 +209,58 @@ export default function ShoutOutsSystem() {
             class_name: student.class_name,
             recentShoutOuts: 0
           }))
-          console.log('📊 Formatted students count:', formattedStudents.length)
           setStudents(formattedStudents)
         } else {
-          console.warn('⚠️ No students array in response:', data)
           setStudents([])
         }
       } else {
-        const errorText = await response.text()
-        console.error('❌ Failed to fetch students:', response.status, errorText)
+        toast.error('Failed to load students')
         setStudents([])
       }
     } catch (error: any) {
-      console.error('❌ Error fetching students by class:', error)
+      toast.error('Error loading students')
       setStudents([])
     } finally {
       setLoadingStudents(false)
     }
-  }
+  }, [])
 
-  const fetchStudents = async () => {
-    // This is now handled by fetchStudentsByClass
-    // Keep for backward compatibility with existing shout-outs display
+
+  const fetchShoutOuts = useCallback(async () => {
     try {
-      const response = await fetch('/api/teacher/students')
+      const response = await fetch('/api/teacher/shout-outs', {
+        next: { revalidate: 30 }
+      })
       if (response.ok) {
         const data = await response.json()
-        setStudents(data.students || [])
+        setShoutOuts(data.shoutOuts || [])
       }
     } catch (error: any) {
-      console.error('Error fetching students:', error)
-    }
-  }
-
-  const fetchShoutOuts = async () => {
-    try {
-      const response = await fetch('/api/teacher/shout-outs')
-      if (response.ok) {
-        const data = await response.json()
-        setShoutOuts(data.shoutOuts)
-      }
-    } catch (error: any) {
-      console.error('Error fetching shout-outs:', error)
+      toast.error('Failed to load shout-outs')
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const fetchTemplates = async () => {
+  const fetchTemplates = useCallback(async () => {
     try {
-      const response = await fetch('/api/teacher/shout-out-templates')
+      const response = await fetch('/api/teacher/shout-out-templates', {
+        next: { revalidate: 300 }
+      })
       if (response.ok) {
         const data = await response.json()
-        setTemplates(data.templates)
+        setTemplates(data.templates || [])
       }
     } catch (error: any) {
-      console.error('Error fetching templates:', error)
+      // Templates are optional, fail silently
     }
-  }
+  }, [])
+
+  // Load initial data
+  useEffect(() => {
+    fetchShoutOuts()
+    fetchTemplates()
+  }, [fetchShoutOuts, fetchTemplates])
 
   const sendShoutOut = async () => {
     if (!selectedStudent || (!customMessage.trim() && !selectedTemplate)) return
@@ -245,6 +280,11 @@ export default function ShoutOutsSystem() {
       })
 
       if (response.ok) {
+        const data = await response.json()
+        toast.success(`✨ Shout-out sent to ${selectedStudent.name}!`, {
+          description: `+${data.xpAwarded || 50} XP awarded`
+        })
+        
         setCustomMessage('')
         setSelectedTemplate(null)
         setSelectedStudent(null)
@@ -252,32 +292,16 @@ export default function ShoutOutsSystem() {
         setModalStep('classes')
         setShowCreateModal(false)
         fetchShoutOuts()
-        // Refresh students if we have a selected class
-        if (selectedClass) {
-          try {
-            const { createClient } = await import('@supabase/supabase-js')
-            const supabase = createClient(
-              process.env.NEXT_PUBLIC_SUPABASE_URL!,
-              process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-            )
-            const { data: { user } } = await supabase.auth.getUser()
-            if (user) {
-              const profileResponse = await fetch('/api/get-profile', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.id }),
-              })
-              const profileData = await profileResponse.json()
-              const schoolId = profileData.school_id
-              await fetchStudentsByClass(selectedClass.class_id, schoolId)
-            }
-          } catch (error) {
-            console.error('Error refreshing students:', error)
-          }
-        }
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        toast.error('Failed to send shout-out', {
+          description: errorData.error || 'Please try again'
+        })
       }
     } catch (error: any) {
-      console.error('Error sending shout-out:', error)
+      toast.error('Failed to send shout-out', {
+        description: 'Check your internet connection'
+      })
     } finally {
       setSending(false)
     }
@@ -307,18 +331,66 @@ export default function ShoutOutsSystem() {
     }
   }
 
-  const filteredStudents = students.filter(student =>
-    student.name.toLowerCase().includes(searchTerm.toLowerCase())
+  // Memoize filtered lists for performance
+  const filteredStudents = useMemo(() => 
+    students.filter(student =>
+      student.name.toLowerCase().includes(searchTerm.toLowerCase())
+    ), [students, searchTerm]
   )
 
-  const filteredShoutOuts = shoutOuts.filter(shoutOut =>
-    selectedCategory === 'all' || shoutOut.category === selectedCategory
+  const filteredShoutOuts = useMemo(() => 
+    shoutOuts.filter(shoutOut =>
+      selectedCategory === 'all' || shoutOut.category === selectedCategory
+    ), [shoutOuts, selectedCategory]
   )
+
+  // Memoize stats calculations
+  const stats = useMemo(() => ({
+    thisWeek: shoutOuts.filter(s => 
+      s.createdAt > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+    ).length,
+    publicPercentage: Math.round(
+      (shoutOuts.filter(s => s.isPublic).length / Math.max(shoutOuts.length, 1)) * 100
+    )
+  }), [shoutOuts])
+
+  // Paginated shout-outs for better performance
+  const displayedShoutOuts = useMemo(() => 
+    filteredShoutOuts.slice(0, displayLimit),
+    [filteredShoutOuts, displayLimit]
+  )
+
+  const hasMoreShoutOuts = filteredShoutOuts.length > displayLimit
+
+  const loadMore = useCallback(() => {
+    setDisplayLimit(prev => prev + 10)
+  }, [])
+
+  // Reset display limit when filter changes
+  useEffect(() => {
+    setDisplayLimit(10)
+  }, [selectedCategory])
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 rounded-2xl p-6 mb-6 animate-pulse">
+          <div className="h-8 bg-white/20 rounded w-1/3 mb-4"></div>
+          <div className="h-4 bg-white/10 rounded w-1/2 mb-6"></div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[1,2,3,4].map(i => (
+              <div key={i} className="h-20 bg-white/10 rounded-xl"></div>
+            ))}
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl p-6 border border-gray-100">
+          <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="space-y-3">
+            {[1,2,3].map(i => (
+              <div key={i} className="h-32 bg-gray-100 rounded-xl animate-pulse"></div>
+            ))}
+          </div>
+        </div>
       </div>
     )
   }
@@ -351,11 +423,11 @@ export default function ShoutOutsSystem() {
               <div className="text-xs sm:text-sm text-white/80 mt-0.5">Students</div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl p-3 sm:p-4 hover:bg-white/20 transition-colors">
-              <div className="text-lg sm:text-xl lg:text-2xl font-bold">{shoutOuts.filter(s => s.createdAt > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()).length}</div>
+              <div className="text-lg sm:text-xl lg:text-2xl font-bold">{stats.thisWeek}</div>
               <div className="text-xs sm:text-sm text-white/80 mt-0.5">This Week</div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl p-3 sm:p-4 hover:bg-white/20 transition-colors">
-              <div className="text-lg sm:text-xl lg:text-2xl font-bold">{Math.round((shoutOuts.filter(s => s.isPublic).length / Math.max(shoutOuts.length, 1)) * 100)}%</div>
+              <div className="text-lg sm:text-xl lg:text-2xl font-bold">{stats.publicPercentage}%</div>
               <div className="text-xs sm:text-sm text-white/80 mt-0.5">Public</div>
             </div>
           </div>
@@ -404,23 +476,21 @@ export default function ShoutOutsSystem() {
             <div className="mt-4 pt-4 border-t border-gray-100">
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                 {filteredStudents.slice(0, 12).map((student) => (
-                  <motion.button
+                  <button
                     key={student.id}
                     onClick={() => {
                       setSelectedStudent(student)
                       setShowCreateModal(true)
                     }}
                     className="p-3 text-left border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 group"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
                   >
                     <div className="text-sm font-medium text-gray-900 truncate group-hover:text-blue-700">{student.name}</div>
                     <div className="text-xs text-gray-500 truncate">{student.grade || 'Grade N/A'}</div>
                     <div className="flex items-center mt-1">
-                      <Star className="h-3 w-3 text-yellow-500 mr-1" />
+                      <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 mr-1" />
                       <span className="text-xs text-gray-600">{student.recentShoutOuts || 0}</span>
                     </div>
-                  </motion.button>
+                  </button>
                 ))}
               </div>
               {filteredStudents.length > 12 && (
@@ -443,12 +513,17 @@ export default function ShoutOutsSystem() {
         {/* Recent Shout-Outs */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-            <h2 className="text-xl font-bold flex items-center">
-              <div className="p-2 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-xl text-white mr-3">
-                <Award className="h-6 w-6" />
-              </div>
-              Recent Shout-Outs
-            </h2>
+            <div>
+              <h2 className="text-xl font-bold flex items-center">
+                <div className="p-2 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-xl text-white mr-3">
+                  <Award className="h-6 w-6" />
+                </div>
+                Recent Shout-Outs
+              </h2>
+              <p className="text-sm text-gray-500 mt-1 ml-14">
+                Showing {displayedShoutOuts.length} of {filteredShoutOuts.length} shout-outs
+              </p>
+            </div>
             
             <div className="flex items-center gap-3">
               <Filter className="h-4 w-4 text-gray-400" />
@@ -468,52 +543,21 @@ export default function ShoutOutsSystem() {
             </div>
           </div>
             
-          <div className="space-y-4 max-h-96 overflow-y-auto">
-            <AnimatePresence>
-              {filteredShoutOuts.map((shoutOut, index) => (
-                <motion.div
-                  key={shoutOut.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="border border-gray-200 rounded-xl p-4 sm:p-6 hover:shadow-lg hover:border-gray-300 transition-all duration-200 bg-white"
+          <div className="space-y-3">
+            {displayedShoutOuts.map((shoutOut) => (
+              <ShoutOutCard key={shoutOut.id} shoutOut={shoutOut} getCategoryColor={getCategoryColor} getCategoryIcon={getCategoryIcon} />
+            ))}
+            
+            {hasMoreShoutOuts && (
+              <div className="text-center pt-4">
+                <button
+                  onClick={loadMore}
+                  className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 font-medium text-sm shadow-md hover:shadow-lg"
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className={`inline-flex items-center px-3 py-1 rounded-xl text-sm font-semibold border ${getCategoryColor(shoutOut.category)}`}>
-                        {getCategoryIcon(shoutOut.category)}
-                        <span className="ml-2 capitalize">{shoutOut.category}</span>
-                      </div>
-                      {shoutOut.badge && (
-                        <span className="text-xl" title={shoutOut.badge}>{shoutOut.badge}</span>
-                      )}
-                      {shoutOut.isPublic && (
-                        <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-medium">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Public
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center text-gray-500 text-sm">
-                      <Clock className="h-4 w-4 mr-2" />
-                      {new Date(shoutOut.createdAt).toLocaleDateString()}
-                    </div>
-                  </div>
-                  
-                  <h3 className="font-bold text-lg text-gray-900 mb-2">{shoutOut.studentName}</h3>
-                  <p className="text-gray-700 mb-4 leading-relaxed">{shoutOut.message}</p>
-                  
-                  <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-                    <span className="text-sm text-gray-600 font-medium">by {shoutOut.teacherName}</span>
-                    <div className="flex items-center text-red-500 bg-red-50 px-3 py-1 rounded-full">
-                      <Heart className="h-4 w-4 mr-1" />
-                      <span className="text-sm font-semibold">{shoutOut.reactions || 0}</span>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+                  Load More ({filteredShoutOuts.length - displayLimit} remaining)
+                </button>
+              </div>
+            )}
             
             {filteredShoutOuts.length === 0 && (
               <div className="text-center py-12 text-gray-500">
@@ -605,14 +649,12 @@ export default function ShoutOutsSystem() {
                             setSelectedClass(classAssignment)
                             setModalStep('students')
                             
-                            // Use Redux user instead of creating new Supabase client
                             if (!user?.id) {
-                              console.error('❌ No user found in Redux')
+                              toast.error('Please log in to continue')
                               return
                             }
                             
                             try {
-                              // Fetch profile to get school_id
                               const profileResponse = await fetch('/api/get-profile', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
@@ -621,14 +663,12 @@ export default function ShoutOutsSystem() {
                               
                               if (profileResponse.ok) {
                                 const profileData = await profileResponse.json()
-                                const schoolId = profileData.school_id
-                                console.log('🏫 Using school_id:', schoolId)
-                                await fetchStudentsByClass(classAssignment.class_id, schoolId)
+                                await fetchStudentsByClass(classAssignment.class_id, profileData.school_id)
                               } else {
-                                console.error('❌ Failed to fetch profile:', profileResponse.status)
+                                toast.error('Failed to load class data')
                               }
                             } catch (error) {
-                              console.error('❌ Error fetching students:', error)
+                              toast.error('Error loading students')
                             }
                           }}
                           className="p-4 text-left border-2 border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
@@ -772,11 +812,11 @@ export default function ShoutOutsSystem() {
                               setSelectedStudent(student)
                               setModalStep('create')
                             }}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.05 }}
-                            className="group relative p-3.5 text-left bg-white border-2 border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-lg transition-all duration-300 overflow-hidden"
-                            whileHover={{ scale: 1.03, y: -2 }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.15 }}
+                            className="group relative p-3.5 text-left bg-white border-2 border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-lg transition-all duration-200 overflow-hidden"
+                            whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                           >
                             {/* Gradient overlay on hover */}

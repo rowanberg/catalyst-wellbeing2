@@ -16,7 +16,15 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_A
 // Use SSR-compatible browser client that properly syncs cookies with server
 export const supabase = createBrowserClient(
   supabaseUrl,
-  supabaseAnonKey
+  supabaseAnonKey,
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      flowType: 'pkce',
+    },
+  }
 )
 
 // Handle auth state changes and refresh token errors

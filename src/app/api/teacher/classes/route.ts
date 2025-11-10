@@ -77,15 +77,17 @@ export async function GET(request: NextRequest) {
     const schoolId = teacherProfile.school_id
     const teacherId = user.id  // Use user.id for teacher_class_assignments
 
-    if (!schoolId || !gradeLevelId) {
+    if (!schoolId) {
       return NextResponse.json(
-        { message: 'School ID and Grade Level ID are required' },
+        { message: 'School ID is required' },
         { status: 400 }
       )
     }
 
-    // Create cache key
-    const cacheKey = `classes:${schoolId}:${gradeLevelId}:${teacherId || 'all'}`
+    // Create cache key (include grade level if provided)
+    const cacheKey = gradeLevelId 
+      ? `classes:${schoolId}:${gradeLevelId}:${teacherId || 'all'}`
+      : `classes:${schoolId}:all:${teacherId || 'all'}`
     
     // Check cache first
     const cached = classCache.get(cacheKey)
@@ -98,7 +100,7 @@ export async function GET(request: NextRequest) {
 
     // Use request deduplication for concurrent calls (saves 3.7s on 4 parallel calls)
     const result = await dedupedRequest(cacheKey, async () => {
-      return await fetchClassesData(schoolId, gradeLevelId, teacherId)
+      return await fetchClassesData(schoolId, gradeLevelId || undefined, teacherId)
     })
 
     // Store in cache
@@ -125,13 +127,13 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function fetchClassesData(schoolId: string, gradeLevelId: string, teacherId: string | null) {
+async function fetchClassesData(schoolId: string, gradeLevelId: string | undefined, teacherId: string | null) {
   const supabaseAdmin = getSupabaseAdmin()
   let classes: ClassData[] = []
   try {
     // Strategy 1: If teacherId provided, get assigned classes directly
     if (teacherId) {
-      const { data: teacherClasses, error: classError } = await supabaseAdmin
+      let query = supabaseAdmin
         .from('teacher_class_assignments')
         .select(`
           classes!inner(
@@ -146,15 +148,21 @@ async function fetchClassesData(schoolId: string, gradeLevelId: string, teacherI
         `)
         .eq('teacher_id', teacherId)
         .eq('classes.school_id', schoolId)
-        .eq('classes.grade_level_id', gradeLevelId)
+      
+      // Only filter by grade level if provided
+      if (gradeLevelId) {
+        query = query.eq('classes.grade_level_id', gradeLevelId)
+      }
+      
+      const { data: teacherClasses, error: classError } = await query
       
       if (!classError && teacherClasses) {
         classes = teacherClasses.map((assignment: any) => normalizeClass(assignment.classes))
       }
     }
     
-    // Strategy 2: Try database function if no teacher-specific classes
-    if (classes.length === 0) {
+    // Strategy 2: Try database function if no teacher-specific classes (only if gradeLevelId provided)
+    if (classes.length === 0 && gradeLevelId) {
       try {
         const { data: dbClasses, error: rpcError } = await supabaseAdmin
           .rpc('get_grade_classes', { 
@@ -174,11 +182,17 @@ async function fetchClassesData(schoolId: string, gradeLevelId: string, teacherI
     
     // Strategy 3: Fallback to direct table query
     if (classes.length === 0) {
-      const { data: directClasses, error: directError } = await supabaseAdmin
+      let query = supabaseAdmin
         .from('classes')
         .select('*')
         .eq('school_id', schoolId)
-        .eq('grade_level_id', gradeLevelId)
+      
+      // Only filter by grade level if provided
+      if (gradeLevelId) {
+        query = query.eq('grade_level_id', gradeLevelId)
+      }
+      
+      const { data: directClasses, error: directError } = await query
       
       if (!directError && directClasses) {
         classes = directClasses.map((cls: any) => normalizeClass(cls))

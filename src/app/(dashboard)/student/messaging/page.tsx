@@ -11,7 +11,11 @@ import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
+// Disable barrel optimization for lucide-react to prevent constructor errors in Next.js 15
+import * as LucideIcons from 'lucide-react'
+
+// Destructure the icons we need
+const {
   MessageCircle, 
   Users, 
   Heart, 
@@ -36,7 +40,7 @@ import {
   Info,
   Camera,
   Mic,
-  Image as ImageIcon,
+  Image: ImageIcon,
   Zap,
   ThumbsUp,
   Frown,
@@ -71,7 +75,7 @@ import {
   Music,
   Scissors,
   Paintbrush
-} from 'lucide-react'
+} = LucideIcons
 
 interface Teacher {
   id: string
@@ -1249,40 +1253,6 @@ function StudentMessagingContent() {
                               </motion.div>
 
                               <motion.div
-                                className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-400/20 backdrop-blur-sm cursor-pointer hover:bg-purple-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10"
-                                whileHover={{ scale: 1.02, x: 4 }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={() => router.push('/student/grade-analytics')}
-                              >
-                                <div className="flex items-center space-x-3 sm:space-x-4">
-                                  <div className="relative p-2 sm:p-3 bg-purple-500/20 rounded-lg sm:rounded-xl group-hover:bg-purple-500/30 transition-colors">
-                                    <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-purple-300 group-hover:text-purple-200 transition-colors" />
-                                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center space-x-2 mb-1">
-                                      <p className="text-white/90 font-semibold text-sm sm:text-base truncate">Grade Analytics</p>
-                                      <Crown className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400 flex-shrink-0" />
-                                    </div>
-                                    <p className="text-white/60 text-xs sm:text-sm line-clamp-1">Track academic progress & insights</p>
-                                    <div className="flex items-center space-x-2 mt-2">
-                                      <div className="flex items-center space-x-1">
-                                        <TrendingUp className="h-3 w-3 text-purple-400" />
-                                        <span className="text-white/70 text-xs">Progress tracking</span>
-                                      </div>
-                                      <span className="text-white/50 text-xs">•</span>
-                                      <span className="text-white/50 text-xs">Analytics</span>
-                                    </div>
-                                  </div>
-                                  <div className="flex flex-col items-end space-y-1">
-                                    <Badge variant="outline" className="bg-purple-500/10 text-purple-300 border-purple-400/30 text-xs px-2 py-0.5">
-                                      Insights
-                                    </Badge>
-                                  </div>
-                                </div>
-                              </motion.div>
-
-                              <motion.div
                                 className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-400/20 backdrop-blur-sm cursor-pointer hover:bg-green-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/10"
                                 whileHover={{ scale: 1.02, x: 4 }}
                                 whileTap={{ scale: 0.98 }}
@@ -1386,81 +1356,7 @@ function StudentMessagingContent() {
                                 </div>
                               </motion.div>
 
-                              {/* School Events Hub */}
-                              <motion.div
-                                className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-400/20 backdrop-blur-sm cursor-pointer hover:bg-orange-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/10"
-                                whileHover={{ scale: 1.02, x: 4 }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={() => router.push('/student/school-events')}
-                              >
-                                <div className="flex items-center space-x-3 sm:space-x-4">
-                                  <div className="relative p-2 sm:p-3 bg-orange-500/20 rounded-lg sm:rounded-xl group-hover:bg-orange-500/30 transition-colors">
-                                    <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-orange-300 group-hover:text-orange-200 transition-colors" />
-                                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center space-x-2 mb-1">
-                                      <p className="text-white/90 font-semibold text-sm sm:text-base truncate">School Events Hub</p>
-                                      <Crown className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400 flex-shrink-0" />
-                                    </div>
-                                    <p className="text-white/60 text-xs sm:text-sm line-clamp-1">Discover & join exciting school activities</p>
-                                    <div className="flex items-center space-x-2 mt-2">
-                                      <div className="flex items-center space-x-1">
-                                        <Clock className="h-3 w-3 text-orange-400" />
-                                        <span className="text-white/70 text-xs">3 events today</span>
-                                      </div>
-                                      <span className="text-white/50 text-xs">•</span>
-                                      <span className="text-white/50 text-xs">15 upcoming</span>
-                                    </div>
-                                  </div>
-                                  <div className="flex flex-col items-end space-y-1">
-                                    <Badge variant="outline" className="bg-orange-500/10 text-orange-300 border-orange-400/30 text-xs px-2 py-0.5">
-                                      Live
-                                    </Badge>
-                                  </div>
-                                </div>
-                              </motion.div>
-                              
-                              {/* Achievement Center */}
-                              <motion.div
-                                className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-400/20 backdrop-blur-sm cursor-pointer hover:bg-yellow-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/10"
-                                whileHover={{ scale: 1.02, x: 4 }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={() => router.push('/student/achievement-center')}
-                              >
-                                <div className="flex items-center space-x-3 sm:space-x-4">
-                                  <div className="relative p-2 sm:p-3 bg-yellow-500/20 rounded-lg sm:rounded-xl group-hover:bg-yellow-500/30 transition-colors">
-                                    <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-300 group-hover:text-yellow-200 transition-colors" />
-                                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center space-x-2 mb-1">
-                                      <p className="text-white/90 font-semibold text-sm sm:text-base truncate">Achievement Center</p>
-                                      <Crown className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400 flex-shrink-0" />
-                                    </div>
-                                    <p className="text-white/60 text-xs sm:text-sm line-clamp-1">Unlock badges, trophies & exclusive rewards</p>
-                                    <div className="flex items-center space-x-2 mt-2">
-                                      <div className="flex items-center space-x-1">
-                                        <div className="flex -space-x-0.5">
-                                          <div className="w-3 h-3 bg-yellow-400 rounded-sm rotate-45"></div>
-                                          <div className="w-3 h-3 bg-orange-400 rounded-sm rotate-45"></div>
-                                          <div className="w-3 h-3 bg-red-400 rounded-sm rotate-45"></div>
-                                        </div>
-                                        <span className="text-white/70 text-xs">7 badges earned</span>
-                                      </div>
-                                      <span className="text-white/50 text-xs">•</span>
-                                      <span className="text-white/50 text-xs">3 new available</span>
-                                    </div>
-                                  </div>
-                                  <div className="flex flex-col items-end space-y-1">
-                                    <Badge variant="outline" className="bg-yellow-500/10 text-yellow-300 border-yellow-400/30 text-xs px-2 py-0.5">
-                                      Trending
-                                    </Badge>
-                                  </div>
-                                </div>
-                              </motion.div>
-
-                              {/* Learning Games */}
+{/* Learning Games */}
                               <motion.div
                                 className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-400/20 backdrop-blur-sm cursor-pointer hover:bg-indigo-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/10"
                                 whileHover={{ scale: 1.02, x: 4 }}
@@ -1490,48 +1386,6 @@ function StudentMessagingContent() {
                                   <div className="flex flex-col items-end space-y-1">
                                     <Badge variant="outline" className="bg-indigo-500/10 text-indigo-300 border-indigo-400/30 text-xs px-2 py-0.5">
                                       Fun
-                                    </Badge>
-                                  </div>
-                                </div>
-                              </motion.div>
-                              
-                              {/* Digital Portfolio */}
-                              <motion.div
-                                className="group relative p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-pink-500/10 to-rose-500/10 border border-pink-400/20 backdrop-blur-sm cursor-pointer hover:bg-pink-500/20 transition-all duration-300 hover:shadow-lg hover:shadow-pink-500/10"
-                                whileHover={{ scale: 1.02, x: 4 }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={() => router.push('/student/digital-portfolio')}
-                              >
-                                <div className="flex items-center space-x-3 sm:space-x-4">
-                                  <div className="relative p-2 sm:p-3 bg-pink-500/20 rounded-lg sm:rounded-xl group-hover:bg-pink-500/30 transition-colors">
-                                    <Palette className="h-4 w-4 sm:h-5 sm:w-5 text-pink-300 group-hover:text-pink-200 transition-colors" />
-                                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-400 rounded-full animate-pulse"></div>
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center space-x-2 mb-1">
-                                      <p className="text-white/90 font-semibold text-sm sm:text-base truncate">Digital Portfolio</p>
-                                      <Crown className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400 flex-shrink-0" />
-                                    </div>
-                                    <p className="text-white/60 text-xs sm:text-sm line-clamp-1">Showcase your best work & achievements</p>
-                                    <div className="flex items-center space-x-2 mt-2">
-                                      <div className="flex items-center space-x-1">
-                                        <div className="flex -space-x-1">
-                                          <div className="w-4 h-4 sm:w-5 sm:h-5 bg-gradient-to-br from-pink-400 to-rose-400 rounded border border-white/20 flex items-center justify-center">
-                                            <ImageIcon className="h-2 w-2 text-white" />
-                                          </div>
-                                          <div className="w-4 h-4 sm:w-5 sm:h-5 bg-gradient-to-br from-purple-400 to-pink-400 rounded border border-white/20 flex items-center justify-center">
-                                            <BookOpen className="h-2 w-2 text-white" />
-                                          </div>
-                                        </div>
-                                        <span className="text-white/70 text-xs">12 projects</span>
-                                      </div>
-                                      <span className="text-white/50 text-xs">•</span>
-                                      <span className="text-white/50 text-xs">85% complete</span>
-                                    </div>
-                                  </div>
-                                  <div className="flex flex-col items-end space-y-1">
-                                    <Badge variant="outline" className="bg-pink-500/10 text-pink-300 border-pink-400/30 text-xs px-2 py-0.5">
-                                      Popular
                                     </Badge>
                                   </div>
                                 </div>

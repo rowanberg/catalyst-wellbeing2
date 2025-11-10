@@ -120,6 +120,35 @@ export async function POST(request: NextRequest) {
       // Don't fail the registration, student record can be created later
     }
 
+    // Increment current_users count for the school
+    try {
+      // First get current counts
+      const { data: schoolCounts } = await supabaseAdmin
+        .from('schools')
+        .select('current_users, student_count')
+        .eq('id', schoolData.id)
+        .single()
+      
+      if (schoolCounts) {
+        const { error: updateError } = await supabaseAdmin
+          .from('schools')
+          .update({ 
+            current_users: (schoolCounts.current_users || 0) + 1,
+            student_count: (schoolCounts.student_count || 0) + 1
+          })
+          .eq('id', schoolData.id)
+        
+        if (updateError) {
+          console.error('Failed to update school user count:', updateError)
+        } else {
+          console.log(`✅ Incremented user count for school: ${schoolData.name}`)
+        }
+      }
+    } catch (countError) {
+      console.error('Error updating school user count:', countError)
+      // Don't fail registration if count update fails
+    }
+
     // Find the class this student is joining to invalidate its roster cache
     try {
       const { data: studentClass } = await supabaseAdmin

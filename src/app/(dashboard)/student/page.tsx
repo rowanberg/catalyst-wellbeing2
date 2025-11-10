@@ -11,7 +11,9 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { useAppSelector } from '@/lib/redux/hooks'
 import { 
-  Compass, Rocket, Flower2, ScanFace, Menu, X, BellDot, RefreshCcw
+  Compass, Rocket, Flower2, ScanFace, Menu, X, BellDot, RefreshCcw,
+  Sparkles, Users, LogOut, Settings, HelpCircle, BookOpen, MessageSquare,
+  BarChart3, ChevronRight, Shield
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -624,9 +626,176 @@ export default function EnhancedStudentDashboard() {
               onClick={(e) => e.stopPropagation()}
               className="absolute right-0 top-0 bottom-0 w-80 bg-white shadow-2xl"
             >
-              <div className="p-6">
-                <h2 className="text-xl font-bold text-slate-900 mb-6">Menu</h2>
-                {/* Add menu items here */}
+              <div className="h-full flex flex-col">
+                {/* Menu Header */}
+                <div className="p-6 border-b border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-bold text-slate-900">Quick Actions</h2>
+                    <button
+                      onClick={() => setShowMobileMenu(false)}
+                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <X className="w-5 h-5 text-slate-600" />
+                    </button>
+                  </div>
+                  {profile && (
+                    <p className="text-sm text-slate-500 mt-2">
+                      {profile.full_name || 'Student'}
+                    </p>
+                  )}
+                </div>
+
+                {/* Menu Items */}
+                <div className="flex-1 overflow-y-auto p-4">
+                  <div className="space-y-1">
+                    {/* Luminex AI */}
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        setShowMobileMenu(false)
+                        window.location.href = '/student/messaging'
+                      }}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all group"
+                    >
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 group-hover:shadow-md transition-shadow">
+                        <Sparkles className="w-5 h-5 text-white" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="font-semibold text-slate-800 text-sm">Luminex AI</p>
+                        <p className="text-xs text-slate-500">Your AI study assistant</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                    </motion.button>
+
+                    {/* Study Groups */}
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        setShowMobileMenu(false)
+                        window.location.href = '/student/study-groups'
+                      }}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 transition-all group"
+                    >
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 group-hover:shadow-md transition-shadow">
+                        <Users className="w-5 h-5 text-white" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="font-semibold text-slate-800 text-sm">Study Groups</p>
+                        <p className="text-xs text-slate-500">Collaborate with peers</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                    </motion.button>
+
+                    {/* Library */}
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        setShowMobileMenu(false)
+                        window.location.href = '/student/library'
+                      }}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 transition-all group"
+                    >
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 group-hover:shadow-md transition-shadow">
+                        <BookOpen className="w-5 h-5 text-white" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="font-semibold text-slate-800 text-sm">Library</p>
+                        <p className="text-xs text-slate-500">Access study materials</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                    </motion.button>
+
+                    {/* Achievements */}
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        setShowMobileMenu(false)
+                        window.location.href = '/student/achievements'
+                      }}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 transition-all group"
+                    >
+                      <div className="p-2 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 group-hover:shadow-md transition-shadow">
+                        <BarChart3 className="w-5 h-5 text-white" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="font-semibold text-slate-800 text-sm">Achievements</p>
+                        <p className="text-xs text-slate-500">View your progress</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                    </motion.button>
+
+                    <div className="border-t border-gray-100 my-2" />
+
+                    {/* Notifications */}
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        setShowMobileMenu(false)
+                        window.location.href = '/student/notifications'
+                      }}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-all"
+                    >
+                      <BellDot className="w-5 h-5 text-slate-600" />
+                      <div className="flex-1 text-left">
+                        <p className="font-medium text-slate-700 text-sm">Notifications</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                    </motion.button>
+
+                    {/* Settings */}
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        setShowMobileMenu(false)
+                        window.location.href = '/student/settings'
+                      }}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-all"
+                    >
+                      <Settings className="w-5 h-5 text-slate-600" />
+                      <div className="flex-1 text-left">
+                        <p className="font-medium text-slate-700 text-sm">Settings</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                    </motion.button>
+
+                    {/* Help & Support */}
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        setShowMobileMenu(false)
+                        window.location.href = '/student/help'
+                      }}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-all"
+                    >
+                      <HelpCircle className="w-5 h-5 text-slate-600" />
+                      <div className="flex-1 text-left">
+                        <p className="font-medium text-slate-700 text-sm">Help & Support</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                    </motion.button>
+                  </div>
+                </div>
+
+                {/* Sign Out Button */}
+                <div className="p-4 border-t border-gray-100">
+                  <motion.button
+                    whileTap={{ scale: 0.98 }}
+                    onClick={async () => {
+                      setShowMobileMenu(false)
+                      const { createBrowserClient } = await import('@supabase/ssr')
+                      const supabase = createBrowserClient(
+                        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+                      )
+                      await supabase.auth.signOut()
+                      window.location.href = '/auth/signin'
+                    }}
+                    className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-red-50 hover:bg-red-100 transition-colors group"
+                  >
+                    <LogOut className="w-5 h-5 text-red-600" />
+                    <span className="font-semibold text-red-600">Sign Out</span>
+                  </motion.button>
+                </div>
               </div>
             </motion.div>
           </motion.div>

@@ -271,11 +271,22 @@ export default function RegisterPage() {
       })
 
       if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        
         // User-friendly error messages based on status code
         if (response.status === 404) {
           throw new ValidationError('SCHOOL_NOT_FOUND', 'School ID not found. Please check and try again.')
         } else if (response.status === 400) {
           throw new ValidationError('INVALID_SCHOOL_ID', 'Invalid School ID format. Please enter a valid 12-character School ID.')
+        } else if (response.status === 403) {
+          // Handle user limit and inactive school errors
+          if (errorData.errorCode === 'USER_LIMIT_REACHED') {
+            throw new ValidationError('USER_LIMIT_REACHED', errorData.message || 'User limit reached. Please contact school administration.')
+          } else if (errorData.errorCode === 'SCHOOL_INACTIVE') {
+            throw new ValidationError('SCHOOL_INACTIVE', errorData.message || 'This school account is currently inactive. Please contact school administration.')
+          } else {
+            throw new ValidationError('SCHOOL_ACCESS_DENIED', errorData.message || 'Access denied. Please contact school administration.')
+          }
         } else if (response.status >= 500) {
           throw new ValidationError('SERVER_ERROR', 'Unable to verify school at this time. Please try again later.')
         } else {
@@ -315,10 +326,15 @@ export default function RegisterPage() {
           }
         }
         
+        // Show success message with available slots info
+        const slotsInfo = data.availableSlots !== undefined 
+          ? ` (${data.availableSlots} spots available)` 
+          : ''
+        
         addToast({
           type: 'success',
-          title: 'School Verified',
-          description: `Found: ${data.schoolName}`
+          title: 'School Verified ✓',
+          description: `${data.schoolName}${slotsInfo}`
         })
       } else {
         throw new ValidationError('SCHOOL_NOT_FOUND', 'School ID not found. Please verify with your school administrator.')

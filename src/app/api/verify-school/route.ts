@@ -21,10 +21,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find the specific school by school code
+    // Find the specific school by school code with user limit info
     const { data: school, error } = await supabaseAdmin
       .from('schools')
-      .select('id, name, school_code')
+      .select('id, name, school_code, user_limit, current_users, is_active, subscription_status')
       .eq('school_code', schoolId)
       .single()
 
@@ -51,10 +51,42 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check if school is active
+    if (!school.is_active) {
+      return NextResponse.json(
+        { 
+          message: 'This school account is currently inactive. Please contact school administration.',
+          errorCode: 'SCHOOL_INACTIVE'
+        },
+        { status: 403 }
+      )
+    }
+
+    // Check user limit
+    const currentUsers = school.current_users || 0
+    const userLimit = school.user_limit || 100
+
+    if (currentUsers >= userLimit) {
+      return NextResponse.json(
+        { 
+          message: 'User limit reached. Please contact school administration to increase capacity.',
+          errorCode: 'USER_LIMIT_REACHED',
+          details: {
+            currentUsers,
+            userLimit
+          }
+        },
+        { status: 403 }
+      )
+    }
+
     return NextResponse.json({
       schoolName: school.name,
       schoolUuid: school.id,
-      verified: true
+      verified: true,
+      userLimit,
+      currentUsers,
+      availableSlots: userLimit - currentUsers
     })
   } catch (error) {
     console.error('Verify school API error:', error)

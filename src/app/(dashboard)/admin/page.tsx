@@ -29,7 +29,8 @@ import {
   Clock,
   LogOut,
   User,
-  ChevronDown
+  ChevronDown,
+  Shield
 } from 'lucide-react'
 import { PageLoader } from '@/components/ui/loading-spinner'
 import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
@@ -564,7 +565,7 @@ function AdminDashboardContent() {
                 <p className="text-sm text-gray-600 mt-1 font-['DM_Sans']">Essential administrative tools</p>
               </div>
               <div className="text-xs font-semibold text-gray-700 bg-gray-100 px-3 py-2 rounded-lg font-['DM_Sans']" style={{ letterSpacing: '0.05em' }}>
-                8 tools
+                9 tools
               </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">  
@@ -720,6 +721,26 @@ function AdminDashboardContent() {
                 </Link>
               </motion.div>
 
+              {/* Incident Data */}
+              <motion.div 
+                whileHover={{ y: -4 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Link href="/admin/incidents" className="block group">
+                  <div className="h-full bg-white rounded-xl border border-gray-200 p-5 hover:border-gray-300 transition-all" style={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' }}>
+                    <div className="flex flex-col items-center text-center space-y-3">
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center relative" style={{ background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)', boxShadow: '0 4px 12px rgba(245, 158, 11, 0.15)' }}>
+                        <Shield className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900 text-sm font-['Plus_Jakarta_Sans']" style={{ letterSpacing: '-0.01em' }}>Incident Data</p>
+                        <p className="text-xs text-gray-600 mt-1 font-['DM_Sans']">View all incidents</p>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              </motion.div>
 
             </div>
           </motion.div>

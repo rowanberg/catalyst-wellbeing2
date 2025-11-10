@@ -73,29 +73,12 @@ export function SeatingViewer({ isOpen, onClose }: SeatingViewerProps) {
       const response = await fetch('/api/student/seating')
       const data = await response.json()
       
-      // Convert flat seat_pattern to 2D grid
-      if (data.seatingChart && Array.isArray(data.seatingChart.seat_pattern)) {
-        const { rows, cols, seat_pattern } = data.seatingChart
-        
-        // Check if it's a flat array (like ["seat", "seat", ...])
-        if (seat_pattern.length > 0 && typeof seat_pattern[0] === 'string') {
-          // Convert flat array to 2D grid based on rows x cols
-          const grid: number[][] = []
-          for (let r = 0; r < rows; r++) {
-            const row: number[] = []
-            for (let c = 0; c < cols; c++) {
-              const index = r * cols + c
-              // "seat" = 1, anything else = 0 (empty)
-              row.push(seat_pattern[index] === 'seat' ? 1 : 0)
-            }
-            grid.push(row)
-          }
-          data.seatingChart.seat_pattern = grid
-        }
-      }
-      
-      console.log('Processed seating data:', data)
-      console.log('Seat pattern grid:', data.seatingChart?.seat_pattern)
+      console.log('✅ Seating data loaded:', data.seatingChart?.layout_name)
+      console.log('Pattern type:', typeof data.seatingChart?.seat_pattern)
+      console.log('Pattern length:', data.seatingChart?.seat_pattern?.length)
+      console.log('Pattern contents:', JSON.stringify(data.seatingChart?.seat_pattern))
+      console.log('First element:', data.seatingChart?.seat_pattern?.[0])
+      console.log('Is first element "seat"?', data.seatingChart?.seat_pattern?.[0] === 'seat')
       
       setSeatingData(data)
     } catch (error) {
@@ -143,7 +126,7 @@ export function SeatingViewer({ isOpen, onClose }: SeatingViewerProps) {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: '100%', opacity: 0 }}
           transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-          className="w-full sm:max-w-3xl bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[85vh] overflow-hidden flex flex-col"
+          className="w-full sm:max-w-3xl bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -176,7 +159,7 @@ export function SeatingViewer({ isOpen, onClose }: SeatingViewerProps) {
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 sm:pb-6">
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200" style={{ borderTopColor: 'var(--theme-primary)' }} />
@@ -222,17 +205,18 @@ export function SeatingViewer({ isOpen, onClose }: SeatingViewerProps) {
 
                 {/* Layout Info */}
                 {seatingData.seatingChart && (
-                  <div className="mb-4">
+                  <div className="mt-4 mb-4">
                     <Button
                       variant="outline"
                       onClick={() => setExpanded(!expanded)}
-                      className="w-full justify-between"
+                      className="w-full justify-between h-12 text-base font-semibold"
+                      style={{ borderColor: 'var(--theme-primary)', color: 'var(--theme-primary)' }}
                     >
                       <span className="flex items-center gap-2">
-                        <Sparkles className="h-4 w-4" style={{ color: 'var(--theme-primary)' }} />
-                        <span className="font-medium">View Full Classroom Layout</span>
+                        <Sparkles className="h-5 w-5" />
+                        <span>View Full Classroom Layout</span>
                       </span>
-                      {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      {expanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
                     </Button>
                   </div>
                 )}
@@ -264,67 +248,62 @@ export function SeatingViewer({ isOpen, onClose }: SeatingViewerProps) {
                             <p className="text-xs font-semibold text-gray-600">TEACHER'S DESK</p>
                           </div>
 
-                          {/* Seating Grid */}
-                          <div className="space-y-2 overflow-x-auto pb-2">
-                            {!Array.isArray(seatingData.seatingChart.seat_pattern) || seatingData.seatingChart.seat_pattern.length === 0 ? (
-                              <div className="text-center py-8 text-sm text-gray-600">
-                                <p className="font-medium">⚠️ Seat pattern data is invalid</p>
-                                <p className="text-xs mt-1">Type: {typeof seatingData.seatingChart.seat_pattern}</p>
-                                <p className="text-xs">Value: {JSON.stringify(seatingData.seatingChart.seat_pattern)?.slice(0, 100)}</p>
-                              </div>
-                            ) : (
-                              seatingData.seatingChart.seat_pattern.map((row, rowIndex) => (
-                              <div key={rowIndex} className="flex gap-2 justify-center">
-                                {Array.isArray(row) && row.map((cell, colIndex) => {
-                                  const isYourSeat = isStudentSeat(rowIndex, colIndex)
-                                  const occupant = getSeatOccupant(rowIndex, colIndex)
-                                  const isEmpty = cell === 0
+                          {/* Seating Grid - EXACTLY like teacher page */}
+                          {seatingData.seatingChart && (
+                            <div className="grid gap-2 sm:gap-3 p-2 sm:p-3 bg-white/50 rounded-lg overflow-x-auto" style={{ gridTemplateColumns: `repeat(${seatingData.seatingChart.cols}, minmax(0, 1fr))` }}>
+                              {Array.from({ length: seatingData.seatingChart.rows }).map((_, rowIndex) =>
+                                Array.from({ length: seatingData.seatingChart!.cols }).map((_, colIndex) => {
+                                  const { rows, cols, seat_pattern } = seatingData.seatingChart!
+                                  const patternIndex = rowIndex * cols + colIndex
+                                  const isEmptySpace = (seat_pattern as any[])[patternIndex] === 'empty'
+                                
+                                if (isEmptySpace) {
+                                  return <div key={`empty-${rowIndex}-${colIndex}`} className="w-16 h-16 sm:w-20 sm:h-20" />
+                                }
 
-                                  if (isEmpty) {
-                                    return <div key={colIndex} className="w-16 h-16 sm:w-20 sm:h-20" />
-                                  }
+                                const isYourSeat = isStudentSeat(rowIndex, colIndex)
+                                const occupant = getSeatOccupant(rowIndex, colIndex)
 
-                                  return (
-                                    <motion.div
-                                      key={colIndex}
-                                      whileHover={{ scale: 1.05 }}
-                                      className={cn(
-                                        'w-16 h-16 sm:w-20 sm:h-20 rounded-lg border-2 flex flex-col items-center justify-center text-xs font-medium transition-all cursor-pointer',
-                                        isYourSeat
-                                          ? 'border-2 shadow-lg'
-                                          : occupant
-                                          ? 'bg-gray-50 border-gray-300 hover:shadow-md'
-                                          : 'bg-white border-gray-200 border-dashed'
-                                      )}
-                                      style={
-                                        isYourSeat
-                                          ? {
-                                              borderColor: 'var(--theme-primary)',
-                                              background: 'linear-gradient(135deg, var(--theme-highlight), var(--theme-tertiary))',
-                                              color: 'var(--theme-primary)',
-                                            }
-                                          : {}
-                                      }
-                                      title={occupant ? `${occupant.profiles.first_name} ${occupant.profiles.last_name}` : undefined}
-                                    >
-                                      <span className={cn('font-bold text-[10px]', isYourSeat && 'font-extrabold')}>
-                                        {getSeatLabel(rowIndex, colIndex)}
+                                return (
+                                  <motion.div
+                                    key={`${rowIndex}-${colIndex}`}
+                                    whileHover={{ scale: 1.05 }}
+                                    className={cn(
+                                      'w-16 h-16 sm:w-20 sm:h-20 rounded-lg border-2 flex flex-col items-center justify-center text-xs font-medium transition-all cursor-pointer',
+                                      isYourSeat
+                                        ? 'border-2 shadow-lg'
+                                        : occupant
+                                        ? 'bg-gray-50 border-gray-300 hover:shadow-md'
+                                        : 'bg-white border-gray-200 border-dashed'
+                                    )}
+                                    style={
+                                      isYourSeat
+                                        ? {
+                                            borderColor: 'var(--theme-primary)',
+                                            background: 'linear-gradient(135deg, var(--theme-highlight), var(--theme-tertiary))',
+                                            color: 'var(--theme-primary)',
+                                          }
+                                        : {}
+                                    }
+                                    title={occupant ? `${occupant.profiles.first_name} ${occupant.profiles.last_name}` : undefined}
+                                  >
+                                    <span className={cn('font-bold text-[10px]', isYourSeat && 'font-extrabold')}>
+                                      {getSeatLabel(rowIndex, colIndex)}
+                                    </span>
+                                    {isYourSeat && (
+                                      <MapPin className="h-3 w-3 mt-0.5" style={{ color: 'var(--theme-primary)' }} />
+                                    )}
+                                    {occupant && (
+                                      <span className="text-[9px] text-gray-600 mt-0.5 font-medium text-center leading-tight px-1">
+                                        {isYourSeat ? 'You' : occupant.profiles.first_name}
                                       </span>
-                                      {isYourSeat && (
-                                        <MapPin className="h-3 w-3 mt-0.5" style={{ color: 'var(--theme-primary)' }} />
-                                      )}
-                                      {occupant && (
-                                        <span className="text-[9px] text-gray-600 mt-0.5 font-medium text-center leading-tight px-1">
-                                          {isYourSeat ? 'You' : occupant.profiles.first_name}
-                                        </span>
-                                      )}
-                                    </motion.div>
-                                  )
-                                })}
-                              </div>
-                            ))
+                                    )}
+                                  </motion.div>
+                                )
+                              })
                             )}
                           </div>
+                          )}
 
                           {/* Legend */}
                           <div className="mt-4 pt-3 border-t border-gray-200 flex flex-wrap gap-3 justify-center text-xs">

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
+import type { User } from '@supabase/supabase-js'
 
 // Get super admin access key from environment variable
 // This should be a strong, randomly generated key stored securely
@@ -27,24 +29,47 @@ function timingSafeEqual(a: string, b: string): boolean {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
   
-  // Create response with security headers for all routes
-  let response: NextResponse
+  // Create a response object that we'll modify
+  let response = NextResponse.next({
+    request: {
+      headers: req.headers,
+    },
+  })
 
-  // Fast redirect for root path - avoid client-side delay
-  if (pathname === '/') {
-    // Check for auth session cookie
-    const authToken = req.cookies.get('sb-localhost-auth-token')?.value || 
-                     req.cookies.get(Object.keys(req.cookies).find(k => k.includes('auth-token')) || '')?.value
-    
-    if (authToken) {
-      // Has session - will redirect via client (needs profile lookup)
-      // But we can return immediately instead of rendering full page
-      response = NextResponse.next()
-    } else {
-      // No session - redirect directly to login (server-side)
-      return NextResponse.redirect(new URL('/login', req.url))
+  // Create Supabase client for auth handling
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            req.cookies.set(name, value)
+            response.cookies.set(name, value, options)
+          })
+        },
+      },
     }
-  } else if (pathname.startsWith('/superpanel')) {
+  )
+
+  // Refresh session if expired - this resolves refresh token errors
+  // Suppress auth errors as they're expected for unauthenticated requests
+  let user: User | null = null
+  try {
+    const { data, error } = await supabase.auth.getUser()
+    if (!error && data.user) {
+      user = data.user
+    }
+  } catch (err) {
+    // Silently handle auth errors - they're normal for logged out users
+    user = null
+  }
+
+  // Handle superpanel routes (separate auth system)
+  if (pathname.startsWith('/superpanel')) {
     // Always allow auth page - no checks at all
     if (pathname === '/superpanel/auth') {
       response = NextResponse.next()
@@ -71,11 +96,24 @@ export async function middleware(req: NextRequest) {
         console.log('[Middleware] Session token decode failed, redirecting to auth')
         return NextResponse.redirect(new URL('/superpanel/auth', req.url))
       }
-      
-      response = NextResponse.next()
     }
-  } else {
-    response = NextResponse.next()
+  } 
+  // Handle root path redirect
+  else if (pathname === '/') {
+    if (user) {
+      // Has valid session - will redirect via client (needs profile lookup)
+      response = NextResponse.next()
+    } else {
+      // No session - redirect directly to login (server-side)
+      return NextResponse.redirect(new URL('/login', req.url))
+    }
+  }
+  // For protected routes, redirect to login if no valid session
+  else if (pathname.startsWith('/student') || pathname.startsWith('/teacher') || 
+           pathname.startsWith('/parent') || pathname.startsWith('/admin')) {
+    if (!user) {
+      return NextResponse.redirect(new URL('/login', req.url))
+    }
   }
 
   // Apply comprehensive security headers to all responses

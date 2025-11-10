@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -32,13 +32,27 @@ interface Poll {
   type?: string
 }
 
+interface ShoutOut {
+  id: string
+  student_id: string
+  student_name: string
+  category: string
+  message: string
+  teacher_name: string
+  created_at: string
+  badge?: string
+  is_public: boolean
+}
+
 export default function StudentAnnouncementsPage() {
   const router = useRouter()
   const { addToast } = useToast()
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [polls, setPolls] = useState<Poll[]>([])
+  const [shoutOuts, setShoutOuts] = useState<ShoutOut[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'announcements' | 'polls'>('announcements')
+  const [loadingShoutOuts, setLoadingShoutOuts] = useState(false)
+  const [activeTab, setActiveTab] = useState<'announcements' | 'polls' | 'shoutouts'>('announcements')
   
   // UI state
   const [bookmarkedItems, setBookmarkedItems] = useState<Set<string>>(new Set())
@@ -53,14 +67,11 @@ export default function StudentAnnouncementsPage() {
   const [pollResponses, setPollResponses] = useState<{[key: string]: any}>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  useEffect(() => {
-    fetchData()
-  }, []) // Fixed: Added proper dependency array to prevent duplicate calls
   // Cache for preventing duplicate requests
   const [requestCache, setRequestCache] = useState<Map<string, any>>(new Map())
   const [lastFetchTime, setLastFetchTime] = useState<Map<string, number>>(new Map())
   
-  const fetchData = async (forceRefresh = false) => {
+  const fetchData = useCallback(async (forceRefresh = false) => {
     const cacheKey = 'announcements-data'
     const now = Date.now()
     const lastFetch = lastFetchTime.get(cacheKey) || 0
@@ -112,10 +123,10 @@ export default function StudentAnnouncementsPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [requestCache, lastFetchTime])
 
   // Fallback method using individual endpoints
-  const fetchDataFallback = async () => {
+  const fetchDataFallback = useCallback(async () => {
     try {
       const [announcementsResponse, pollsResponse] = await Promise.all([
         fetch('/api/student/announcements'),
@@ -137,9 +148,51 @@ export default function StudentAnnouncementsPage() {
     } catch (error) {
       console.error('Fallback fetch error:', error)
     }
-  }
+  }, [])
+
+  // Fetch class shout-outs with caching
+  const fetchShoutOuts = useCallback(async (forceRefresh = false) => {
+    const cacheKey = 'shoutouts-data'
+    const now = Date.now()
+    const lastFetch = lastFetchTime.get(cacheKey) || 0
+    const cacheExpiry = 3 * 60 * 1000 // 3 minutes cache
+    
+    // Return cached data if still fresh and not forcing refresh
+    if (!forceRefresh && requestCache.has(cacheKey) && (now - lastFetch) < cacheExpiry) {
+      const cached = requestCache.get(cacheKey)
+      setShoutOuts(cached)
+      return
+    }
+    
+    try {
+      setLoadingShoutOuts(true)
+      const response = await fetch('/api/student/class-shoutouts', {
+        next: { revalidate: 180 } // Cache for 3 minutes
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        const shoutOutsData = data.shoutOuts || []
+        setShoutOuts(shoutOutsData)
+        
+        // Cache the results
+        setRequestCache(prev => new Map(prev.set(cacheKey, shoutOutsData)))
+        setLastFetchTime(prev => new Map(prev.set(cacheKey, now)))
+      }
+    } catch (error) {
+      console.error('Error fetching shout-outs:', error)
+    } finally {
+      setLoadingShoutOuts(false)
+    }
+  }, [requestCache, lastFetchTime])
 
 
+
+  // Mount effect
+  useEffect(() => {
+    fetchData()
+    fetchShoutOuts()
+  }, [fetchData, fetchShoutOuts])
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -181,7 +234,7 @@ export default function StudentAnnouncementsPage() {
   }
 
   // Toggle announcement expansion
-  const toggleExpanded = (id: string) => {
+  const toggleExpanded = useCallback((id: string) => {
     setExpandedAnnouncements(prev => {
       const newSet = new Set(prev)
       if (newSet.has(id)) {
@@ -191,10 +244,10 @@ export default function StudentAnnouncementsPage() {
       }
       return newSet
     })
-  }
+  }, [])
 
   // Interactive functions
-  const toggleBookmark = (id: string) => {
+  const toggleBookmark = useCallback((id: string) => {
     setBookmarkedItems(prev => {
       const newSet = new Set(prev)
       if (newSet.has(id)) {
@@ -214,9 +267,9 @@ export default function StudentAnnouncementsPage() {
       }
       return newSet
     })
-  }
+  }, [addToast])
 
-  const toggleLike = (id: string) => {
+  const toggleLike = useCallback((id: string) => {
     setLikedItems(prev => {
       const newSet = new Set(prev)
       if (newSet.has(id)) {
@@ -231,25 +284,25 @@ export default function StudentAnnouncementsPage() {
       }
       return newSet
     })
-  }
+  }, [addToast])
 
-  const markAsViewed = (id: string) => {
+  const markAsViewed = useCallback((id: string) => {
     setViewedItems(prev => {
       const newSet = new Set(prev)
       newSet.add(id)
       return newSet
     })
-  }
+  }, [])
 
   // Handle poll response
-  const handlePollResponse = (poll: Poll) => {
+  const handlePollResponse = useCallback((poll: Poll) => {
     setSelectedPoll(poll)
     setShowPollModal(true)
     setPollResponses({}) // Reset responses
-  }
+  }, [])
 
   // Submit poll response
-  const submitPollResponse = async () => {
+  const submitPollResponse = useCallback(async () => {
     if (!selectedPoll || isSubmitting) return
 
     setIsSubmitting(true)
@@ -321,7 +374,7 @@ export default function StudentAnnouncementsPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }
+  }, [selectedPoll, isSubmitting, pollResponses, addToast])
 
   return (
     <>
@@ -385,12 +438,12 @@ export default function StudentAnnouncementsPage() {
         <div className="px-3 sm:px-6 lg:px-8 py-4 sm:py-6 max-w-6xl mx-auto relative z-10">
           {/* Themed Tab Navigation */}
           <div className="mb-6">
-            <div className="bg-white/80 backdrop-blur-sm rounded-xl p-1 shadow-lg max-w-md mx-auto lg:mx-0" style={{ border: '1px solid color-mix(in srgb, var(--theme-accent) 20%, transparent)' }}>
-              <div className="grid grid-cols-2 gap-1">
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl p-1 shadow-lg max-w-2xl mx-auto lg:mx-0" style={{ border: '1px solid color-mix(in srgb, var(--theme-accent) 20%, transparent)' }}>
+              <div className="grid grid-cols-3 gap-1">
                 <Button
                   onClick={() => setActiveTab('announcements')}
                   variant="ghost"
-                  className="h-10 rounded-lg transition-all duration-200 font-medium"
+                  className="h-10 rounded-lg transition-all duration-200 font-medium text-xs sm:text-sm"
                   style={{
                     background: activeTab === 'announcements' 
                       ? 'linear-gradient(135deg, var(--theme-primary), var(--theme-secondary))'
@@ -398,14 +451,30 @@ export default function StudentAnnouncementsPage() {
                     color: activeTab === 'announcements' ? 'white' : 'var(--theme-primary)'
                   }}
                 >
-                  <Bell className="h-4 w-4 mr-2" />
-                  <span>Announcements</span>
+                  <Bell className="h-4 w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Announcements</span>
+                  <span className="sm:hidden">News</span>
+                </Button>
+                
+                <Button
+                  onClick={() => setActiveTab('shoutouts')}
+                  variant="ghost"
+                  className="h-10 rounded-lg transition-all duration-200 font-medium text-xs sm:text-sm"
+                  style={{
+                    background: activeTab === 'shoutouts' 
+                      ? 'linear-gradient(135deg, var(--theme-primary), var(--theme-secondary))'
+                      : 'transparent',
+                    color: activeTab === 'shoutouts' ? 'white' : 'var(--theme-primary)'
+                  }}
+                >
+                  <Star className="h-4 w-4 mr-1 sm:mr-2" />
+                  <span>Shout-Outs</span>
                 </Button>
                 
                 <Button
                   onClick={() => setActiveTab('polls')}
                   variant="ghost"
-                  className="h-10 rounded-lg transition-all duration-200 font-medium"
+                  className="h-10 rounded-lg transition-all duration-200 font-medium text-xs sm:text-sm"
                   style={{
                     background: activeTab === 'polls' 
                       ? 'linear-gradient(135deg, var(--theme-primary), var(--theme-secondary))'
@@ -413,7 +482,7 @@ export default function StudentAnnouncementsPage() {
                     color: activeTab === 'polls' ? 'white' : 'var(--theme-primary)'
                   }}
                 >
-                  <BarChart3 className="h-4 w-4 mr-2" />
+                  <BarChart3 className="h-4 w-4 mr-1 sm:mr-2" />
                   <span>Polls</span>
                 </Button>
               </div>
@@ -636,6 +705,112 @@ export default function StudentAnnouncementsPage() {
                   )}
                 </motion.div>
               )}
+
+            {/* Shout-Outs Tab */}
+            {activeTab === 'shoutouts' && (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                className="space-y-4"
+              >
+                {/* Class Shout-Outs Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl text-white">
+                        <Heart className="h-5 w-5" />
+                      </div>
+                      <h2 className="text-lg sm:text-xl font-bold text-gray-900">✨ Class Recognitions</h2>
+                    </div>
+                    {!loadingShoutOuts && shoutOuts.length > 0 && (
+                      <Badge className="bg-green-100 text-green-700 border-green-200 font-semibold">
+                        {shoutOuts.length} shout-outs
+                      </Badge>
+                    )}
+                  </div>
+
+                  {loadingShoutOuts ? (
+                    <Card className="bg-white/90 backdrop-blur-xl border-white/30 shadow-xl">
+                      <CardContent className="text-center py-12 sm:py-16">
+                        <div 
+                          className="w-8 h-8 border-2 rounded-full mx-auto mb-4 animate-spin" 
+                          style={{ 
+                            borderColor: 'color-mix(in srgb, var(--theme-primary) 30%, transparent)',
+                            borderTopColor: 'var(--theme-primary)'
+                          }}
+                        />
+                        <p className="text-gray-600 text-sm">Loading shout-outs...</p>
+                      </CardContent>
+                    </Card>
+                  ) : shoutOuts.length === 0 ? (
+                    <Card className="bg-white/90 backdrop-blur-xl border-white/30 shadow-xl">
+                      <CardContent className="text-center py-12 sm:py-16">
+                        <div className="mb-4 sm:mb-6">
+                          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                            <Star className="h-8 w-8 sm:h-10 sm:w-10 text-green-500" />
+                          </div>
+                        </div>
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">No Shout-Outs Yet</h3>
+                        <p className="text-gray-600 text-sm sm:text-base">Your teachers haven't shared any recognitions yet. Keep up the great work!</p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    shoutOuts.map((shoutOut) => {
+                      const categoryColors = {
+                        academic: 'from-blue-500 to-indigo-500 border-blue-200',
+                        behavior: 'from-green-500 to-emerald-500 border-green-200',
+                        kindness: 'from-pink-500 to-rose-500 border-pink-200',
+                        effort: 'from-orange-500 to-amber-500 border-orange-200',
+                        leadership: 'from-purple-500 to-violet-500 border-purple-200',
+                        creativity: 'from-yellow-500 to-amber-500 border-yellow-200'
+                      }
+                      const gradient = categoryColors[shoutOut.category as keyof typeof categoryColors] || 'from-gray-500 to-gray-600'
+
+                      return (
+                        <Card key={shoutOut.id} className="bg-white/95 backdrop-blur-xl border-white/40 shadow-xl hover:shadow-2xl transition-all duration-300">
+                          <CardContent className="p-4 sm:p-6">
+                            <div className="flex gap-3 sm:gap-4">
+                              <div className={`flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-r ${gradient} flex items-center justify-center text-2xl sm:text-3xl shadow-lg`}>
+                                {shoutOut.badge || '⭐'}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2 mb-2">
+                                  <div>
+                                    <h3 className="font-bold text-gray-900 text-base sm:text-lg">{shoutOut.student_name}</h3>
+                                    <Badge className={`mt-1 capitalize border bg-gradient-to-r ${gradient.split(' ')[0]} ${gradient.split(' ')[1]} text-white`}>
+                                      {shoutOut.category}
+                                    </Badge>
+                                  </div>
+                                  <div className="text-xs sm:text-sm text-gray-500">
+                                    {new Date(shoutOut.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                  </div>
+                                </div>
+                                
+                                <p className="text-gray-700 leading-relaxed mb-3 text-sm sm:text-base">{shoutOut.message}</p>
+                                
+                                <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                                  <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
+                                    <Users className="h-4 w-4" />
+                                    <span className="font-medium">by {shoutOut.teacher_name}</span>
+                                  </div>
+                                  {shoutOut.is_public && (
+                                    <Badge className="bg-green-100 text-green-700 border-green-200 text-xs">
+                                      <CheckCircle className="h-3 w-3 mr-1" />
+                                      Public
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )
+                    })
+                  )}
+                </div>
+              </motion.div>
+            )}
 
             {/* Polls Tab */}
             {activeTab === 'polls' && (

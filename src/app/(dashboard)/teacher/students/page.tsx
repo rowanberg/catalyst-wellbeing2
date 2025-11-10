@@ -37,7 +37,7 @@ import {
   ArrowLeft,
   Search,
   Filter,
-  Grid3X3,
+  Grid3x3,
   List,
   MoreVertical,
   SortAsc,
@@ -548,10 +548,14 @@ export default function TeacherStudentsPage() {
   // Initial view setup: Show appropriate starting view
   useEffect(() => {
     if (!loading) {
-      // Only auto-navigate on initial load when explicitly on assigned-classes view
-      // Don't navigate if user has manually navigated elsewhere
-      if (currentView === 'assigned-classes' && assignedClasses.length === 0 && grades.length > 0) {
-        // If no assigned classes, show grades view to let teacher assign classes
+      // Prioritize showing assigned classes if available
+      if (assignedClasses.length > 0) {
+        // If teacher has assigned classes, always show them first
+        if (currentView === 'grades' || currentView === 'assigned-classes') {
+          setCurrentView('assigned-classes')
+        }
+      } else if (currentView === 'assigned-classes' && grades.length > 0) {
+        // Only if no assigned classes, show grades view to let teacher assign classes
         setCurrentView('grades')
       }
     }
@@ -1053,7 +1057,7 @@ export default function TeacherStudentsPage() {
                     className="p-2.5 rounded-xl hover:bg-gray-100 border border-gray-200 bg-white/80"
                     title={`Switch to ${viewMode === 'grid' ? 'List' : 'Grid'} view`}
                   >
-                    {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
+                    {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid3x3 className="h-4 w-4" />}
                   </Button>
                   
                   {/* Mobile Examinations Button */}
@@ -1154,7 +1158,7 @@ export default function TeacherStudentsPage() {
                           : 'text-gray-600 hover:text-gray-900'
                       }`}
                     >
-                      <Grid3X3 className="h-4 w-4" />
+                      <Grid3x3 className="h-4 w-4" />
                     </Button>
                     <Button
                       variant={viewMode === 'list' ? 'default' : 'ghost'}
@@ -1824,7 +1828,37 @@ export default function TeacherStudentsPage() {
             </motion.div>
           )}
 
-          {(currentView === 'grades' || (currentView === 'assigned-classes' && assignedClasses.length === 0 && !loading)) && (
+          {currentView === 'assigned-classes' && assignedClasses.length === 0 && !loading && (
+            <motion.div
+              key="no-assigned-classes"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="px-4 sm:px-6 lg:px-8"
+            >
+              <div className="max-w-2xl mx-auto text-center py-12">
+                <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl flex items-center justify-center">
+                  <UserCheck className="h-10 w-10 text-blue-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3" style={{ fontFamily: 'var(--font-jakarta)' }}>
+                  No Classes Assigned Yet
+                </h2>
+                <p className="text-gray-600 dark:text-slate-300 mb-8" style={{ fontFamily: 'var(--font-dm-sans)' }}>
+                  You haven't been assigned to any classes yet. Click the button below to browse available classes and assign yourself.
+                </p>
+                <Button
+                  onClick={handleAddMoreClasses}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl shadow-md"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Browse & Assign Classes
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {currentView === 'grades' && (
             <motion.div
               key="grades"
               initial={{ opacity: 0, y: 20 }}
@@ -1836,10 +1870,10 @@ export default function TeacherStudentsPage() {
               <div>
                 <div className="mb-6">
                   <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white mb-2" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.02em' }}>
-                    Select Grade Level
+                    {assignedClasses.length === 0 ? 'Select Grade Level to Assign Classes' : 'Select Grade Level'}
                   </h1>
                   <p className="text-gray-600" style={{ fontFamily: 'var(--font-dm-sans)' }}>
-                    Choose a grade to view classes and students
+                    {assignedClasses.length === 0 ? 'You have no assigned classes. Choose a grade to view and assign classes' : 'Choose a grade to view classes and students'}
                   </p>
                 </div>
 

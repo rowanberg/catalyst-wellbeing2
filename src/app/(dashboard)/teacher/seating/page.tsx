@@ -357,6 +357,28 @@ export default function SeatingChartPage() {
         if (!chartId) {
           throw new Error('Failed to create seating chart')
         }
+      } else {
+        // Update existing chart's layout if it changed
+        console.log('📝 Updating existing seating chart layout:', seatingChartId)
+        const response = await fetch('/api/teacher/seating/update-layout', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            seatingChartId: chartId,
+            layoutTemplateId: selectedLayout.id,
+            layoutName: selectedLayout.name,
+            rows: selectedLayout.rows,
+            cols: selectedLayout.cols,
+            totalSeats: selectedLayout.seatPattern.filter(s => s === 'seat').length,
+            seatPattern: selectedLayout.seatPattern
+          })
+        })
+        
+        if (!response.ok) {
+          console.error('Failed to update layout')
+        } else {
+          console.log('✅ Layout updated successfully')
+        }
       }
       
       // Save assignments

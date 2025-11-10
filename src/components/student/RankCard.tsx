@@ -151,23 +151,23 @@ export const RankCard = ({ rankData, type = 'class', className }: RankCardProps)
       />
 
       {/* Header */}
-      <div className="relative flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
+      <div className="relative flex items-start sm:items-center justify-between mb-3 sm:mb-4 gap-2">
+        <div className="flex items-start sm:items-center gap-2 sm:gap-3 flex-1 min-w-0">
           <div className={cn(
-            'w-10 h-10 rounded-xl flex items-center justify-center',
+            'w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0',
             isClassRank ? 'bg-indigo-500' : 'bg-emerald-500'
           )}>
             {isClassRank ? (
-              <Users className="w-5 h-5 text-white" />
+              <Users className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             ) : (
-              <Award className="w-5 h-5 text-white" />
+              <Award className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             )}
           </div>
-          <div>
-            <h3 className="text-sm font-bold text-gray-800">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-xs sm:text-sm font-bold text-gray-800 leading-tight">
               {isClassRank ? 'Academic Class Standing' : 'Grade-Level Academic Ranking'}
             </h3>
-            <p className="text-xs text-gray-600 font-medium">
+            <p className="text-[10px] sm:text-xs text-gray-600 font-medium mt-0.5 truncate">
               {isClassRank 
                 ? `${rankData.class_name || 'N/A'} • Grade ${rankData.grade_level}`
                 : `Grade ${rankData.grade_level} • Academic Year ${new Date().getFullYear()}`}
@@ -182,22 +182,25 @@ export const RankCard = ({ rankData, type = 'class', className }: RankCardProps)
             animate={{ scale: 1 }}
             transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
             className={cn(
-              'flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold',
+              'flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-semibold flex-shrink-0',
               rankChange > 0 ? 'bg-green-100' : rankChange < 0 ? 'bg-red-100' : 'bg-gray-100'
             )}
           >
             <span className={getTrendColor()}>
               {getTrendIcon()}
             </span>
-            <span className={getTrendColor()}>
+            <span className={cn(getTrendColor(), 'hidden sm:inline')}>
               {getTrendText()}
+            </span>
+            <span className={cn(getTrendColor(), 'sm:hidden')}>
+              {rankChange > 0 ? `↑${Math.abs(rankChange)}` : rankChange < 0 ? `↓${Math.abs(rankChange)}` : '—'}
             </span>
           </motion.div>
         )}
       </div>
 
       {/* Main rank display */}
-      <div className="relative flex items-baseline gap-3 mb-4">
+      <div className="relative flex items-baseline gap-2 sm:gap-3 mb-3 sm:mb-4">
         {medalGradient ? (
           <motion.div
             initial={{ scale: 0, rotate: -180 }}
@@ -206,10 +209,10 @@ export const RankCard = ({ rankData, type = 'class', className }: RankCardProps)
             className="relative"
           >
             <div className={cn(
-              'w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-br shadow-lg',
+              'w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center bg-gradient-to-br shadow-lg',
               medalGradient
             )}>
-              <Trophy className="w-8 h-8 text-white drop-shadow-lg" />
+              <Trophy className="w-7 h-7 sm:w-8 sm:h-8 text-white drop-shadow-lg" />
             </div>
             <motion.div
               animate={{ scale: [1, 1.2, 1] }}
@@ -224,7 +227,7 @@ export const RankCard = ({ rankData, type = 'class', className }: RankCardProps)
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
             className={cn(
-              'w-16 h-16 rounded-full flex items-center justify-center font-bold text-2xl shadow-lg',
+              'w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center font-bold text-xl sm:text-2xl shadow-lg',
               isClassRank 
                 ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white'
                 : 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white'
@@ -241,10 +244,10 @@ export const RankCard = ({ rankData, type = 'class', className }: RankCardProps)
             transition={{ delay: 0.3 }}
             className="flex items-baseline gap-2"
           >
-            <span className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+            <span className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
               #{rank}
             </span>
-            <span className="text-lg text-gray-500">
+            <span className="text-base sm:text-lg text-gray-500">
               of {totalStudents}
             </span>
           </motion.div>
@@ -256,10 +259,10 @@ export const RankCard = ({ rankData, type = 'class', className }: RankCardProps)
               transition={{ delay: 0.4 }}
               className="mt-1 space-y-0.5"
             >
-              <p className="text-sm font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              <p className="text-xs sm:text-sm font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                 Top {(100 - percentile).toFixed(1)}% Performer
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-[10px] sm:text-xs text-gray-500">
                 Outperforming {percentile?.toFixed(0)}% of peers
               </p>
             </motion.div>
@@ -272,28 +275,28 @@ export const RankCard = ({ rankData, type = 'class', className }: RankCardProps)
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
-        className="relative pt-4 border-t border-gray-200"
+        className="relative pt-3 sm:pt-4 border-t border-gray-200"
       >
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <div>
-            <p className="text-xs font-medium text-gray-600 mb-1 uppercase tracking-wide">Cumulative Average</p>
-            <div className="flex items-baseline gap-1">
-              <p className="text-2xl font-bold text-gray-900">
+            <p className="text-[10px] sm:text-xs font-medium text-gray-600 mb-1 uppercase tracking-wide">Cumulative Average</p>
+            <div className="flex items-baseline gap-0.5 sm:gap-1">
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">
                 {rankData.average_score.toFixed(1)}
               </p>
-              <span className="text-sm text-gray-500 font-medium">%</span>
+              <span className="text-xs sm:text-sm text-gray-500 font-medium">%</span>
             </div>
-            <p className="text-[10px] text-gray-500 mt-0.5">Overall academic performance</p>
+            <p className="text-[9px] sm:text-[10px] text-gray-500 mt-0.5 leading-tight">Overall academic performance</p>
           </div>
           <div>
-            <p className="text-xs font-medium text-gray-600 mb-1 uppercase tracking-wide">Evaluations</p>
-            <div className="flex items-baseline gap-1">
-              <p className="text-2xl font-bold text-gray-900">
+            <p className="text-[10px] sm:text-xs font-medium text-gray-600 mb-1 uppercase tracking-wide">Evaluations</p>
+            <div className="flex items-baseline gap-0.5 sm:gap-1">
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">
                 {rankData.total_assessments}
               </p>
-              <span className="text-sm text-gray-500 font-medium">taken</span>
+              <span className="text-xs sm:text-sm text-gray-500 font-medium">taken</span>
             </div>
-            <p className="text-[10px] text-gray-500 mt-0.5">Assessments completed</p>
+            <p className="text-[9px] sm:text-[10px] text-gray-500 mt-0.5 leading-tight">Assessments completed</p>
           </div>
         </div>
 
@@ -312,8 +315,8 @@ export const RankCard = ({ rankData, type = 'class', className }: RankCardProps)
               )}
             />
           </div>
-          <p className="text-xs font-medium text-gray-600 mt-1.5 text-right">
-            <span className="text-gray-900">{percentile?.toFixed(1)}</span>th Percentile Ranking
+          <p className="text-[10px] sm:text-xs font-medium text-gray-600 mt-1 sm:mt-1.5 text-right">
+            <span className="text-gray-900">{percentile?.toFixed(1)}</span>th Percentile
           </p>
         </div>
       </motion.div>
@@ -328,24 +331,26 @@ export const RankCard = ({ rankData, type = 'class', className }: RankCardProps)
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.7 }}
-        className="mt-4 space-y-2"
+        className="mt-3 sm:mt-4 space-y-2"
       >
         {/* Refresh Rankings Button */}
         <Button
           onClick={handleRefreshRankings}
           disabled={isRefreshing}
           variant="outline"
-          className="w-full gap-2 font-medium border-2"
+          className="w-full gap-1.5 sm:gap-2 font-medium border-2 h-9 sm:h-10 text-xs sm:text-sm"
         >
           {isRefreshing ? (
             <>
-              <RefreshCw className="w-4 h-4 animate-spin" />
-              <span>Updating Rankings...</span>
+              <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
+              <span className="hidden sm:inline">Updating Rankings...</span>
+              <span className="sm:hidden">Updating...</span>
             </>
           ) : (
             <>
-              <RefreshCw className="w-4 h-4" />
-              <span>Refresh Rankings (includes new assessments)</span>
+              <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Refresh Rankings (includes new assessments)</span>
+              <span className="sm:hidden">Refresh Rankings</span>
             </>
           )}
         </Button>
@@ -355,7 +360,7 @@ export const RankCard = ({ rankData, type = 'class', className }: RankCardProps)
           onClick={handleDownloadPDF}
           disabled={isGenerating}
           className={cn(
-            'w-full gap-2 font-semibold shadow-lg transition-all duration-300',
+            'w-full gap-1.5 sm:gap-2 font-semibold shadow-lg transition-all duration-300 h-9 sm:h-10 text-xs sm:text-sm',
             isClassRank
               ? 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700'
               : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700'
@@ -363,13 +368,14 @@ export const RankCard = ({ rankData, type = 'class', className }: RankCardProps)
         >
           {isGenerating ? (
             <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               <span>Generating PDF...</span>
             </>
           ) : (
             <>
-              <Download className="w-4 h-4" />
-              <span>Download Official Certificate</span>
+              <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Download Official Certificate</span>
+              <span className="sm:hidden">Download Certificate</span>
             </>
           )}
         </Button>

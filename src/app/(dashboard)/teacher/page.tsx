@@ -25,9 +25,6 @@ const QuestBadgeCreator = dynamic(() => import('@/components/teacher/quest-badge
 const BlackMarkSystem = dynamic(() => import('@/components/teacher/BlackMarkSystem'), {
   loading: () => <div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div></div>
 })
-const ParentCommunicationSystem = dynamic(() => import('@/components/teacher/parent-communication-system'), {
-  loading: () => <div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div></div>
-})
 const InteractiveActivitiesSystem = dynamic(() => import('@/components/teacher/interactive-activities-system'), {
   loading: () => <div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div>
 })
@@ -45,6 +42,9 @@ const TeacherStudentsPage = dynamic(() => import('./students/page').then(mod => 
 })
 const TeacherAttendancePage = dynamic(() => import('./attendance/page').then(mod => ({ default: mod.default })), {
   loading: () => <div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div></div>
+})
+const IncidentManagement = dynamic(() => import('@/components/teacher/IncidentManagement').then(mod => ({ default: mod.IncidentManagement })), {
+  loading: () => <div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600"></div></div>
 })
 import { 
   Users, 
@@ -232,7 +232,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
   const [isDataFetching, setIsDataFetching] = useState(false) // Prevent concurrent API calls
   const fetchingRef = useRef(false) // More reliable concurrent call protection
   const [dataFetched, setDataFetched] = useState(false)
-  const [activeTab, setActiveTab] = useState<'analytics' | 'overview' | 'roster' | 'attendance' | 'community' | 'incidents' | 'shoutouts' | 'interventions' | 'quests' | 'blackmarks' | 'activities' | 'communication' | 'settings' | 'results'>('overview')
+  const [activeTab, setActiveTab] = useState<'analytics' | 'overview' | 'roster' | 'attendance' | 'community' | 'incidents' | 'shoutouts' | 'interventions' | 'quests' | 'blackmarks' | 'activities' | 'settings' | 'results'>('overview')
   const [isTabLoading, setIsTabLoading] = useState(false)
   const [notifications, setNotifications] = useState<Array<{id: string, message: string, type: 'success' | 'error' | 'warning' | 'info'}>>([])
   const [realTimeData, setRealTimeData] = useState({
@@ -527,15 +527,15 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
 
   // Skeleton loader component
   const SkeletonCard = memo(() => (
-    <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-4 sm:p-6 animate-pulse">
-      <div className="flex items-start justify-between mb-4">
-        <div className="w-12 h-12 bg-gray-200 rounded-xl" />
-        <div className="w-16 h-6 bg-gray-200 rounded-full" />
+    <div className="bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-lg p-3 sm:p-4 lg:p-6 animate-pulse">
+      <div className="flex items-start justify-between mb-3 sm:mb-4">
+        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 rounded-lg sm:rounded-xl" />
+        <div className="w-12 h-5 sm:w-16 sm:h-6 bg-gray-200 rounded-full" />
       </div>
-      <div className="space-y-2">
-        <div className="w-24 h-4 bg-gray-200 rounded" />
-        <div className="w-16 h-8 bg-gray-200 rounded" />
-        <div className="w-32 h-3 bg-gray-200 rounded" />
+      <div className="space-y-1.5 sm:space-y-2">
+        <div className="w-20 sm:w-24 h-3 sm:h-4 bg-gray-200 rounded" />
+        <div className="w-12 sm:w-16 h-6 sm:h-8 bg-gray-200 rounded" />
+        <div className="w-24 sm:w-32 h-2.5 sm:h-3 bg-gray-200 rounded" />
       </div>
     </div>
   ))
@@ -585,22 +585,22 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
         <div className="flex-1 flex flex-col overflow-hidden relative z-10">
           {/* Top Header Bar */}
           <div className="bg-white/80 backdrop-blur-xl border-b border-gray-200 shadow-sm">
-            <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
-              <div className="flex items-center justify-between">
+            <div className="px-3 sm:px-4 lg:px-8 py-3 sm:py-4 lg:py-5">
+              <div className="flex items-center justify-between gap-3">
                 {/* Mobile Menu Button */}
-                <div className="lg:hidden w-10 h-10 bg-gray-200 rounded-lg animate-pulse" />
+                <div className="lg:hidden w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 rounded-lg animate-pulse flex-shrink-0" />
                 
                 {/* Title */}
-                <div className="space-y-2 flex-1 lg:flex-none">
-                  <div className="w-48 h-7 bg-gray-200 rounded animate-pulse" />
-                  <div className="w-32 h-4 bg-gray-200 rounded animate-pulse" />
+                <div className="space-y-1 sm:space-y-2 flex-1 lg:flex-none min-w-0">
+                  <div className="w-32 sm:w-48 h-5 sm:h-7 bg-gray-200 rounded animate-pulse" />
+                  <div className="w-24 sm:w-32 h-3 sm:h-4 bg-gray-200 rounded animate-pulse" />
                 </div>
                 
                 {/* Right Side Actions */}
-                <div className="hidden sm:flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
-                  <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
-                  <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
+                <div className="hidden sm:flex items-center space-x-2 lg:space-x-3 flex-shrink-0">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 rounded-full animate-pulse" />
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 rounded-full animate-pulse" />
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 rounded-full animate-pulse" />
                 </div>
               </div>
             </div>
@@ -608,38 +608,38 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
           
           {/* Main Content */}
           <div className="flex-1 overflow-y-auto">
-            <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+            <div className="max-w-7xl mx-auto p-3 sm:p-4 lg:p-6 xl:p-8 space-y-4 sm:space-y-6">
               {/* Stats Grid */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 {[...Array(4)].map((_, i) => (
-                  <div key={i} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 animate-pulse">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="w-14 h-14 bg-gradient-to-br from-blue-200 to-indigo-200 rounded-xl" />
-                      <div className="w-16 h-6 bg-gray-200 rounded-full" />
+                  <div key={i} className="bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-lg p-3 sm:p-4 lg:p-6 animate-pulse">
+                    <div className="flex items-start justify-between mb-2 sm:mb-3 lg:mb-4">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-blue-200 to-indigo-200 rounded-lg sm:rounded-xl" />
+                      <div className="w-12 h-5 sm:w-14 sm:h-5 lg:w-16 lg:h-6 bg-gray-200 rounded-full" />
                     </div>
-                    <div className="space-y-3">
-                      <div className="w-24 h-4 bg-gray-200 rounded" />
-                      <div className="w-16 h-8 bg-gray-200 rounded" />
-                      <div className="w-32 h-3 bg-gray-200 rounded" />
+                    <div className="space-y-1.5 sm:space-y-2 lg:space-y-3">
+                      <div className="w-16 sm:w-20 lg:w-24 h-3 sm:h-3.5 lg:h-4 bg-gray-200 rounded" />
+                      <div className="w-12 sm:w-14 lg:w-16 h-6 sm:h-7 lg:h-8 bg-gray-200 rounded" />
+                      <div className="w-20 sm:w-24 lg:w-32 h-2.5 sm:h-3 bg-gray-200 rounded" />
                     </div>
                   </div>
                 ))}
               </div>
               
               {/* Quick Actions Section */}
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="w-40 h-6 bg-gray-200 rounded animate-pulse" />
-                  <div className="w-24 h-9 bg-gray-200 rounded-lg animate-pulse" />
+              <div className="bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-5 lg:p-6">
+                <div className="flex items-center justify-between mb-4 sm:mb-5 lg:mb-6">
+                  <div className="w-32 sm:w-40 h-5 sm:h-6 bg-gray-200 rounded animate-pulse" />
+                  <div className="w-20 sm:w-24 h-8 sm:h-9 bg-gray-200 rounded-lg animate-pulse" />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                   {[...Array(8)].map((_, i) => (
-                    <div key={i} className="group relative bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 shadow-md hover:shadow-xl transition-all duration-300 animate-pulse">
-                      <div className="w-16 h-16 bg-gradient-to-br from-blue-200 to-indigo-200 rounded-2xl mb-4" />
-                      <div className="space-y-2">
-                        <div className="w-32 h-5 bg-gray-200 rounded" />
-                        <div className="w-40 h-3 bg-gray-200 rounded" />
-                        <div className="w-24 h-4 bg-gray-200 rounded mt-3" />
+                    <div key={i} className="group relative bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 shadow-md hover:shadow-xl transition-all duration-300 animate-pulse">
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-blue-200 to-indigo-200 rounded-xl sm:rounded-2xl mb-3 sm:mb-4" />
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <div className="w-24 sm:w-28 lg:w-32 h-4 sm:h-5 bg-gray-200 rounded" />
+                        <div className="w-28 sm:w-32 lg:w-40 h-2.5 sm:h-3 bg-gray-200 rounded" />
+                        <div className="w-16 sm:w-20 lg:w-24 h-3 sm:h-4 bg-gray-200 rounded mt-2 sm:mt-3" />
                       </div>
                     </div>
                   ))}
@@ -647,13 +647,13 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
               </div>
               
               {/* Additional Content Cards */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 animate-pulse">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="w-40 h-6 bg-gray-200 rounded" />
-                    <div className="w-20 h-8 bg-gray-200 rounded-lg" />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                <div className="bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-5 lg:p-6 animate-pulse">
+                  <div className="flex items-center justify-between mb-4 sm:mb-5 lg:mb-6">
+                    <div className="w-32 sm:w-40 h-5 sm:h-6 bg-gray-200 rounded" />
+                    <div className="w-16 sm:w-20 h-7 sm:h-8 bg-gray-200 rounded-lg" />
                   </div>
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     {[...Array(4)].map((_, i) => (
                       <div key={i} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl">
                         <div className="w-12 h-12 bg-gray-200 rounded-xl" />
@@ -753,7 +753,6 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
             { id: 'credits', label: 'Issue Credits', icon: Gem, color: 'text-purple-600', bgColor: 'bg-purple-50', isLink: true, href: '/teacher/issue-credits' },
             { id: 'shoutouts', label: 'Shout-outs', icon: Star, color: 'text-amber-500', bgColor: 'bg-amber-50' },
             { id: 'activities', label: 'Activities', icon: Play, color: 'text-cyan-600', bgColor: 'bg-cyan-50' },
-            { id: 'communication', label: 'Parent Hub', icon: MessageSquare, color: 'text-sky-600', bgColor: 'bg-sky-50' },
             { id: 'results', label: 'Update Results', icon: BarChart3, color: 'text-emerald-600', bgColor: 'bg-emerald-50' },
             { id: 'quests', label: 'Quests', icon: Trophy, color: 'text-rose-500', bgColor: 'bg-rose-50' },
             { id: 'blackmarks', label: 'Black Marks', icon: AlertTriangle, color: 'text-red-600', bgColor: 'bg-red-50' },
@@ -1463,69 +1462,9 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="space-y-4 sm:space-y-8 p-4 sm:p-5 lg:p-6"
+                className="p-4 sm:p-5 lg:p-6"
               >
-              <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border-0 p-8">
-                <div className="mb-8">
-                  <h2 className="text-2xl font-bold text-slate-800 mb-2 flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-r from-gray-500 to-gray-600 rounded-xl text-white">
-                      <Shield className="h-6 w-6" />
-                    </div>
-                    Incident Logging System
-                  </h2>
-                  <p className="text-slate-600">Secure and private incident documentation for administrative purposes</p>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                  {[
-                    { title: 'Behavioral Incidents', icon: AlertTriangle, color: 'from-red-500 to-red-600', count: '0' },
-                    { title: 'Academic Concerns', icon: BookOpen, color: 'from-blue-500 to-blue-600', count: '0' },
-                    { title: 'Positive Notes', icon: Star, color: 'from-green-500 to-green-600', count: '0' }
-                  ].map((category, index) => {
-                    const Icon = category.icon
-                    return (
-                      <motion.div
-                        key={category.title}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-6 shadow-lg border border-gray-100"
-                      >
-                        <div className={`inline-flex p-3 rounded-xl bg-gradient-to-r ${category.color} text-white mb-4`}>
-                          <Icon className="h-6 w-6" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-slate-800 mb-2">{category.title}</h3>
-                        <div className="text-3xl font-bold text-slate-700 mb-2">{category.count}</div>
-                        <p className="text-slate-500 text-sm">This month</p>
-                      </motion.div>
-                    )
-                  })}
-                </div>
-                
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-8 border border-blue-100 text-center">
-                  <div className="inline-flex p-4 bg-blue-500 rounded-full text-white mb-4">
-                    <FileText className="h-8 w-8" />
-                  </div>
-                  
-                  <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-6 border border-orange-100">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="p-2 bg-orange-500 rounded-lg text-white">
-                        <Bell className="h-5 w-5" />
-                      </div>
-                      <h3 className="text-lg font-semibold text-slate-800">Automated Notifications</h3>
-                    </div>
-                    <p className="text-slate-600 mb-4">Set up automatic updates for attendance and progress</p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100"
-                    >
-                      <Bell className="h-4 w-4 mr-2" />
-                      Open Notifications
-                    </Button>
-                  </div>
-                </div>
-              </div>
+                <IncidentManagement />
               </motion.div>
             )}
 
@@ -1539,18 +1478,6 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
               className="p-4 sm:p-5 lg:p-6"
             >
               <ComprehensiveAnalytics />
-            </motion.div>
-          )}
-
-          {activeTab === 'communication' && (
-            <motion.div
-              key="communication"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="p-4 sm:p-5 lg:p-6"
-            >
-              <ParentCommunicationSystem />
             </motion.div>
           )}
 

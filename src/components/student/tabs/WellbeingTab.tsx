@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
+import { MoodHistoryTracker } from '@/components/student/MoodHistoryTracker'
 import { 
   Heart, Smile, Frown, Meh, Angry, Laugh, Shield, AlertCircle, 
   Wind, Sparkles, Moon, Droplets, Brain, HelpCircle, ChevronRight,
@@ -58,10 +59,54 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
     { id: 'anxious', emoji: '😰', label: 'Anxious', color: '#8b5cf6, #ec4899' }
   ]
 
+  // Function to get mood-specific greeting
+  const getMoodGreeting = useCallback((moodId: string) => {
+    const firstName = profile?.full_name?.split(' ')[0] || 'friend'
+    
+    const moodGreetings: Record<string, { title: string, message: string }> = {
+      happy: {
+        title: 'Wonderful to See You Happy! 😊',
+        message: `That's amazing, ${firstName}! Your joy is contagious. Keep spreading that positive energy! Remember, happiness grows when shared. 🌟✨`
+      },
+      excited: {
+        title: 'Your Energy is Electric! 🤩',
+        message: `Wow, ${firstName}! That excitement is absolutely incredible! Channel that energy into something amazing today. The world needs your enthusiasm! ⚡🎉`
+      },
+      calm: {
+        title: 'Peace Looks Good on You 😌',
+        message: `Beautiful, ${firstName}. Inner calm is a superpower. Take this moment to breathe, reflect, and appreciate the peace you've found. 🧘‍♀️💙`
+      },
+      sad: {
+        title: 'We\'re Here for You 😢',
+        message: `${firstName}, it's okay to feel sad. You're brave for acknowledging it. Remember, this feeling is temporary, and you're never alone. We're here to support you. 💙🫂`
+      },
+      angry: {
+        title: 'Your Feelings Are Valid 😠',
+        message: `${firstName}, it's okay to feel angry. Let's find healthy ways to process this. Take some deep breaths, and remember you're in control. We're here to help. 🌊💪`
+      },
+      anxious: {
+        title: 'You\'re Safe and Supported 😰',
+        message: `${firstName}, anxiety can be overwhelming, but you're stronger than you think. Let's work through this together. Try some breathing exercises - you've got this! 🌈🤗`
+      }
+    }
+    
+    return moodGreetings[moodId] || { 
+      title: 'Thank You for Sharing! 💙',
+      message: `${firstName}, we appreciate you checking in with us. Your well-being matters! 🌟`
+    }
+  }, [profile])
+
   // Set time-reactive greeting (persists for session)
   useEffect(() => {
     const hour = new Date().getHours()
     const firstName = profile?.full_name?.split(' ')[0] || 'friend'
+    
+    // Check if we have a stored mood greeting first
+    const storedMoodGreeting = sessionStorage.getItem('wellbeing-mood-greeting')
+    if (storedMoodGreeting) {
+      setGreeting(JSON.parse(storedMoodGreeting))
+      return
+    }
     
     const greetings = {
       morning: [
@@ -150,6 +195,14 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
         setSelectedMood(moodId)
         setMoodLocked(true) // Lock all moods immediately
         
+        // Update greeting with mood-specific message
+        const moodGreeting = getMoodGreeting(moodId)
+        setGreeting(moodGreeting)
+        sessionStorage.setItem('wellbeing-mood-greeting', JSON.stringify(moodGreeting))
+        // Clear time-based greeting
+        sessionStorage.removeItem('wellbeing-greeting')
+        sessionStorage.removeItem('wellbeing-time-period')
+        
         if (typeof navigator !== 'undefined' && navigator.vibrate) {
           navigator.vibrate([10, 50, 10])
         }
@@ -191,7 +244,7 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
         'error'
       )
     }
-  }, [wellbeingData.mood?.lockedDate, onRefresh, moodOptions, showToastMessage])
+  }, [wellbeingData.mood?.lockedDate, onRefresh, moodOptions, showToastMessage, getMoodGreeting, profile])
 
   const handlePetInteraction = useCallback(() => {
     setPetAnimation('happy')
@@ -559,11 +612,20 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
         </motion.div>
       </div>
 
-      {/* Mindfulness Activities */}
+      {/* Mood History */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25 }}
+      >
+        <MoodHistoryTracker className="mb-6" />
+      </motion.div>
+
+      {/* Mindfulness Activities */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35 }}
       >
         <Card className="border-0 shadow-lg overflow-hidden">
           <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50">
