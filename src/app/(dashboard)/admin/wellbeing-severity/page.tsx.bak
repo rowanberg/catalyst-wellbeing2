@@ -1,0 +1,500 @@
+'use client'
+
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'framer-motion'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
+import { 
+  AlertTriangle, Heart, Brain, Users, TrendingUp, TrendingDown,
+  Search, Filter, Download, ArrowLeft, RefreshCw, Eye,
+  Target, Activity, Zap, Clock, CheckCircle, AlertCircle,
+  User, Calendar, BarChart3, Award, Shield, BookOpen,
+  Sparkles, Cpu, Layers, Globe, Network, Scan, Radar,
+  Bot, Lightbulb, Waves, Binary, Code, Atom, Orbit,
+  Palette, Flame, Star, Hexagon, Diamond, Triangle
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { toast } from 'sonner'
+import Link from 'next/link'
+import dynamic from 'next/dynamic'
+
+// Future: Add advanced visualization components when needed
+// const AdvancedChart = dynamic(() => import('@/components/charts/AdvancedChart'), { ssr: false })
+// const NeuralNetwork = dynamic(() => import('@/components/visualizations/NeuralNetwork'), { ssr: false })
+
+interface WellbeingAnalytic {
+  id: string
+  student_id: string
+  student_name: string
+  student_grade: string
+  student_avatar?: string
+  analysis_date: string
+  period_type: string
+  overall_wellbeing_score: number
+  emotional_wellbeing_score: number
+  academic_wellbeing_score: number
+  engagement_wellbeing_score: number
+  social_wellbeing_score: number
+  behavioral_wellbeing_score: number
+  risk_level: 'thriving' | 'low' | 'medium' | 'high' | 'critical'
+  risk_score: number
+  risk_trend: 'increasing' | 'stable' | 'decreasing'
+  risk_factors: string[]
+  protective_factors: string[]
+  risk_factor_count: number
+  protective_factor_count: number
+  intervention_recommended: boolean
+  intervention_type?: string
+  intervention_priority?: 'immediate' | 'urgent' | 'moderate' | 'low'
+  recommended_actions: string[]
+  early_warning_flags: string[]
+  warning_flag_count: number
+  predicted_next_score: number
+  predicted_risk_level: string
+  confidence_level: number
+  overall_score_trend: 'improving' | 'stable' | 'declining'
+  score_change_from_previous: number
+  school_percentile: number
+  grade_percentile: number
+  mood_score_avg: number
+  gpa: number
+  attendance_rate: number
+  quest_completion_rate: number
+  xp_earned: number
+  incident_count: number
+  help_requests_count: number
+  urgent_help_requests_count: number
+  data_quality_score: number
+  data_completeness_percentage: number
+}
+
+interface SummaryStats {
+  total: number
+  by_risk_level: Record<string, number>
+  by_intervention_priority: Record<string, number>
+  average_scores: Record<string, number>
+  interventions_needed: number
+  high_risk_count: number
+  improving_trend: number
+  declining_trend: number
+}
+
+export default function WellbeingSeverityPage() {
+  // Core State
+  const [analytics, setAnalytics] = useState<WellbeingAnalytic[]>([])
+  const [summary, setSummary] = useState<SummaryStats | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  
+  // Search & Filters
+  const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [periodType, setPeriodType] = useState('weekly')
+  const [riskLevelFilter, setRiskLevelFilter] = useState('all')
+  const [sortBy, setSortBy] = useState('risk_score')
+  const [sortOrder, setSortOrder] = useState('desc')
+  
+  // UI State
+  const [selectedStudent, setSelectedStudent] = useState<WellbeingAnalytic | null>(null)
+  const [showInterventionModal, setShowInterventionModal] = useState(false)
+  const [interventionStudent, setInterventionStudent] = useState<WellbeingAnalytic | null>(null)
+  const [selectedInterventions, setSelectedInterventions] = useState<string[]>([])
+  const [interventionNotes, setInterventionNotes] = useState('')
+  const [interventionPriority, setInterventionPriority] = useState<'urgent' | 'high' | 'medium'>('high')
+  const [interventionLoading, setInterventionLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState('neural')
+  const [showFilters, setShowFilters] = useState(false)
+  const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null)
+  
+  // Advanced Features
+  const [viewMode, setViewMode] = useState<'grid' | 'neural' | 'heatmap' | 'predictive'>('neural')
+  const [aiInsights, setAiInsights] = useState<any[]>([])
+  const [anomalies, setAnomalies] = useState<any[]>([])
+  const [predictions, setPredictions] = useState<any[]>([])
+  const [isProcessingAI, setIsProcessingAI] = useState(false)
+  const [neuralConnections, setNeuralConnections] = useState<any[]>([])
+  const [heatmapData, setHeatmapData] = useState<any[][]>([])
+  const [realTimeUpdates, setRealTimeUpdates] = useState(true)
+  const [darkMode, setDarkMode] = useState(false)
+  const [particleSystem, setParticleSystem] = useState(true)
+  
+  // Responsive
+  const isMobile = useMediaQuery('(max-width: 768px)')
+  const isTablet = useMediaQuery('(max-width: 1024px)')
+  
+  // Refs for advanced animations
+  const containerRef = useRef<HTMLDivElement>(null)
+  const headerRef = useRef<HTMLDivElement>(null)
+  
+  // Scroll animations
+  const { scrollYProgress } = useScroll({ target: containerRef })
+  const yTransform = useTransform(scrollYProgress, [0, 1], [0, -50])
+  const opacityTransform = useTransform(scrollYProgress, [0, 0.2], [1, 0.8])
+  const scaleTransform = useTransform(scrollYProgress, [0, 0.5], [1, 0.98])
+  
+  // Spring animations
+  const springConfig = { stiffness: 100, damping: 30, restDelta: 0.001 }
+  const scaleSpring = useSpring(1, springConfig)
+  const opacitySpring = useSpring(1, springConfig)
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  // Fetch analytics data
+  const fetchAnalytics = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const params = new URLSearchParams({
+        period: periodType,
+        risk_level: riskLevelFilter,
+        sort_by: sortBy,
+        sort_order: sortOrder
+      })
+      
+      const response = await fetch(`/api/admin/wellbeing-severity?${params}`)
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to fetch analytics')
+      }
+
+      const data = await response.json()
+      
+      // Ensure data structure
+      const analyticsData = Array.isArray(data.analytics) ? data.analytics : []
+      const summaryData = data.summary || {
+        total: analyticsData.length,
+        high_risk_count: analyticsData.filter((a: WellbeingAnalytic) => a.risk_level === 'high' || a.risk_level === 'critical').length,
+        interventions_needed: analyticsData.filter((a: WellbeingAnalytic) => a.intervention_recommended).length,
+        improving_trend: analyticsData.filter((a: WellbeingAnalytic) => a.overall_score_trend === 'improving').length,
+        declining_trend: analyticsData.filter((a: WellbeingAnalytic) => a.overall_score_trend === 'declining').length,
+        average_scores: {
+          overall: analyticsData.reduce((sum: number, a: WellbeingAnalytic) => sum + (a.overall_wellbeing_score || 0), 0) / (analyticsData.length || 1)
+        },
+        by_risk_level: {},
+        by_intervention_priority: {}
+      }
+      
+      setAnalytics(analyticsData)
+      setSummary(summaryData)
+      setLastFetchTime(new Date())
+      
+      if (analyticsData.length > 0) {
+        toast.success(`Loaded ${analyticsData.length} student record${analyticsData.length > 1 ? 's' : ''}`)
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load wellbeing analytics'
+      console.error('Error fetching wellbeing analytics:', error)
+      setError(errorMessage)
+      toast.error(errorMessage)
+      setAnalytics([])
+      setSummary(null)
+    } finally {
+      setLoading(false)
+    }
+  }, [periodType, riskLevelFilter, sortBy, sortOrder])
+
+  useEffect(() => {
+    fetchAnalytics()
+  }, [fetchAnalytics])
+
+  // Intervention options
+  const interventionOptions = [
+    { id: 'counseling', label: 'Schedule Counseling Session', icon: '🗣️', description: 'One-on-one session with school counselor' },
+    { id: 'parent_contact', label: 'Contact Parents/Guardians', icon: '👨‍👩‍👧', description: 'Notify and involve family members' },
+    { id: 'wellness_plan', label: 'Create Wellness Plan', icon: '📋', description: 'Personalized wellbeing action plan' },
+    { id: 'support_teacher', label: 'Assign Support Teacher', icon: '👨‍🏫', description: 'Dedicated teacher for additional support' },
+    { id: 'peer_support', label: 'Peer Support Group', icon: '👥', description: 'Connect with peer support network' },
+    { id: 'mental_health', label: 'Mental Health Resources', icon: '💚', description: 'Provide mental health materials and contacts' },
+    { id: 'academic_support', label: 'Academic Tutoring', icon: '📚', description: 'Additional academic assistance' },
+    { id: 'priority_checkin', label: 'Priority Daily Check-in', icon: '✅', description: 'Daily wellbeing monitoring' },
+    { id: 'school_counselor', label: 'Refer to School Counselor', icon: '🏥', description: 'Professional counseling referral' },
+    { id: 'break_schedule', label: 'Adjusted Schedule', icon: '⏰', description: 'Modified schedule for wellbeing' }
+  ]
+
+  // Handle intervention modal
+  const openInterventionModal = useCallback((student: WellbeingAnalytic) => {
+    console.log('Opening intervention modal for:', student.student_name, 'Risk:', student.risk_level)
+    setInterventionStudent(student)
+    setShowInterventionModal(true)
+    setSelectedInterventions([])
+    setInterventionNotes('')
+    setInterventionPriority(student.risk_level === 'critical' ? 'urgent' : 'high')
+  }, [])
+
+  const closeInterventionModal = useCallback(() => {
+    setShowInterventionModal(false)
+    setInterventionStudent(null)
+    setSelectedInterventions([])
+    setInterventionNotes('')
+    setInterventionPriority('high')
+    setInterventionLoading(false)
+  }, [])
+
+  const toggleIntervention = useCallback((interventionId: string) => {
+    setSelectedInterventions(prev => 
+      prev.includes(interventionId)
+        ? prev.filter(id => id !== interventionId)
+        : [...prev, interventionId]
+    )
+  }, [])
+
+  const handleSubmitIntervention = useCallback(async () => {
+    if (!interventionStudent || selectedInterventions.length === 0) {
+      toast.error('Please select at least one intervention')
+      return
+    }
+
+    try {
+      setInterventionLoading(true)
+      
+      // Add a small delay to show the loading state
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      const interventionData = {
+        student_id: interventionStudent.student_id,
+        student_name: interventionStudent.student_name,
+        interventions: selectedInterventions,
+        priority: interventionPriority,
+        notes: interventionNotes,
+        risk_level: interventionStudent.risk_level,
+        risk_score: interventionStudent.risk_score,
+        overall_wellbeing_score: interventionStudent.overall_wellbeing_score,
+        scheduled_start_date: new Date().toISOString().split('T')[0], // Today
+        target_completion_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 30 days from now
+      }
+
+      console.log('Submitting intervention data:', interventionData)
+      
+      let response: Response
+      
+      try {
+        response = await fetch('/api/admin/interventions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(interventionData)
+        })
+      } catch (fetchError) {
+        console.error('Network error:', fetchError)
+        throw new Error('Network error: Unable to connect to the server. Please check your internet connection and try again.')
+      }
+
+      if (!response.ok) {
+        let errorData: { error?: string } = {}
+        let responseText = ''
+        
+        try {
+          responseText = await response.text()
+          errorData = JSON.parse(responseText)
+        } catch (parseError) {
+          console.warn('Failed to parse error response:', responseText)
+        }
+        
+        console.error('API Error Details:', {
+          status: response.status,
+          statusText: response.statusText,
+          responseText,
+          errorData,
+          url: response.url
+        })
+        
+        // Provide specific error messages for different status codes
+        if (response.status === 401) {
+          throw new Error('You are not authorized to create interventions. Please log in again.')
+        } else if (response.status === 403) {
+          throw new Error('You do not have permission to create interventions. Only administrators can create intervention plans.')
+        } else if (response.status === 400) {
+          throw new Error(errorData.error || 'Invalid intervention data provided')
+        } else if (response.status >= 500) {
+          throw new Error(`Server error (${response.status}): The server is experiencing issues. Please try again later.`)
+        } else {
+          throw new Error(errorData.error || `Request failed (${response.status}): ${response.statusText}`)
+        }
+      }
+
+      const result = await response.json()
+
+      toast.success(`Intervention plan created successfully for ${interventionStudent.student_name}`)
+      closeInterventionModal()
+      setSelectedStudent(null)
+      
+      // Refresh analytics data to show updated status
+      fetchAnalytics()
+    } catch (error) {
+      console.error('Error creating intervention:', {
+        error,
+        errorType: typeof error,
+        errorString: String(error),
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        student: interventionStudent.student_name,
+        interventions: selectedInterventions,
+        priority: interventionPriority
+      })
+      
+      // Show user-friendly error message
+      if (error instanceof Error && error.message) {
+        toast.error(error.message)
+      } else if (typeof error === 'string') {
+        toast.error(error)
+      } else {
+        const errorString = String(error)
+        if (errorString && errorString !== '[object Object]') {
+          toast.error(`Error: ${errorString}`)
+        } else {
+          toast.error('An unexpected error occurred while creating the intervention plan. Please check your connection and try again.')
+        }
+      }
+    } finally {
+      setInterventionLoading(false)
+    }
+  }, [interventionStudent, selectedInterventions, interventionPriority, interventionNotes, closeInterventionModal, fetchAnalytics])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Escape to close modals or clear search
+      if (e.key === 'Escape') {
+        if (showInterventionModal) {
+          closeInterventionModal()
+        } else if (selectedStudent) {
+          setSelectedStudent(null)
+        } else if (searchTerm) {
+          setSearchTerm('')
+        }
+        return
+      }
+      
+      // Ctrl/Cmd + R to refresh
+      if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+        e.preventDefault()
+        fetchAnalytics()
+      }
+      // Ctrl/Cmd + K to focus search
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        document.querySelector<HTMLInputElement>('input[placeholder*="Search"]')?.focus()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyPress)
+    return () => window.removeEventListener('keydown', handleKeyPress)
+  }, [fetchAnalytics, searchTerm, selectedStudent, showInterventionModal, closeInterventionModal])
+
+  // Filtered analytics
+  const filteredAnalytics = useMemo(() => {
+    if (!debouncedSearch) return analytics
+    
+    const search = debouncedSearch.toLowerCase()
+    return analytics.filter(analytic =>
+      analytic.student_name.toLowerCase().includes(search) ||
+      analytic.student_grade?.toLowerCase().includes(search) ||
+      analytic.risk_level.toLowerCase().includes(search)
+    )
+  }, [analytics, debouncedSearch])
+
+  // Memoized helper functions
+  const getRiskLevelColor = useCallback((riskLevel: string) => {
+    switch (riskLevel) {
+      case 'thriving': return 'from-emerald-500 to-green-600'
+      case 'low': return 'from-green-500 to-emerald-600'
+      case 'medium': return 'from-yellow-500 to-orange-600'
+      case 'high': return 'from-orange-500 to-red-600'
+      case 'critical': return 'from-red-500 to-red-700'
+      default: return 'from-gray-500 to-gray-600'
+    }
+  }, [])
+
+  const getRiskLevelIcon = useCallback((riskLevel: string) => {
+    switch (riskLevel) {
+      case 'thriving': return Award
+      case 'low': return Shield
+      case 'medium': return AlertCircle
+      case 'high': return AlertTriangle
+      case 'critical': return AlertTriangle
+      default: return AlertCircle
+    }
+  }, [])
+
+  const getTrendIcon = useCallback((trend?: string) => {
+    switch (trend) {
+      case 'improving': return TrendingUp
+      case 'declining': return TrendingDown
+      default: return Activity
+    }
+  }, [])
+
+  const formatScore = useCallback((score: number) => {
+    if (score === null || score === undefined) return '0.0'
+    return Number(score).toFixed(1)
+  }, [])
+
+  // Handle keyboard navigation
+  const handleCardKeyPress = (e: React.KeyboardEvent, analytic: WellbeingAnalytic) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      setSelectedStudent(analytic)
+    }
+  }
+
+  // Generate CSV export data
+  const generateCSV = () => {
+    const headers = [
+      'Student Name',
+      'Grade',
+      'Risk Level',
+      'Overall Score',
+      'Emotional Score',
+      'Academic Score',
+      'Engagement Score',
+      'Risk Factors',
+      'Protective Factors',
+      'Trend',
+      'Intervention Recommended',
+      'Analysis Date'
+    ]
+
+    const rows = filteredAnalytics.map(a => [
+      a.student_name || 'Unknown',
+      a.student_grade || 'N/A',
+      a.risk_level || 'N/A',
+      formatScore(a.overall_wellbeing_score),
+      formatScore(a.emotional_wellbeing_score),
+      formatScore(a.academic_wellbeing_score),
+      formatScore(a.engagement_wellbeing_score),
+      a.risk_factor_count || 0,
+      a.protective_factor_count || 0,
+      a.overall_score_trend || 'stable',
+      a.intervention_recommended ? 'Yes' : 'No',
+      a.analysis_date ? new Date(a.analysis_date).toLocaleDateString() : 'N/A'
+    ])
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `wellbeing-severity-${new Date().toISOString().split('T')[0]}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    
+    toast.success(`Exported ${filteredAnalytics.length} records to CSV`)
+  }
+
+  return (

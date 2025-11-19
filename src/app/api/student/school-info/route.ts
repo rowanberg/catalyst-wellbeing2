@@ -1,44 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export async function GET(request: NextRequest) {
   try {
     console.log('=== Student School Info API Called ===')
     
-    // Use proper SSR authentication
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      }
-    )
+    // Authenticate student via shared helper (with caching)
+    const auth = await authenticateStudent(request)
 
-    // Get current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      console.log('❌ No user session found:', authError?.message)
-      return NextResponse.json({ 
-        error: 'Authentication required',
+    if (isAuthError(auth)) {
+      return NextResponse.json({
+        error: auth.status === 401 ? 'Authentication required' : auth.error,
         schoolInfo: null
-      }, { status: 401 })
+      }, { status: auth.status })
     }
-    
-    console.log('✅ User authenticated:', user.id)
+
+    const { userId } = auth
+    console.log('✅ User authenticated:', userId)
     
     // Get user's profile to find school
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('school_id, school_code, role')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single()
     
     if (!profile?.school_id) {

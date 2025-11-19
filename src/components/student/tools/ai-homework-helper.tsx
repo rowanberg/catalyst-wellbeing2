@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
+import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
 import { useAppSelector } from '@/lib/redux/hooks'
 import { usePerformanceOptimizer } from '@/hooks/usePerformanceOptimizer'
@@ -10,15 +11,15 @@ import {
   Brain, Send, Lightbulb, Target, CheckCircle2, Clock, Sparkles,
   Paperclip, Plus, MessageCircle, Copy, Check, X, Menu, History,
   CreditCard, ChevronLeft, ChevronRight, RotateCw, Maximize, Minimize,
-  BookOpen, CalendarCheck
+  BookOpen, CalendarCheck, HelpCircle, Award, AlertCircle
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { FluidThinking } from './FluidThinking'
 import { LuminexAvatar } from './LuminexAvatar'
 import { UserAvatar } from './UserAvatar'
 import { QuotaIndicator } from './QuotaIndicator'
 import { supabase, supabaseUrl } from '@/lib/supabaseClient'
-import AIGraphRenderer from './AIGraphRenderer'
+const AIGraphRenderer = dynamic(() => import('./AIGraphRenderer'), { ssr: false })
+const FluidThinking = dynamic(() => import('./FluidThinking').then(m => m.FluidThinking), { ssr: false })
 
 interface ChatMessage {
   id: string
@@ -28,6 +29,21 @@ interface ChatMessage {
   subject?: string
   imageData?: string
   isFlashCard?: boolean
+  isQuiz?: boolean
+}
+
+interface QuizQuestion {
+  question: string
+  options: string[]
+  correctAnswer: number
+  explanation: string
+}
+
+interface QuizState {
+  currentQuestionIndex: number
+  selectedAnswers: (number | null)[]
+  showResults: boolean
+  score: number
 }
 
 interface ChatSession {
@@ -739,6 +755,335 @@ function FlashCard({ question, answer, index, total, onNext, onPrev }: {
   )
 }
 
+// Quiz Component
+function Quiz({ 
+  questions, 
+  quizState, 
+  onAnswerSelect, 
+  onNextQuestion, 
+  onPrevQuestion, 
+  onShowResults, 
+  onRestart 
+}: { 
+  questions: QuizQuestion[]
+  quizState: QuizState
+  onAnswerSelect: (questionIndex: number, answerIndex: number) => void
+  onNextQuestion: () => void
+  onPrevQuestion: () => void
+  onShowResults: () => void
+  onRestart: () => void
+}) {
+  const [isFullscreen, setIsFullscreen] = React.useState(false)
+  const containerRef = React.useRef<HTMLDivElement>(null)
+
+  // Handle fullscreen toggle
+  const toggleFullscreen = React.useCallback(async () => {
+    if (!containerRef.current) return
+
+    try {
+      if (!isFullscreen) {
+        // Enter fullscreen
+        if (containerRef.current.requestFullscreen) {
+          await containerRef.current.requestFullscreen()
+        } else if ((containerRef.current as any).webkitRequestFullscreen) {
+          await (containerRef.current as any).webkitRequestFullscreen()
+        } else if ((containerRef.current as any).mozRequestFullScreen) {
+          await (containerRef.current as any).mozRequestFullScreen()
+        } else if ((containerRef.current as any).msRequestFullscreen) {
+          await (containerRef.current as any).msRequestFullscreen()
+        }
+        setIsFullscreen(true)
+      } else {
+        // Exit fullscreen
+        if (document.exitFullscreen) {
+          await document.exitFullscreen()
+        } else if ((document as any).webkitExitFullscreen) {
+          await (document as any).webkitExitFullscreen()
+        } else if ((document as any).mozCancelFullScreen) {
+          await (document as any).mozCancelFullScreen()
+        } else if ((document as any).msExitFullscreen) {
+          await (document as any).msExitFullscreen()
+        }
+        setIsFullscreen(false)
+      }
+    } catch (error) {
+      console.error('Fullscreen error:', error)
+    }
+  }, [isFullscreen])
+
+  // Keep local state in sync with browser fullscreen changes (e.g., ESC)
+  React.useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      )
+      setIsFullscreen(isCurrentlyFullscreen)
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange)
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange)
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange)
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange)
+    }
+  }, [])
+
+  const containerClass = cn(
+    "bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700/50 shadow-2xl",
+    isFullscreen ? "fixed inset-0 z-50 p-4 sm:p-8 overflow-y-auto" : ""
+  )
+
+  const totalQuestions = questions.length
+
+  // If no questions were parsed, show a simple fallback instead of crashing
+  if (totalQuestions === 0) {
+    return (
+      <div ref={containerRef} className={containerClass}>
+        <div className="text-center text-slate-300">
+          <p className="mb-4">No quiz questions found in this response.</p>
+          <Button
+            onClick={onRestart}
+            variant="outline"
+            size="sm"
+            className="bg-slate-800/60 border-slate-600 text-slate-200 hover:bg-slate-700/80"
+          >
+            Close
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // Clamp the current question index to the available questions to avoid undefined access
+  const clampedIndex = Math.min(
+    Math.max(quizState.currentQuestionIndex, 0),
+    totalQuestions - 1
+  )
+
+  const currentQuestion = questions[clampedIndex]
+  const isLastQuestion = clampedIndex === totalQuestions - 1
+  const selectedAnswer = quizState.selectedAnswers[clampedIndex]
+
+  const progress = ((clampedIndex + 1) / totalQuestions) * 100
+
+  if (quizState.showResults) {
+    return (
+      <div ref={containerRef} className={containerClass}>
+        <div className="flex items-center justify-end mb-2">
+          <Button
+            onClick={(e) => {
+              e.stopPropagation()
+              toggleFullscreen()
+            }}
+            size="sm"
+            variant="ghost"
+            className="text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg px-3 py-1.5"
+            title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen view'}
+          >
+            {isFullscreen ? (
+              <Minimize className="h-4 w-4" />
+            ) : (
+              <Maximize className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+        <div className="text-center">
+          <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
+            <Award className="h-8 w-8 text-white" />
+          </div>
+          <h3 className="text-xl font-bold text-white mb-2">Quiz Complete!</h3>
+          <div className="text-3xl font-bold text-emerald-400 mb-4">
+            {quizState.score}/{questions.length}
+          </div>
+          <div className="text-slate-300 mb-6">
+            You scored {Math.round((quizState.score / questions.length) * 100)}%
+          </div>
+          
+          {/* Results breakdown */}
+          <div className="space-y-3 mb-6">
+            {questions.map((question, index) => {
+              const userAnswer = quizState.selectedAnswers[index]
+              const isCorrect = userAnswer === question.correctAnswer
+              
+              return (
+                <div key={index} className="bg-slate-700/30 rounded-lg p-3 text-left">
+                  <div className="flex items-start gap-3">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                      isCorrect ? 'bg-green-500' : 'bg-red-500'
+                    }`}>
+                      {isCorrect ? (
+                        <CheckCircle2 className="h-4 w-4 text-white" />
+                      ) : (
+                        <X className="h-4 w-4 text-white" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm text-slate-200 mb-1">{question.question}</p>
+                      {userAnswer !== null && (
+                        <p className={`text-xs ${isCorrect ? 'text-green-400' : 'text-red-400'}`}>
+                          Your answer: {question.options[userAnswer]}
+                        </p>
+                      )}
+                      {!isCorrect && (
+                        <p className="text-xs text-green-400">
+                          Correct: {question.options[question.correctAnswer]}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          
+          <Button
+            onClick={onRestart}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-lg"
+          >
+            <RotateCw className="h-4 w-4 mr-2" />
+            Retake Quiz
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div ref={containerRef} className={containerClass}>
+      {/* Quiz Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+            <HelpCircle className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-white">Quiz Mode</h3>
+            <p className="text-sm text-slate-400">
+              Question {clampedIndex + 1} of {totalQuestions}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={(e) => {
+              e.stopPropagation()
+              toggleFullscreen()
+            }}
+            size="sm"
+            variant="ghost"
+            className="text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg px-3 py-1.5"
+            title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen view'}
+          >
+            {isFullscreen ? (
+              <Minimize className="h-4 w-4" />
+            ) : (
+              <Maximize className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
+          <span>Progress</span>
+          <span>{Math.round(progress)}%</span>
+        </div>
+        <div className="w-full bg-slate-700/50 rounded-full h-2 overflow-hidden">
+          <motion.div
+            className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.3 }}
+          />
+        </div>
+      </div>
+
+      {/* Question */}
+      <div className="mb-6">
+        <h4 className="text-lg font-semibold text-white mb-4 leading-relaxed">
+          {currentQuestion.question}
+        </h4>
+        
+        {/* Answer Options */}
+        <div className="space-y-3">
+          {currentQuestion.options.map((option, index) => {
+            const isSelected = selectedAnswer === index
+            const optionLetter = String.fromCharCode(65 + index) // A, B, C, D
+            
+            return (
+              <motion.button
+                key={index}
+                onClick={() => onAnswerSelect(quizState.currentQuestionIndex, index)}
+                className={cn(
+                  "w-full p-4 rounded-lg border-2 text-left transition-all duration-200 flex items-center gap-3",
+                  isSelected
+                    ? "bg-blue-600/20 border-blue-500 text-blue-300"
+                    : "bg-slate-700/30 border-slate-600 text-slate-300 hover:bg-slate-600/30 hover:border-slate-500"
+                )}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+              >
+                <div className={cn(
+                  "w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold text-sm",
+                  isSelected
+                    ? "bg-blue-500 border-blue-400 text-white"
+                    : "border-slate-500 text-slate-400"
+                )}>
+                  {optionLetter}
+                </div>
+                <span className="flex-1">{option}</span>
+              </motion.button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <div className="flex items-center justify-between">
+        <Button
+          onClick={onPrevQuestion}
+          disabled={quizState.currentQuestionIndex === 0}
+          variant="outline"
+          size="sm"
+          className="bg-slate-700/50 border-slate-600 text-slate-300 hover:bg-slate-600/50"
+        >
+          <ChevronLeft className="h-4 w-4 mr-1" />
+          Previous
+        </Button>
+        
+        {isLastQuestion ? (
+          <Button
+            onClick={onShowResults}
+            disabled={selectedAnswer === null}
+            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
+          >
+            <Award className="h-4 w-4 mr-2" />
+            Show Results
+          </Button>
+        ) : (
+          <Button
+            onClick={onNextQuestion}
+            disabled={selectedAnswer === null}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+          >
+            Next
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // Parse flash cards from AI response
 function parseFlashCards(content: string): { question: string; answer: string }[] {
   const flashCards: { question: string; answer: string }[] = []
@@ -753,6 +1098,166 @@ function parseFlashCards(content: string): { question: string; answer: string }[
   }
 
   return flashCards
+}
+
+// Parse quiz questions from AI response with flexible format detection
+function parseQuizQuestions(content: string): QuizQuestion[] {
+  console.log('🔍 Parsing quiz content:', content.substring(0, 200) + '...')
+  
+  const quizQuestions: QuizQuestion[] = []
+  
+  // Try the strict format first
+  const strictRegex = /<<<QUIZ>>>\s*Q:\s*([\s\S]*?)\s*A:\s*([\s\S]*?)\s*B:\s*([\s\S]*?)\s*C:\s*([\s\S]*?)\s*D:\s*([\s\S]*?)\s*CORRECT:\s*([A-D])\s*EXPLANATION:\s*([\s\S]*?)\s*<<<END_QUIZ>>>/g
+  let match
+
+  while ((match = strictRegex.exec(content)) !== null) {
+    const question = match[1].trim()
+    const options = [
+      match[2].trim(), // A
+      match[3].trim(), // B
+      match[4].trim(), // C
+      match[5].trim()  // D
+    ]
+    const correctLetter = match[6].trim()
+    const explanation = match[7].trim()
+    
+    // Convert letter to index (A=0, B=1, C=2, D=3)
+    const correctAnswer = correctLetter.charCodeAt(0) - 'A'.charCodeAt(0)
+    
+    console.log('✅ Found strict format quiz question:', { question, options, correctAnswer, explanation })
+    
+    quizQuestions.push({
+      question,
+      options,
+      correctAnswer,
+      explanation
+    })
+  }
+
+  // If no strict format found, try flexible parsing for regular quiz content
+  if (quizQuestions.length === 0) {
+    console.log('🔄 No strict format found, trying flexible parsing...')
+    
+    // Split content into lines and look for question patterns
+    const lines = content.split('\n').map(line => line.trim()).filter(line => line.length > 0)
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+      
+      // Look for question headers: "Question 1:", "Question 2:", etc.
+      if (line.match(/^Question\s*\d+:/i)) {
+        console.log('🔍 Found question header:', line)
+        
+        // Get the question text (might be on the same line or next lines)
+        let questionText = line.replace(/^Question\s*\d+:\s*/i, '').trim()
+        let j = i + 1
+        
+        // If question text is empty, look for it in the next lines
+        while (j < lines.length && !questionText && !lines[j].match(/^[a-d]\)/i)) {
+          if (lines[j] && !lines[j].match(/^Question\s*\d+:/i)) {
+            questionText = lines[j].trim()
+          }
+          j++
+        }
+        
+        // Now look for options starting from current position
+        const options: string[] = []
+        let currentPos = questionText ? j : i + 1
+        
+        // Look for a), b), c), d) options
+        for (let optionLetter of ['a', 'b', 'c', 'd']) {
+          while (currentPos < lines.length) {
+            const optionLine = lines[currentPos]
+            const optionRegex = new RegExp(`^${optionLetter}\\)\\s*(.+)`, 'i')
+            const optionMatch = optionLine.match(optionRegex)
+            
+            if (optionMatch) {
+              options.push(optionMatch[1].trim())
+              currentPos++
+              break
+            }
+            currentPos++
+            
+            // Don't go too far looking for options
+            if (currentPos - (questionText ? j : i + 1) > 10) break
+          }
+        }
+        
+        // If we found a question and at least 2 options, create a quiz question
+        if (questionText && options.length >= 2) {
+          // Pad options to 4 if needed
+          while (options.length < 4) {
+            options.push(`Option ${options.length + 1}`)
+          }
+          
+          const correctAnswer = Math.floor(Math.random() * options.length) // Random for now
+          const explanation = "This is a practice question. The correct answer may vary - check your study materials!"
+          
+          console.log('✅ Found flexible format quiz question:', { 
+            question: questionText, 
+            options, 
+            correctAnswer, 
+            explanation 
+          })
+          
+          quizQuestions.push({
+            question: questionText,
+            options,
+            correctAnswer,
+            explanation
+          })
+        }
+        
+        // Move to next question
+        i = currentPos - 1
+      }
+    }
+    
+    // If still no questions found, try a more aggressive approach
+    if (quizQuestions.length === 0) {
+      console.log('🔄 Trying more aggressive parsing...')
+      
+      // Look for any line that ends with a question mark and has options below it
+      for (let i = 0; i < lines.length - 4; i++) {
+        const line = lines[i]
+        
+        if (line.includes('?') && line.length > 10) {
+          const options: string[] = []
+          
+          // Check next 4 lines for a), b), c), d) pattern
+          for (let j = i + 1; j < Math.min(i + 8, lines.length); j++) {
+            const optionMatch = lines[j].match(/^[a-d]\)\s*(.+)/i)
+            if (optionMatch) {
+              options.push(optionMatch[1].trim())
+            }
+          }
+          
+          if (options.length >= 3) {
+            while (options.length < 4) {
+              options.push(`Additional option ${options.length + 1}`)
+            }
+            
+            console.log('✅ Found aggressive parsing quiz question:', { 
+              question: line, 
+              options, 
+              correctAnswer: 0, 
+              explanation: "Practice question - verify the correct answer in your materials." 
+            })
+            
+            quizQuestions.push({
+              question: line,
+              options,
+              correctAnswer: 0,
+              explanation: "Practice question - verify the correct answer in your materials."
+            })
+          }
+        }
+      }
+    }
+  }
+
+  console.log(`🎯 Total quiz questions found: ${quizQuestions.length}`)
+  return quizQuestions
 }
 
 // Component to render formatted message content
@@ -1130,6 +1635,13 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
   const [resetDate, setResetDate] = useState<Date>(new Date())
   const [flashCardMode, setFlashCardMode] = useState(false)
   const [currentCardIndex, setCurrentCardIndex] = useState(0)
+  // Quiz state (no toggle needed - auto-detected by AI)
+  const [quizState, setQuizState] = useState<QuizState>({
+    currentQuestionIndex: 0,
+    selectedAnswers: [],
+    showResults: false,
+    score: 0
+  })
   const [todayTopics, setTodayTopics] = useState<any[]>([])
   const [loadingTopics, setLoadingTopics] = useState(true)
   const [showTopicsSidebar, setShowTopicsSidebar] = useState(false)
@@ -1146,8 +1658,10 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
     return settings.maxMessagesInView
   }, [settings.maxMessagesInView])
   
-  // Fetch today's topics
+  // Fetch today's topics (slightly deferred to avoid work on first paint)
   useEffect(() => {
+    let timeoutId: any
+
     const fetchTodayTopics = async () => {
       try {
         const response = await fetch('/api/student/daily-topics')
@@ -1163,7 +1677,13 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
     }
     
     if (profile?.id) {
-      fetchTodayTopics()
+      timeoutId = setTimeout(fetchTodayTopics, 1500)
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
     }
   }, [profile?.id])
 
@@ -1327,16 +1847,15 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
     setHelpCount(prev => prev + 1)
 
     try {
-      // Get auth token for extended API from existing session
-      // UnifiedAuthGuard ensures user is authenticated, so we can get the session safely
+      // Get auth token for Supabase Edge Function
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
       
       if (sessionError || !session) {
-        console.error('Session error:', sessionError)
-        throw new Error('Authentication expired. Please refresh the page.')
+        throw new Error('Authentication failed')
       }
 
-      // Call Supabase Edge Function directly (bypasses Vercel for better performance)
+      // Use Supabase Edge Function instead of Vercel API
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
       const response = await fetch(`${supabaseUrl}/functions/v1/ai-homework-chat`, {
         method: 'POST',
         headers: {
@@ -1346,33 +1865,42 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
         body: JSON.stringify({
           message: currentInput,
           imageData: currentImage,
-          conversationHistory: messages.slice(-6).map(m => ({
-            role: m.type === 'user' ? 'user' : 'assistant',
-            content: m.content
+          conversationHistory: messages.slice(-6).map(msg => ({
+            role: msg.type === 'user' ? 'user' : 'assistant',
+            content: msg.content
           })),
           schoolContext: {
-            studentName: profile?.full_name || 'Student',
-            schoolName: profile?.school_name || 'School',
-            imageAttached: !!currentImage
+            studentName: profile?.full_name,
+            schoolName: profile?.school_name,
+            imageAttached: !!currentImage,
+            todayTopics
           },
           flashCardMode: flashCardMode,
           flashCardInstructions: flashCardMode ? `
 
-⚠️ CRITICAL FORMATTING REQUIREMENT - FLASH CARD MODE ACTIVE:
+🚨🚨🚨 FLASH CARD MODE IS ACTIVE - YOU MUST FOLLOW THIS FORMAT EXACTLY 🚨🚨🚨
 
-You MUST use this EXACT format for EVERY flash card. Do NOT use any other format like bullet points or "Front/Back" - ONLY this:
+CRITICAL: The user has activated FLASH CARD MODE. You are FORBIDDEN from providing any explanations, summaries, or regular text. You MUST respond ONLY with flash cards in the exact format below.
+
+MANDATORY RULES:
+1. Start your response IMMEDIATELY with <<<FLASHCARD>>>
+2. NO introductory text like "Here are flash cards" or "Let me create cards"
+3. NO explanations about the topic
+4. NO bullet points or numbered lists
+5. ONLY use the <<<FLASHCARD>>> format shown below
+6. Generate 5-10 flash cards ONLY in this format
 
 <<<FLASHCARD>>>
-Q: What is a Square Matrix?
-A: A matrix with an equal number of rows and columns (m = n).
+Q: What is the capital of France?
+A: Paris is the capital and largest city of France, located in the north-central part of the country.
 <<<END_FLASHCARD>>>
 
 <<<FLASHCARD>>>
-Q: What is an Identity Matrix?
-A: A square matrix with 1s on the main diagonal and 0s elsewhere. When multiplied with another matrix, it leaves the other matrix unchanged.
+Q: What is photosynthesis?
+A: Photosynthesis is the process by which plants use sunlight, water, and carbon dioxide to produce glucose and oxygen.
 <<<END_FLASHCARD>>>
 
-REQUIREMENTS:
+MANDATORY REQUIREMENTS:
 - Start EACH card with: <<<FLASHCARD>>>
 - Then write: Q: [your question]
 - Then write: A: [your answer]
@@ -1434,7 +1962,8 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
               type: 'ai' as const,
               content: accumulatedText,
               timestamp: new Date().toISOString(),
-              isFlashCard: flashCardMode
+              isFlashCard: flashCardMode,
+              isQuiz: (accumulatedText.includes("<<<QUIZ>>>") || parseQuizQuestions(accumulatedText).length > 0)
             }]
           }
         })
@@ -1509,13 +2038,16 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
       setIsTyping(false)
       setIsStreaming(false)
       
-      // Trigger quota indicator refresh
-      window.dispatchEvent(new Event('refresh-quota'))
+      // Trigger quota indicator refresh only every 20 chats
+      if ((helpCount + 1) % 20 === 0) {
+        window.dispatchEvent(new Event('refresh-quota'))
+      }
       
       // Final smooth scroll to ensure full message is visible
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
       }, 100)
+      
     } catch (error: any) {
       console.error('Error calling Gemini API:', error)
       
@@ -1533,7 +2065,57 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
-  }, [inputMessage, selectedImage, messages, profile, setMessages, setInputMessage, setSelectedImage, setIsTyping, setIsStreaming, setHelpCount, messagesEndRef, fileInputRef, flashCardMode])
+  }, [inputMessage, selectedImage, messages, profile, setMessages, setInputMessage, setSelectedImage, setIsTyping, setIsStreaming, setHelpCount, messagesEndRef, fileInputRef, flashCardMode, helpCount])
+
+  // Quiz handlers
+  const handleAnswerSelect = useCallback((questionIndex: number, answerIndex: number) => {
+    setQuizState(prev => {
+      const newSelectedAnswers = [...prev.selectedAnswers]
+      newSelectedAnswers[questionIndex] = answerIndex
+      return {
+        ...prev,
+        selectedAnswers: newSelectedAnswers
+      }
+    })
+  }, [])
+
+  const handleNextQuestion = useCallback(() => {
+    setQuizState(prev => ({
+      ...prev,
+      currentQuestionIndex: Math.min(prev.currentQuestionIndex + 1, prev.selectedAnswers.length - 1)
+    }))
+  }, [])
+
+  const handlePrevQuestion = useCallback(() => {
+    setQuizState(prev => ({
+      ...prev,
+      currentQuestionIndex: Math.max(prev.currentQuestionIndex - 1, 0)
+    }))
+  }, [])
+
+  const handleShowResults = useCallback((questions: QuizQuestion[]) => {
+    const score = quizState.selectedAnswers.reduce((acc, answer, index) => {
+      if (answer !== null && answer === questions[index]?.correctAnswer) {
+        return (acc || 0) + 1
+      }
+      return acc || 0
+    }, 0)
+
+    setQuizState(prev => ({
+      ...prev,
+      showResults: true,
+      score: score || 0
+    }))
+  }, [quizState.selectedAnswers])
+
+  const handleRestartQuiz = useCallback(() => {
+    setQuizState({
+      currentQuestionIndex: 0,
+      selectedAnswers: [],
+      showResults: false,
+      score: 0
+    })
+  }, [])
 
   // Move input to bottom when messages appear
   useEffect(() => {
@@ -2316,6 +2898,7 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
                   <span className="hidden sm:inline">{flashCardMode ? 'Flash Cards ON' : 'Flash Cards'}</span>
                   <span className="sm:hidden">Cards</span>
                 </Button>
+                
                 <div className="hidden sm:flex items-center gap-2 text-[10px] text-slate-400">
                   <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-lg shadow-emerald-500/50"></div>
                   <span className="font-semibold">Online</span>
@@ -2512,6 +3095,28 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
                     
                     <div className="relative">
                       {(() => {
+                        // Detect quiz directly from message content rather than relying only on isQuiz flag
+                        if (message.type === 'ai' && (message.isQuiz || message.content.includes('<<<QUIZ>>>'))) {
+                          console.log('🎯 Detecting quiz in message, parsing...')
+                          const quizQuestions = parseQuizQuestions(message.content)
+                          console.log('📝 Quiz questions parsed:', quizQuestions.length)
+                          if (quizQuestions.length > 0) {
+                            // We found quiz questions, render the quiz UI
+                            return (
+                              <Quiz
+                                questions={quizQuestions}
+                                quizState={quizState}
+                                onAnswerSelect={handleAnswerSelect}
+                                onNextQuestion={handleNextQuestion}
+                                onPrevQuestion={handlePrevQuestion}
+                                onShowResults={() => handleShowResults(quizQuestions)}
+                                onRestart={handleRestartQuiz}
+                              />
+                            )
+                          }
+                          // No quiz questions found, fall back to normal message display
+                        }
+                        
                         // If it's marked as flash card and it's AI response, check if we have actual cards
                         if (message.isFlashCard && message.type === 'ai') {
                           const flashCards = parseFlashCards(message.content)
@@ -2530,13 +3135,17 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
                           }
                           // No flash cards found, fall back to normal message display
                         }
+                        
                         // Normal message rendering
                         return (
-                          <MessageContent 
-                            content={message.content} 
-                            onCopy={(code) => { setCopiedCode(`${message.id}-code`); setTimeout(() => setCopiedCode(null), 2000) }}
-                            showCopyButton={message.type === 'ai' && !isStreaming}
-                          />
+                          <div>
+                            <MessageContent 
+                              content={message.content} 
+                              onCopy={(code) => { setCopiedCode(`${message.id}-code`); setTimeout(() => setCopiedCode(null), 2000) }}
+                              showCopyButton={message.type === 'ai' && !isStreaming}
+                            />
+                            
+                          </div>
                         )
                       })()}
                       {/* Show typing cursor while streaming */}

@@ -1,92 +1,79 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { withCache, generateUserCacheKey, invalidateUserCaches } from '@/lib/cache/cacheManager';
 import { withRateLimit } from '@/lib/security/rateLimiter';
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth';
 
 export async function GET(request: NextRequest) {
   return withRateLimit(request, async () => {
     try {
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              );
-            } catch {
-              // Ignore server component errors
-            }
-          },
-        },
-      }
-    );
-
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Use Supabase client with proper RLS instead of admin bypass
-    // Get user profile to access student_tag and gems
-    const { data: profiles, error: profileError } = await supabase
-      .from('profiles')
-      .select('student_tag, first_name, last_name, gems')
-      .eq('user_id', user.id);
-
-    // Generate unique student tag helper
-    const generateStudentTag = (): string => {
-      const timestamp = Date.now().toString().slice(-8);
-      const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-      return timestamp + random;
-    };
-
-    let profile = profiles?.[0];
-    if (profileError || !profile) {
+      const auth = await authenticateStudent(request);
       
-      // Create profile using regular client with RLS
+      if (isAuthError(auth)) {
+        if (auth.status === 401) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        
+        if (auth.status === 403) {
+          return NextResponse.json({ error: 'Student access required' }, { status: 403 });
+        }
+        
+        return NextResponse.json({ error: auth.error || 'Authentication failed' }, { status: auth.status });
+      }
+      
+      const { supabase, userId, email } = auth;
+      const user = { id: userId, email } as { id: string; email?: string | null };
 
-      const { data: newProfile, error: createError } = await supabase
+      // Use Supabase client with proper RLS instead of admin bypass
+      // Get user profile to access student_tag and gems
+      const { data: profiles, error: profileError } = await supabase
         .from('profiles')
-        .insert({
-          user_id: user.id,
-          first_name: user.email?.split('@')[0] || 'Student',
-          last_name: '',
-          role: 'student',
-          student_tag: generateStudentTag(),
-          gems: 0,
-          created_at: new Date().toISOString()
-        })
         .select('student_tag, first_name, last_name, gems')
+        .eq('user_id', user.id);
+
+      // Generate unique student tag helper
+      const generateStudentTag = (): string => {
+        const timestamp = Date.now().toString().slice(-8);
+        const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+        return timestamp + random;
+      };
+
+      let profile = profiles?.[0];
+      if (profileError || !profile) {
+        
+        // Create profile using regular client with RLS
+
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            user_id: user.id,
+            first_name: user.email?.split('@')[0] || 'Student',
+            last_name: '',
+            role: 'student',
+            student_tag: generateStudentTag(),
+            gems: 0,
+            created_at: new Date().toISOString()
+          })
+          .select('student_tag, first_name, last_name, gems')
+          .single();
+
+        if (createError) {
+          return NextResponse.json({ error: 'Failed to create profile' }, { status: 500 });
+        }
+        // Use the newly created profile
+        profile = newProfile;
+      }
+
+      // Check if wallet exists for this user
+      const { data: wallet, error: walletError } = await supabase
+        .from('student_wallets')
+        .select('*')
+        .eq('student_id', user.id)
         .single();
 
-      if (createError) {
-        return NextResponse.json({ error: 'Failed to create profile' }, { status: 500 });
+      // If wallet doesn't exist, return 404
+      if (!wallet) {
+        return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
       }
-      // Use the newly created profile
-      profile = newProfile;
-    }
-
-    // Check if wallet exists for this user
-    const { data: wallet, error: walletError } = await supabase
-      .from('student_wallets')
-      .select('*')
-      .eq('student_id', user.id)
-      .single();
-
-    // If wallet doesn't exist, return 404
-    if (!wallet) {
-      return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
-    }
 
       // Check for cache refresh parameter
       const { searchParams } = new URL(request.url);
@@ -175,36 +162,24 @@ export async function POST(request: NextRequest) {
   }, 'general');
 }
 
-export async function PATCH(request: Request) {
+export async function PATCH(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              );
-            } catch {
-              // Ignore server component errors
-            }
-          },
-        },
+    const auth = await authenticateStudent(request);
+    
+    if (isAuthError(auth)) {
+      if (auth.status === 401) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
-    );
-    const body = await request.json();
-
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      
+      if (auth.status === 403) {
+        return NextResponse.json({ error: 'Student access required' }, { status: 403 });
+      }
+      
+      return NextResponse.json({ error: auth.error || 'Authentication failed' }, { status: auth.status });
     }
+    
+    const { supabase, userId } = auth;
+    const body = await request.json();
 
     // Update wallet settings
     const { error: updateError } = await supabase
@@ -216,15 +191,15 @@ export async function PATCH(request: Request) {
         settings: body.settings,
         updated_at: new Date().toISOString()
       })
-      .eq('student_id', user.id);
-
+      .eq('student_id', userId);
+    
     if (updateError) {
       console.error('Error updating wallet:', updateError);
       return NextResponse.json({ error: 'Failed to update wallet' }, { status: 500 });
     }
-
+    
     // Invalidate cache after update
-    invalidateUserCaches(user.id);
+    invalidateUserCaches(userId);
     
     return NextResponse.json({ success: true });
   } catch (error) {

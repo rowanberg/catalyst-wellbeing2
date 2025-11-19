@@ -1,21 +1,28 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const supabase = await createClient();
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await authenticateStudent(request);
+    
+    if (isAuthError(auth)) {
+      if (auth.status === 401) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      
+      if (auth.status === 403) {
+        return NextResponse.json({ error: 'Student access required' }, { status: 403 });
+      }
+      
+      return NextResponse.json({ error: auth.error || 'Authentication failed' }, { status: auth.status });
     }
+    
+    const { supabase, userId } = auth;
 
     const { data: wallet } = await supabase
       .from('student_wallets')
       .select('id')
-      .eq('student_id', user.id)
+      .eq('student_id', userId)
       .single();
 
     if (!wallet) {

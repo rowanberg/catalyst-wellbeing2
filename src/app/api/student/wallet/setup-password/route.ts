@@ -1,49 +1,37 @@
-import { NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
 import * as bcrypt from 'bcryptjs';
 import { invalidateUserCaches } from '@/lib/cache/cacheManager';
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth';
 
 // Use bcrypt for secure password hashing
 // Cost factor of 12 provides good security/performance balance
 const BCRYPT_ROUNDS = 12;
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              );
-            } catch {
-              // Ignore server component errors
-            }
-          },
-        },
-      }
-    );
-    
     const { password } = await request.json();
 
     if (!password || password.length < 6) {
       return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
     }
 
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      console.error('Auth error in setup-password:', userError);
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await authenticateStudent(request);
+    
+    if (isAuthError(auth)) {
+      if (auth.status === 401) {
+        console.error('Auth error in setup-password: Unauthorized');
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      
+      if (auth.status === 403) {
+        return NextResponse.json({ error: 'Student access required' }, { status: 403 });
+      }
+      
+      console.error('Auth error in setup-password:', auth.error);
+      return NextResponse.json({ error: auth.error || 'Authentication failed' }, { status: auth.status });
     }
+    
+    const { supabase, userId } = auth;
 
     // Hash password using bcrypt
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
@@ -55,7 +43,7 @@ export async function POST(request: Request) {
         transaction_password_hash: passwordHash,
         updated_at: new Date().toISOString()
       })
-      .eq('student_id', user.id);
+      .eq('student_id', userId);
 
     if (updateError) {
       console.error('Error setting password:', updateError);
@@ -63,13 +51,13 @@ export async function POST(request: Request) {
     }
 
     // Invalidate wallet cache so fresh data is fetched
-    invalidateUserCaches(user.id);
+    invalidateUserCaches(userId);
 
     // Log security event
     await supabase
       .from('wallet_security_logs')
       .insert({
-        wallet_id: user.id,
+        wallet_id: userId,
         action_type: 'password_set',
         action_details: 'Transaction password was set',
         success: true

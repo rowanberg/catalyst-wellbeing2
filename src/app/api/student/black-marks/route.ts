@@ -1,33 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    const auth = await authenticateStudent(request)
     
-    // Get the current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (isAuthError(auth)) {
+      if (auth.status === 401) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      
+      if (auth.status === 403) {
+        return NextResponse.json({ error: 'Access denied. Student role required.' }, { status: 403 })
+      }
+      
+      return NextResponse.json({ error: auth.error || 'Authentication failed' }, { status: auth.status })
     }
-
-    // Get user's profile to verify they are a student
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role, school_id')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || !profile || profile.role !== 'student') {
-      return NextResponse.json({ error: 'Access denied. Student role required.' }, { status: 403 })
-    }
+    
+    const { supabase, userId } = auth
 
     // Get student's black marks using the database function
     const { data: blackMarks, error: blackMarksError } = await supabase
       .rpc('get_student_black_marks', { 
-        student_uuid: user.id
+        student_uuid: userId
       })
 
     if (blackMarksError) {
@@ -43,7 +38,7 @@ export async function GET(request: NextRequest) {
         .from('black_mark_submissions')
         .select('*')
         .in('black_mark_id', blackMarkIds)
-        .eq('student_id', user.id)
+        .eq('student_id', userId)
 
       if (!submissionsError) {
         submissions = submissionsData || []

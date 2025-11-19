@@ -3,11 +3,12 @@ import { Inter, Plus_Jakarta_Sans, DM_Sans } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/lib/redux/providers'
 import { ToastProvider } from '@/components/ui/toast'
-import { ErrorBoundary } from '@/components/ui/error-boundary'
+import ErrorBoundary, { PageErrorBoundary } from '@/components/ErrorBoundary'
 import { HydrationProvider } from '@/components/providers/HydrationProvider'
 import { AuthChecker } from '@/components/providers/AuthChecker'
 import { RealtimeProvider } from '@/components/communications/RealtimeProvider'
 import { PWAUpdateBanner, OfflineIndicator } from '@/components/ui/pwa-install-prompt'
+import { AnalyticsProvider, ServiceWorkerProvider } from '@/components/providers'
 
 const inter = Inter({ subsets: ['latin'] })
 const plusJakartaSans = Plus_Jakarta_Sans({ 
@@ -67,26 +68,52 @@ export default function RootLayout({
         <meta name="theme-color" content="#3b82f6" />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var observer=new MutationObserver(function(mutations){mutations.forEach(function(mutation){if(mutation.type==='attributes'&&mutation.attributeName==='bis_skin_checked'){mutation.target.removeAttribute('bis_skin_checked');}});});if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',function(){observer.observe(document.body,{attributes:true,subtree:true,attributeFilter:['bis_skin_checked']});});}else{observer.observe(document.body,{attributes:true,subtree:true,attributeFilter:['bis_skin_checked']});}}catch(e){}})();`,
+            __html: `
+              // Initialize performance monitoring and analytics
+              (function(){
+                try {
+                  // BiS skin checked removal
+                  var observer=new MutationObserver(function(mutations){
+                    mutations.forEach(function(mutation){
+                      if(mutation.type==='attributes'&&mutation.attributeName==='bis_skin_checked'){
+                        mutation.target.removeAttribute('bis_skin_checked');
+                      }
+                    });
+                  });
+                  
+                  if(document.readyState==='loading'){
+                    document.addEventListener('DOMContentLoaded',function(){
+                      observer.observe(document.body,{attributes:true,subtree:true,attributeFilter:['bis_skin_checked']});
+                    });
+                  } else {
+                    observer.observe(document.body,{attributes:true,subtree:true,attributeFilter:['bis_skin_checked']});
+                  }
+                } catch(e) {}
+              })();
+            `,
           }}
         />
       </head>
       <body className={`${inter.className} ${plusJakartaSans.variable} ${dmSans.variable}`} suppressHydrationWarning>
-        <ErrorBoundary>
+        <PageErrorBoundary>
           <HydrationProvider>
             <Providers>
-              <ToastProvider>
-                <AuthChecker>
-                  <RealtimeProvider>
-                    {children}
-                    <PWAUpdateBanner />
-                    <OfflineIndicator />
-                  </RealtimeProvider>
-                </AuthChecker>
-              </ToastProvider>
+              <ServiceWorkerProvider>
+                <AnalyticsProvider>
+                  <ToastProvider>
+                    <AuthChecker>
+                      <RealtimeProvider>
+                        {children}
+                        <PWAUpdateBanner />
+                        <OfflineIndicator />
+                      </RealtimeProvider>
+                    </AuthChecker>
+                  </ToastProvider>
+                </AnalyticsProvider>
+              </ServiceWorkerProvider>
             </Providers>
           </HydrationProvider>
-        </ErrorBoundary>
+        </PageErrorBoundary>
       </body>
     </html>
   )

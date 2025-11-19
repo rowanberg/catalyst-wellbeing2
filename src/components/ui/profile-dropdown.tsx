@@ -116,41 +116,42 @@ export function ProfileDropdown({ className = '' }: ProfileDropdownProps) {
 
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
-      {/* Profile Button */}
+      {/* Profile Button - Matching Enterprise Header Design */}
       <motion.button
         onClick={() => setIsOpen(!isOpen)}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        className={`flex items-center space-x-2 sm:space-x-3 px-3 sm:px-4 py-2 sm:py-2.5 bg-white/90 hover:bg-white border border-gray-200/50 hover:border-gray-300/50 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 ${
-          isOpen ? 'ring-2 ring-blue-500/20 border-blue-300/50' : ''
+        className={`flex items-center gap-3 px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/70 rounded-xl border border-slate-200/80 dark:border-slate-700/80 transition-all duration-300 ${
+          isOpen ? 'ring-2 ring-blue-500/20 border-blue-300/50 dark:border-blue-600/50' : ''
         }`}
+        style={{ fontFamily: 'var(--font-jakarta)' }}
       >
-        {/* Avatar */}
+        {/* Avatar with enterprise styling */}
         <div className="relative">
-          <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-white text-sm font-bold shadow-lg">
+          <div className="w-9 h-9 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-white text-sm font-bold shadow-lg">
             {profile.first_name?.[0]}{profile.last_name?.[0]}
           </div>
           {/* Online indicator */}
-          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full shadow-sm"></div>
+          <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-slate-800 rounded-full shadow-sm"></div>
         </div>
 
-        {/* Profile Info - Hidden on mobile */}
+        {/* Profile Info - Matching header typography */}
         <div className="hidden sm:block text-left min-w-0">
-          <p className="text-sm font-semibold text-gray-900 truncate max-w-32 lg:max-w-none">
+          <p className="text-sm font-bold text-gray-900 dark:text-slate-100 truncate max-w-32 lg:max-w-none" style={{ fontFamily: 'var(--font-jakarta)' }}>
             {profile.first_name} {profile.last_name}
           </p>
-          <p className="text-xs text-gray-500 capitalize">
+          <p className="text-xs text-gray-600 dark:text-slate-400 font-medium capitalize" style={{ fontFamily: 'var(--font-dm-sans)' }}>
             {profile.role || 'Teacher'}
           </p>
         </div>
 
-        {/* Chevron */}
+        {/* Chevron with enterprise styling */}
         <motion.div
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.2 }}
           className="hidden sm:block"
         >
-          <ChevronDown className="w-4 h-4 text-gray-400" />
+          <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500" />
         </motion.div>
       </motion.button>
 
@@ -162,24 +163,24 @@ export function ProfileDropdown({ className = '' }: ProfileDropdownProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -10 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute right-0 top-full mt-2 w-72 bg-white/95 backdrop-blur-xl border border-gray-200/50 rounded-2xl shadow-2xl z-50 overflow-hidden"
+            className="absolute right-0 top-full mt-2 w-72 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200/50 dark:border-slate-700/50 rounded-2xl shadow-2xl z-50 overflow-hidden"
           >
             {/* Header */}
-            <div className="px-4 py-3 border-b border-gray-100/50 bg-gradient-to-r from-blue-50/50 to-indigo-50/50">
+            <div className="px-4 py-3 border-b border-slate-100/50 dark:border-slate-700/50 bg-gradient-to-r from-slate-50/50 to-slate-100/50 dark:from-slate-800/50 dark:to-slate-700/50">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-white text-lg font-bold shadow-lg">
                   {profile.first_name?.[0]}{profile.last_name?.[0]}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-semibold text-gray-900 truncate">
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-slate-100 truncate" style={{ fontFamily: 'var(--font-jakarta)' }}>
                     {profile.first_name} {profile.last_name}
                   </h3>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-600 dark:text-slate-400 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                     {user?.email || 'No email'}
                   </p>
                   <div className="flex items-center space-x-1 mt-1">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-xs text-gray-500 capitalize">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                    <span className="text-xs text-gray-600 dark:text-slate-400 font-medium capitalize" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                       {profile.role || 'Teacher'} • Online
                     </span>
                   </div>
@@ -199,30 +200,30 @@ export function ProfileDropdown({ className = '' }: ProfileDropdownProps) {
                     whileTap={{ scale: 0.98 }}
                     className={`w-full flex items-center space-x-3 px-4 py-3 text-left transition-all duration-150 ${
                       item.isDanger 
-                        ? 'hover:bg-red-50 border-t border-gray-100/50 mt-1' 
-                        : item.bgColor
+                        ? 'hover:bg-red-50 dark:hover:bg-red-950/20 border-t border-slate-100/50 dark:border-slate-700/50 mt-1' 
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'
                     }`}
                   >
                     <div className={`p-2 rounded-lg ${
                       item.isDanger 
-                        ? 'bg-red-100' 
+                        ? 'bg-red-100 dark:bg-red-900/30' 
                         : item.label === 'Profile' 
-                          ? 'bg-blue-100' 
+                          ? 'bg-blue-100 dark:bg-blue-900/30' 
                           : item.label === 'Your School'
-                            ? 'bg-emerald-100'
-                            : 'bg-gray-100'
+                            ? 'bg-emerald-100 dark:bg-emerald-900/30'
+                            : 'bg-slate-100 dark:bg-slate-700/50'
                     }`}>
-                      <Icon className={`w-4 h-4 ${item.color}`} />
+                      <Icon className={`w-4 h-4 ${item.color} ${item.isDanger ? '' : 'dark:text-slate-300'}`} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium ${
-                        item.isDanger ? 'text-red-700' : 'text-gray-900'
-                      }`}>
+                      <p className={`text-sm font-bold ${
+                        item.isDanger ? 'text-red-700 dark:text-red-400' : 'text-gray-900 dark:text-slate-100'
+                      }`} style={{ fontFamily: 'var(--font-jakarta)' }}>
                         {item.label}
                       </p>
-                      <p className={`text-xs ${
-                        item.isDanger ? 'text-red-500' : 'text-gray-500'
-                      }`}>
+                      <p className={`text-xs font-medium ${
+                        item.isDanger ? 'text-red-500 dark:text-red-400' : 'text-gray-600 dark:text-slate-400'
+                      }`} style={{ fontFamily: 'var(--font-dm-sans)' }}>
                         {item.description}
                       </p>
                     </div>
@@ -232,10 +233,10 @@ export function ProfileDropdown({ className = '' }: ProfileDropdownProps) {
             </div>
 
             {/* Footer */}
-            <div className="px-4 py-3 border-t border-gray-100/50 bg-gray-50/50">
-              <div className="flex items-center justify-between text-xs text-gray-500">
+            <div className="px-4 py-3 border-t border-slate-100/50 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/50">
+              <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                 <span>Catalyst Platform</span>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer">
                   <HelpCircle className="w-3 h-3" />
                   <span>Help</span>
                 </div>

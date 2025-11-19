@@ -556,71 +556,73 @@ function TeacherCommunityContent() {
                   key={post.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm"
+                  className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm lg:max-w-4xl lg:mx-auto"
                 >
-                  {/* Post Image - Full Width */}
-                  {post.image_url && (
-                    <div className="bg-gray-100 dark:bg-gray-900">
-                      <Image
-                        src={post.image_url}
-                        alt="Post"
-                        width={800}
-                        height={600}
-                        className="w-full h-auto object-cover"
-                        style={{ maxHeight: '500px' }}
-                      />
-                    </div>
-                  )}
-
-                  {/* Post Content */}
-                  <div className="p-4">
-                    <div className="flex items-start space-x-3 mb-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <span className="text-white font-bold text-sm">
-                          {post.teacher_name[0]}
-                        </span>
+                  <div className="flex flex-col lg:flex-row">
+                    {/* Post Image - Full Width */}
+                    {post.image_url && (
+                      <div className="bg-gray-100 dark:bg-gray-900 lg:w-1/2 lg:max-h-[520px] lg:flex lg:items-center lg:justify-center">
+                        <Image
+                          src={post.image_url}
+                          alt="Post"
+                          width={800}
+                          height={600}
+                          className="w-full h-auto lg:h-full object-cover"
+                          style={{ maxHeight: '500px' }}
+                        />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2">
-                          <p className="font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
-                            {post.teacher_name}
-                          </p>
-                          {post.is_pinned && (
-                            <div className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center space-x-1">
-                              <Pin className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                              <span className="text-xs font-medium text-blue-600 dark:text-blue-400">Pinned</span>
-                            </div>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>
-                          {new Date(post.created_at).toLocaleDateString('en-US', { 
-                            month: 'short', 
-                            day: 'numeric',
-                            hour: 'numeric',
-                            minute: '2-digit'
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    {post.content && (
-                      <p className="text-gray-900 dark:text-white whitespace-pre-wrap leading-relaxed" style={{ fontFamily: 'var(--font-dm-sans)' }}>
-                        {post.content}
-                      </p>
                     )}
-                    
-                    {/* Simplified Like Button */}
-                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                      <button
-                        className={`flex items-center space-x-2 px-4 py-2.5 rounded-full transition-all ${
-                          post.has_reacted
-                            ? 'text-red-600 bg-red-50 dark:bg-red-900/20'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        <Heart className={`w-5 h-5 ${post.has_reacted ? 'fill-current' : ''}`} />
-                        <span className="font-semibold">{post.reactions_count} {post.reactions_count === 1 ? 'like' : 'likes'}</span>
-                      </button>
+
+                    {/* Post Content */}
+                    <div className={`p-4 lg:p-5 ${post.image_url ? 'lg:w-1/2' : 'w-full'}`}>
+                      <div className="flex items-start space-x-3 mb-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                          <span className="text-white font-bold text-sm">
+                            {post.teacher_name[0]}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2">
+                            <p className="font-bold text-gray-900 dark:text-white" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
+                              {post.teacher_name}
+                            </p>
+                            {post.is_pinned && (
+                              <div className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center space-x-1">
+                                <Pin className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                                <span className="text-xs font-medium text-blue-600 dark:text-blue-400">Pinned</span>
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>
+                            {new Date(post.created_at).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric',
+                              hour: 'numeric',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {post.content && (
+                        <p className="text-gray-900 dark:text-white whitespace-pre-wrap leading-relaxed" style={{ fontFamily: 'var(--font-dm-sans)' }}>
+                          {post.content}
+                        </p>
+                      )}
+                      
+                      {/* Simplified Like Button */}
+                      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <button
+                          className={`flex items-center space-x-2 px-4 py-2.5 rounded-full transition-all ${
+                            post.has_reacted
+                              ? 'text-red-600 bg-red-50 dark:bg-red-900/20'
+                              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          <Heart className={`w-5 h-5 ${post.has_reacted ? 'fill-current' : ''}`} />
+                          <span className="font-semibold">{post.reactions_count} {post.reactions_count === 1 ? 'like' : 'likes'}</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </motion.div>

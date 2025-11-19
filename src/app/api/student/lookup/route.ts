@@ -1,9 +1,8 @@
-import { NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const { studentTag } = await request.json();
 
@@ -11,33 +10,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid student tag' }, { status: 400 });
     }
 
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              );
-            } catch {
-              // Ignore server component errors
-            }
-          },
-        },
-      }
-    );
+    const auth = await authenticateStudent(request);
 
-    // Get current user for authentication
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (isAuthError(auth)) {
+      if (auth.status === 401) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      if (auth.status === 403) {
+        return NextResponse.json({ error: 'Student access required' }, { status: 403 });
+      }
+
+      return NextResponse.json({ error: auth.error || 'Authentication failed' }, { status: auth.status });
     }
 
     // Use admin client to bypass RLS

@@ -2,8 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect, useCallback } from 'react'
-import dynamicImport from 'next/dynamic'
+import { useState, useEffect, useCallback, Suspense, lazy } from 'react'
 import { useAppSelector, useAppDispatch } from '@/lib/redux/hooks'
 import { fetchProfile } from '@/lib/redux/slices/authSlice'
 import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
@@ -11,14 +10,48 @@ import { OfflineAPI } from '@/lib/api/offline-wrapper'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Loader, Users } from 'lucide-react'
 import { DarkModeProvider, useDarkMode } from '@/contexts/DarkModeContext'
+import ErrorBoundary from '@/components/ErrorBoundary'
+import { useTabSwipeNavigation } from '@/hooks/useSwipeNavigation'
+import { usePullToRefresh } from '@/components/ui/PullToRefresh'
+import { useRefreshAllData, usePrefetchWellbeing } from '@/hooks/useParentAPI'
+import { useOfflineStatus, usePWA } from '@/hooks/useOfflinePWA'
+import { useAnalytics } from '@/utils/analytics'
+import { useAccessibility } from '@/utils/accessibility'
+// Removed WebSocket and performance monitoring imports for better performance
+import { useDebounce } from '@/utils/performanceOptimizer'
+import { PulseNotification, MorphingLoader } from '@/components/ui/MicroInteractions'
 
-// Dynamic imports to prevent SSR issues
-const BottomNavigation = dynamicImport(() => import('@/components/parent/BottomNavigation').then(mod => ({ default: mod.default })), { ssr: false })
-const DesktopNavigation = dynamicImport(() => import('@/components/parent/BottomNavigation').then(mod => ({ default: mod.DesktopNavigation })), { ssr: false })
-const HomeTab = dynamicImport(() => import('@/components/parent/HomeTab'), { ssr: false })
-const CommunityTab = dynamicImport(() => import('@/components/parent/CommunityTab'), { ssr: false })
-const AnalyticsTab = dynamicImport(() => import('@/components/parent/AnalyticsTab'), { ssr: false })
-const ProfileTab = dynamicImport(() => import('@/components/parent/ProfileTab'), { ssr: false })
+// Optimized lazy loading with proper code splitting
+const BottomNavigation = lazy(() => import('@/components/parent/BottomNavigation').then(mod => ({ default: mod.default })))
+const DesktopNavigation = lazy(() => import('@/components/parent/BottomNavigation').then(mod => ({ default: mod.DesktopNavigation })))
+const HomeTab = lazy(() => import('@/components/parent/HomeTab'))
+const CommunityTab = lazy(() => import('@/components/parent/CommunityTab'))
+const AnalyticsTab = lazy(() => import('@/components/parent/AnalyticsTab'))
+const WellbeingTab = lazy(() => import('@/components/parent/WellbeingTab'))
+const ProfileTab = lazy(() => import('@/components/parent/ProfileTab'))
+
+// Loading component for Suspense fallbacks
+const TabLoadingFallback = ({ tabName }: { tabName: string }) => (
+  <div className="flex items-center justify-center min-h-[400px]">
+    <div className="flex flex-col items-center gap-3">
+      <Loader className="h-8 w-8 animate-spin text-blue-600" />
+      <p className="text-sm text-gray-600 dark:text-gray-400">Loading {tabName}...</p>
+    </div>
+  </div>
+)
+
+const NavigationLoadingFallback = () => (
+  <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-sm md:hidden">
+    <div className="flex justify-around items-center h-16 px-2">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className="flex flex-col items-center gap-1 py-2">
+          <div className="w-6 h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          <div className="h-2 w-12 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
+        </div>
+      ))}
+    </div>
+  </div>
+)
 
 function ParentDashboardContent() {
   const { isDarkMode } = useDarkMode()
@@ -79,7 +112,26 @@ function ParentDashboardContent() {
     }
   }
 
-  const checkNotifications = async () => {
+  // Advanced features (must be declared before other callbacks)
+  const { isOnline } = useOfflineStatus()
+  const { track, page, setUser } = useAnalytics()
+  const { announce, focusElement } = useAccessibility({
+    announcePageChanges: true,
+    keyboardNavigation: true,
+    focusManagement: true,
+    screenReaderOptimizations: true
+  })
+  const pwa = usePWA()
+  
+  // Performance monitoring removed for better performance
+  
+  // Simple notification state (replacing WebSocket real-time updates)
+  const [hasRealTimeUpdates, setHasRealTimeUpdates] = useState(false)
+
+  // Prefetch wellbeing data in the background for smoother tab switching
+  const prefetchWellbeing = usePrefetchWellbeing()
+
+  const checkNotifications = useCallback(async () => {
     if (!selectedChild) return
     
     try {
@@ -109,18 +161,105 @@ function ParentDashboardContent() {
     } catch (error) {
       console.error('Error checking notifications:', error)
     }
-  }
+  }, [selectedChild])
 
   const handleTabChange = useCallback((tab: string) => {
+    // Track tab navigation
+    track('parent_tab_change', {
+      from_tab: activeTab,
+      to_tab: tab,
+      selectedChild,
+      navigation_method: 'click'
+    })
+    
+    // Announce tab change for screen readers
+    announce(`Switched to ${tab} tab`)
+    
     setActiveTab(tab)
-  }, [])
+    
+    // Track page view
+    page(`Parent ${tab.charAt(0).toUpperCase() + tab.slice(1)}`, {
+      tab,
+      selectedChild,
+      hasChildren: children.length > 0
+    })
+  }, [activeTab, selectedChild, children.length, track, announce, page])
 
   const handleChildChange = useCallback((childId: string) => {
     setSelectedChild(childId)
     checkNotifications()
-  }, [])
+  }, [checkNotifications])
 
-  // Listen for child selection from ProfileTab
+  // Warm wellbeing data when child changes (unless already on wellbeing tab)
+  useEffect(() => {
+    if (selectedChild && activeTab !== 'wellbeing') {
+      prefetchWellbeing(selectedChild)
+    }
+  }, [selectedChild, activeTab, prefetchWellbeing])
+
+  // Tab order for swipe navigation
+  const tabOrder = ['home', 'community', 'analytics', 'wellbeing', 'profile']
+  
+  // Modern swipe navigation with improved touch handling
+  const { elementRef: swipeRef, canSwipeLeft, canSwipeRight } = useTabSwipeNavigation(
+    tabOrder,
+    activeTab,
+    handleTabChange,
+    true // enabled
+  )
+
+  // Pull-to-refresh functionality with smart detection
+  const refreshAllData = useRefreshAllData()
+  const { PullToRefreshWrapper, isRefreshing } = usePullToRefresh(
+    async () => {
+      // Track refresh action
+      track('parent_dashboard_refresh', { 
+        activeTab, 
+        selectedChild,
+        method: 'pull_to_refresh'
+      })
+      
+      // Refresh all cached data
+      refreshAllData()
+      
+      // Refetch children and notifications
+      await fetchChildren()
+      await checkNotifications()
+      
+      // Announce completion for screen readers
+      announce('Dashboard refreshed successfully')
+    },
+    {
+      threshold: 80,
+      resistance: 2.5,
+      enabled: true
+    }
+  )
+
+
+  // Initialize analytics and accessibility
+  useEffect(() => {
+    if (profile?.id) {
+      // Set user for analytics
+      setUser(profile.id, 'parent', {
+        hasChildren: children.length > 0,
+        childrenCount: children.length
+      })
+      
+      // Track initial page view
+      page('Parent Dashboard', {
+        activeTab,
+        selectedChild,
+        hasChildren: children.length > 0,
+        isOnline
+      })
+      
+      // Announce page load for screen readers
+      announce(`Parent dashboard loaded. ${children.length} children linked.`)
+    }
+  }, [profile?.id, children.length, activeTab, selectedChild, isOnline, setUser, page, announce])
+
+  // Listen for child selection from ProfileTab with proper cleanup
   useEffect(() => {
     const handleChildSelected = (event: any) => {
       const { childId, childName, childGrade } = event.detail || {}
@@ -139,12 +278,13 @@ function ParentDashboardContent() {
     if (typeof window !== 'undefined') {
       window.addEventListener('childSelected', handleChildSelected)
     }
+    
     return () => {
       if (typeof window !== 'undefined') {
         window.removeEventListener('childSelected', handleChildSelected)
       }
     }
-  }, [])
+  }, [checkNotifications]) // Add checkNotifications to dependencies
 
   if (loadingChildren) {
     return (
@@ -160,7 +300,7 @@ function ParentDashboardContent() {
             
             {/* Nav Items Skeleton */}
             <div className="space-y-2">
-              {['Home', 'Community', 'Analytics', 'Profile'].map((label, i) => (
+              {['Home', 'Community', 'Analytics', 'Wellbeing', 'Profile'].map((label, i) => (
                 <div key={i} className="flex items-center gap-3 p-3 rounded-lg">
                   <div className="w-5 h-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
                   <div className="h-4 flex-1 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
@@ -234,9 +374,11 @@ function ParentDashboardContent() {
                 {[1, 2, 3, 4].map(i => (
                   <div key={i} className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl">
                     <div className="w-12 h-12 bg-blue-100 rounded-lg flex-shrink-0" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-4 bg-gray-200 rounded w-2/3" />
-                      <div className="h-3 bg-gray-100 rounded w-1/3" />
+                    <div className="flex-1 overflow-hidden">
+                      <div className="space-y-2">
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
+                        <div className="h-3 bg-gray-100 dark:bg-gray-600 rounded w-1/3" />
+                      </div>
                     </div>
                     <div className="w-16 h-6 bg-gray-100 dark:bg-gray-700 rounded-full" />
                   </div>
@@ -249,7 +391,7 @@ function ParentDashboardContent() {
         {/* Mobile Bottom Navigation Skeleton */}
         <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 safe-area-inset-bottom">
           <div className="flex justify-around items-center h-16 px-2">
-            {['Home', 'Community', 'Analytics', 'Profile'].map((label, i) => (
+            {['Home', 'Community', 'Analytics', 'Wellbeing', 'Profile'].map((label, i) => (
               <div key={i} className="flex flex-col items-center gap-1 py-2">
                 <div className="w-6 h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
                 <div className="h-2 w-12 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
@@ -266,11 +408,15 @@ function ParentDashboardContent() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       {/* Desktop Navigation */}
-      <DesktopNavigation 
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-        hasNotifications={hasNotifications}
-      />
+      <ErrorBoundary level="component">
+        <Suspense fallback={<div className="hidden md:block w-64 h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 animate-pulse" />}>
+          <DesktopNavigation 
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            hasNotifications={hasNotifications}
+          />
+        </Suspense>
+      </ErrorBoundary>
       
       {/* Enterprise Header - Only on Home Tab */}
       {activeTab === 'home' && (
@@ -370,21 +516,81 @@ function ParentDashboardContent() {
         </div>
       )}
       
-      {/* Main Content */}
-      <div className="md:ml-64 min-h-screen pb-20 md:pb-0 bg-slate-50 dark:bg-slate-950">
-        <div className={`${activeTab === 'profile' ? 'w-full' : 'max-w-[1600px] mx-auto'} px-6 lg:px-8 py-8`}>
-          {/* Tab Content */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.2 }}
+      {/* Offline Indicator */}
+      {!isOnline && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-orange-500 text-white px-4 py-2 text-center text-sm font-medium">
+          <span className="inline-flex items-center gap-2">
+            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+            You're offline. Some features may be limited.
+          </span>
+        </div>
+      )}
+
+      {/* PWA Install Prompt */}
+      {pwa.install.canInstall && (
+        <div className="fixed bottom-20 md:bottom-4 right-4 z-40 bg-blue-600 text-white p-4 rounded-lg shadow-lg max-w-sm">
+          <p className="text-sm mb-3">Install Catalyst for a better experience!</p>
+          <div className="flex gap-2">
+            <button
+              onClick={pwa.install.installPWA}
+              className="bg-white text-blue-600 px-3 py-1 rounded text-sm font-medium"
             >
+              Install
+            </button>
+            <button
+              onClick={() => {/* dismiss */}}
+              className="text-blue-100 px-3 py-1 rounded text-sm"
+            >
+              Later
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div className="md:ml-64 min-h-screen pb-20 md:pb-0 bg-slate-50 dark:bg-slate-950" ref={swipeRef as any}>
+        {/* Swipe indicators for mobile */}
+        <div className="md:hidden fixed top-1/2 left-2 right-2 flex justify-between pointer-events-none z-10">
+          {canSwipeRight && (
+            <div className="bg-black/20 dark:bg-white/20 backdrop-blur-sm rounded-full p-2 animate-pulse">
+              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </div>
+          )}
+          {canSwipeLeft && (
+            <div className="bg-black/20 dark:bg-white/20 backdrop-blur-sm rounded-full p-2 animate-pulse ml-auto">
+              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          )}
+        </div>
+        
+        <PullToRefreshWrapper className="h-full">
+          <div 
+            className={`${activeTab === 'profile' ? 'w-full' : 'max-w-[1600px] mx-auto'} px-6 lg:px-8 py-8 overscroll-behavior-y-contain`}
+            ref={swipeRef as React.RefObject<HTMLDivElement>}
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              touchAction: 'pan-y pinch-zoom'
+            }}
+          >
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+              >
               {activeTab === 'home' && (
                 selectedChild ? (
-                  <HomeTab studentId={selectedChild} />
+                  <ErrorBoundary level="component">
+                    <Suspense fallback={<TabLoadingFallback tabName="Home" />}>
+                      <HomeTab studentId={selectedChild} />
+                    </Suspense>
+                  </ErrorBoundary>
                 ) : (
                   <div className="max-w-4xl mx-auto">
                     <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
@@ -427,7 +633,11 @@ function ParentDashboardContent() {
               
               {activeTab === 'community' && (
                 selectedChild && profile?.id ? (
-                  <CommunityTab studentId={selectedChild} parentId={profile.id} />
+                  <ErrorBoundary level="component">
+                    <Suspense fallback={<TabLoadingFallback tabName="Community" />}>
+                      <CommunityTab studentId={selectedChild} parentId={profile.id} />
+                    </Suspense>
+                  </ErrorBoundary>
                 ) : (
                   <div className="max-w-4xl mx-auto">
                     <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-12 text-center">
@@ -452,7 +662,11 @@ function ParentDashboardContent() {
               
               {activeTab === 'analytics' && (
                 selectedChild ? (
-                  <AnalyticsTab studentId={selectedChild} studentName={selectedChildDetails?.name} />
+                  <ErrorBoundary level="component">
+                    <Suspense fallback={<TabLoadingFallback tabName="Analytics" />}>
+                      <AnalyticsTab studentId={selectedChild} studentName={selectedChildDetails?.name} />
+                    </Suspense>
+                  </ErrorBoundary>
                 ) : (
                   <div className="max-w-4xl mx-auto">
                     <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-12 text-center">
@@ -475,20 +689,63 @@ function ParentDashboardContent() {
                 )
               )}
               
-              {activeTab === 'profile' && profile?.id && (
-                <ProfileTab parentId={profile.id} />
+              {activeTab === 'wellbeing' && (
+                selectedChild ? (
+                  <ErrorBoundary level="component">
+                    <Suspense fallback={<TabLoadingFallback tabName="Wellbeing" />}>
+                      <WellbeingTab studentId={selectedChild} studentName={selectedChildDetails?.name} />
+                    </Suspense>
+                  </ErrorBoundary>
+                ) : (
+                  <div className="max-w-4xl mx-auto">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-12 text-center">
+                      <div className="inline-flex items-center justify-center w-16 h-16 bg-pink-100 dark:bg-pink-900/30 rounded-full mb-6">
+                        <Users className="h-8 w-8 text-pink-600 dark:text-pink-400" />
+                      </div>
+                      <h3 className="text-2xl font-semibold text-slate-900 dark:text-white mb-3">Wellbeing Dashboard</h3>
+                      <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-md mx-auto">Link your child to view their wellbeing insights and mental health analytics.</p>
+                      <button
+                        onClick={() => setActiveTab('profile')}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-pink-600 hover:bg-pink-700 text-white font-medium rounded-lg transition-colors"
+                      >
+                        <span>Link Child Account</span>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                )
               )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
+              
+              {activeTab === 'profile' && profile?.id && (
+                <ErrorBoundary level="component">
+                  <Suspense fallback={<TabLoadingFallback tabName="Profile" />}>
+                    <ProfileTab parentId={profile.id} />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </PullToRefreshWrapper>
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <BottomNavigation 
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-        hasNotifications={hasNotifications}
-      />
+      <ErrorBoundary level="component">
+        <Suspense fallback={<NavigationLoadingFallback />}>
+          <PulseNotification 
+            active={hasRealTimeUpdates || hasNotifications}
+            color="bg-blue-500"
+          >
+            <BottomNavigation 
+              activeTab={activeTab}
+              onTabChange={handleTabChange}
+              hasNotifications={hasNotifications || hasRealTimeUpdates}
+            />
+          </PulseNotification>
+        </Suspense>
+      </ErrorBoundary>
     </div>
   )
 }

@@ -17,16 +17,13 @@ export async function clearInvalidSession() {
           error.message?.includes('Refresh Token Not Found') ||
           error.message?.includes('refresh_token_not_found')) {
         
-        console.log('🔄 [AuthUtils] Clearing invalid session data...')
+        console.log(' [AuthUtils] Clearing invalid session data...')
         
         // Sign out to clear all session data
         await supabase.auth.signOut()
         
-        // Clear localStorage
+        // Clear specific Supabase keys
         if (typeof window !== 'undefined') {
-          window.localStorage.clear()
-          
-          // Clear specific Supabase keys
           const keysToRemove = [
             'sb-access-token',
             'sb-refresh-token',

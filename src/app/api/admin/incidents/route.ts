@@ -44,7 +44,7 @@ export async function GET(request: Request) {
       )
     }
 
-    // Fetch all incidents for the admin's school
+    // Fetch all incidents for the admin's school (exclude automated wellbeing alerts)
     const { data: incidents, error: incidentsError } = await supabase
       .from('incident_reports')
       .select(`
@@ -65,6 +65,7 @@ export async function GET(request: Request) {
         school_id
       `)
       .eq('school_id', profile.school_id)
+      .neq('incident_type', 'wellbeing_alert')  // Exclude automated wellbeing alerts
       .order('created_at', { ascending: false })
       .limit(500)
 

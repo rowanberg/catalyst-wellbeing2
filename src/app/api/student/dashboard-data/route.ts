@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { withCache, generateUserCacheKey } from '@/lib/cache/cacheManager'
 import { withRateLimit } from '@/lib/security/rateLimiter'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 
 export async function GET(request: NextRequest) {
   return withRateLimit(request, async () => {
@@ -14,54 +13,24 @@ export async function GET(request: NextRequest) {
       const pollsLimit = Math.min(parseInt(searchParams.get('polls_limit') || '5', 10), 20)
       const forceRefresh = searchParams.get('force_refresh') === 'true'
     
-    // Enhanced authentication
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
+    // Shared student authentication (cookie or bearer) with caching
+    const auth = await authenticateStudent(request)
+
+    if (isAuthError(auth)) {
+      if (auth.status === 401) {
+        return NextResponse.json(
+          {
+            error: 'Authentication required',
+            details: auth.error || 'No user session found'
           },
-        },
+          { status: 401 }
+        )
       }
-    )
 
-    // Get the current user with retry logic
-    let user: { id: string; [key: string]: any } | null = null
-    let authError: any = null
-    
-    try {
-      const authResult = await supabase.auth.getUser()
-      user = authResult.data?.user
-      authError = authResult.error
-    } catch (error) {
-      console.error('Auth error:', error)
-      authError = error
-    }
-    
-    if (authError || !user) {
-      return NextResponse.json({ 
-        error: 'Authentication required',
-        details: (authError as any)?.message || 'No user session found'
-      }, { status: 401 })
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
-    // Get student profile
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('role, school_id, first_name, last_name')
-      .eq('user_id', user.id)
-      .single()
-
-    if (profileError || !profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
-    }
-
-    if (profile.role !== 'student') {
-      return NextResponse.json({ error: 'Student access required' }, { status: 403 })
-    }
+    const { userId, schoolId, profile } = auth
 
     // Fetch all data in parallel for maximum performance
     const [announcementsResult, pollsResult, schoolInfoResult] = await Promise.all([
@@ -83,7 +52,7 @@ export async function GET(request: NextRequest) {
             last_name
           )
         `)
-        .eq('school_id', profile.school_id)
+        .eq('school_id', schoolId)
         .eq('is_active', true)
         .in('target_audience', ['all', 'students'])
         .or(`expires_at.is.null,expires_at.gte.now()`)
@@ -119,7 +88,7 @@ export async function GET(request: NextRequest) {
             order_index
           )
         `)
-        .eq('school_id', profile.school_id)
+        .eq('school_id', schoolId)
         .eq('status', 'active')
         .in('target_audience', ['all', 'students'])
         .order('created_at', { ascending: false })
@@ -129,7 +98,7 @@ export async function GET(request: NextRequest) {
       supabaseAdmin
         .from('schools')
         .select('id, name, address, phone, email')
-        .eq('id', profile.school_id)
+        .eq('id', schoolId)
         .single()
     ])
 
@@ -154,7 +123,7 @@ export async function GET(request: NextRequest) {
       const responsesResult = await supabaseAdmin
         .from('poll_responses')
         .select('poll_id')
-        .eq('respondent_id', user.id) // Using correct column name
+        .eq('respondent_id', userId) // Using correct column name
         .in('poll_id', pollIds)
       
       userResponses = responsesResult.data || []
@@ -174,9 +143,9 @@ export async function GET(request: NextRequest) {
 
       // Create cache key for this user's dashboard data
       const cacheKey = generateUserCacheKey(
-        user.id, 
-        'dashboard', 
-        announcementsLimit.toString(), 
+        userId,
+        'dashboard',
+        announcementsLimit.toString(),
         pollsLimit.toString()
       );
 
@@ -184,11 +153,11 @@ export async function GET(request: NextRequest) {
       const fetchDashboardData = async () => {
         return {
           profile: {
-            id: user.id,
+            id: userId,
             firstName: profile.first_name,
             lastName: profile.last_name,
             role: profile.role,
-            schoolId: profile.school_id
+            schoolId
           },
           announcements: {
             data: announcements,

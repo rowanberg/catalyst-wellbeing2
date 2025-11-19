@@ -1,28 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key',
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
+    const auth = await authenticateStudent(request)
+    
+    if (isAuthError(auth)) {
+      if (auth.status === 401) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
-    )
+      
+      if (auth.status === 403) {
+        return NextResponse.json({ error: 'Student access required' }, { status: 403 })
+      }
+      
+      return NextResponse.json({ error: auth.error || 'Authentication failed' }, { status: auth.status })
+    }
+    
+    const { supabase, userId } = auth
     const { questType, completed } = await request.json()
     
     // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    // const { data: { user }, error: userError } = await supabase.auth.getUser()
+    // if (userError || !user) {
+    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // }
 
     const today = new Date().toISOString().split('T')[0]
     
@@ -50,7 +52,7 @@ export async function POST(request: NextRequest) {
       const { data: existingQuest } = await supabase
         .from('daily_quests')
         .select('xp_earned, gems_earned')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('quest_type', questType)
         .eq('date', today)
         .single()
@@ -63,7 +65,7 @@ export async function POST(request: NextRequest) {
     const { data: questData, error: questError } = await supabase
       .from('daily_quests')
       .upsert({
-        user_id: user.id,
+        user_id: userId,
         quest_type: questType,
         completed,
         date: today,
@@ -84,7 +86,7 @@ export async function POST(request: NextRequest) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('xp, gems, total_quests_completed, pet_happiness')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single()
 
     console.log('Current profile:', profile)
@@ -107,7 +109,7 @@ export async function POST(request: NextRequest) {
         const { data: existingQuest } = await supabase
           .from('daily_quests')
           .select('xp_earned, gems_earned')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .eq('quest_type', questType)
           .eq('date', today)
           .single()
@@ -136,7 +138,7 @@ export async function POST(request: NextRequest) {
           total_quests_completed: newTotalQuests,
           pet_happiness: newPetHappiness
         })
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         
       if (updateError) {
         console.error('Profile update error:', updateError)

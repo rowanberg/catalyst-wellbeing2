@@ -7,7 +7,8 @@ import {
   Users, 
   TrendingUp, 
   User,
-  Bell
+  Bell,
+  Heart
 } from 'lucide-react'
 import { useDarkMode } from '@/contexts/DarkModeContext'
 
@@ -21,6 +22,7 @@ const tabs = [
   { id: 'home', label: 'Home', icon: Home },
   { id: 'community', label: 'Community', icon: Users },
   { id: 'analytics', label: 'Analytics', icon: TrendingUp },
+  { id: 'wellbeing', label: 'Wellbeing', icon: Heart },
   { id: 'profile', label: 'Profile', icon: User }
 ]
 
@@ -28,8 +30,8 @@ export default function BottomNavigation({ activeTab, onTabChange, hasNotificati
   const { isDarkMode } = useDarkMode()
   
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-sm md:hidden">
-      <div className="grid grid-cols-4 h-16">
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 shadow-lg md:hidden safe-area-inset-bottom">
+      <div className="grid grid-cols-5 h-16" style={{ willChange: 'transform' }}>
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id
           const Icon = tab.icon
@@ -38,7 +40,12 @@ export default function BottomNavigation({ activeTab, onTabChange, hasNotificati
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className="relative flex flex-col items-center justify-center gap-1 transition-colors"
+              className="relative flex flex-col items-center justify-center gap-1 transition-all duration-200 min-h-[44px] min-w-[44px] p-2 active:scale-95 active:bg-gray-100 dark:active:bg-gray-800 rounded-lg mx-1 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+              style={{ 
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent',
+                transform: 'translateZ(0)' // Force hardware acceleration
+              }}
             >
               {/* Active indicator line */}
               {isActive && (
@@ -97,11 +104,12 @@ export function DesktopNavigation({ activeTab, onTabChange, hasNotifications }: 
               <button
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 min-h-[44px] active:scale-98 ${
                   isActive 
-                    ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-500' 
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                    ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-500 shadow-sm' 
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-sm'
                 }`}
+                style={{ touchAction: 'manipulation' }}
               >
                 <div className="relative">
                   <Icon className="h-5 w-5" strokeWidth={2} />
@@ -126,7 +134,10 @@ export function DesktopNavigation({ activeTab, onTabChange, hasNotifications }: 
         {/* Quick Actions */}
         {hasNotifications && (
           <div className="p-4 border-t border-gray-200 dark:border-gray-800">
-            <button className="w-full flex items-center justify-between px-4 py-2.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
+            <button 
+              className="w-full flex items-center justify-between px-4 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-all duration-200 min-h-[44px] active:scale-98 shadow-sm hover:shadow-md"
+              style={{ touchAction: 'manipulation' }}
+            >
               <span className="text-sm font-medium">Action Required</span>
               <Bell className="h-4 w-4" />
             </button>

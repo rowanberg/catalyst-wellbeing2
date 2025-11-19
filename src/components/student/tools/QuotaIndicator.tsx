@@ -62,8 +62,8 @@ export function QuotaIndicator() {
         const diff = reset.getTime() - now.getTime()
         
         if (diff <= 0) {
-          setTimeUntilReset('Resetting...')
-          fetchQuotaStatus()
+          // Do not re-fetch from API here; just show that reset time has passed
+          setTimeUntilReset('0h 0m')
         } else {
           const hours = Math.floor(diff / (1000 * 60 * 60))
           const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))

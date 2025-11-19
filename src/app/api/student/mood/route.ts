@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 
 // Helper function to calculate mood score
 function calculateMoodScore(mood: string): number {
@@ -17,18 +16,13 @@ function calculateMoodScore(mood: string): number {
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      }
-    )
+    const auth = await authenticateStudent(request)
+    
+    if (isAuthError(auth)) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
+    }
+
+    const { supabase, userId } = auth
     const { mood, mood_score, notes } = await request.json()
     
     // Map mood to emoji
@@ -42,12 +36,6 @@ export async function POST(request: NextRequest) {
     }
     const moodEmoji = moodEmojis[mood as keyof typeof moodEmojis] || "😊"
     
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     // Get today's date in user's timezone (assuming local timezone for now)
     // In production, you might want to store user timezone in profile
     const now = new Date()
@@ -59,7 +47,7 @@ export async function POST(request: NextRequest) {
     const { data: existingMood, error: checkError } = await supabase
       .from('mood_tracking')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('date', today)
       .single()
       
@@ -94,7 +82,7 @@ export async function POST(request: NextRequest) {
         const { error: profileError } = await supabase
           .from('profiles')
           .update({ current_mood: mood })
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
 
         if (profileError) {
           console.error('Error updating profile mood:', profileError)
@@ -124,7 +112,7 @@ export async function POST(request: NextRequest) {
     const { data: moodEntry, error: moodError } = await supabase
       .from('mood_tracking')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         mood,
         mood_emoji: moodEmojis[mood as keyof typeof moodEmojis] || '😊',
         date: today
@@ -136,7 +124,7 @@ export async function POST(request: NextRequest) {
     const { error: historyError } = await supabase
       .from('mood_history')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         mood,
         mood_emoji: moodEmoji,
         mood_score: mood_score || calculateMoodScore(mood),
@@ -156,7 +144,7 @@ export async function POST(request: NextRequest) {
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ current_mood: mood })
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
 
       if (profileError) {
         console.error('Error updating profile mood:', profileError)
@@ -178,7 +166,7 @@ export async function POST(request: NextRequest) {
     const { error: profileError } = await supabase
       .from('profiles')
       .update({ current_mood: mood })
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
 
     if (profileError) {
       console.error('Error updating profile mood:', profileError)

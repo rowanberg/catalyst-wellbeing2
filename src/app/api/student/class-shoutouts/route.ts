@@ -1,51 +1,38 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 
 export const dynamic = 'force-dynamic'
 
 // GET - Fetch class shout-outs for student's class
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      }
-    )
-
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const auth = await authenticateStudent(request)
     
-    if (authError || !user) {
+    if (isAuthError(auth)) {
+      if (auth.status === 401) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+      
+      if (auth.status === 403) {
+        return NextResponse.json(
+          { error: 'Only students can view class shout-outs' },
+          { status: 403 }
+        )
+      }
+      
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: auth.error || 'Authentication failed' },
+        { status: auth.status }
       )
     }
-
-    // Get student profile
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, school_id, role, first_name, last_name')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!profile || profile.role !== 'student') {
-      return NextResponse.json(
-        { error: 'Only students can view class shout-outs' },
-        { status: 403 }
-      )
-    }
-
+    
+    const { supabase, profile, schoolId } = auth
+    
     console.log(`🎓 Student: ${profile.first_name} ${profile.last_name}`)
-    console.log(`🏫 Student's school_id: ${profile.school_id}`)
+    console.log(`🏫 Student's school_id: ${schoolId}`)
 
     // Fetch ALL public shout-outs from the school (last 60 days)
     const sixtyDaysAgo = new Date()
@@ -63,7 +50,7 @@ export async function GET(request: Request) {
         is_public,
         created_at
       `)
-      .eq('school_id', profile.school_id)
+      .eq('school_id', schoolId)
       .eq('is_public', true)
       .gte('created_at', sixtyDaysAgo.toISOString())
       .order('created_at', { ascending: false })
@@ -77,14 +64,14 @@ export async function GET(request: Request) {
       )
     }
 
-    console.log(`Found ${shoutOuts?.length || 0} shout-outs for school ${profile.school_id}`)
+    console.log(`Found ${shoutOuts?.length || 0} shout-outs for school ${schoolId}`)
     
     // If no shout-outs found, check if ANY exist in the table
     if (!shoutOuts || shoutOuts.length === 0) {
       const { data: anyShoutOuts, count } = await supabase
         .from('student_shout_outs')
         .select('id', { count: 'exact' })
-        .eq('school_id', profile.school_id)
+        .eq('school_id', schoolId)
         .limit(1)
       
       console.log(`Total shout-outs in school (any): ${count}`)
@@ -92,7 +79,7 @@ export async function GET(request: Request) {
       const { data: publicCount, count: pubCount } = await supabase
         .from('student_shout_outs')
         .select('id', { count: 'exact' })
-        .eq('school_id', profile.school_id)
+        .eq('school_id', schoolId)
         .eq('is_public', true)
         .limit(1)
       
@@ -106,7 +93,7 @@ export async function GET(request: Request) {
         .limit(5)
       
       console.log(`📋 Recent shout-outs from ALL schools:`, allSchools)
-      console.log(`🔍 Looking for school_id: ${profile.school_id}`)
+      console.log(`🔍 Looking for school_id: ${schoolId}`)
     }
 
     // Get student and teacher names

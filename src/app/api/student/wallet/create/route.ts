@@ -1,6 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth';
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import { withRateLimit } from '@/lib/security/rateLimiter';
@@ -56,41 +55,25 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Wallet nickname is too long (max 50 characters)' }, { status: 400 });
       }
 
-    // Create Supabase client with SSR
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              );
-            } catch {
-              // The `setAll` method was called from a Server Component.
-              // This can be ignored if you have middleware refreshing
-              // user sessions.
-            }
-          },
-        },
-      }
-    );
-    console.log('✅ Supabase SSR client created');
+    const auth = await authenticateStudent(request);
 
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      console.error('❌ Auth error:', userError);
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    if (isAuthError(auth)) {
+      if (auth.status === 401) {
+        console.error('❌ Auth error: Unauthorized');
+        return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      }
+
+      if (auth.status === 403) {
+        return NextResponse.json({ error: 'Student access required' }, { status: 403 });
+      }
+
+      console.error('❌ Auth error:', auth.error);
+      return NextResponse.json({ error: auth.error || 'Authentication failed' }, { status: auth.status });
     }
 
-    console.log('✅ User authenticated:', user.id);
+    const { supabase, userId } = auth;
+
+    console.log('✅ User authenticated:', userId);
 
       // Generate wallet data
       const studentTag = generateStudentTag();
@@ -105,7 +88,7 @@ export async function POST(request: NextRequest) {
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ student_tag: studentTag })
-        .eq('id', user.id);
+        .eq('id', userId);
 
       if (profileError) {
         console.error('⚠️ Profile update error (student_tag column may not exist):', profileError);
@@ -123,7 +106,7 @@ export async function POST(request: NextRequest) {
       console.log('💰 Attempting to create wallet in database...');
       
       const walletData = {
-        student_id: user.id,
+        student_id: userId,
         wallet_address: walletAddress,
         mind_gems_balance: 100, // Starting balance
         fluxon_balance: 10.0,   // Starting bonus

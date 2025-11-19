@@ -680,15 +680,15 @@ function AdminDashboardContent() {
                 whileTap={{ scale: 0.98 }}
                 transition={{ duration: 0.2 }}
               >
-                <Link href="/admin/pending-users" className="block group">
+                <Link href="/admin/wellbeing-severity" className="block group">
                   <div className="h-full bg-white rounded-xl border border-gray-200 p-5 hover:border-gray-300 transition-all" style={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' }}>
                     <div className="flex flex-col items-center text-center space-y-3">
-                      <div className="w-12 h-12 rounded-xl flex items-center justify-center relative" style={{ background: 'linear-gradient(135deg, #6B7280 0%, #4B5563 100%)', boxShadow: '0 4px 12px rgba(107, 114, 128, 0.15)' }}>
-                        <HelpCircle className="h-6 w-6 text-white" />
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center relative" style={{ background: 'linear-gradient(135deg, #EC4899 0%, #BE185D 100%)', boxShadow: '0 4px 12px rgba(236, 72, 153, 0.15)' }}>
+                        <Heart className="w-6 h-6 text-white" />
                       </div>
                       <div>
-                        <p className="font-bold text-gray-900 text-sm font-['Plus_Jakarta_Sans']" style={{ letterSpacing: '-0.01em' }}>Pending Users</p>
-                        <p className="text-xs text-gray-600 mt-1 font-['DM_Sans']">Approvals needed</p>
+                        <h3 className="font-semibold text-gray-900 text-sm mb-1">Wellbeing Severity</h3>
+                        <p className="text-xs text-gray-500 leading-relaxed">Monitor student wellbeing risk levels</p>
                       </div>
                     </div>
                   </div>

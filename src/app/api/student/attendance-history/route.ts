@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { ApiResponse } from '@/lib/api/response'
 import { logger } from '@/lib/logger'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,52 +13,38 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
-
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const auth = await authenticateStudent(request)
     
-    if (authError || !user) {
-      logger.warn('Unauthorized attendance access attempt')
-      return ApiResponse.unauthorized('Authentication required')
+    if (isAuthError(auth)) {
+      logger.warn('Unauthorized attendance access attempt', { reason: auth.error })
+      
+      if (auth.status === 401) {
+        return ApiResponse.unauthorized('Authentication required')
+      }
+      
+      if (auth.status === 403) {
+        return ApiResponse.forbidden('Access denied. Students only.')
+      }
+      
+      return ApiResponse.error(auth.error || 'Authentication failed')
     }
-
-    // Get user's profile
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('user_id, school_id, role')
-      .eq('user_id', user.id)
-      .single()
-
-    if (profileError || !profile) {
-      logger.error('Profile not found for user', { userId: user.id })
-      return ApiResponse.error('Profile not found')
-    }
-
-    // Verify user is a student
-    if (profile.role !== 'student') {
-      logger.warn('Non-student attempted to access attendance', { 
-        userId: user.id,
-        role: profile.role 
-      })
-      return ApiResponse.forbidden('Access denied. Students only.')
-    }
-
-    logger.info('Student attendance access', { userId: user.id })
+    
+    const { supabase, userId, schoolId } = auth
+    logger.info('Student attendance access', { userId })
 
     // Fetch attendance records for this student only
     const { data: attendance, error } = await supabase
       .from('attendance')
       .select('date, status')
-      .eq('student_id', user.id)
-      .eq('school_id', profile.school_id)
+      .eq('student_id', userId)
+      .eq('school_id', schoolId)
       .order('date', { ascending: false })
       .limit(90) // Last 90 days
 
     if (error) {
       logger.error('Error fetching student attendance', { 
         error: error.message,
-        userId: user.id
+        userId
       })
       return ApiResponse.error(`Failed to fetch attendance: ${error.message}`)
     }
@@ -71,7 +57,7 @@ export async function GET(request: NextRequest) {
 
     logger.info('Student attendance fetched', { 
       count: records.length,
-      userId: user.id
+      userId
     })
 
     return ApiResponse.success({

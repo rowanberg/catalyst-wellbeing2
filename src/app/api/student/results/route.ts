@@ -1,29 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServerClient()
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '10', 10)
     const year = searchParams.get('year') || new Date().getFullYear().toString()
     
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await authenticateStudent(request)
+    
+    if (isAuthError(auth)) {
+      if (auth.status === 401) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      
+      if (auth.status === 403) {
+        return NextResponse.json({ error: 'Student access required' }, { status: 403 })
+      }
+      
+      return NextResponse.json({ error: auth.error || 'Authentication failed' }, { status: auth.status })
     }
-
-    // Verify student role
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role, school_id, first_name, last_name')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || !profile || profile.role !== 'student') {
-      return NextResponse.json({ error: 'Student access required' }, { status: 403 })
-    }
+    
+    const { supabase, userId, schoolId, profile } = auth
 
     // Get student's assessment grades with assessment details
     const { data: results, error: resultsError } = await supabase
@@ -50,7 +48,7 @@ export async function GET(request: NextRequest) {
           )
         )
       `)
-      .eq('student_id', user.id)
+      .eq('student_id', userId)
       .gte('created_at', `${year}-01-01`)
       .lte('created_at', `${year}-12-31`)
       .order('created_at', { ascending: false })
@@ -97,8 +95,8 @@ export async function GET(request: NextRequest) {
       results: formattedResults,
       stats,
       student_info: {
-        name: `${profile.first_name} ${profile.last_name}`,
-        school_id: profile.school_id
+        name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim(),
+        school_id: schoolId
       }
     })
 

@@ -129,20 +129,31 @@ export async function authenticateRequest(
   try {
     // Get auth token from request
     const authHeader = request.headers.get('authorization')
-    const token = authHeader?.replace('Bearer ', '')
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined
     
-    if (!token) {
-      // Check cookies for session
+    let cacheKey: string
+
+    if (bearerToken) {
+      // Cache by bearer token when provided (mobile/API clients)
+      cacheKey = `auth:bearer:${bearerToken}`
+    } else {
+      // Derive a stable cache key from the full cookie set.
+      // Let the Supabase SSR client decide which cookies are auth-related.
       const cookieStore = await cookies()
-      const sessionCookie = cookieStore.get('sb-access-token')
-      
-      if (!sessionCookie) {
+      const allCookies = cookieStore.getAll()
+
+      if (!allCookies || allCookies.length === 0) {
         return { error: 'No authentication token provided', status: 401 }
       }
-    }
 
-    // Create cache key from session
-    const cacheKey = `auth:${token || 'cookie'}`
+      // Build a deterministic signature from all cookies (names + values)
+      const cookieSignature = allCookies
+        .map((c) => `${c.name}=${c.value}`)
+        .sort()
+        .join(';')
+
+      cacheKey = `auth:cookies:${cookieSignature}`
+    }
 
     // Check cache first
     const cached = authCache.get(cacheKey)
@@ -158,8 +169,8 @@ export async function authenticateRequest(
       return await pending
     }
 
-    // Fetch auth data
-    const authPromise = fetchAuthData(cacheKey)
+    // Fetch auth data (supports both cookie and bearer-token flows)
+    const authPromise = fetchAuthData(cacheKey, bearerToken)
     pendingRequests.set(cacheKey, authPromise)
 
     try {
@@ -191,15 +202,22 @@ export async function authenticateRequest(
 
   } catch (error: any) {
     console.error('❌ [Auth] Error:', error)
+
+    // Map known auth failures to 401 so callers can distinguish them
+    if (error?.message === 'Invalid or expired session') {
+      return { error: error.message, status: 401 }
+    }
+
     return { error: error.message || 'Authentication failed', status: 500 }
   }
 }
 
 // ============================================================================
 // Fetch Auth Data (Parallel auth + profile)
+// Supports both cookie-based sessions and bearer tokens
 // ============================================================================
 
-async function fetchAuthData(cacheKey: string): Promise<AuthenticatedUser> {
+async function fetchAuthData(cacheKey: string, bearerToken?: string): Promise<AuthenticatedUser> {
   const cookieStore = await cookies()
   
   // Create Supabase client
@@ -224,8 +242,13 @@ async function fetchAuthData(cacheKey: string): Promise<AuthenticatedUser> {
     }
   )
 
-  // Get user from session
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  // Get user from session or bearer token
+  const {
+    data: { user },
+    error: userError
+  } = bearerToken
+    ? await supabase.auth.getUser(bearerToken)
+    : await supabase.auth.getUser()
   
   if (userError || !user) {
     throw new Error('Invalid or expired session')

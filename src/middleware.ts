@@ -130,7 +130,15 @@ export async function middleware(req: NextRequest) {
   response.headers.set('X-XSS-Protection', '1; mode=block')
   
   // Restrict permissions (Permissions Policy)
-  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self), interest-cohort=()')
+  // Allow camera only on Ai Live and Luminex activation pages
+  const allowCamera = pathname.startsWith('/teacher/ai-live') || pathname.startsWith('/luminex/activate')
+  const permissionsPolicy = [
+    `camera=${allowCamera ? '(self)' : '()'}`,
+    'microphone=()',
+    'geolocation=(self)',
+    'interest-cohort=()'
+  ].join(', ')
+  response.headers.set('Permissions-Policy', permissionsPolicy)
   
   // Content Security Policy (CSP) - don't apply to API routes or auth pages
   if (!pathname.startsWith('/_next') && 

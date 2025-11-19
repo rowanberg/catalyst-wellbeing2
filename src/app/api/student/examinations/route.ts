@@ -1,20 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 
 // export const dynamic = 'force-dynamic' // Removed for Capacitor
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const auth = await authenticateStudent(request)
     
-    // Get the current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (isAuthError(auth)) {
+      if (auth.status === 401) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      
+      if (auth.status === 403) {
+        // This route is for students only
+        return NextResponse.json({ error: 'Student access required' }, { status: 403 })
+      }
+      
+      return NextResponse.json({ error: auth.error || 'Authentication failed' }, { status: auth.status })
     }
-
-    // Get student's examinations
+    
+    const { supabase, userId } = auth
+    
+    // Get student's examinations (RLS ensures the student only sees their exams)
     const { data: exams, error: examsError } = await supabase
       .from('examinations')
       .select('*')
@@ -46,7 +54,7 @@ export async function GET(request: NextRequest) {
     const { data: statuses, error: statusError } = await supabase
       .from('student_exam_sessions')
       .select('exam_id, status, score, attempts_used, completed_at')
-      .eq('student_id', user.id)
+      .eq('student_id', userId)
 
     if (statusError) {
       console.error('Error fetching exam statuses:', statusError)

@@ -1,33 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      }
-    )
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      console.error('Auth error:', authError)
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await authenticateStudent(request)
+    
+    if (isAuthError(auth)) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
+    const { supabase, userId } = auth
     const body = await request.json()
     const { level_id, completed, stars, xp_earned, gems_earned } = body
     // Always use the authenticated user's id for safety
-    const student_id = user.id
+    const student_id = userId
 
     // Upsert progress record
     const { data, error } = await supabase
@@ -93,27 +79,15 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      }
-    )
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      console.error('Auth error in GET:', authError)
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await authenticateStudent(request)
+    
+    if (isAuthError(auth)) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
+
+    const { supabase, userId } = auth
     // Always use auth user id
-    const student_id = user.id
+    const student_id = userId
 
     // Get progress for all levels
     const { data, error } = await supabase

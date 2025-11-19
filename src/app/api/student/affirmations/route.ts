@@ -1,37 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key',
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      }
-    )
-
-    const { sessionCompleted } = await request.json()
+    const auth = await authenticateStudent(request)
     
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (isAuthError(auth)) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
+    const { supabase, userId } = auth
+    const { sessionCompleted } = await request.json()
+    
     const today = new Date().toISOString().split('T')[0]
     
     // Check if user has already completed affirmations today
     const { data: existingEntry } = await supabase
       .from('affirmation_sessions')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('date', today)
       .single()
 
@@ -44,7 +31,7 @@ export async function POST(request: NextRequest) {
       const { error: upsertError } = await supabase
         .from('affirmation_sessions')
         .upsert({
-          user_id: user.id,
+          user_id: userId,
           date: today,
           sessions_completed: sessionsCompleted,
           last_session_at: new Date().toISOString()
@@ -58,12 +45,12 @@ export async function POST(request: NextRequest) {
       const xpReward = 15
       const gemsReward = 3
       
-      console.log('[Affirmations] Awarding rewards:', { user_id: user.id, xpReward, gemsReward, sessionsCompleted })
+      console.log('[Affirmations] Awarding rewards:', { user_id: userId, xpReward, gemsReward, sessionsCompleted })
       
       const { data: profile, error: profileFetchError } = await supabase
         .from('profiles')
         .select('xp, gems, level')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .single()
 
       if (profileFetchError) {
@@ -97,7 +84,7 @@ export async function POST(request: NextRequest) {
             gems: newGems,
             level: newLevel
           })
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
 
         if (updateError) {
           console.error('[Affirmations] Error updating profile:', updateError)
@@ -110,7 +97,7 @@ export async function POST(request: NextRequest) {
           })
         }
 
-        console.log('[Affirmations] ✅ Success! Profile updated successfully')
+        console.log('[Affirmations] Success! Profile updated successfully')
         
         return NextResponse.json({ 
           success: true, 
@@ -139,32 +126,21 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key',
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      }
-    )
-
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await authenticateStudent(request)
+    
+    if (isAuthError(auth)) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
+    const { supabase, userId } = auth
+    
     const today = new Date().toISOString().split('T')[0]
     
     // Get today's affirmation sessions
     const { data: todaySession } = await supabase
       .from('affirmation_sessions')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('date', today)
       .single()
 

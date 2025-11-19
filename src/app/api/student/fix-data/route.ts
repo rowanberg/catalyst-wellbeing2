@@ -1,31 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
+    const auth = await authenticateStudent(request)
+    
+    if (isAuthError(auth)) {
+      if (auth.status === 401) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
-    )
-
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      
+      if (auth.status === 403) {
+        return NextResponse.json({ error: 'Student access required' }, { status: 403 })
+      }
+      
+      return NextResponse.json({ error: auth.error || 'Authentication failed' }, { status: auth.status })
     }
-
+    
+    const { userId } = auth
+    
     const results = {
-      userId: user.id,
+      userId,
       fixes: [] as string[],
       issues: [] as string[],
       profile: null as any,
@@ -37,7 +33,7 @@ export async function POST(request: NextRequest) {
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single()
 
     results.profile = { data: profile, error: profileError }
@@ -60,7 +56,7 @@ export async function POST(request: NextRequest) {
           school_id
         )
       `)
-      .eq('student_id', user.id)
+      .eq('student_id', userId)
 
     results.classAssignments = { data: assignments, error: assignmentError }
 
@@ -109,7 +105,7 @@ export async function POST(request: NextRequest) {
         const { data: newAssignment, error: createError } = await supabaseAdmin
           .from('student_class_assignments')
           .insert({
-            student_id: user.id,
+            student_id: userId,
             class_id: classToAssign.id,
             is_active: true,
             assigned_at: new Date().toISOString()
@@ -133,7 +129,7 @@ export async function POST(request: NextRequest) {
     const { data: todayMood, error: moodError } = await supabaseAdmin
       .from('mood_tracking')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('date', today)
       .single()
 
@@ -148,7 +144,7 @@ export async function POST(request: NextRequest) {
       const { data: newMood, error: createMoodError } = await supabaseAdmin
         .from('mood_tracking')
         .insert({
-          user_id: user.id,
+          user_id: userId,
           date: today,
           mood_score: 7,
           energy_level: 6,
@@ -171,7 +167,7 @@ export async function POST(request: NextRequest) {
     const { data: todayQuests, error: questsError } = await supabaseAdmin
       .from('daily_quests')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('date', today)
 
     if (!todayQuests || todayQuests.length === 0) {
@@ -180,7 +176,7 @@ export async function POST(request: NextRequest) {
       // Create sample daily quests
       const questTypes = ['gratitude', 'kindness', 'breathing', 'water']
       const questInserts = questTypes.map(type => ({
-        user_id: user.id,
+        user_id: userId,
         quest_type: type,
         date: today,
         completed: false,

@@ -5,6 +5,7 @@
 import { NextRequest } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin-client'
 import { ApiResponse } from '@/lib/api/response'
+import { getCachedStudentAnalytics, setCachedStudentAnalytics } from '@/lib/redis/parent-cache'
 
 export async function GET(
   request: NextRequest,
@@ -12,6 +13,13 @@ export async function GET(
 ) {
   try {
     const { id: studentId } = await params
+
+    // Check two-tier cache first (local memory + Redis)
+    const cachedData = await getCachedStudentAnalytics(studentId)
+    if (cachedData) {
+      return ApiResponse.success(cachedData)
+    }
+
     const supabase = getSupabaseAdmin()
 
     // Parallel fetch all analytics data
@@ -98,12 +106,17 @@ export async function GET(
     // Format detailed gradebook
     const gradebook = formatGradebook(detailedGrades.data || [])
 
-    return ApiResponse.success({
+    const responseData = {
       academic: performanceData,
       engagement: engagementMetrics,
       benchmarks,
       gradebook
-    })
+    }
+
+    // Cache the aggregated analytics payload for future requests
+    await setCachedStudentAnalytics(studentId, responseData)
+
+    return ApiResponse.success(responseData)
 
   } catch (error: any) {
     console.error('Analytics API error:', error)

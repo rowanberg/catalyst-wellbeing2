@@ -83,6 +83,18 @@
       ]
     },
     {
+      "name": "Parent Portal",
+      "short_name": "Parent",
+      "description": "Monitor your child's progress",
+      "url": "/parent",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
       "name": "Admin Dashboard",
       "short_name": "Admin",
       "description": "Admin management",

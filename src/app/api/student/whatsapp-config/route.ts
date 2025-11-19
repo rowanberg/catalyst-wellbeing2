@@ -1,21 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServerClient()
+    const auth = await authenticateStudent(request)
     
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (isAuthError(auth)) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
+
+    const { supabase, userId } = auth
 
     // Get user's WhatsApp configuration
     const { data: whatsappConfig, error } = await supabase
       .from('student_whatsapp_config')
       .select('phone_number, whatsapp_link, is_enabled')
-      .eq('student_id', user.id)
+      .eq('student_id', userId)
       .single()
 
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
@@ -41,13 +41,13 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServerClient()
+    const auth = await authenticateStudent(request)
     
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (isAuthError(auth)) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
+
+    const { supabase, userId } = auth
 
     const body = await request.json()
     const { phoneNumber, whatsappLink, isEnabled } = body
@@ -75,7 +75,7 @@ export async function PUT(request: NextRequest) {
     const { error } = await supabase
       .from('student_whatsapp_config')
       .upsert({
-        student_id: user.id,
+        student_id: userId,
         phone_number: phoneNumber || null,
         whatsapp_link: whatsappLink || null,
         is_enabled: isEnabled || false,

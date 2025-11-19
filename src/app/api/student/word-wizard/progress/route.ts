@@ -1,18 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const auth = await authenticateStudent(request)
     
-    // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (isAuthError(auth)) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
+    const { supabase, userId } = auth
+    
     const body = await request.json()
     const { 
       chapterId, 
@@ -34,12 +32,12 @@ export async function POST(request: NextRequest) {
     const { data: existingProgress } = await supabase
       .from('word_wizard_progress')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('chapter_id', chapterId)
       .single()
 
     const progressData = {
-      user_id: user.id,
+      user_id: userId,
       chapter_id: chapterId,
       spells_completed: spellsCompleted,
       total_spells: totalSpells,
@@ -59,7 +57,7 @@ export async function POST(request: NextRequest) {
       const { data, error } = await supabase
         .from('word_wizard_progress')
         .update(progressData)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('chapter_id', chapterId)
         .select()
         .single()
@@ -88,7 +86,7 @@ export async function POST(request: NextRequest) {
     // Update student points if chapter completed
     if (spellsCompleted === totalSpells && gemsEarned > 0) {
       const { error: pointsError } = await supabase.rpc('add_student_points', {
-        student_id: user.id,
+        student_id: userId,
         points_to_add: gemsEarned,
         source: 'word_wizard_academy',
         description: `Completed ${category} chapter - ${spellsCompleted} spells`
@@ -114,20 +112,19 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    const auth = await authenticateStudent(request)
     
-    // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (isAuthError(auth)) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
+    const { supabase, userId } = auth
+    
     // Get all progress for the user
     const { data: progress, error } = await supabase
       .from('word_wizard_progress')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('chapter_id', { ascending: true })
 
     if (error) {
@@ -139,7 +136,7 @@ export async function GET(request: NextRequest) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('points')
-      .eq('id', user.id)
+      .eq('id', userId)
       .single()
 
     return NextResponse.json({ 

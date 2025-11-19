@@ -1,35 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 import { apiCache, createCacheKey } from '@/lib/utils/apiCache'
 import { createCachedResponse, CacheStrategies } from '@/lib/api/cache-headers'
 
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      }
-    )
-
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await authenticateStudent(request)
+    
+    if (isAuthError(auth)) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
+
+    const { supabase, userId } = auth
 
     const today = new Date().toISOString().split('T')[0]
     
     // Check cache first (2 minutes for today's data, 10 minutes for weekly)
-    const todaysCacheKey = createCacheKey(`habits_today_${user.id}_${today}`)
-    const weeklyCacheKey = createCacheKey(`habits_weekly_${user.id}`)
+    const todaysCacheKey = createCacheKey(`habits_today_${userId}_${today}`)
+    const weeklyCacheKey = createCacheKey(`habits_weekly_${userId}`)
     
     const cachedTodayData = apiCache.get(todaysCacheKey)
     const cachedWeeklyData = apiCache.get(weeklyCacheKey)
@@ -46,7 +34,7 @@ export async function GET(request: NextRequest) {
     const { data: todayData } = await supabase
       .from('habit_tracker')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('date', today)
       .single()
 
@@ -57,7 +45,7 @@ export async function GET(request: NextRequest) {
     const { data: weekData } = await supabase
       .from('habit_tracker')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .gte('date', weekAgo.toISOString().split('T')[0])
       .order('date', { ascending: false })
 
@@ -92,34 +80,22 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      }
-    )
-
-    const { sleep_hours, water_glasses } = await request.json()
+    const auth = await authenticateStudent(request)
     
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (isAuthError(auth)) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
+    const { supabase, userId } = auth
+    const { sleep_hours, water_glasses } = await request.json()
+    
     const today = new Date().toISOString().split('T')[0]
 
     // Update or insert habit data
     const { data: habitData, error: habitError } = await supabase
       .from('habit_tracker')
       .upsert({
-        user_id: user.id,
+        user_id: userId,
         date: today,
         sleep_hours: sleep_hours || 0,
         water_glasses: water_glasses || 0,
@@ -136,7 +112,7 @@ export async function POST(request: NextRequest) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('xp, gems')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single()
 
     if (profile) {
@@ -151,7 +127,7 @@ export async function POST(request: NextRequest) {
           gems: newGems,
           level: newLevel
         })
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
 
       if (updateError) {
         console.error('Error updating profile:', updateError)
@@ -160,8 +136,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Invalidate cache on habit update
-    const todaysCacheKey = createCacheKey(`habits_today_${user.id}_${today}`)
-    const weeklyCacheKey = createCacheKey(`habits_weekly_${user.id}`)
+    const todaysCacheKey = createCacheKey(`habits_today_${userId}_${today}`)
+    const weeklyCacheKey = createCacheKey(`habits_weekly_${userId}`)
     apiCache.delete(todaysCacheKey)
     apiCache.delete(weeklyCacheKey)
 

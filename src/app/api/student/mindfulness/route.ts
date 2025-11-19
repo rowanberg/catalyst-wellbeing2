@@ -1,34 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key',
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      }
-    )
-    const { sessionType, durationSeconds } = await request.json()
+    const auth = await authenticateStudent(request)
     
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (isAuthError(auth)) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
+    const { supabase, userId } = auth
+    const { sessionType, durationSeconds } = await request.json()
+    
     // Create mindfulness session
     const { data, error } = await supabase
       .from('mindfulness_sessions')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         session_type: sessionType,
         duration_seconds: durationSeconds || 0,
         completed: true
@@ -45,7 +33,7 @@ export async function POST(request: NextRequest) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('xp')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single()
 
     if (profile) {
@@ -58,7 +46,7 @@ export async function POST(request: NextRequest) {
           xp: newXp,
           level: newLevel
         })
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
     }
 
     return NextResponse.json({ 

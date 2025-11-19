@@ -1,49 +1,36 @@
-import { NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              );
-            } catch {
-              // Ignore server component errors
-            }
-          },
-        },
-      }
-    );
-
     // Use admin client for database operations to bypass RLS
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
-
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    
+    const auth = await authenticateStudent(request);
+    
+    if (isAuthError(auth)) {
+      if (auth.status === 401) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      
+      if (auth.status === 403) {
+        return NextResponse.json({ error: 'Student access required' }, { status: 403 });
+      }
+      
+      return NextResponse.json({ error: auth.error || 'Authentication failed' }, { status: auth.status });
     }
+    
+    const { userId } = auth;
 
     // Get user's profile with student tag using admin client
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('id, first_name, last_name, student_tag')
-      .eq('id', user.id)
+      .eq('id', userId)
       .single();
 
     if (profileError || !profile) {
@@ -60,7 +47,7 @@ export async function GET() {
           grade_levels(name)
         )
       `)
-      .eq('student_id', user.id)
+      .eq('student_id', userId)
       .eq('is_active', true);
 
     if (manualError || !manualClassmates || manualClassmates.length === 0) {
@@ -93,7 +80,7 @@ export async function GET() {
         )
       `)
       .in('class_id', classIds)
-      .neq('student_id', user.id)
+      .neq('student_id', userId)
       .eq('is_active', true);
 
 

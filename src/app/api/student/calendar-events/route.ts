@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { ApiResponse } from '@/lib/api/response'
 import { logger } from '@/lib/logger'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,59 +14,46 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
-
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const auth = await authenticateStudent(request)
     
-    if (authError || !user) {
-      logger.warn('Unauthorized calendar access attempt')
-      return ApiResponse.unauthorized('Authentication required')
+    if (isAuthError(auth)) {
+      logger.warn('Unauthorized calendar access attempt', { reason: auth.error })
+      
+      if (auth.status === 401) {
+        return ApiResponse.unauthorized('Authentication required')
+      }
+      
+      if (auth.status === 403) {
+        return ApiResponse.forbidden('Access denied. Students only.')
+      }
+      
+      return ApiResponse.error(auth.error || 'Authentication failed')
     }
-
-    // Get user's profile to verify role and get school_id
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('user_id, school_id, role')
-      .eq('user_id', user.id)
-      .single()
-
-    if (profileError || !profile) {
-      logger.error('Profile not found for user', { userId: user.id })
-      return ApiResponse.error('Profile not found')
-    }
-
-    // Verify user is a student
-    if (profile.role !== 'student') {
-      logger.warn('Non-student attempted to access student calendar', { 
-        userId: user.id,
-        role: profile.role 
-      })
-      return ApiResponse.forbidden('Access denied. Students only.')
-    }
-
-    if (!profile.school_id) {
-      logger.error('Student has no school_id', { userId: user.id })
+    
+    const { supabase, userId, schoolId } = auth
+    
+    if (!schoolId) {
+      logger.error('Student has no school_id', { userId })
       return ApiResponse.error('Student not assigned to a school')
     }
-
+    
     logger.info('Student calendar access', { 
-      userId: user.id,
-      schoolId: profile.school_id 
+      userId,
+      schoolId 
     })
 
     // Fetch events from academic_schedule
     // RLS policies ensure users can only see their school's data
     logger.info('Fetching student calendar events', {
-      schoolId: profile.school_id,
-      userId: user.id,
-      role: profile.role
+      schoolId,
+      userId,
+      role: auth.role
     })
 
     const { data: events, error } = await supabase
       .from('academic_schedule')
       .select('id, title, description, event_type, start_date, end_date, all_day, subject, location, meeting_link, priority, target_audience')
-      .eq('school_id', profile.school_id)
+      .eq('school_id', schoolId)
       .eq('status', 'active')
       .overlaps('target_audience', ['student']) // Check if array contains 'student'
       .order('start_date', { ascending: true })
@@ -77,8 +64,8 @@ export async function GET(request: NextRequest) {
         code: error.code,
         details: error.details,
         hint: error.hint,
-        userId: user.id,
-        schoolId: profile.school_id
+        userId,
+        schoolId
       })
       return ApiResponse.error(`Failed to fetch calendar events: ${error.message}`)
     }
@@ -96,8 +83,8 @@ export async function GET(request: NextRequest) {
     logger.info('Student calendar events fetched', { 
       count: transformedEvents.length,
       events: transformedEvents.map(e => ({ id: e.id, title: e.title, date: e.date, type: e.type })),
-      userId: user.id,
-      schoolId: profile.school_id
+      userId,
+      schoolId
     })
 
     return ApiResponse.success({

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 
 /**
  * GET /api/student/daily-topics
@@ -7,41 +7,39 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServerClient()
+    const auth = await authenticateStudent(request)
     
-    // Authenticate user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
+    if (isAuthError(auth)) {
+      if (auth.status === 401) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+      
+      if (auth.status === 403) {
+        return NextResponse.json(
+          { error: 'Only students can access this endpoint', details: auth.error },
+          { status: 403 }
+        )
+      }
+      
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: auth.error || 'Authentication failed' },
+        { status: auth.status }
       )
     }
-
-    // Get student profile
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role, school_id, class_id, first_name, last_name')
-      .eq('user_id', user.id)
-      .single()
-
+    
+    const { supabase, userId, profile } = auth
+    
     console.log('[Daily Topics] Profile:', { 
-      userId: user.id, 
+      userId, 
       role: profile?.role, 
-      classId: profile?.class_id,
+      classId: (profile as any)?.class_id,
       name: `${profile?.first_name} ${profile?.last_name}`
     })
-
-    if (profileError || !profile || profile.role !== 'student') {
-      console.error('[Daily Topics] Profile error:', profileError)
-      return NextResponse.json(
-        { error: 'Only students can access this endpoint', details: profileError?.message },
-        { status: 403 }
-      )
-    }
-
-    if (!profile.class_id) {
+    
+    if (!(profile as any)?.class_id) {
       console.warn('[Daily Topics] Student has no class_id assigned')
       return NextResponse.json({
         success: true,
@@ -54,8 +52,10 @@ export async function GET(request: NextRequest) {
     }
 
     const today = new Date().toISOString().split('T')[0]
+    const classId = (profile as any).class_id
+    
     console.log('[Daily Topics] Fetching topics for:', { 
-      classId: profile.class_id, 
+      classId, 
       date: today 
     })
 
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
           last_name
         )
       `)
-      .eq('class_id', profile.class_id)
+      .eq('class_id', classId)
       .eq('topic_date', today)
 
     console.log('[Daily Topics] Query result:', {
@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
           subject
         )
       `)
-      .eq('class_id', profile.class_id)
+      .eq('class_id', classId)
       .gte('topic_date', sevenDaysAgo)
       .lt('topic_date', today)
       .order('topic_date', { ascending: false })
@@ -121,7 +121,7 @@ export async function GET(request: NextRequest) {
       recentTopics: recentTopics || [],
       hasTopicsToday: (topics?.length || 0) > 0,
       studentClass: {
-        id: profile.class_id,
+        id: classId,
         name: (topics && topics[0] && (topics[0].classes as any)?.class_name) || 'Your Class'
       }
     })

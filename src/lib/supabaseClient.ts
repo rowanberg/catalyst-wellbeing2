@@ -39,7 +39,15 @@ if (typeof window !== 'undefined') {
       // Token refresh handled silently
     } else if (event === 'SIGNED_OUT') {
       // Clear all auth-related data
-      window.localStorage.clear()
+      const keysToRemove = [
+        'supabase.auth.token',
+        'sb-access-token',
+        'sb-refresh-token'
+      ]
+      keysToRemove.forEach((key) => {
+        window.localStorage.removeItem(key)
+        document.cookie = `${key}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`
+      })
       // Clear Redux store
       if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
         window.location.href = '/login'

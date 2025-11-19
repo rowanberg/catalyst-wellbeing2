@@ -1,32 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 import { apiCache, createCacheKey } from '@/lib/utils/apiCache'
 import { createCachedResponse, CacheStrategies } from '@/lib/api/cache-headers'
 
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      }
-    )
-
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await authenticateStudent(request)
+    
+    if (isAuthError(auth)) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
+    const { supabase, userId } = auth
+
     // Check cache first (10-minute cache for courage entries)
-    const cacheKey = createCacheKey(`courage_entries_${user.id}`)
+    const cacheKey = createCacheKey(`courage_entries_${userId}`)
     const cachedData = apiCache.get(cacheKey)
     if (cachedData) {
       return createCachedResponse(cachedData, CacheStrategies.MEDIUM_CACHE)
@@ -36,7 +24,7 @@ export async function GET(request: NextRequest) {
     const { data: entries, error } = await supabase
       .from('courage_log')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -59,26 +47,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      }
-    )
-
-    const { content } = await request.json()
+    const auth = await authenticateStudent(request)
     
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (isAuthError(auth)) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
+
+    const { supabase, userId } = auth
+    const { content } = await request.json()
 
     if (!content || !content.trim()) {
       return NextResponse.json({ error: 'Content is required' }, { status: 400 })
@@ -88,7 +64,7 @@ export async function POST(request: NextRequest) {
     const { data: entryData, error: entryError } = await supabase
       .from('courage_log')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         content: content.trim()
       })
       .select()
@@ -103,7 +79,7 @@ export async function POST(request: NextRequest) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('xp, gems')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single()
 
     if (profile) {
@@ -118,7 +94,7 @@ export async function POST(request: NextRequest) {
           gems: newGems,
           level: newLevel
         })
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
 
       if (updateError) {
         console.error('Error updating profile:', updateError)
@@ -127,7 +103,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Invalidate cache on new entry
-    const cacheKey = createCacheKey(`courage_entries_${user.id}`)
+    const cacheKey = createCacheKey(`courage_entries_${userId}`)
     apiCache.delete(cacheKey)
 
     return NextResponse.json({ 

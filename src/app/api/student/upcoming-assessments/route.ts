@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 
 // 1-hour cache for upcoming assessments
 const assessmentsCache = new Map<string, { data: any; timestamp: number }>()
@@ -18,24 +18,21 @@ function cleanupCache() {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServerClient()
+    const auth = await authenticateStudent(request)
     
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (isAuthError(auth)) {
+      if (auth.status === 401) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      
+      if (auth.status === 403) {
+        return NextResponse.json({ error: 'Student access required' }, { status: 403 })
+      }
+      
+      return NextResponse.json({ error: auth.error || 'Authentication failed' }, { status: auth.status })
     }
-
-    // Get student's profile
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, role, school_id, grade_level')
-      .eq('user_id', user.id)
-      .single()
-
-    if (profileError || !profile || profile.role !== 'student') {
-      return NextResponse.json({ error: 'Student access required' }, { status: 403 })
-    }
+    
+    const { supabase, profile, schoolId } = auth
 
     // Check cache first
     const cacheKey = `assessments-${profile.id}`
@@ -94,7 +91,7 @@ export async function GET(request: NextRequest) {
         )
       `)
       .in('class_id', classIds)
-      .eq('school_id', profile.school_id)
+      .eq('school_id', schoolId)
       .gte('assessment_date', now)
       .order('assessment_date', { ascending: true })
       .limit(5)

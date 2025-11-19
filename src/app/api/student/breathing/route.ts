@@ -1,30 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      }
-    )
-
-    const { cycles_completed } = await request.json()
+    const auth = await authenticateStudent(request)
     
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (isAuthError(auth)) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
+    const { supabase, userId } = auth
+    const { cycles_completed } = await request.json()
+    
     if (!cycles_completed || cycles_completed < 1) {
       return NextResponse.json({ error: 'Invalid cycles completed' }, { status: 400 })
     }
@@ -33,7 +20,7 @@ export async function POST(request: NextRequest) {
     const { data: sessionData, error: sessionError } = await supabase
       .from('breathing_sessions')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         cycles_completed: cycles_completed,
         session_type: '4-4-6'
       })
@@ -49,7 +36,7 @@ export async function POST(request: NextRequest) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('xp, gems')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single()
 
     if (profile) {
@@ -64,7 +51,7 @@ export async function POST(request: NextRequest) {
           gems: newGems,
           level: newLevel
         })
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
 
       if (updateError) {
         console.error('Error updating profile:', updateError)

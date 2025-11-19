@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 import { apiCache, createCacheKey } from '@/lib/utils/apiCache'
 
 export async function GET(request: NextRequest) {
@@ -71,35 +70,15 @@ export async function GET(request: NextRequest) {
         }
       })
     }
-    
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-          set(name: string, value: string, options: any) {
-            cookieStore.set({ name, value, ...options })
-          },
-          remove(name: string, options: any) {
-            cookieStore.set({ name, value: '', ...options })
-          }
-        }
-      }
-    )
 
-    // Get user from session
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    
-    if (userError || !user) {
-      return NextResponse.json(
-        { message: 'Unauthorized' },
-        { status: 401 }
-      )
+    const auth = await authenticateStudent(request)
+
+    if (isAuthError(auth)) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
+
+    const { supabase, userId } = auth
+    const user = { id: userId }
 
     // Check cache first for this user's dashboard data
     const cacheKey = createCacheKey('dashboard', { userId: user.id })

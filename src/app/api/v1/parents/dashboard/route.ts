@@ -354,9 +354,38 @@ function calculateGrowthMetrics(data: any) {
   const sparklineData = validGrades.length > 0 ? 
     Array.from({ length: 30 }, (_, i) => ({
       day: i + 1,
-      value: avgPercentage + (Math.random() - 0.5) * 10
+      value: avgPercentage + (Math.sin((i / 29) * Math.PI * 2) * 5)
     })) : 
     Array.from({ length: 30 }, (_, i) => ({ day: i + 1, value: 75 }))
+
+  // Deterministic 7-day weekly progress series for parent Weekly Progress chart
+  const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  const weeklySeries = weekDays.map((day, index) => {
+    const position = weekDays.length > 1 ? index / (weekDays.length - 1) : 0
+
+    // Base around average percentage
+    let value = avgPercentage
+
+    // Apply a small directional slope based on trend
+    const slopeMagnitude = 6 // max swing across the week
+    if (trend === 'up') {
+      value += (position - 0.5) * slopeMagnitude
+    } else if (trend === 'down') {
+      value -= (position - 0.5) * slopeMagnitude
+    }
+
+    // Add a gentle deterministic wave for visual interest (no randomness)
+    const wave = Math.sin(position * Math.PI) * 4
+    value += wave
+
+    // Clamp between 20 and 100 for chart safety
+    const clamped = Math.max(20, Math.min(100, value))
+
+    return {
+      day,
+      value: Number(clamped.toFixed(1))
+    }
+  })
 
   return {
     gpa: validGrades.length > 0 ? gpa.toFixed(2) : '0.00',
@@ -366,7 +395,8 @@ function calculateGrowthMetrics(data: any) {
     weeklyXP: data.student?.xp || 0,
     level: data.student?.level || 1,
     totalAssignments: grades.length,
-    avgPercentage: avgPercentage.toFixed(1)
+    avgPercentage: avgPercentage.toFixed(1),
+    weeklySeries,
   }
 }
 

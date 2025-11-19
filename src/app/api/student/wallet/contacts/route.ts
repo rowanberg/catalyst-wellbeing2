@@ -1,28 +1,35 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const supabase = await createClient();
-
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await authenticateStudent(request);
+    
+    if (isAuthError(auth)) {
+      if (auth.status === 401) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      
+      if (auth.status === 403) {
+        return NextResponse.json({ error: 'Student access required' }, { status: 403 });
+      }
+      
+      return NextResponse.json({ error: auth.error || 'Authentication failed' }, { status: auth.status });
     }
+    
+    const { supabase, userId } = auth;
 
     // Get frequent transaction partners
     const { data: sentTransactions } = await supabase
       .from('wallet_transactions')
       .select('to_wallet_id, to_address, to_student_tag')
-      .eq('from_wallet_id', (await supabase.from('student_wallets').select('id').eq('student_id', user.id).single()).data?.id)
+      .eq('from_wallet_id', (await supabase.from('student_wallets').select('id').eq('student_id', userId).single()).data?.id)
       .eq('status', 'completed');
 
     const { data: receivedTransactions } = await supabase
       .from('wallet_transactions')
       .select('from_wallet_id, from_address, from_student_tag')
-      .eq('to_wallet_id', (await supabase.from('student_wallets').select('id').eq('student_id', user.id).single()).data?.id)
+      .eq('to_wallet_id', (await supabase.from('student_wallets').select('id').eq('student_id', userId).single()).data?.id)
       .eq('status', 'completed');
 
     // Count transactions per contact

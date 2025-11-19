@@ -1,26 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServerClient()
+    const auth = await authenticateStudent(request)
     
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (isAuthError(auth)) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
 
-    // Verify student role
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role, school_id, first_name, last_name')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || !profile || profile.role !== 'student') {
-      return NextResponse.json({ error: 'Student access required' }, { status: 403 })
-    }
+    const { supabase, userId, schoolId, profile } = auth
 
     // Get management messages for this student
     const { data: messages, error: messagesError } = await supabase
@@ -37,8 +26,8 @@ export async function GET(request: NextRequest) {
         created_at,
         updated_at
       `)
-      .eq('recipient_id', user.id)
-      .eq('school_id', profile.school_id)
+      .eq('recipient_id', userId)
+      .eq('school_id', schoolId)
       .order('created_at', { ascending: false })
       .limit(50)
 
@@ -51,7 +40,7 @@ export async function GET(request: NextRequest) {
     const { data: whatsappConfig } = await supabase
       .from('student_whatsapp_config')
       .select('phone_number, whatsapp_link, is_enabled')
-      .eq('student_id', user.id)
+      .eq('student_id', userId)
       .single()
 
     // Format messages for frontend
@@ -90,13 +79,13 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServerClient()
+    const auth = await authenticateStudent(request)
     
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (isAuthError(auth)) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
+
+    const { supabase, userId } = auth
 
     const body = await request.json()
     const { messageId, isRead } = body
@@ -113,7 +102,7 @@ export async function PUT(request: NextRequest) {
         updated_at: new Date().toISOString()
       })
       .eq('id', messageId)
-      .eq('recipient_id', user.id)
+      .eq('recipient_id', userId)
 
     if (updateError) {
       console.error('Error updating message status:', updateError)

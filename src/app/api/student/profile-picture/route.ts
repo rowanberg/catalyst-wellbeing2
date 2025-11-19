@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { rateLimiters } from '@/lib/security/enhanced-rate-limiter'
 import { validateUploadedFile, generateSecureFilename } from '@/lib/security/file-validation'
 import { handleSecureError } from '@/lib/security/error-handler'
 import sharp from 'sharp'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 
 // Maximum file size in bytes (2MB for better performance)
 const MAX_FILE_SIZE = 2 * 1024 * 1024
@@ -17,16 +17,30 @@ export async function POST(request: NextRequest) {
     let buffer: Buffer | null = null
     
     try {
-      const supabase = await createClient()
-
-      // Check authentication
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError || !user) {
+      const auth = await authenticateStudent(request)
+      
+      if (isAuthError(auth)) {
+        if (auth.status === 401) {
+          return NextResponse.json({ 
+            error: 'Authentication required',
+            code: 'UNAUTHORIZED' 
+          }, { status: 401 })
+        }
+        
+        if (auth.status === 403) {
+          return NextResponse.json({ 
+            error: 'Student access required',
+            code: 'FORBIDDEN' 
+          }, { status: 403 })
+        }
+        
         return NextResponse.json({ 
-          error: 'Authentication required',
-          code: 'UNAUTHORIZED' 
-        }, { status: 401 })
+          error: auth.error || 'Authentication failed',
+          code: 'AUTH_ERROR' 
+        }, { status: auth.status })
       }
+      
+      const { supabase, userId } = auth
 
       // Get form data
       const formData = await request.formData()
@@ -54,7 +68,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Generate secure filename
-      const fileName = generateSecureFilename(validation.sanitizedFilename!, user.id)
+      const fileName = generateSecureFilename(validation.sanitizedFilename!, userId)
       const filePath = `profile-pictures/${fileName}`
 
       // Convert file to buffer and optimize image
@@ -108,7 +122,7 @@ export async function POST(request: NextRequest) {
           profile_picture_url: publicUrl,
           updated_at: new Date().toISOString()
         })
-        .eq('user_id', user.id) // Use user_id for proper authorization
+        .eq('user_id', userId) // Use user_id for proper authorization
 
       if (updateError) {
         console.error(`[${requestId}] Profile update error:`, updateError)
@@ -154,22 +168,36 @@ export async function DELETE(request: NextRequest) {
   const requestId = `delete-${Date.now()}-${Math.random().toString(36).substring(7)}`
   
   try {
-    const supabase = await createClient()
-
-    // Check authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
+    const auth = await authenticateStudent(request)
+    
+    if (isAuthError(auth)) {
+      if (auth.status === 401) {
+        return NextResponse.json({ 
+          error: 'Authentication required',
+          code: 'UNAUTHORIZED' 
+        }, { status: 401 })
+      }
+      
+      if (auth.status === 403) {
+        return NextResponse.json({ 
+          error: 'Student access required',
+          code: 'FORBIDDEN' 
+        }, { status: 403 })
+      }
+      
       return NextResponse.json({ 
-        error: 'Authentication required',
-        code: 'UNAUTHORIZED' 
-      }, { status: 401 })
+        error: auth.error || 'Authentication failed',
+        code: 'AUTH_ERROR' 
+      }, { status: auth.status })
     }
+    
+    const { supabase, userId } = auth
 
     // Get current profile picture URL
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('profile_picture_url')
-      .eq('user_id', user.id) // Use user_id for proper authorization
+      .eq('user_id', userId) // Use user_id for proper authorization
       .single()
 
     if (profileError || !profile?.profile_picture_url) {
@@ -199,7 +227,7 @@ export async function DELETE(request: NextRequest) {
         profile_picture_url: null,
         updated_at: new Date().toISOString()
       })
-      .eq('user_id', user.id) // Use user_id for proper authorization
+      .eq('user_id', userId) // Use user_id for proper authorization
 
     if (updateError) {
       console.error(`[${requestId}] Profile update error:`, updateError)

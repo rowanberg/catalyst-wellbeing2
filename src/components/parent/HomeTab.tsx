@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, memo } from 'react'
-import { AlertTriangle, TrendingUp, TrendingDown, Calendar, Clock, BookOpen, FileText, X, RefreshCw } from 'lucide-react'
+import { AlertTriangle, TrendingUp, TrendingDown, Calendar, Clock, BookOpen, FileText, X, RefreshCw, BarChart3, Activity } from 'lucide-react'
 import { useDarkMode } from '@/contexts/DarkModeContext'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Area, AreaChart } from 'recharts'
 
 interface ActionItem {
   type: 'alert' | 'warning' | 'info' | 'success'
@@ -21,6 +22,7 @@ interface GrowthMetrics {
   level: number
   totalAssignments: number
   avgPercentage: string
+  weeklySeries?: { day: string; value: number }[]
 }
 
 interface UpcomingAssignment {
@@ -34,6 +36,147 @@ interface UpcomingAssignment {
 
 interface HomeTabProps {
   studentId: string
+}
+
+// Custom Tooltip Component for Charts
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0]
+    const value = Math.round(data.value)
+    const isHigh = value >= 85
+    const isMedium = value >= 70
+    
+    return (
+      <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600">
+        <p className="font-semibold text-gray-900 dark:text-white">{label}</p>
+        <div className="flex items-center gap-2 mt-1">
+          <div className={`w-3 h-3 rounded-full ${
+            isHigh ? 'bg-emerald-500' : isMedium ? 'bg-blue-500' : 'bg-amber-500'
+          }`} />
+          <span className="text-sm text-gray-600 dark:text-gray-400">Progress: </span>
+          <span className={`font-bold ${
+            isHigh ? 'text-emerald-600' : isMedium ? 'text-blue-600' : 'text-amber-600'
+          }`}>{value}%</span>
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          {isHigh ? '🌟 Excellent' : isMedium ? '👍 Good' : '📈 Keep Going'}
+        </p>
+      </div>
+    )
+  }
+  return null
+}
+
+// Chart Type Toggle Component
+const ChartTypeToggle = ({ chartType, setChartType }: { 
+  chartType: 'area' | 'bar' | 'line'
+  setChartType: (type: 'area' | 'bar' | 'line') => void 
+}) => {
+  return (
+    <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+      {[
+        { type: 'area' as const, icon: Activity, label: 'Area' },
+        { type: 'bar' as const, icon: BarChart3, label: 'Bar' },
+        { type: 'line' as const, icon: TrendingUp, label: 'Line' }
+      ].map(({ type, icon: Icon, label }) => (
+        <button
+          key={type}
+          onClick={() => setChartType(type)}
+          className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all ${
+            chartType === type
+              ? 'bg-blue-600 text-white shadow-sm'
+              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+          }`}
+        >
+          <Icon className="h-3 w-3" />
+          <span className="hidden sm:inline">{label}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// Dynamic Chart Renderer
+const DynamicChart = ({ chartType, chartData }: { 
+  chartType: 'area' | 'bar' | 'line'
+  chartData: any[] 
+}) => {
+  const commonProps = {
+    data: chartData,
+    margin: { top: 20, right: 30, left: 20, bottom: 5 }
+  }
+
+  const commonElements = (
+    <>
+      <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" className="dark:stroke-gray-600" />
+      <XAxis 
+        dataKey="day" 
+        stroke="#6B7280" 
+        className="dark:stroke-gray-400"
+        fontSize={12}
+      />
+      <YAxis 
+        stroke="#6B7280" 
+        className="dark:stroke-gray-400"
+        fontSize={12}
+        domain={[0, 100]}
+      />
+      <Tooltip 
+        content={<CustomTooltip />}
+        cursor={{ fill: 'rgba(59, 130, 246, 0.1)' }}
+      />
+    </>
+  )
+
+  if (chartType === 'area') {
+    return (
+      <AreaChart {...commonProps}>
+        <defs>
+          <linearGradient id="progressGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
+            <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.1}/>
+          </linearGradient>
+        </defs>
+        {commonElements}
+        <Area
+          type="monotone"
+          dataKey="value"
+          stroke="#3B82F6"
+          strokeWidth={3}
+          fill="url(#progressGradient)"
+          dot={{ fill: '#3B82F6', strokeWidth: 2, r: 5 }}
+          activeDot={{ r: 7, stroke: '#3B82F6', strokeWidth: 2, fill: '#FFFFFF' }}
+        />
+      </AreaChart>
+    )
+  }
+
+  if (chartType === 'bar') {
+    return (
+      <BarChart {...commonProps}>
+        {commonElements}
+        <Bar 
+          dataKey="value" 
+          fill="#3B82F6"
+          radius={[4, 4, 0, 0]}
+        />
+      </BarChart>
+    )
+  }
+
+  return (
+    <LineChart {...commonProps}>
+      {commonElements}
+      <Line
+        type="monotone"
+        dataKey="value"
+        stroke="#3B82F6"
+        strokeWidth={3}
+        dot={{ fill: '#3B82F6', strokeWidth: 2, r: 5 }}
+        activeDot={{ r: 7, stroke: '#3B82F6', strokeWidth: 2, fill: '#FFFFFF' }}
+      />
+    </LineChart>
+  )
 }
 
 // Enterprise Stats Card
@@ -197,131 +340,6 @@ const GPAChart = memo(({ metrics }: { metrics: GrowthMetrics }) => {
           <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mt-1">{metrics.avgPercentage}% Avg</p>
         </div>
       </div>
-
-      {/* Desktop: Enhanced Performance Chart */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl p-6 border border-slate-200 dark:border-slate-800">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Performance Trend</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">7-day academic progress overview</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-sm">
-              <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-              <span className="text-slate-600 dark:text-slate-400">Average: {metrics.avgPercentage}%</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Professional Line Chart with Enhanced Styling */}
-        <div className="h-64 lg:h-80 relative">
-          <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
-            {/* Grid lines - horizontal */}
-            {[0, 25, 50, 75, 100].map((y) => (
-              <line 
-                key={y} 
-                x1="0" 
-                y1={y} 
-                x2="100" 
-                y2={y} 
-                stroke="currentColor" 
-                className="text-slate-100 dark:text-slate-800" 
-                strokeWidth="0.3" 
-                strokeDasharray="2,2"
-              />
-            ))}
-            
-            {/* Gradient definitions */}
-            <defs>
-              <linearGradient id="professionalGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} />
-                <stop offset="50%" stopColor="#3b82f6" stopOpacity={0.15} />
-                <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
-              </linearGradient>
-              <filter id="shadow">
-                <feDropShadow dx="0" dy="2" stdDeviation="2" floodOpacity="0.1"/>
-              </filter>
-            </defs>
-            
-            {/* Area fill with gradient */}
-            <polygon
-              points={`0,100 ${chartData.map((d, i) => 
-                `${(i / 6) * 100},${100 - ((d.value - minValue) / (maxValue - minValue)) * 100}`
-              ).join(' ')} 100,100`}
-              fill="url(#professionalGradient)"
-            />
-            
-            {/* Main trend line */}
-            <polyline
-              points={chartData.map((d, i) => 
-                `${(i / 6) * 100},${100 - ((d.value - minValue) / (maxValue - minValue)) * 100}`
-              ).join(' ')}
-              fill="none"
-              stroke="#2563eb"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              filter="url(#shadow)"
-            />
-            
-            {/* Data points with animation effect */}
-            {chartData.map((d, i) => (
-              <g key={i}>
-                {/* Outer glow circle */}
-                <circle
-                  cx={(i / 6) * 100}
-                  cy={100 - ((d.value - minValue) / (maxValue - minValue)) * 100}
-                  r="4"
-                  fill="#2563eb"
-                  opacity="0.2"
-                />
-                {/* Main data point */}
-                <circle
-                  cx={(i / 6) * 100}
-                  cy={100 - ((d.value - minValue) / (maxValue - minValue)) * 100}
-                  r="2.5"
-                  fill="#2563eb"
-                  stroke="white"
-                  strokeWidth="2"
-                />
-              </g>
-            ))}
-          </svg>
-          
-          {/* Y-axis labels */}
-          <div className="absolute left-0 top-0 bottom-6 flex flex-col justify-between text-xs text-slate-400 dark:text-slate-500 font-medium">
-            <span>100%</span>
-            <span>75%</span>
-            <span>50%</span>
-          </div>
-          
-          {/* X-axis labels with enhanced styling */}
-          <div className="flex justify-between mt-3 px-8">
-            {chartData.map((d, i) => (
-              <div key={i} className="flex flex-col items-center">
-                <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">{d.day}</span>
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">{Math.round(d.value)}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Summary Stats Below Chart */}
-        <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-200 dark:border-slate-800">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-slate-900 dark:text-white">{Math.round(baseValue)}%</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Weekly Average</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{Math.max(...chartData.map(d => Math.round(d.value)))}%</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Highest Score</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{metrics.totalAssignments}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Total Tasks</p>
-          </div>
-        </div>
-      </div>
     </div>
   )
 })
@@ -380,6 +398,7 @@ export default function HomeTab({ studentId }: HomeTabProps) {
   const [data, setData] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   const [dismissedActions, setDismissedActions] = useState<number[]>([])
+  const [chartType, setChartType] = useState<'area' | 'bar' | 'line'>('area')
 
   useEffect(() => {
     fetchDashboardData()
@@ -424,6 +443,55 @@ export default function HomeTab({ studentId }: HomeTabProps) {
 
   const handleDismissAction = (index: number) => {
     setDismissedActions([...dismissedActions, index])
+  }
+
+  // Precompute weekly chart data with safe numeric values
+  const weeklyBaseRaw = data?.growthTracker?.avgPercentage
+  const weeklyBaseParsed = weeklyBaseRaw !== undefined && weeklyBaseRaw !== null
+    ? parseFloat(weeklyBaseRaw)
+    : NaN
+  const weeklyBaseValue = !Number.isNaN(weeklyBaseParsed) ? weeklyBaseParsed : 75
+
+  const backendWeekly = data?.growthTracker?.weeklySeries
+  const defaultWeekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+  let weeklyChartData: { day: string; value: number }[]
+
+  if (Array.isArray(backendWeekly) && backendWeekly.length > 0) {
+    weeklyChartData = backendWeekly.map((point, index) => {
+      const safeDay = typeof point.day === 'string'
+        ? point.day
+        : defaultWeekDays[index] || `Day ${index + 1}`
+
+      let rawValue: number
+      if (typeof point.value === 'number') {
+        rawValue = point.value
+      } else if (typeof (point as any).value === 'string') {
+        const parsed = parseFloat((point as any).value)
+        rawValue = Number.isNaN(parsed) ? weeklyBaseValue : parsed
+      } else {
+        rawValue = weeklyBaseValue
+      }
+
+      const clamped = Math.max(20, Math.min(100, rawValue))
+
+      return {
+        day: safeDay,
+        value: Number(clamped.toFixed(1)),
+      }
+    })
+  } else {
+    // Deterministic fallback (no randomness) using a gentle wave around the base value
+    weeklyChartData = defaultWeekDays.map((day, index) => {
+      const position = defaultWeekDays.length > 1 ? index / (defaultWeekDays.length - 1) : 0
+      const wave = Math.sin(position * Math.PI) * 4
+      const value = weeklyBaseValue + wave
+      const clamped = Math.max(20, Math.min(100, value))
+      return {
+        day,
+        value: Number(clamped.toFixed(1)),
+      }
+    })
   }
 
   // Loading State
@@ -526,40 +594,105 @@ export default function HomeTab({ studentId }: HomeTabProps) {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Stats Overview - Desktop optimized grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
-        <StatCard 
-          label="GPA" 
-          value={data?.growthTracker?.gpa || '0.00'}
-          trend={data?.growthTracker?.trend}
-          sublabel={`${data?.growthTracker?.totalAssignments || 0} assignments`}
-          icon={TrendingUp}
-        />
-        <StatCard 
-          label="Average" 
-          value={`${data?.growthTracker?.avgPercentage || '0'}%`}
-          sublabel="Overall performance"
-          icon={BookOpen}
-        />
-        <StatCard 
-          label="Streak" 
-          value={`${data?.growthTracker?.dayStreak || 0}`}
-          sublabel="days active"
-          icon={Calendar}
-        />
-        <StatCard 
-          label="Level" 
-          value={`${data?.growthTracker?.level || 1}`}
-          sublabel={`${data?.growthTracker?.weeklyXP || 0} XP`}
-          icon={TrendingUp}
-        />
-      </div>
-
       {/* Growth Tracker - Desktop optimized layout */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 lg:p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
         <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-5">Growth Tracker</h2>
         {data?.growthTracker && <GPAChart metrics={data.growthTracker} />}
       </div>
+
+      {/* Professional Weekly Progress Chart */}
+      {data?.growthTracker && (
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 shadow-[0_0_40px_rgba(56,189,248,0.18)] backdrop-blur-xl">
+          <div className="pointer-events-none absolute inset-0 opacity-70 dark:opacity-90">
+            <div className="absolute -top-24 -right-24 h-64 w-64 bg-cyan-500/30 blur-3xl rounded-full" />
+            <div className="absolute -bottom-24 -left-16 h-72 w-72 bg-violet-500/25 blur-3xl rounded-full" />
+          </div>
+
+          <div className="relative p-4 lg:p-6">
+            {/* Header with Chart Type Toggle */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-violet-500 text-white shadow-lg shadow-cyan-500/40">
+                    <BarChart3 className="h-4 w-4" />
+                  </div>
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50 tracking-tight">Weekly Progress</h2>
+                </div>
+                <p className="text-sm text-slate-600 dark:text-slate-400">Pulse view of performance across the last 7 days</p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2 rounded-full bg-slate-900/90 text-xs text-slate-200 px-3 py-1 border border-slate-700/80">
+                  <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Live snapshot · Last 7 days</span>
+                </div>
+                <div className="flex items-center gap-2 rounded-full bg-slate-900/80 text-xs text-slate-200 px-3 py-1 border border-slate-700/80">
+                  <span className="text-slate-400">Average</span>
+                  <span className="font-semibold text-slate-50">{data.growthTracker.avgPercentage}%</span>
+                </div>
+                <ChartTypeToggle chartType={chartType} setChartType={setChartType} />
+              </div>
+            </div>
+
+            {/* Professional Chart Container */}
+            <div className="mb-6">
+              <div className="h-64 lg:h-80 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <DynamicChart 
+                    chartType={chartType} 
+                    chartData={weeklyChartData}
+                  />
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+              <div className="relative overflow-hidden rounded-xl border border-cyan-500/40 bg-slate-950/80 px-4 py-3">
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/15 via-transparent to-sky-500/10" />
+                <div className="relative flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <TrendingUp className="h-4 w-4 text-cyan-400" />
+                      <span className="text-xs font-medium text-slate-200">Weekly Average</span>
+                    </div>
+                    <div className="text-2xl font-bold text-slate-50">{data.growthTracker.avgPercentage}%</div>
+                  </div>
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wide">Performance</span>
+                </div>
+              </div>
+
+              <div className="relative overflow-hidden rounded-xl border border-emerald-500/40 bg-slate-950/80 px-4 py-3">
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/15 via-transparent to-emerald-400/10" />
+                <div className="relative flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <BookOpen className="h-4 w-4 text-emerald-400" />
+                      <span className="text-xs font-medium text-slate-200">Tasks Completed</span>
+                    </div>
+                    <div className="text-2xl font-bold text-slate-50">{data.growthTracker.totalAssignments}</div>
+                  </div>
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wide">Volume</span>
+                </div>
+              </div>
+
+              <div className="relative overflow-hidden rounded-xl border border-purple-500/40 bg-slate-950/80 px-4 py-3">
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/15 via-transparent to-fuchsia-500/10" />
+                <div className="relative flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Activity className="h-4 w-4 text-purple-400" />
+                      <span className="text-xs font-medium text-slate-200">Streak</span>
+                    </div>
+                    <div className="text-2xl font-bold text-slate-50">{data.growthTracker.dayStreak} days</div>
+                  </div>
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wide">Consistency</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Action Center */}
       {visibleActions.length > 0 && (

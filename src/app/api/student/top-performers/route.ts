@@ -1,54 +1,42 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 
 export const dynamic = 'force-dynamic'
 
 // GET - Fetch top performers from student's class
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      }
-    )
-
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const auth = await authenticateStudent(request)
     
-    if (authError || !user) {
+    if (isAuthError(auth)) {
+      if (auth.status === 401) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+      
+      if (auth.status === 403) {
+        return NextResponse.json(
+          { error: 'Only students can view top performers' },
+          { status: 403 }
+        )
+      }
+      
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: auth.error || 'Authentication failed' },
+        { status: auth.status }
       )
     }
-
-    // Get student profile
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, school_id, role')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!profile || profile.role !== 'student') {
-      return NextResponse.json(
-        { error: 'Only students can view top performers' },
-        { status: 403 }
-      )
-    }
+    
+    const { supabase, profile } = auth
 
     // Get student's class
+    const profileId = profile.id
     const { data: studentClass } = await supabase
       .from('class_students')
       .select('class_id')
-      .eq('student_id', profile.id)
+      .eq('student_id', profileId)
       .single()
 
     if (!studentClass) {

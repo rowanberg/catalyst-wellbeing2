@@ -1,27 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      }
-    )
-
-    // Get authenticated user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await authenticateStudent(request)
+    
+    if (isAuthError(auth)) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
+
+    const { supabase, userId } = auth
 
     // Parse query parameters
     const { searchParams } = new URL(request.url)
@@ -36,7 +24,7 @@ export async function GET(request: NextRequest) {
     // Fetch mood history data using the function we created
     const { data: moodHistory, error: moodError } = await supabase
       .rpc('get_user_mood_history', {
-        user_uuid: user.id,
+        user_uuid: userId,
         days_limit: days,
         page_size: pageSize,
         page_number: page
@@ -49,7 +37,7 @@ export async function GET(request: NextRequest) {
       const { data: fallbackData, error: fallbackError } = await supabase
         .from('mood_history')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .gte('recorded_date', startDate.toISOString().split('T')[0])
         .order('recorded_date', { ascending: false })
         .order('created_at', { ascending: false })
@@ -72,7 +60,7 @@ export async function GET(request: NextRequest) {
     const { count, error: countError } = await supabase
       .from('mood_history')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .gte('recorded_date', startDate.toISOString().split('T')[0])
     
     return NextResponse.json({
@@ -93,24 +81,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      }
-    )
-
-    // Get authenticated user
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await authenticateStudent(request)
+    
+    if (isAuthError(auth)) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
     }
+
+    const { supabase, userId } = auth
 
     // Parse request body
     const { mood, mood_score, notes } = await request.json()
@@ -139,7 +116,7 @@ export async function POST(request: NextRequest) {
     const { data: moodEntry, error: moodError } = await supabase
       .from('mood_history')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         mood,
         mood_emoji,
         mood_score: mood_score || null,
@@ -162,7 +139,7 @@ export async function POST(request: NextRequest) {
     const { error: profileError } = await supabase
       .from('profiles')
       .update({ current_mood: mood })
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
 
     if (profileError) {
       console.error('Error updating profile mood:', profileError)

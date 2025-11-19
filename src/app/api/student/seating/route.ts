@@ -1,44 +1,26 @@
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          }
-        }
+    const auth = await authenticateStudent(request)
+    
+    if (isAuthError(auth)) {
+      if (auth.status === 401) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
-    )
-
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      
+      if (auth.status === 403) {
+        return NextResponse.json({ error: 'Only students can view seating' }, { status: 403 })
+      }
+      
+      return NextResponse.json({ error: auth.error || 'Authentication failed' }, { status: auth.status })
     }
-
-    // Get student profile
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, role')
-      .eq('user_id', user.id)
-      .single()
-
-    if (profileError || !profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
-    }
-
-    if (profile.role !== 'student') {
-      return NextResponse.json({ error: 'Only students can view seating' }, { status: 403 })
-    }
-
-    console.log('👤 Student profile ID:', profile.id)
+    
+    const { supabase, profile } = auth
+    const profileId = profile.id
+    
+    console.log('👤 Student profile ID:', profileId)
 
     // Get seat assignment from ACTIVE seating chart only
     const { data: seatAssignment, error: assignmentError } = await supabase
@@ -51,7 +33,7 @@ export async function GET(request: Request) {
           class_id
         )
       `)
-      .eq('student_id', profile.id)
+      .eq('student_id', profileId)
       .eq('seating_charts.is_active', true)
       .maybeSingle()
 

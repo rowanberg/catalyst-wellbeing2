@@ -288,10 +288,10 @@ function ComprehensiveAnalytics() {
   const { overview, wellbeing, engagement, topPerformers, insights } = data
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+    <div className="space-y-4 sm:space-y-6">
       {/* Sticky Header with Refresh - Mobile Optimized */}
-      <div className="sticky top-0 z-30 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 shadow-sm">
-        <div className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
+        <div className="px-4 sm:px-5 lg:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
@@ -316,7 +316,7 @@ function ComprehensiveAnalytics() {
       </div>
 
       {/* Main Content */}
-      <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
+      <div className="space-y-4 sm:space-y-6">
 
       {/* Priority Insights with better design */}
       <AnimatePresence>

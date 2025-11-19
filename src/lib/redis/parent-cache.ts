@@ -31,6 +31,7 @@ const LOCAL_CACHE_TTL = {
   DASHBOARD: 5 * 60 * 1000,      // 5 minutes (changes frequently)
   ANALYTICS: 15 * 60 * 1000,     // 15 minutes (expensive queries)
   COMMUNITY: 5 * 60 * 1000,      // 5 minutes (real-time content)
+  WELLBEING: 10 * 60 * 1000,
 }
 
 /**
@@ -102,6 +103,7 @@ export const ParentCacheKeys = {
   
   // Student analytics
   analytics: (studentId: string) => `student:${studentId}:analytics`,
+  wellbeing: (studentId: string) => `student:${studentId}:wellbeing`,
   
   // Community feed (per school per page)
   communityFeed: (schoolId: string, page: number, filters?: string) => 
@@ -114,6 +116,7 @@ export const ParentCacheTTL = {
   DASHBOARD: 1296000,     // 15 days - invalidated when data changes
   ANALYTICS: 1296000,     // 15 days - invalidated when grades change
   COMMUNITY_FEED: 1296000, // 15 days - invalidated when posts change
+  WELLBEING: 1296000,
 }
 
 // ============================================================================
@@ -330,6 +333,58 @@ export async function invalidateStudentAnalytics(studentId: string) {
   }
 }
 
+export async function getCachedStudentWellbeing(studentId: string) {
+  const cacheKey = ParentCacheKeys.wellbeing(studentId)
+
+  const localData = getFromLocalCache(cacheKey)
+  if (localData) {
+    console.log(`⚡ [Local Cache] INSTANT HIT - Wellbeing: ${studentId} (0ms)`)
+    return localData
+  }
+
+  try {
+    const redisData = await redisParents.get(cacheKey)
+    if (redisData) {
+      console.log(`✅ [Parents Redis] Cache HIT - Wellbeing: ${studentId} (~50ms)`)
+      setToLocalCache(cacheKey, redisData, LOCAL_CACHE_TTL.WELLBEING)
+      console.log('💾 [Local Cache] Stored wellbeing (10min TTL)')
+      return redisData
+    }
+    return null
+  } catch (error) {
+    console.error('Parents Redis GET error (wellbeing):', error)
+    return null
+  }
+}
+
+export async function setCachedStudentWellbeing(studentId: string, data: any) {
+  const cacheKey = ParentCacheKeys.wellbeing(studentId)
+
+  setToLocalCache(cacheKey, data, LOCAL_CACHE_TTL.WELLBEING)
+  console.log(`💾 [Local Cache] Stored wellbeing: ${studentId} (10min TTL)`)
+
+  try {
+    await redisParents.set(cacheKey, data, { ex: ParentCacheTTL.WELLBEING })
+    console.log(`✅ [Parents Redis] Cached wellbeing: ${studentId} (15d TTL)`)
+  } catch (error) {
+    console.error('Parents Redis SET error (wellbeing):', error)
+  }
+}
+
+export async function invalidateStudentWellbeing(studentId: string) {
+  const cacheKey = ParentCacheKeys.wellbeing(studentId)
+
+  clearFromLocalCache(cacheKey)
+  console.log(`🗑️ [Local Cache] Cleared wellbeing: ${studentId}`)
+
+  try {
+    await redisParents.del(cacheKey)
+    console.log(`🗑️ [Parents Redis] Invalidated wellbeing: ${studentId}`)
+  } catch (error) {
+    console.error('Parents Redis DEL error (wellbeing):', error)
+  }
+}
+
 // ============================================================================
 // COMMUNITY FEED CACHE
 // ============================================================================
@@ -541,6 +596,7 @@ export async function invalidateAllStudentCaches(studentId: string) {
   await Promise.all([
     invalidateStudentDashboard(studentId),
     invalidateStudentAnalytics(studentId),
+    invalidateStudentWellbeing(studentId),
   ])
   console.log(`🗑️ [Cache] Invalidated ALL caches for student: ${studentId}`)
 }

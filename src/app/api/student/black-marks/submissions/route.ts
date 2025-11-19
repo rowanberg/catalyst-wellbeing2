@@ -1,26 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth'
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+    const auth = await authenticateStudent(request)
     
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (isAuthError(auth)) {
+      if (auth.status === 401) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      
+      if (auth.status === 403) {
+        return NextResponse.json({ error: 'Access denied. Student role required.' }, { status: 403 })
+      }
+      
+      return NextResponse.json({ error: auth.error || 'Authentication failed' }, { status: auth.status })
     }
-
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role, school_id')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || !profile || profile.role !== 'student') {
-      return NextResponse.json({ error: 'Access denied. Student role required.' }, { status: 403 })
-    }
+    
+    const { supabase, userId } = auth
 
     const body = await request.json()
     const { blackMarkId, submissionText, submissionFiles } = body
@@ -34,7 +31,7 @@ export async function POST(request: NextRequest) {
       .from('black_marks')
       .select('id, student_id, status')
       .eq('id', blackMarkId)
-      .eq('student_id', user.id)
+      .eq('student_id', userId)
       .single()
 
     if (blackMarkError || !blackMark) {
@@ -50,7 +47,7 @@ export async function POST(request: NextRequest) {
       .from('black_mark_submissions')
       .insert({
         black_mark_id: blackMarkId,
-        student_id: user.id,
+        student_id: userId,
         submission_text: submissionText,
         submission_files: submissionFiles || [],
         status: 'pending'

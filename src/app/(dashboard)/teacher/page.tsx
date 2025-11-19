@@ -46,6 +46,9 @@ const TeacherAttendancePage = dynamic(() => import('./attendance/page').then(mod
 const IncidentManagement = dynamic(() => import('@/components/teacher/IncidentManagement').then(mod => ({ default: mod.IncidentManagement })), {
   loading: () => <div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600"></div></div>
 })
+const TeacherWellbeingTab = dynamic(() => import('@/components/teacher/TeacherWellbeingTab').then(mod => ({ default: mod.TeacherWellbeingTab })), {
+  loading: () => <div className="flex items-center justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600"></div></div>
+})
 import { 
   Users, 
   TrendingUp, 
@@ -232,7 +235,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
   const [isDataFetching, setIsDataFetching] = useState(false) // Prevent concurrent API calls
   const fetchingRef = useRef(false) // More reliable concurrent call protection
   const [dataFetched, setDataFetched] = useState(false)
-  const [activeTab, setActiveTab] = useState<'analytics' | 'overview' | 'roster' | 'attendance' | 'community' | 'incidents' | 'shoutouts' | 'interventions' | 'quests' | 'blackmarks' | 'activities' | 'settings' | 'results'>('overview')
+  const [activeTab, setActiveTab] = useState<'analytics' | 'overview' | 'roster' | 'attendance' | 'community' | 'incidents' | 'shoutouts' | 'interventions' | 'quests' | 'blackmarks' | 'activities' | 'settings' | 'results' | 'wellbeing'>('overview')
   const [isTabLoading, setIsTabLoading] = useState(false)
   const [notifications, setNotifications] = useState<Array<{id: string, message: string, type: 'success' | 'error' | 'warning' | 'info'}>>([])
   const [realTimeData, setRealTimeData] = useState({
@@ -746,9 +749,11 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
             { id: 'overview', label: 'Overview', icon: School, color: 'text-blue-600', bgColor: 'bg-blue-50' },
             { id: 'roster', label: 'Students', icon: Users, color: 'text-emerald-600', bgColor: 'bg-emerald-50', isLink: true, href: '/teacher/students' },
             { id: 'attendance', label: 'Attendance', icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-50', isLink: true, href: '/teacher/attendance' },
+            { id: 'wellbeing', label: 'Wellbeing', icon: Heart, color: 'text-pink-600', bgColor: 'bg-pink-50' },
             { id: 'seating', label: 'Seating', icon: LayoutGrid, color: 'text-blue-600', bgColor: 'bg-blue-50', isLink: true, href: '/teacher/seating' },
             { id: 'examinations', label: 'Examinations', icon: GraduationCap, color: 'text-indigo-600', bgColor: 'bg-indigo-50', isLink: true, href: '/teacher/examinations' },
             { id: 'community', label: 'Community', icon: Megaphone, color: 'text-indigo-600', bgColor: 'bg-indigo-50', isLink: true, href: '/teacher/community' },
+            { id: 'ai-live', label: 'Ai Live', icon: Brain, color: 'text-fuchsia-600', bgColor: 'bg-fuchsia-50', isLink: true, href: '/teacher/ai-live' },
             { id: 'analytics', label: 'Analytics', icon: Activity, color: 'text-violet-600', bgColor: 'bg-violet-50' },
             { id: 'credits', label: 'Issue Credits', icon: Gem, color: 'text-purple-600', bgColor: 'bg-purple-50', isLink: true, href: '/teacher/issue-credits' },
             { id: 'shoutouts', label: 'Shout-outs', icon: Star, color: 'text-amber-500', bgColor: 'bg-amber-50' },
@@ -1478,6 +1483,18 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
               className="p-4 sm:p-5 lg:p-6"
             >
               <ComprehensiveAnalytics />
+            </motion.div>
+          )}
+
+          {activeTab === 'wellbeing' && (
+            <motion.div
+              key="wellbeing"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="min-h-screen"
+            >
+              <TeacherWellbeingTab />
             </motion.div>
           )}
 

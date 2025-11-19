@@ -227,6 +227,9 @@ serve(async (req) => {
   try {
     // Parse request body
     const { message, imageData, conversationHistory, schoolContext, flashCardMode, flashCardInstructions } = await req.json()
+    
+    // Auto-detect quiz requests
+    const isQuizRequest = /\b(quiz|test|questions|multiple choice|mcq|exam)\b/i.test(message)
 
     if (!message) {
       return new Response(
@@ -302,8 +305,8 @@ serve(async (req) => {
         
         modelUsed = apiKeyData.model_used || 'gemini-2.0-flash'
 
-        // Build system prompt
-        const systemPrompt = `You are Luminex AI, an intelligent learning assistant from Catalyst Innovations, helping ${schoolContext?.studentName || 'a student'} at ${schoolContext?.schoolName || 'school'}.
+        // Build system prompt with quiz detection
+        let systemPrompt = `You are Luminex AI, an intelligent learning assistant from Catalyst Innovations, helping ${schoolContext?.studentName || 'a student'} at ${schoolContext?.schoolName || 'school'}.
     
 Your role is to:
 - Help students understand concepts, not just give answers
@@ -336,6 +339,76 @@ Example for sin(x) from -2π to 2π:
 
 You have ${quotaCheck.remainingNormal} standard requests remaining today.
 ${flashCardMode && flashCardInstructions ? flashCardInstructions : ''}`
+
+        // If today's topics are provided from the client, include them as context
+        if (schoolContext?.todayTopics && Array.isArray(schoolContext.todayTopics) && schoolContext.todayTopics.length > 0) {
+          try {
+            const topicsText = schoolContext.todayTopics
+              .slice(0, 10)
+              .map((t: any, idx: number) => {
+                const subject = t.classes?.subject || t.classes?.class_name || 'Subject'
+                const topic = t.topic || t.title || ''
+                const teacherName = t.profiles
+                  ? `${t.profiles.first_name || ''} ${t.profiles.last_name || ''}`.trim() || 'Teacher'
+                  : 'Teacher'
+                return `${idx + 1}. [${subject}] ${topic} (Teacher: ${teacherName})`
+              })
+              .join('\n')
+
+            systemPrompt += `\n\n## Today's Class Topics (from school system):\n${topicsText}\n\nWhen helping the student, prefer to relate explanations and examples to these topics when relevant.`
+          } catch (e) {
+            console.error('Failed to format todayTopics for prompt:', e)
+          }
+        }
+
+        // Add quiz instructions if quiz is detected
+        if (isQuizRequest) {
+          systemPrompt += `
+
+🚨🚨🚨 QUIZ MODE DETECTED - YOU MUST FOLLOW THIS FORMAT EXACTLY 🚨🚨🚨
+
+The user is asking for quiz questions. You MUST respond ONLY with quiz questions in the exact format below. NO explanations, NO introductory text, NO other content.
+
+MANDATORY QUIZ FORMAT:
+Start each question with: <<<QUIZ>>>
+Then: Q: [question text]
+Then: A: [option A]
+Then: B: [option B]
+Then: C: [option C]
+Then: D: [option D]
+Then: CORRECT: [A, B, C, or D]
+Then: EXPLANATION: [brief explanation]
+End each question with: <<<END_QUIZ>>>
+
+EXAMPLE:
+<<<QUIZ>>>
+Q: What is the capital of France?
+A: London
+B: Berlin
+C: Paris
+D: Madrid
+CORRECT: C
+EXPLANATION: Paris is the capital and largest city of France.
+<<<END_QUIZ>>>
+
+<<<QUIZ>>>
+Q: Which process converts light energy to chemical energy?
+A: Respiration
+B: Photosynthesis
+C: Digestion
+D: Circulation
+CORRECT: B
+EXPLANATION: Photosynthesis converts light energy from the sun into chemical energy stored as glucose.
+<<<END_QUIZ>>>
+
+CRITICAL REQUIREMENTS:
+1. Generate 3-5 quiz questions
+2. Use ONLY the <<<QUIZ>>> format shown above
+3. NO introductory text like "Here's a quiz" or explanations
+4. Start your response immediately with <<<QUIZ>>>
+5. Each question must have exactly 4 options (A, B, C, D)
+6. Include correct answer and brief explanation for each question`
+        }
 
         // Format conversation history
         let contextMessages = ''
