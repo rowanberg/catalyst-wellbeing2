@@ -92,26 +92,6 @@ const nextConfig = {
 
   // Custom webpack configuration to handle hydration issues
   webpack: (config, { dev, isServer }) => {
-    // Exclude info folder from build (separate site for explore.catalystwells.in)
-    config.plugins.push(
-      new (require('webpack').IgnorePlugin)({
-        resourceRegExp: /^\.\/info/,
-        contextRegExp: /catalyst/
-      })
-    )
-
-    // Exclude info folder from module resolution
-    config.module = {
-      ...config.module,
-      rules: [
-        ...config.module.rules,
-        {
-          test: /info\/.*/,
-          loader: 'ignore-loader'
-        }
-      ]
-    }
-
     if (dev && !isServer) {
       // Suppress hydration warnings in development for form elements
       config.resolve.alias = {
