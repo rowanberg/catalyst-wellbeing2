@@ -54,19 +54,19 @@ class WebSocketManager {
     if (typeof window === 'undefined') return
 
     this.connectionState = 'connecting'
-    
+
     try {
       // Use secure WebSocket in production
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
       const wsUrl = `${protocol}//${window.location.host}/ws`
-      
+
       this.ws = new WebSocket(wsUrl)
-      
+
       this.ws.onopen = this.handleOpen.bind(this)
       this.ws.onmessage = this.handleMessage.bind(this)
       this.ws.onclose = this.handleClose.bind(this)
       this.ws.onerror = this.handleError.bind(this)
-      
+
     } catch (error) {
       console.error('[WebSocket] Connection failed:', error)
       this.scheduleReconnect()
@@ -77,7 +77,7 @@ class WebSocketManager {
     console.log('[WebSocket] Connected successfully')
     this.connectionState = 'connected'
     this.reconnectAttempts = 0
-    
+
     // Send authentication if user is set
     if (this.userId && this.userRole) {
       this.send({
@@ -89,10 +89,10 @@ class WebSocketManager {
         }
       })
     }
-    
+
     // Start heartbeat
     this.startHeartbeat()
-    
+
     // Notify handlers
     this.notifyHandlers('connection', { status: 'connected' })
   }
@@ -100,23 +100,23 @@ class WebSocketManager {
   private handleMessage(event: MessageEvent) {
     try {
       const message: WebSocketMessage = JSON.parse(event.data)
-      
+
       // Handle system messages
       if (message.type === 'pong') {
         return // Heartbeat response
       }
-      
+
       if (message.type === 'error') {
         console.error('[WebSocket] Server error:', message.payload)
         return
       }
-      
+
       // Notify specific handlers
       this.notifyHandlers(message.type, message.payload)
-      
+
       // Notify all message handlers
       this.notifyHandlers('message', message)
-      
+
     } catch (error) {
       console.error('[WebSocket] Failed to parse message:', error)
     }
@@ -125,10 +125,10 @@ class WebSocketManager {
   private handleClose(event: CloseEvent) {
     console.log('[WebSocket] Connection closed:', event.code, event.reason)
     this.connectionState = 'disconnected'
-    
+
     this.stopHeartbeat()
     this.notifyHandlers('connection', { status: 'disconnected' })
-    
+
     // Reconnect unless it was a clean close
     if (event.code !== 1000) {
       this.scheduleReconnect()
@@ -146,12 +146,12 @@ class WebSocketManager {
       console.error('[WebSocket] Max reconnection attempts reached')
       return
     }
-    
+
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts)
     this.reconnectAttempts++
-    
+
     console.log(`[WebSocket] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`)
-    
+
     setTimeout(() => {
       this.connect()
     }, delay)
@@ -189,7 +189,7 @@ class WebSocketManager {
   setUser(userId: string, userRole: string) {
     this.userId = userId
     this.userRole = userRole
-    
+
     // Send auth if already connected
     if (this.connectionState === 'connected') {
       this.send({
@@ -212,7 +212,7 @@ class WebSocketManager {
         userId: this.userId,
         sessionId: message.sessionId
       }
-      
+
       this.ws.send(JSON.stringify(fullMessage))
     } else {
       console.warn('[WebSocket] Cannot send message - not connected')
@@ -223,9 +223,9 @@ class WebSocketManager {
     if (!this.messageHandlers.has(type)) {
       this.messageHandlers.set(type, new Set())
     }
-    
+
     this.messageHandlers.get(type)!.add(handler)
-    
+
     // Return unsubscribe function
     return () => {
       const handlers = this.messageHandlers.get(type)
@@ -307,7 +307,7 @@ export const useRealTimeNotifications = () => {
   useEffect(() => {
     const unsubscribe = subscribe('notification', (notification: NotificationUpdate) => {
       setNotifications(prev => [notification, ...prev.slice(0, 49)]) // Keep last 50
-      
+
       if (!notification.read) {
         setUnreadCount(prev => prev + 1)
       }
@@ -317,7 +317,7 @@ export const useRealTimeNotifications = () => {
   }, [subscribe])
 
   const markAsRead = useCallback((notificationId: string) => {
-    setNotifications(prev => 
+    setNotifications(prev =>
       prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
     )
     setUnreadCount(prev => Math.max(0, prev - 1))
@@ -342,7 +342,7 @@ export const useRealTimeDataUpdates = (dataTypes: string[] = []) => {
   const { subscribe } = useWebSocket()
 
   useEffect(() => {
-    const unsubscribes = dataTypes.map(type => 
+    const unsubscribes = dataTypes.map(type =>
       subscribe(`data_update_${type}`, (update: DataUpdate) => {
         setUpdates(prev => ({
           ...prev,
@@ -411,7 +411,7 @@ export const useParentRealTimeUpdates = (studentId?: string) => {
   const notifications = useRealTimeNotifications()
   const dataUpdates = useRealTimeDataUpdates(['dashboard', 'wellbeing', 'community', 'analytics'])
   const { subscribe } = useWebSocket()
-  
+
   const [childUpdates, setChildUpdates] = useState<any[]>([])
 
   useEffect(() => {
@@ -440,7 +440,7 @@ export const cleanupWebSocket = () => {
   }
 }
 
-export default {
+const WebSocketHooks = {
   useWebSocket,
   useRealTimeNotifications,
   useRealTimeDataUpdates,
@@ -448,3 +448,5 @@ export default {
   useParentRealTimeUpdates,
   cleanupWebSocket
 }
+
+export default WebSocketHooks

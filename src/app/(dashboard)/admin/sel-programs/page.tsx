@@ -153,8 +153,11 @@ export default function SELProgramsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center px-6">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600" />
+          <p className="text-sm text-slate-600">Loading SEL programs…</p>
+        </div>
       </div>
     )
   }
@@ -163,31 +166,31 @@ export default function SELProgramsPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Header */}
       <div className="sticky top-0 z-40 backdrop-blur-xl bg-white/80 border-b border-white/20 shadow-lg">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
+        <div className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <motion.div 
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="flex items-center space-x-4"
+              className="flex items-center space-x-3 sm:space-x-4"
             >
               <div className="p-3 bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl shadow-lg">
                 <Heart className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
                   SEL Programs
                 </h1>
-                <p className="text-gray-600 mt-1">Social-Emotional Learning programs and activities</p>
+                <p className="text-xs sm:text-sm text-gray-600 mt-1">Social-Emotional Learning programs and activities</p>
               </div>
             </motion.div>
             
-            <div className="flex items-center space-x-3">
-              <Button className="bg-pink-600 hover:bg-pink-700">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <Button className="w-full sm:w-auto bg-pink-600 hover:bg-pink-700">
                 <Plus className="w-4 h-4 mr-2" />
                 Create Program
               </Button>
-              <Link href="/admin">
-                <Button variant="outline" className="bg-white/50 backdrop-blur-sm hover:bg-white/80">
+              <Link href="/admin" className="w-full sm:w-auto">
+                <Button variant="outline" className="w-full sm:w-auto bg-white/50 backdrop-blur-sm hover:bg-white/80">
                   Back to Dashboard
                 </Button>
               </Link>
@@ -196,9 +199,9 @@ export default function SELProgramsPage() {
         </div>
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-5 sm:space-y-6">
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
             <Card className="bg-gradient-to-br from-pink-500 to-rose-600 text-white border-0 shadow-xl">
               <CardContent className="p-6">
@@ -257,7 +260,7 @@ export default function SELProgramsPage() {
         </div>
 
         {/* Programs Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {programs.map((program, index) => (
             <motion.div
               key={program.id}

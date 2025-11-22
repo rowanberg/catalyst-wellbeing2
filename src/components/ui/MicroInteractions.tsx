@@ -164,8 +164,8 @@ export const MorphingLoader: React.FC<{
   return (
     <div className="flex items-center justify-center">
       <motion.div
-        style={{ 
-          width: size, 
+        style={{
+          width: size,
           height: size,
           borderTopColor: color,
           borderRightColor: `${color}80`
@@ -477,7 +477,7 @@ export const PulseNotification: React.FC<{
   )
 }
 
-export default {
+const MicroInteractions = {
   FloatingParticles,
   RippleEffect,
   MagneticButton,
@@ -490,3 +490,5 @@ export default {
   ConfettiExplosion,
   PulseNotification
 }
+
+export default MicroInteractions

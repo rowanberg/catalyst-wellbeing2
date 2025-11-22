@@ -20,7 +20,7 @@ export async function getAvailableGeminiKey(model: string = 'flash2'): Promise<G
   const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
   try {
-    const { data, error } = await supabase.functions.invoke('get-available-gemini-key', {
+    const { data, error } = await supabase.functions.invoke('intelligent-ai-router', {
       method: 'POST',
       body: { model }
     })
@@ -38,7 +38,13 @@ export async function getAvailableGeminiKey(model: string = 'flash2'): Promise<G
       throw new Error(data.error)
     }
 
-    return data as GeminiKeyResponse
+    // Map intelligent-ai-router response to GeminiKeyResponse interface
+    return {
+      apiKey: data.api_key,
+      keyId: data.key_id,
+      remainingDaily: data.usage?.rpd_limit - data.usage?.current_rpd || 0,
+      remainingMinute: data.usage?.rpm_limit - data.usage?.current_rpm || 0
+    }
   } catch (error: any) {
     console.error('Error getting Gemini API key:', error)
     throw new Error(error.message || 'Failed to get API key')
@@ -58,25 +64,25 @@ export async function callGeminiWithRetry(
   model: string = 'flash2'
 ): Promise<any> {
   let lastError: Error | null = null
-  
+
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       const { apiKey } = await getAvailableGeminiKey(model)
       return await apiCall(apiKey)
     } catch (error: any) {
       lastError = error
-      
+
       // If it's a rate limit error, wait before retrying
       if (error.message?.includes('rate-limited')) {
         const backoffMs = Math.min(1000 * Math.pow(2, attempt), 10000)
         await new Promise(resolve => setTimeout(resolve, backoffMs))
         continue
       }
-      
+
       // For other errors, throw immediately
       throw error
     }
   }
-  
+
   throw lastError || new Error('Failed after maximum retries')
 }

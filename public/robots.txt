@@ -1,0 +1,48 @@
+# Catalyst Wellbeing Platform - robots.txt
+# https://developers.google.com/search/docs/crawling-indexing/robots/intro
+
+# Allow all crawlers by default
+User-agent: *
+
+# Allow homepage and public pages
+Allow: /
+Allow: /login
+Allow: /register
+Allow: /privacy
+Allow: /terms
+Allow: /about
+Allow: /features/
+
+# Block authentication pages
+Disallow: /confirm-email
+Disallow: /email-confirmed
+Disallow: /reset-password
+Disallow: /verify-email
+
+# Block API routes (no indexing needed)
+Disallow: /api/
+
+# Block authenticated dashboard pages
+Disallow: /student/
+Disallow: /teacher/
+Disallow: /parent/
+Disallow: /admin/
+Disallow: /superpanel/
+
+# Block internal tools and test pages
+Disallow: /test-games/
+Disallow: /luminex/
+
+# Allow public assets
+Allow: /*.css
+Allow: /*.js
+Allow: /*.png
+Allow: /*.jpg
+Allow: /*.jpeg
+Allow: /*.webp
+Allow: /*.svg
+Allow: /icons/
+Allow: /images/
+
+# Sitemap location
+Sitemap: https://catalystwells.in/sitemap.xml

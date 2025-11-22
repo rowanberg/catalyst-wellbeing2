@@ -33,6 +33,34 @@ function checkTokenBudget(message: string, remainingTpm: number): boolean {
 }
 
 /**
+ * Retry a function with exponential backoff
+ */
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  retries = 2,
+  baseDelay = 100,
+  maxDelay = 1000
+): Promise<T> {
+  let lastError: any;
+
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (i === retries) break;
+
+      const delay = Math.min(baseDelay * Math.pow(2, i), maxDelay);
+      const jitter = Math.random() * 50;
+      await new Promise(resolve => setTimeout(resolve, delay + jitter));
+      console.log(`Retry attempt ${i + 1} failed, retrying in ${delay}ms...`);
+    }
+  }
+
+  throw lastError;
+}
+
+/**
  * Get user quota from database
  */
 async function checkUserQuota(supabase: any, userId: string) {
@@ -115,16 +143,20 @@ async function logAiRequest(
   success: boolean,
   errorMessage?: string
 ) {
-  await supabase.from('ai_request_logs').insert({
-    user_id: userId,
-    quota_type: quotaType,
-    model_used: modelUsed,
-    key_id: keyId,
-    tokens_used: tokensUsed,
-    response_time_ms: responseTimeMs,
-    success,
-    error_message: errorMessage
-  })
+  try {
+    await supabase.from('ai_request_logs').insert({
+      user_id: userId,
+      quota_type: quotaType,
+      model_used: modelUsed,
+      key_id: keyId,
+      tokens_used: tokensUsed,
+      response_time_ms: responseTimeMs,
+      success,
+      error_message: errorMessage
+    })
+  } catch (e) {
+    console.error('Failed to log AI request:', e)
+  }
 }
 
 /**
@@ -158,34 +190,44 @@ async function getUserQuotaStatus(supabase: any, userId: string) {
 }
 
 /**
- * Get available Gemini key from intelligent router
+ * Get available Gemini key from intelligent router with retry
  */
 async function getAvailableGeminiKey(supabaseClient: any) {
-  const { data, error } = await supabaseClient.functions.invoke('intelligent-ai-router', {
-    body: { model: 'gemini-2.0-flash' }
+  return retryWithBackoff(async () => {
+    const { data, error } = await supabaseClient.functions.invoke('intelligent-ai-router', {
+      body: { model: 'gemini-2.0-flash' }
+    })
+
+    if (error || data?.error) {
+      throw new Error(data?.error || error?.message || 'Failed to get API key')
+    }
+
+    return data
   })
-
-  if (error || data?.error) {
-    throw new Error(data?.error || error?.message || 'Failed to get API key')
-  }
-
-  return data
 }
 
 /**
- * Get available Gemma key
+ * Get available Gemma key with retry
  */
 async function getAvailableGemmaKey(supabase: any) {
-  const models = ['gemma-2-27b', 'gemma-2-12b', 'gemma-2-4b']
-  
+  const models = ['gemma-3-27b', 'gemma-3-12b', 'gemma-3-4b']
+
   for (const model of models) {
     try {
-      const { data, error } = await supabase.functions.invoke('intelligent-ai-router', {
-        method: 'POST',
-        body: { model }
-      })
+      // Try to get key for this model with retry
+      const data = await retryWithBackoff(async () => {
+        const { data, error } = await supabase.functions.invoke('intelligent-ai-router', {
+          method: 'POST',
+          body: { model }
+        })
 
-      if (!error && data && !data.error) {
+        if (error || data?.error) {
+          throw new Error(data?.error || error?.message || 'Failed to get key')
+        }
+        return data
+      }, 1, 100, 500) // Fewer retries for individual models to fail fast to next model
+
+      if (data) {
         return {
           keyId: data.key_id,
           encryptedKey: data.api_key,
@@ -196,20 +238,12 @@ async function getAvailableGemmaKey(supabase: any) {
         }
       }
     } catch (e) {
-      console.log(`Model ${model} not available, trying next...`)
+      console.log(`Model ${model} not available or router failed, trying next...`)
       continue
     }
   }
 
   return null
-}
-
-/**
- * Update Gemma key usage
- */
-async function updateGemmaKeyUsage(supabase: any, keyId: string, tokensUsed: number) {
-  // The intelligent-ai-router handles this automatically
-  console.log(`Tokens used for key ${keyId}: ${tokensUsed}`)
 }
 
 // ============================================================================
@@ -223,11 +257,12 @@ serve(async (req) => {
   }
 
   const startTime = Date.now()
+  const requestId = crypto.randomUUID()
 
   try {
     // Parse request body
     const { message, imageData, conversationHistory, schoolContext, flashCardMode, flashCardInstructions } = await req.json()
-    
+
     // Auto-detect quiz requests
     const isQuizRequest = /\b(quiz|test|questions|multiple choice|mcq|exam)\b/i.test(message)
 
@@ -248,7 +283,7 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    
+
     // Create Supabase client with service role for database operations
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -263,9 +298,9 @@ serve(async (req) => {
     )
 
     const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token)
-    
+
     if (authError || !user) {
-      console.error('[Auth] Failed to validate user:', authError?.message || 'No user found')
+      console.error(`[Auth] Failed to validate user: ${authError?.message || 'No user found'} (ReqID: ${requestId})`)
       return new Response(
         JSON.stringify({ error: 'Invalid authentication' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -273,15 +308,15 @@ serve(async (req) => {
     }
 
     const userId = user.id
-    console.log(`[Auth] User validated: ${userId.substring(0, 8)}...`)
+    console.log(`[Auth] User validated: ${userId.substring(0, 8)}... (ReqID: ${requestId})`)
 
     // Check quota
     const quotaCheck = await checkUserQuota(supabaseAdmin, userId)
     console.log(`[Quota Check] User ${userId.substring(0, 8)}... - Type: ${quotaCheck.quotaType}, Normal: ${quotaCheck.remainingNormal}/30, Extra: ${quotaCheck.remainingExtra}/500`)
-    
+
     if (!quotaCheck.canProceed) {
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           error: quotaCheck.message || 'Daily AI request limit reached',
           quotaStatus: await getUserQuotaStatus(supabaseAdmin, userId)
         }),
@@ -292,6 +327,7 @@ serve(async (req) => {
     let modelUsed: string
     let keyId: string | undefined
     let tokensUsed = 0
+    let useFallback = false
 
     // ========================================================================
     // Normal Quota - Gemini
@@ -299,260 +335,271 @@ serve(async (req) => {
     if (quotaCheck.quotaType === 'normal') {
       try {
         // Get Gemini API key from router (use admin client for cross-function calls)
-        const apiKeyData = await getAvailableGeminiKey(supabaseAdmin)
-        keyId = apiKeyData.key_id
-        console.log(`Using Gemini from Supabase pool: ${keyId}`)
-        
-        modelUsed = apiKeyData.model_used || 'gemini-2.0-flash'
-
-        // Build system prompt with quiz detection
-        let systemPrompt = `You are Luminex AI, an intelligent learning assistant from Catalyst Innovations, helping ${schoolContext?.studentName || 'a student'} at ${schoolContext?.schoolName || 'school'}.
-    
-Your role is to:
-- Help students understand concepts, not just give answers
-- Guide them through problem-solving step by step
-- Encourage critical thinking and learning
-- Be supportive and patient
-- Use clear, age-appropriate language
-
-## IMPORTANT FORMATTING RULES:
-
-1. **Use Emojis**: Start sections with relevant emojis (📚 for concepts, 💡 for tips, ✨ for examples, 🎯 for goals)
-2. **Use Headings**: Structure with ## for main sections, ### for subsections
-3. **Format Lists**: Use numbered lists for steps, bullet points for items
-4. **Code Blocks**: Use triple backticks with language name
-5. **Emphasis**: Use **bold** for important terms and *italics* for emphasis
-6. **GRAPHS & PLOTS**: When you want to show an interactive graph, use this EXACT format:
-
-Start with: <<<GRAPH:line>>>
-Then JSON data: {"title":"Function Name","data":[{"x":0,"y":0},{"x":1,"y":1}],"xKey":"x","yKeys":["y"]}
-End with: <<<END_GRAPH>>>
-
-Supported types: line, bar, area, scatter
-Always provide 15-30 data points for smooth curves.
-Round values to 2 decimal places.
-
-Example for sin(x) from -2π to 2π:
-<<<GRAPH:line>>>
-{"title":"y = sin(x)","data":[{"x":-6.28,"y":0},{"x":-5.5,"y":0.71},{"x":-4.71,"y":1},{"x":-3.93,"y":0.71},{"x":-3.14,"y":0},{"x":-2.36,"y":-0.71},{"x":-1.57,"y":-1},{"x":-0.79,"y":-0.71},{"x":0,"y":0},{"x":0.79,"y":0.71},{"x":1.57,"y":1},{"x":2.36,"y":0.71},{"x":3.14,"y":0},{"x":3.93,"y":-0.71},{"x":4.71,"y":-1},{"x":5.5,"y":-0.71},{"x":6.28,"y":0}],"xKey":"x","yKeys":["y"]}
-<<<END_GRAPH>>>
-
-You have ${quotaCheck.remainingNormal} standard requests remaining today.
-${flashCardMode && flashCardInstructions ? flashCardInstructions : ''}`
-
-        // If today's topics are provided from the client, include them as context
-        if (schoolContext?.todayTopics && Array.isArray(schoolContext.todayTopics) && schoolContext.todayTopics.length > 0) {
-          try {
-            const topicsText = schoolContext.todayTopics
-              .slice(0, 10)
-              .map((t: any, idx: number) => {
-                const subject = t.classes?.subject || t.classes?.class_name || 'Subject'
-                const topic = t.topic || t.title || ''
-                const teacherName = t.profiles
-                  ? `${t.profiles.first_name || ''} ${t.profiles.last_name || ''}`.trim() || 'Teacher'
-                  : 'Teacher'
-                return `${idx + 1}. [${subject}] ${topic} (Teacher: ${teacherName})`
-              })
-              .join('\n')
-
-            systemPrompt += `\n\n## Today's Class Topics (from school system):\n${topicsText}\n\nWhen helping the student, prefer to relate explanations and examples to these topics when relevant.`
-          } catch (e) {
-            console.error('Failed to format todayTopics for prompt:', e)
-          }
+        let apiKeyData;
+        try {
+          apiKeyData = await getAvailableGeminiKey(supabaseAdmin)
+        } catch (e) {
+          console.error(`[Router Error] Failed to get Gemini key: ${e.message} (ReqID: ${requestId})`)
+          // If router fails, try fallback to extra quota models if available
+          useFallback = true;
         }
 
-        // Add quiz instructions if quiz is detected
-        if (isQuizRequest) {
-          systemPrompt += `
+        if (!useFallback && apiKeyData) {
+          keyId = apiKeyData.key_id
+          console.log(`Using Gemini from Supabase pool: ${keyId} (ReqID: ${requestId})`)
 
-🚨🚨🚨 QUIZ MODE DETECTED - YOU MUST FOLLOW THIS FORMAT EXACTLY 🚨🚨🚨
+          modelUsed = apiKeyData.model_used || 'gemini-2.0-flash'
 
-The user is asking for quiz questions. You MUST respond ONLY with quiz questions in the exact format below. NO explanations, NO introductory text, NO other content.
+          // Build system prompt with quiz detection
+          let systemPrompt = `You are Luminex AI, an intelligent learning assistant from Catalyst Innovations, helping ${schoolContext?.studentName || 'a student'} at ${schoolContext?.schoolName || 'school'}.
+      
+  Your role is to:
+  - Help students understand concepts, not just give answers
+  - Guide them through problem-solving step by step
+  - Encourage critical thinking and learning
+  - Be supportive and patient
+  - Use clear, age-appropriate language
+  
+  ## IMPORTANT FORMATTING RULES:
+  
+  1. **Use Emojis**: Start sections with relevant emojis (📚 for concepts, 💡 for tips, ✨ for examples, 🎯 for goals)
+  2. **Use Headings**: Structure with ## for main sections, ### for subsections
+  3. **Format Lists**: Use numbered lists for steps, bullet points for items
+  4. **Code Blocks**: Use triple backticks with language name
+  5. **Emphasis**: Use **bold** for important terms and *italics* for emphasis
+  6. **GRAPHS & PLOTS**: When you want to show an interactive graph, use this EXACT format:
+  
+  Start with: <<<GRAPH:line>>>
+  Then JSON data: {"title":"Function Name","data":[{"x":0,"y":0},{"x":1,"y":1}],"xKey":"x","yKeys":["y"]}
+  End with: <<<END_GRAPH>>>
+  
+  Supported types: line, bar, area, scatter
+  Always provide 15-30 data points for smooth curves.
+  Round values to 2 decimal places.
+  
+  Example for sin(x) from -2π to 2π:
+  <<<GRAPH:line>>>
+  {"title":"y = sin(x)","data":[{"x":-6.28,"y":0},{"x":-5.5,"y":0.71},{"x":-4.71,"y":1},{"x":-3.93,"y":0.71},{"x":-3.14,"y":0},{"x":-2.36,"y":-0.71},{"x":-1.57,"y":-1},{"x":-0.79,"y":-0.71},{"x":0,"y":0},{"x":0.79,"y":0.71},{"x":1.57,"y":1},{"x":2.36,"y":0.71},{"x":3.14,"y":0},{"x":3.93,"y":-0.71},{"x":4.71,"y":-1},{"x":5.5,"y":-0.71},{"x":6.28,"y":0}],"xKey":"x","yKeys":["y"]}
+  <<<END_GRAPH>>>
+  
+  You have ${quotaCheck.remainingNormal} standard requests remaining today.
+  ${flashCardMode && flashCardInstructions ? flashCardInstructions : ''}`
 
-MANDATORY QUIZ FORMAT:
-Start each question with: <<<QUIZ>>>
-Then: Q: [question text]
-Then: A: [option A]
-Then: B: [option B]
-Then: C: [option C]
-Then: D: [option D]
-Then: CORRECT: [A, B, C, or D]
-Then: EXPLANATION: [brief explanation]
-End each question with: <<<END_QUIZ>>>
-
-EXAMPLE:
-<<<QUIZ>>>
-Q: What is the capital of France?
-A: London
-B: Berlin
-C: Paris
-D: Madrid
-CORRECT: C
-EXPLANATION: Paris is the capital and largest city of France.
-<<<END_QUIZ>>>
-
-<<<QUIZ>>>
-Q: Which process converts light energy to chemical energy?
-A: Respiration
-B: Photosynthesis
-C: Digestion
-D: Circulation
-CORRECT: B
-EXPLANATION: Photosynthesis converts light energy from the sun into chemical energy stored as glucose.
-<<<END_QUIZ>>>
-
-CRITICAL REQUIREMENTS:
-1. Generate 3-5 quiz questions
-2. Use ONLY the <<<QUIZ>>> format shown above
-3. NO introductory text like "Here's a quiz" or explanations
-4. Start your response immediately with <<<QUIZ>>>
-5. Each question must have exactly 4 options (A, B, C, D)
-6. Include correct answer and brief explanation for each question`
-        }
-
-        // Format conversation history
-        let contextMessages = ''
-        if (conversationHistory && conversationHistory.length > 0) {
-          contextMessages = '\n\nPrevious conversation:\n'
-          conversationHistory.forEach((msg: any) => {
-            contextMessages += `${msg.role === 'user' ? 'Student' : 'Helper'}: ${msg.content}\n`
-          })
-        }
-
-        // Prepare content parts
-        const contentParts: any[] = []
-        const fullPrompt = systemPrompt + contextMessages + '\n\nStudent: ' + message
-        contentParts.push({ text: fullPrompt })
-        
-        // Handle image
-        if (imageData && schoolContext?.imageAttached) {
-          const base64Match = imageData.match(/^data:(image\/\w+);base64,(.+)$/)
-          if (base64Match) {
-            contentParts.push({
-              inlineData: {
-                mimeType: base64Match[1],
-                data: base64Match[2]
-              }
-            })
-            contentParts.push({ 
-              text: '\n\nPlease analyze the image and help me understand it.' 
-            })
-          }
-        }
-
-        // Call Gemini API
-        const geminiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${modelUsed}:streamGenerateContent?alt=sse&key=${apiKeyData.api_key}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: contentParts }] })
-          }
-        )
-
-        if (!geminiResponse.ok) {
-          // Handle rate limiting by putting key in cooldown
-          if (geminiResponse.status === 429 && keyId) {
-            const cooldownMinutes = 5
-            const cooldownExpiry = new Date(Date.now() + cooldownMinutes * 60000).toISOString()
-            await supabaseAdmin.from('gemini_api_keys')
-              .update({
-                flash2_is_in_cooldown: true,
-                flash2_cooldown_expires_at: cooldownExpiry
-              })
-              .eq('id', keyId)
-            console.log(`[Cooldown] Key ${keyId.substring(0, 8)}... marked for ${cooldownMinutes}min cooldown`)
-          }
-          throw new Error(`Gemini API error: ${geminiResponse.status}`)
-        }
-
-        // Create streaming response
-        const stream = new ReadableStream({
-          async start(controller) {
-            const reader = geminiResponse.body?.getReader()
-            const decoder = new TextDecoder()
-            const encoder = new TextEncoder()
-
+          // If today's topics are provided from the client, include them as context
+          if (schoolContext?.todayTopics && Array.isArray(schoolContext.todayTopics) && schoolContext.todayTopics.length > 0) {
             try {
-              while (true) {
-                const { done, value } = await reader!.read()
-                if (done) break
+              const topicsText = schoolContext.todayTopics
+                .slice(0, 10)
+                .map((t: any, idx: number) => {
+                  const subject = t.classes?.subject || t.classes?.class_name || 'Subject'
+                  const topic = t.topic || t.title || ''
+                  const teacherName = t.profiles
+                    ? `${t.profiles.first_name || ''} ${t.profiles.last_name || ''}`.trim() || 'Teacher'
+                    : 'Teacher'
+                  return `${idx + 1}. [${subject}] ${topic} (Teacher: ${teacherName})`
+                })
+                .join('\n')
 
-                const chunk = decoder.decode(value)
-                const lines = chunk.split('\n')
-
-                for (const line of lines) {
-                  if (line.startsWith('data: ')) {
-                    const data = line.slice(6)
-                    if (data === '[DONE]') continue
-
-                    try {
-                      const parsed = JSON.parse(data)
-                      const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text
-                      
-                      if (text) {
-                        tokensUsed += estimateTokens(text)
-                        const responseData = JSON.stringify({
-                          text,
-                          quotaType: 'normal',
-                          remainingRequests: quotaCheck.remainingNormal - 1
-                        })
-                        controller.enqueue(encoder.encode(`data: ${responseData}\n\n`))
-                      }
-                    } catch (e) {
-                      // Skip malformed JSON
-                    }
-                  }
-                }
-              }
-
-              // Increment quota
-              await incrementUserQuota(supabaseAdmin, userId, 'normal')
-              console.log(`[Quota Increment] User ${userId.substring(0, 8)}... - Normal quota incremented`)
-              
-              // Log request
-              const responseTimeMs = Date.now() - startTime
-              await logAiRequest(supabaseAdmin, userId, 'normal', modelUsed, undefined, tokensUsed, responseTimeMs, true)
-              
-              controller.enqueue(encoder.encode('data: [DONE]\n\n'))
-              controller.close()
-            } catch (error) {
-              console.error('Streaming error:', error)
-              controller.error(error)
+              systemPrompt += `\n\n## Today's Class Topics (from school system):\n${topicsText}\n\nWhen helping the student, prefer to relate explanations and examples to these topics when relevant.`
+            } catch (e) {
+              console.error('Failed to format todayTopics for prompt:', e)
             }
           }
-        })
 
-        return new Response(stream, {
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache',
-            'Connection': 'keep-alive',
+          // Add quiz instructions if quiz is detected
+          if (isQuizRequest) {
+            systemPrompt += `
+  
+  🚨🚨🚨 QUIZ MODE DETECTED - YOU MUST FOLLOW THIS FORMAT EXACTLY 🚨🚨🚨
+  
+  The user is asking for quiz questions. You MUST respond ONLY with quiz questions in the exact format below. NO explanations, NO introductory text, NO other content.
+  
+  MANDATORY QUIZ FORMAT:
+  Start each question with: <<<QUIZ>>>
+  Then: Q: [question text]
+  Then: A: [option A]
+  Then: B: [option B]
+  Then: C: [option C]
+  Then: D: [option D]
+  Then: CORRECT: [A, B, C, or D]
+  Then: EXPLANATION: [brief explanation]
+  End each question with: <<<END_QUIZ>>>
+  
+  EXAMPLE:
+  <<<QUIZ>>>
+  Q: What is the capital of France?
+  A: London
+  B: Berlin
+  C: Paris
+  D: Madrid
+  CORRECT: C
+  EXPLANATION: Paris is the capital and largest city of France.
+  <<<END_QUIZ>>>
+  
+  <<<QUIZ>>>
+  Q: Which process converts light energy to chemical energy?
+  A: Respiration
+  B: Photosynthesis
+  C: Digestion
+  D: Circulation
+  CORRECT: B
+  EXPLANATION: Photosynthesis converts light energy from the sun into chemical energy stored as glucose.
+  <<<END_QUIZ>>>
+  
+  CRITICAL REQUIREMENTS:
+  1. Generate 3-5 quiz questions
+  2. Use ONLY the <<<QUIZ>>> format shown above
+  3. NO introductory text like "Here's a quiz" or explanations
+  4. Start your response immediately with <<<QUIZ>>>
+  5. Each question must have exactly 4 options (A, B, C, D)
+  6. Include correct answer and brief explanation for each question`
           }
-        })
 
+          // Format conversation history
+          let contextMessages = ''
+          if (conversationHistory && conversationHistory.length > 0) {
+            contextMessages = '\n\nPrevious conversation:\n'
+            conversationHistory.forEach((msg: any) => {
+              contextMessages += `${msg.role === 'user' ? 'Student' : 'Helper'}: ${msg.content}\n`
+            })
+          }
+
+          // Prepare content parts
+          const contentParts: any[] = []
+          const fullPrompt = systemPrompt + contextMessages + '\n\nStudent: ' + message
+          contentParts.push({ text: fullPrompt })
+
+          // Handle image
+          if (imageData && schoolContext?.imageAttached) {
+            const base64Match = imageData.match(/^data:(image\/\w+);base64,(.+)$/)
+            if (base64Match) {
+              contentParts.push({
+                inlineData: {
+                  mimeType: base64Match[1],
+                  data: base64Match[2]
+                }
+              })
+              contentParts.push({
+                text: '\n\nPlease analyze the image and help me understand it.'
+              })
+            }
+          }
+
+          // Call Gemini API
+          const geminiResponse = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${modelUsed}:streamGenerateContent?alt=sse&key=${apiKeyData.api_key}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ contents: [{ parts: contentParts }] })
+            }
+          )
+
+          if (!geminiResponse.ok) {
+            // Handle rate limiting by putting key in cooldown
+            if (geminiResponse.status === 429 && keyId) {
+              const cooldownMinutes = 5
+              const cooldownExpiry = new Date(Date.now() + cooldownMinutes * 60000).toISOString()
+              await supabaseAdmin.from('gemini_api_keys')
+                .update({
+                  flash2_is_in_cooldown: true,
+                  flash2_cooldown_expires_at: cooldownExpiry
+                })
+                .eq('id', keyId)
+              console.log(`[Cooldown] Key ${keyId.substring(0, 8)}... marked for ${cooldownMinutes}min cooldown`)
+            }
+
+            console.error(`[Gemini API Error] Status: ${geminiResponse.status} (ReqID: ${requestId})`)
+            // Trigger fallback
+            useFallback = true;
+          } else {
+            // Create streaming response
+            const stream = new ReadableStream({
+              async start(controller) {
+                const reader = geminiResponse.body?.getReader()
+                const decoder = new TextDecoder()
+                const encoder = new TextEncoder()
+
+                try {
+                  while (true) {
+                    const { done, value } = await reader!.read()
+                    if (done) break
+
+                    const chunk = decoder.decode(value)
+                    const lines = chunk.split('\n')
+
+                    for (const line of lines) {
+                      if (line.startsWith('data: ')) {
+                        const data = line.slice(6)
+                        if (data === '[DONE]') continue
+
+                        try {
+                          const parsed = JSON.parse(data)
+                          const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text
+
+                          if (text) {
+                            tokensUsed += estimateTokens(text)
+                            const responseData = JSON.stringify({
+                              text,
+                              quotaType: 'normal',
+                              remainingRequests: quotaCheck.remainingNormal - 1
+                            })
+                            controller.enqueue(encoder.encode(`data: ${responseData}\n\n`))
+                          }
+                        } catch (e) {
+                          // Skip malformed JSON
+                        }
+                      }
+                    }
+                  }
+
+                  // Increment quota
+                  await incrementUserQuota(supabaseAdmin, userId, 'normal')
+                  console.log(`[Quota Increment] User ${userId.substring(0, 8)}... - Normal quota incremented`)
+
+                  // Log request
+                  const responseTimeMs = Date.now() - startTime
+                  await logAiRequest(supabaseAdmin, userId, 'normal', modelUsed, keyId, tokensUsed, responseTimeMs, true)
+
+                  controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+                  controller.close()
+                } catch (error) {
+                  console.error('Streaming error:', error)
+                  controller.error(error)
+                }
+              }
+            })
+
+            return new Response(stream, {
+              headers: {
+                ...corsHeaders,
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+              }
+            })
+          }
+        }
       } catch (error: any) {
-        console.error('Gemini error:', error)
-        return new Response(
-          JSON.stringify({ 
-            error: 'Failed to process request with Luminex AI',
-            quotaStatus: await getUserQuotaStatus(supabaseAdmin, userId)
-          }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
+        console.error(`[Gemini Error] ${error.message} (ReqID: ${requestId})`)
+        useFallback = true;
       }
     }
+
     // ========================================================================
-    // Extra Quota - Gemma
+    // Fallback / Extra Quota - Gemma
     // ========================================================================
-    else if (quotaCheck.quotaType === 'extra') {
+    if (quotaCheck.quotaType === 'extra' || useFallback) {
+      if (useFallback) {
+        console.log(`[Fallback] Switching to Gemma models due to Gemini failure (ReqID: ${requestId})`)
+      }
+
       const gemmaKey = await getAvailableGemmaKey(supabaseAdmin)
-      
+
       if (!gemmaKey) {
         return new Response(
-          JSON.stringify({ 
-            error: 'Extra AI requests temporarily unavailable, try again later',
+          JSON.stringify({
+            error: 'AI service temporarily busy, please try again in a moment',
             quotaStatus: await getUserQuotaStatus(supabaseAdmin, userId)
           }),
           { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -565,7 +612,7 @@ CRITICAL REQUIREMENTS:
       // Check token budget
       if (!checkTokenBudget(message, gemmaKey.remainingTpm)) {
         return new Response(
-          JSON.stringify({ 
+          JSON.stringify({
             error: 'Message too long for current rate limits. Please try a shorter message.',
             quotaStatus: await getUserQuotaStatus(supabaseAdmin, userId)
           }),
@@ -576,7 +623,7 @@ CRITICAL REQUIREMENTS:
       try {
         // Build system prompt for Gemma
         let systemPrompt = `You are Luminex AI, an intelligent learning assistant helping students with their homework. Be helpful, patient, and encouraging.`
-        
+
         if (conversationHistory && conversationHistory.length > 0) {
           systemPrompt += '\n\nPrevious conversation:\n'
           conversationHistory.forEach((msg: any) => {
@@ -629,13 +676,13 @@ CRITICAL REQUIREMENTS:
                     try {
                       const parsed = JSON.parse(data)
                       const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text
-                      
+
                       if (text) {
                         tokensUsed += estimateTokens(text)
                         const responseData = JSON.stringify({
                           text,
-                          quotaType: 'extra',
-                          remainingRequests: quotaCheck.remainingExtra - 1
+                          quotaType: useFallback ? 'normal' : 'extra', // Keep showing normal if it was a fallback
+                          remainingRequests: useFallback ? quotaCheck.remainingNormal - 1 : quotaCheck.remainingExtra - 1
                         })
                         controller.enqueue(encoder.encode(`data: ${responseData}\n\n`))
                       }
@@ -646,15 +693,16 @@ CRITICAL REQUIREMENTS:
                 }
               }
 
-              // Increment quota
-              await incrementUserQuota(supabaseAdmin, userId, 'extra')
-              await updateGemmaKeyUsage(supabaseAdmin, keyId!, tokensUsed)
-              console.log(`[Quota Increment] User ${userId.substring(0, 8)}... - Extra quota incremented`)
-              
+              // Increment quota (if fallback, still increment normal quota as user "used" their slot)
+              const quotaToIncrement = useFallback ? 'normal' : 'extra';
+              await incrementUserQuota(supabaseAdmin, userId, quotaToIncrement)
+
+              console.log(`[Quota Increment] User ${userId.substring(0, 8)}... - ${quotaToIncrement} quota incremented (Fallback: ${useFallback})`)
+
               // Log request
               const responseTimeMs = Date.now() - startTime
-              await logAiRequest(supabaseAdmin, userId, 'extra', modelUsed, keyId, tokensUsed, responseTimeMs, true)
-              
+              await logAiRequest(supabaseAdmin, userId, quotaToIncrement, modelUsed, keyId, tokensUsed, responseTimeMs, true)
+
               controller.enqueue(encoder.encode('data: [DONE]\n\n'))
               controller.close()
             } catch (error) {
@@ -674,13 +722,13 @@ CRITICAL REQUIREMENTS:
         })
 
       } catch (error: any) {
-        console.error('[Gemma Error] Model:', modelUsed, 'KeyId:', keyId)
+        console.error(`[Gemma Error] Model: ${modelUsed}, KeyId: ${keyId} (ReqID: ${requestId})`)
         console.error('[Gemma Error]:', error)
-        
+
         await logAiRequest(supabaseAdmin, userId, 'extra', modelUsed, keyId, 0, Date.now() - startTime, false, error.message)
-        
+
         return new Response(
-          JSON.stringify({ 
+          JSON.stringify({
             error: 'Failed to process request with Luminex Standards',
             quotaStatus: await getUserQuotaStatus(supabaseAdmin, userId)
           }),
@@ -689,7 +737,7 @@ CRITICAL REQUIREMENTS:
       }
     } else {
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           error: 'No quota available',
           quotaStatus: await getUserQuotaStatus(supabaseAdmin, userId)
         }),
@@ -698,7 +746,7 @@ CRITICAL REQUIREMENTS:
     }
 
   } catch (error: any) {
-    console.error('Error in AI homework chat:', error)
+    console.error(`[Fatal Error] ${error.message} (ReqID: ${requestId})`)
     return new Response(
       JSON.stringify({ error: 'Failed to process request with Luminex AI' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

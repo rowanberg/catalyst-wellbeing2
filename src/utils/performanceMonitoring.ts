@@ -65,7 +65,7 @@ class PerformanceMonitor {
       const lcpObserver = new PerformanceObserver((list) => {
         const entries = list.getEntries()
         const lastEntry = entries[entries.length - 1]
-        
+
         this.recordMetric({
           name: 'LCP',
           value: lastEntry.startTime,
@@ -88,7 +88,7 @@ class PerformanceMonitor {
       const fidObserver = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
           const fidValue = (entry as any).processingStart - entry.startTime
-          
+
           this.recordMetric({
             name: 'FID',
             value: fidValue,
@@ -195,7 +195,7 @@ class PerformanceMonitor {
       const resourceObserver = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
           const resource = entry as PerformanceResourceTiming
-          
+
           this.resourceTimings.push({
             name: resource.name,
             duration: resource.duration,
@@ -218,7 +218,7 @@ class PerformanceMonitor {
   private setupNavigationTiming() {
     window.addEventListener('load', () => {
       const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming
-      
+
       if (navigation) {
         // DNS Lookup Time
         this.recordMetric({
@@ -317,7 +317,7 @@ class PerformanceMonitor {
   private setupNetworkMonitoring() {
     if ('connection' in navigator) {
       const connection = (navigator as any).connection
-      
+
       this.recordMetric({
         name: 'Network',
         value: connection.downlink || 0,
@@ -412,7 +412,7 @@ class PerformanceMonitor {
 
   recordMetric(metric: PerformanceMetric) {
     this.metrics.push(metric)
-    
+
     // Log poor performance
     if (metric.rating === 'poor') {
       console.warn(`[Performance] Poor ${metric.name}: ${metric.value}ms`)
@@ -426,7 +426,7 @@ class PerformanceMonitor {
 
   recordCustomTiming(name: string, startTime: number, endTime?: number) {
     const duration = (endTime || performance.now()) - startTime
-    
+
     this.recordMetric({
       name: `Custom_${name}`,
       value: duration,
@@ -439,7 +439,7 @@ class PerformanceMonitor {
 
   getMetricsSummary() {
     const summary: Record<string, any> = {}
-    
+
     for (const metric of this.metrics) {
       if (!summary[metric.name]) {
         summary[metric.name] = {
@@ -452,23 +452,23 @@ class PerformanceMonitor {
           poor: 0
         }
       }
-      
+
       const s = summary[metric.name]
       s.count++
       s.total += metric.value
       s.min = Math.min(s.min, metric.value)
       s.max = Math.max(s.max, metric.value)
-      
+
       if (metric.rating === 'good') s.good++
       else if (metric.rating === 'needs-improvement') s.needsImprovement++
       else s.poor++
     }
-    
+
     // Calculate averages
     for (const key in summary) {
       summary[key].average = summary[key].total / summary[key].count
     }
-    
+
     return summary
   }
 
@@ -536,7 +536,7 @@ export const usePerformanceMonitoring = () => {
     recordCustomTiming: (name: string, startTime: number, endTime?: number) => {
       performanceMonitor?.recordCustomTiming(name, startTime, endTime)
     },
-    
+
     recordError: (error: Error, context?: any) => {
       performanceMonitor?.recordError({
         message: error.message,
@@ -548,11 +548,11 @@ export const usePerformanceMonitoring = () => {
         errorBoundary: context?.errorBoundary
       })
     },
-    
+
     setUser: (userId: string) => {
       performanceMonitor?.setUser(userId)
     },
-    
+
     getMetricsSummary: () => {
       return performanceMonitor?.getMetricsSummary() || {}
     }
@@ -567,7 +567,7 @@ export const withPerformanceTiming = <T extends (...args: any[]) => any>(
   return ((...args: any[]) => {
     const startTime = performance.now()
     const result = fn(...args)
-    
+
     if (result instanceof Promise) {
       return result.finally(() => {
         performanceMonitor?.recordCustomTiming(name, startTime)
@@ -587,27 +587,29 @@ export const withPerformanceTracking = <P extends object>(
   const WrappedComponent = (props: P) => {
     const React = require('react')
     const startTime = React.useRef(performance.now())
-    
+
     React.useEffect(() => {
       // Track component mount time
       performanceMonitor?.recordCustomTiming(`${componentName}_mount`, startTime.current)
-      
+
       return () => {
         // Track component unmount
         performanceMonitor?.recordCustomTiming(`${componentName}_unmount`, performance.now())
       }
     }, [])
-    
+
     return React.createElement(Component, props)
   }
-  
+
   WrappedComponent.displayName = `withPerformanceTracking(${componentName})`
   return WrappedComponent
 }
 
-export default {
+const PerformanceMonitoring = {
   initializePerformanceMonitoring,
   usePerformanceMonitoring,
   withPerformanceTiming,
   withPerformanceTracking
 }
+
+export default PerformanceMonitoring

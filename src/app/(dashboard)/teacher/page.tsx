@@ -197,6 +197,21 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
     
     return () => clearTimeout(preloadTimer)
   }, [user?.id, profile?.school_id])
+
+  // Preload students page component in the background so navigation from sidebar feels instant
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      import('./students/page')
+        .then(() => {
+          console.log('✅ Teacher students page component preloaded')
+        })
+        .catch(err => {
+          console.warn('⚠️ Failed to preload teacher students page:', err)
+        })
+    }, 1500)
+
+    return () => clearTimeout(timer)
+  }, [])
   
   // Conditional Motion wrapper - memoized for performance
   const ConditionalMotion = useMemo(() => {
@@ -743,7 +758,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
           </div>
         </div>
         
-        {/* Navigation Menu */}
+        {/* Navigation Menu - static, lightweight for performance */}
         <nav className="flex-1 p-3 sm:p-4 space-y-1.5 sm:space-y-2 overflow-y-auto">
           {[
             { id: 'overview', label: 'Overview', icon: School, color: 'text-blue-600', bgColor: 'bg-blue-50' },
@@ -766,8 +781,9 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
             const Icon = item.icon
             const isActive = activeTab === item.id
             return (
-              <motion.button
+              <button
                 key={item.id}
+                type="button"
                 onClick={() => {
                   if (item.isLink && item.href) {
                     // Special handling for Community, Students & Attendance: full screen on mobile, inline on desktop
@@ -787,31 +803,24 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                     setSidebarOpen(false)
                   }
                 }}
-                whileHover={{ scale: 1.01, x: 3 }}
-                whileTap={{ scale: 0.98 }}
-                className={`w-full flex items-center space-x-3 px-3 sm:px-4 py-3 rounded-xl transition-all duration-200 text-left group relative overflow-hidden ${
-                  isActive
-                    ? `bg-white dark:bg-slate-700 ${item.color} shadow-sm border border-gray-200 dark:border-slate-600`
-                    : 'text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 hover:text-gray-900 dark:hover:text-white'
-                }`}
+                className={`relative w-full flex items-center gap-3 px-3 sm:px-4 py-2.5 rounded-lg border text-left text-sm font-medium transition-colors
+                  ${isActive
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                    : 'bg-transparent text-gray-700 dark:text-slate-300 border-transparent hover:bg-gray-50 dark:hover:bg-slate-700/60 hover:text-gray-900 dark:hover:text-white'}
+                `}
+                style={{ fontFamily: 'var(--font-dm-sans)' }}
               >
-                <Icon className={`h-5 w-5 transition-colors flex-shrink-0 ${
-                  isActive ? item.color : 'text-gray-500 dark:text-slate-400 group-hover:text-gray-700 dark:group-hover:text-slate-200'
-                }`} />
-                <span className={`font-semibold transition-colors text-sm ${
-                  isActive ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-slate-300 group-hover:text-gray-900 dark:group-hover:text-white'
-                }`} style={{ fontFamily: 'var(--font-dm-sans)' }}>
-                  {item.label}
-                </span>
+                {/* Active indicator bar */}
                 {isActive && (
-                  <motion.div
-                    layoutId="activeSidebarItem"
-                    className="absolute right-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-600 to-indigo-600 rounded-l-full"
-                    initial={false}
-                    transition={{ type: "spring", bounce: 0.15, duration: 0.4 }}
-                  />
+                  <span className="absolute inset-y-1 left-0 w-1 rounded-full bg-blue-600" aria-hidden="true" />
                 )}
-              </motion.button>
+                <span className={`inline-flex items-center justify-center rounded-md p-1.5 text-sm
+                  ${isActive ? `${item.bgColor} ${item.color}` : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-300'}
+                `}>
+                  <Icon className="h-4 w-4" />
+                </span>
+                <span className="truncate">{item.label}</span>
+              </button>
             )
           })}
         </nav>

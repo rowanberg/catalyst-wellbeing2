@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { 
+import {
   TrendingUp, TrendingDown, BookOpen, Clock, Calendar,
   CheckCircle2, XCircle, Target, RefreshCw, ChevronDown,
   Award, BarChart3, User, ChevronLeft, ChevronRight
@@ -58,11 +58,10 @@ const StatCard = ({ icon: Icon, label, value, change, trend, colorClass }: {
       </div>
       <div className={`text-xl lg:text-2xl font-bold ${valueColors} mb-0.5 lg:mb-1`}>{value}</div>
       {change && trend && (
-        <div className={`text-[10px] lg:text-xs font-medium ${
-          trend === 'up' ? 'text-emerald-600 dark:text-emerald-400' : 
-          trend === 'down' ? 'text-red-600 dark:text-red-400' : 
-          'text-slate-600 dark:text-slate-400'
-        }`}>
+        <div className={`text-[10px] lg:text-xs font-medium ${trend === 'up' ? 'text-emerald-600 dark:text-emerald-400' :
+          trend === 'down' ? 'text-red-600 dark:text-red-400' :
+            'text-slate-600 dark:text-slate-400'
+          }`}>
           {trend === 'up' ? '↑' : trend === 'down' ? '↓' : '—'} {change}
         </div>
       )}
@@ -99,19 +98,19 @@ const GPATrendChart = ({ data, timeRange, onTimeRangeChange }: {
           <option value="1year">1Y</option>
         </select>
       </div>
-      
+
       <div className="relative h-48 lg:h-64">
         <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
           <line x1="0" y1="25" x2="100" y2="25" stroke="currentColor" className="text-slate-200 dark:text-slate-800" strokeWidth="0.5" />
           <line x1="0" y1="50" x2="100" y2="50" stroke="currentColor" className="text-slate-200 dark:text-slate-800" strokeWidth="0.5" />
           <line x1="0" y1="75" x2="100" y2="75" stroke="currentColor" className="text-slate-200 dark:text-slate-800" strokeWidth="0.5" />
-          
+
           <polygon
             points={`0,100 ${points} 100,100`}
             fill="url(#gpaGradient)"
             opacity="0.3"
           />
-          
+
           <polyline
             points={points}
             fill="none"
@@ -120,7 +119,7 @@ const GPATrendChart = ({ data, timeRange, onTimeRangeChange }: {
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          
+
           <defs>
             <linearGradient id="gpaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.4} />
@@ -128,7 +127,7 @@ const GPATrendChart = ({ data, timeRange, onTimeRangeChange }: {
             </linearGradient>
           </defs>
         </svg>
-        
+
         <div className="absolute -left-6 lg:-left-8 top-0 flex flex-col justify-between h-full text-[10px] lg:text-xs text-slate-500 dark:text-slate-400">
           <span>4.0</span>
           <span>3.0</span>
@@ -136,7 +135,7 @@ const GPATrendChart = ({ data, timeRange, onTimeRangeChange }: {
           <span>1.0</span>
         </div>
       </div>
-      
+
       <div className="flex justify-between text-[10px] lg:text-xs text-slate-500 dark:text-slate-400 mt-2">
         {data.map((item, index) => (
           index % Math.ceil(data.length / 6) === 0 && (
@@ -167,9 +166,8 @@ const SubjectPerformance = ({ subjects }: { subjects: any[] }) => (
           </div>
           <div className="flex items-center justify-between mt-0.5 lg:mt-1">
             <span className="text-[10px] lg:text-xs text-slate-500 dark:text-slate-400 truncate pr-2">{subject.assignments} assignments</span>
-            <span className={`text-[10px] lg:text-xs font-medium flex-shrink-0 ${
-              subject.trend === 'up' ? 'text-emerald-600 dark:text-emerald-400' : subject.trend === 'down' ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400'
-            }`}>
+            <span className={`text-[10px] lg:text-xs font-medium flex-shrink-0 ${subject.trend === 'up' ? 'text-emerald-600 dark:text-emerald-400' : subject.trend === 'down' ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400'
+              }`}>
               {subject.trend === 'up' ? '↑' : subject.trend === 'down' ? '↓' : '—'} {subject.change}
             </span>
           </div>
@@ -186,25 +184,25 @@ const MonthlyAttendance = ({ attendanceData, currentMonth }: {
 }) => {
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate()
   const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay()
-  
+
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1)
   const emptyDays = Array.from({ length: firstDayOfMonth }, (_, i) => i)
-  
+
   const getAttendanceStatus = (day: number) => {
     const found = attendanceData.find(a => a.day === day)
     return found?.status || 'none'
   }
-  
+
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-  
+
   const stats = {
     present: attendanceData.filter(a => a.status === 'present').length,
     absent: attendanceData.filter(a => a.status === 'absent').length,
     late: attendanceData.filter(a => a.status === 'late').length,
     excused: attendanceData.filter(a => a.status === 'excused').length
   }
-  
+
   return (
     <>
       {/* Calendar Grid */}
@@ -217,7 +215,7 @@ const MonthlyAttendance = ({ attendanceData, currentMonth }: {
             </div>
           ))}
         </div>
-        
+
         {/* Calendar Days */}
         <div className="grid grid-cols-7 gap-1 lg:gap-1.5">
           {emptyDays.map(i => (
@@ -228,17 +226,16 @@ const MonthlyAttendance = ({ attendanceData, currentMonth }: {
             return (
               <div
                 key={day}
-                className={`aspect-square flex items-center justify-center text-[10px] lg:text-xs font-medium rounded-md lg:rounded-lg transition-all ${
-                  status === 'present' 
-                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-2 border-green-500' 
-                    : status === 'absent'
+                className={`aspect-square flex items-center justify-center text-[10px] lg:text-xs font-medium rounded-md lg:rounded-lg transition-all ${status === 'present'
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-2 border-green-500'
+                  : status === 'absent'
                     ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-2 border-red-500'
                     : status === 'late'
-                    ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-2 border-amber-500'
-                    : status === 'excused'
-                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-2 border-blue-500'
-                    : 'bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-600'
-                }`}
+                      ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-2 border-amber-500'
+                      : status === 'excused'
+                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-2 border-blue-500'
+                        : 'bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-600'
+                  }`}
               >
                 {day}
               </div>
@@ -246,7 +243,7 @@ const MonthlyAttendance = ({ attendanceData, currentMonth }: {
           })}
         </div>
       </div>
-      
+
       {/* Stats Legend */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5 lg:gap-2">
         <div className="flex items-center gap-1.5 p-1.5 lg:p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/30 rounded-lg">
@@ -292,7 +289,7 @@ const AssignmentCompletionChart = ({ completed, pending, overdue, total }: {
   const completedPercent = (completed / total) * 100
   const pendingPercent = (pending / total) * 100
   const overduePercent = (overdue / total) * 100
-  
+
   const completedAngle = (completedPercent / 100) * 360
   const pendingAngle = (pendingPercent / 100) * 360
   const overdueAngle = (overduePercent / 100) * 360
@@ -300,12 +297,12 @@ const AssignmentCompletionChart = ({ completed, pending, overdue, total }: {
   return (
     <div className="bg-white dark:bg-slate-900 rounded-lg p-3 lg:p-4 border border-slate-200 dark:border-slate-800">
       <h3 className="text-sm lg:text-base font-semibold text-slate-900 dark:text-white mb-3 lg:mb-4">Assignment Status</h3>
-      
+
       <div className="flex flex-col lg:flex-row items-center gap-4 lg:gap-6">
         <div className="relative w-32 h-32 lg:w-40 lg:h-40 flex-shrink-0">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
             <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" className="text-slate-100 dark:text-slate-800" strokeWidth="12" />
-            
+
             <circle
               cx="50" cy="50" r="40" fill="none" stroke="#10b981" strokeWidth="12"
               strokeDasharray={`${completedPercent * 2.51} ${251 - completedPercent * 2.51}`}
@@ -324,13 +321,13 @@ const AssignmentCompletionChart = ({ completed, pending, overdue, total }: {
               strokeLinecap="round"
             />
           </svg>
-          
+
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <p className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white">{total}</p>
             <p className="text-xs lg:text-sm text-slate-500 dark:text-slate-400 font-medium">Total</p>
           </div>
         </div>
-        
+
         <div className="flex-1 w-full space-y-2 lg:space-y-2.5">
           <div className="flex items-center justify-between p-2 lg:p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-900/30 rounded-lg">
             <div className="flex items-center gap-2 lg:gap-2.5 min-w-0">
@@ -339,7 +336,7 @@ const AssignmentCompletionChart = ({ completed, pending, overdue, total }: {
             </div>
             <span className="text-base lg:text-lg font-semibold text-slate-900 dark:text-white flex-shrink-0 ml-2">{completed}</span>
           </div>
-          
+
           <div className="flex items-center justify-between p-2 lg:p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/30 rounded-lg">
             <div className="flex items-center gap-2 lg:gap-2.5 min-w-0">
               <div className="w-2.5 h-2.5 lg:w-3 lg:h-3 rounded-full bg-amber-500 flex-shrink-0" />
@@ -347,7 +344,7 @@ const AssignmentCompletionChart = ({ completed, pending, overdue, total }: {
             </div>
             <span className="text-base lg:text-lg font-semibold text-slate-900 dark:text-white flex-shrink-0 ml-2">{pending}</span>
           </div>
-          
+
           <div className="flex items-center justify-between p-2 lg:p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 rounded-lg">
             <div className="flex items-center gap-2 lg:gap-2.5 min-w-0">
               <div className="w-2.5 h-2.5 lg:w-3 lg:h-3 rounded-full bg-red-500 flex-shrink-0" />
@@ -380,7 +377,7 @@ export default function AnalyticsTab({ studentId, studentName }: AnalyticsTabPro
     if (!studentId) return null
 
     const cacheKey = getCacheKey(year, month)
-    
+
     // Return cached data if available
     if (!force && attendanceCache.has(cacheKey)) {
       const cached = attendanceCache.get(cacheKey)
@@ -392,14 +389,14 @@ export default function AnalyticsTab({ studentId, studentName }: AnalyticsTabPro
       const response = await fetch(
         `/api/v1/students/${studentId}/attendance?year=${year}&month=${month}`
       )
-      
+
       if (response.ok) {
         const result = await response.json()
         if (result.success && result.data) {
           // Cache the data
           setAttendanceCache(prev => new Map(prev).set(cacheKey, result.data))
           setAttendanceData(result.data)
-          
+
           // Update attendance percentage for current month only
           if (year === new Date().getFullYear() && month === new Date().getMonth() + 1) {
             if (mockData) {
@@ -426,29 +423,29 @@ export default function AnalyticsTab({ studentId, studentName }: AnalyticsTabPro
   // Fetch multiple months at once (current + 2 previous)
   const fetchInitialAttendance = async () => {
     if (!studentId || isFetchingAttendance) return
-    
+
     setIsFetchingAttendance(true)
     const now = new Date()
     const currentYear = now.getFullYear()
     const currentMonthNum = now.getMonth() + 1
-    
+
     // Calculate 3 months: current, -1, -2
     const monthsToFetch: { year: number; month: number }[] = []
     for (let i = 0; i < 3; i++) {
       const d = new Date(currentYear, currentMonthNum - 1 - i, 1)
       monthsToFetch.push({ year: d.getFullYear(), month: d.getMonth() + 1 })
     }
-    
+
     // Fetch all 3 months in parallel and get results
     const results = await Promise.all(
       monthsToFetch.map(({ year, month }) => fetchAttendanceData(year, month))
     )
-    
+
     // Set current month data (first result is current month)
     if (results[0]) {
       setAttendanceData(results[0])
     }
-    
+
     setIsFetchingAttendance(false)
   }
 
@@ -460,13 +457,13 @@ export default function AnalyticsTab({ studentId, studentName }: AnalyticsTabPro
     } else {
       newDate.setMonth(newDate.getMonth() + 1)
     }
-    
+
     const year = newDate.getFullYear()
     const month = newDate.getMonth() + 1
     const cacheKey = getCacheKey(year, month)
-    
+
     setCurrentMonth(newDate)
-    
+
     // Check if data is cached
     if (attendanceCache.has(cacheKey)) {
       // Use cached data
@@ -481,50 +478,76 @@ export default function AnalyticsTab({ studentId, studentName }: AnalyticsTabPro
   useEffect(() => {
     const loadData = async () => {
       setLoading(true)
-      
-      // Load mock data for other sections
-      setMockData({
-        overview: {
-          gpa: '3.85',
-          gpaChange: '+0.12',
-          gpaTrend: 'up',
-          attendance: '0%',
-          attendanceChange: '+2%',
-          attendanceTrend: 'up',
-          assignments: '89%',
-          assignmentsChange: '-3%',
-          assignmentsTrend: 'down',
-          classRank: '5th',
-          classRankChange: '+2',
-          classRankTrend: 'up'
-        },
-        gpaTrend: [
-          { label: 'Jan', gpa: 3.65 },
-          { label: 'Feb', gpa: 3.72 },
-          { label: 'Mar', gpa: 3.80 },
-          { label: 'Apr', gpa: 3.85 }
-        ],
-        subjects: [
-          { name: 'Mathematics', score: 92, assignments: 24, trend: 'up', change: '+5%', color: 'bg-blue-500' },
-          { name: 'Science', score: 88, assignments: 18, trend: 'stable', change: '0%', color: 'bg-green-500' },
-          { name: 'English', score: 85, assignments: 22, trend: 'up', change: '+3%', color: 'bg-purple-500' },
-          { name: 'History', score: 90, assignments: 16, trend: 'down', change: '-2%', color: 'bg-amber-500' }
-        ],
-        assignments: {
-          completed: 45,
-          pending: 8,
-          overdue: 2,
-          total: 55
+
+      try {
+        console.log('[AnalyticsTab] Fetching analytics for student:', studentId)
+
+        // Fetch analytics data
+        const response = await fetch(`/api/v1/students/${studentId}/analytics`)
+        console.log('[AnalyticsTab] API Response status:', response.status)
+
+        const result = await response.json()
+        console.log('[AnalyticsTab] API Result:', result)
+
+        if (result.success && result.data) {
+          const { academic, engagement } = result.data
+          console.log('[AnalyticsTab] Academic data:', academic)
+          console.log('[AnalyticsTab] Engagement data:', engagement)
+
+          // Map API data to component state
+          const mappedData = {
+            overview: {
+              gpa: academic.currentGPA,
+              gpaChange: null, // Not available in API yet
+              gpaTrend: 'stable',
+              attendance: '0%', // Will be updated by fetchAttendanceData
+              attendanceChange: null,
+              attendanceTrend: 'stable',
+              assignments: `${engagement.completionRate}%`,
+              assignmentsChange: null,
+              assignmentsTrend: 'stable',
+              classRank: 'N/A',
+              classRankChange: null,
+              classRankTrend: 'stable'
+            },
+            gpaTrend: academic.gpaTrend.map((t: any) => ({
+              label: new Date(t.month).toLocaleDateString('en-US', { month: 'short' }),
+              gpa: t.gpa
+            })),
+            subjects: academic.bySubject.map((s: any, i: number) => ({
+              name: s.subject,
+              score: Math.round(parseFloat(s.average)),
+              assignments: s.totalAssignments,
+              trend: s.trend,
+              change: '', // Not available in API yet
+              color: ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-amber-500'][i % 4]
+            })),
+            assignments: {
+              completed: academic.totalAssignments, // Using total graded assignments as completed
+              pending: 0, // Not available in API yet
+              overdue: 0, // Not available in API yet
+              total: academic.totalAssignments
+            }
+          }
+
+          console.log('[AnalyticsTab] Mapped data:', mappedData)
+          setMockData(mappedData)
+        } else {
+          console.error('[AnalyticsTab] API returned no data or failed:', result)
         }
-      })
-      
+      } catch (error) {
+        console.error('[AnalyticsTab] Error fetching analytics:', error)
+      }
+
       // Fetch initial 3 months of attendance data
       await fetchInitialAttendance()
-      
+
       setLoading(false)
     }
-    
-    loadData()
+
+    if (studentId) {
+      loadData()
+    }
   }, [studentId])
 
   if (loading) {
@@ -642,7 +665,7 @@ export default function AnalyticsTab({ studentId, studentName }: AnalyticsTabPro
             </button>
           </div>
         </div>
-        
+
         <MonthlyAttendance
           attendanceData={attendanceData?.attendance || []}
           currentMonth={currentMonth}

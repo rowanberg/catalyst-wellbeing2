@@ -18,7 +18,7 @@ function getSecureSuperAdminKey(): string {
 // Edge Runtime compatible timing-safe comparison
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false
-  
+
   let result = 0
   for (let i = 0; i < a.length; i++) {
     result |= a.charCodeAt(i) ^ b.charCodeAt(i)
@@ -28,7 +28,7 @@ function timingSafeEqual(a: string, b: string): boolean {
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
-  
+
   // Create a response object that we'll modify
   let response = NextResponse.next({
     request: {
@@ -76,18 +76,18 @@ export async function middleware(req: NextRequest) {
     } else {
       // For dashboard and other protected routes, verify session token
       const sessionToken = req.cookies.get('super_admin_session')?.value
-      
+
       if (!sessionToken) {
         console.log('[Middleware] No super_admin_session cookie found, redirecting to auth')
         return NextResponse.redirect(new URL('/superpanel/auth', req.url))
       }
-      
+
       // Validate session token format
       const validKey = getSecureSuperAdminKey()
       try {
         const decoded = Buffer.from(sessionToken, 'base64').toString('utf-8')
         const hasValidPrefix = decoded.startsWith(validKey)
-        
+
         if (!hasValidPrefix) {
           console.log('[Middleware] Invalid session token, redirecting to auth')
           return NextResponse.redirect(new URL('/superpanel/auth', req.url))
@@ -97,7 +97,7 @@ export async function middleware(req: NextRequest) {
         return NextResponse.redirect(new URL('/superpanel/auth', req.url))
       }
     }
-  } 
+  }
   // Handle root path redirect
   else if (pathname === '/') {
     if (user) {
@@ -109,8 +109,8 @@ export async function middleware(req: NextRequest) {
     }
   }
   // For protected routes, redirect to login if no valid session
-  else if (pathname.startsWith('/student') || pathname.startsWith('/teacher') || 
-           pathname.startsWith('/parent') || pathname.startsWith('/admin')) {
+  else if (pathname.startsWith('/student') || pathname.startsWith('/teacher') ||
+    pathname.startsWith('/parent') || pathname.startsWith('/admin')) {
     if (!user) {
       return NextResponse.redirect(new URL('/login', req.url))
     }
@@ -119,16 +119,16 @@ export async function middleware(req: NextRequest) {
   // Apply comprehensive security headers to all responses
   // Prevent clickjacking attacks
   response.headers.set('X-Frame-Options', 'DENY')
-  
+
   // Prevent MIME type sniffing
   response.headers.set('X-Content-Type-Options', 'nosniff')
-  
+
   // Control referrer information
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
-  
+
   // Enable XSS protection (for older browsers)
   response.headers.set('X-XSS-Protection', '1; mode=block')
-  
+
   // Restrict permissions (Permissions Policy)
   // Allow camera only on Ai Live and Luminex activation pages
   const allowCamera = pathname.startsWith('/teacher/ai-live') || pathname.startsWith('/luminex/activate')
@@ -139,14 +139,14 @@ export async function middleware(req: NextRequest) {
     'interest-cohort=()'
   ].join(', ')
   response.headers.set('Permissions-Policy', permissionsPolicy)
-  
+
   // Content Security Policy (CSP) - don't apply to API routes or auth pages
-  if (!pathname.startsWith('/_next') && 
-      !pathname.includes('/api/') && 
-      !pathname.includes('/auth/') &&
-      !pathname.includes('/login') &&
-      !pathname.includes('/register')) {
-    
+  if (!pathname.startsWith('/_next') &&
+    !pathname.includes('/api/') &&
+    !pathname.includes('/auth/') &&
+    !pathname.includes('/login') &&
+    !pathname.includes('/register')) {
+
     // Build CSP header - exclude upgrade-insecure-requests in development
     const cspDirectives = [
       "default-src 'self'",
@@ -160,15 +160,15 @@ export async function middleware(req: NextRequest) {
       "base-uri 'self'",
       "form-action 'self' https://accounts.google.com"
     ]
-    
+
     // Only add upgrade-insecure-requests in production
     if (process.env.NODE_ENV === 'production') {
       cspDirectives.push("upgrade-insecure-requests")
     }
-    
+
     response.headers.set('Content-Security-Policy', cspDirectives.join('; ') + ';')
   }
-  
+
   // Strict Transport Security (HSTS) - only in production
   if (process.env.NODE_ENV === 'production') {
     response.headers.set(
@@ -176,7 +176,7 @@ export async function middleware(req: NextRequest) {
       'max-age=31536000; includeSubDomains; preload'
     )
   }
-  
+
   return response
 }
 

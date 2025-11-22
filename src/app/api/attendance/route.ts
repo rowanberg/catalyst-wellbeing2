@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
 // Save attendance records to database
 export async function POST(request: NextRequest) {
   try {
+    const startTime = Date.now()
     const supabase = await createSupabaseServerClient()
     
     // Get authenticated user
@@ -57,6 +58,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No attendance data provided' }, { status: 400 })
     }
 
+    // Simple guard to avoid very large payloads causing long upserts
+    if (attendanceData.length > 200) {
+      return NextResponse.json({
+        error: 'Too many attendance records. Please submit at most 200 at a time.'
+      }, { status: 400 })
+    }
+
     if (!date) {
       return NextResponse.json({ error: 'Date is required' }, { status: 400 })
     }
@@ -73,26 +81,35 @@ export async function POST(request: NextRequest) {
       notes: record.notes || null
     }))
 
-    // Use upsert to handle updates (UNIQUE constraint on student_id, date)
-    const { data: savedRecords, error: insertError } = await supabase
+    const dbStart = Date.now()
+
+    // Use upsert to handle updates (UNIQUE constraint on student_id, date).
+    // We don't need the inserted rows back here, so skip .select() for speed.
+    const { error: insertError } = await supabase
       .from('attendance')
       .upsert(attendanceRecords, {
         onConflict: 'student_id,date',
         ignoreDuplicates: false
       })
-      .select()
 
     if (insertError) {
+      console.error('❌ Attendance upsert error:', insertError)
       return NextResponse.json({ 
         error: 'Failed to save attendance', 
         details: insertError.message 
       }, { status: 500 })
     }
+
+    const totalMs = Date.now() - startTime
+    const dbMs = Date.now() - dbStart
+    console.log(`✅ Attendance saved: ${attendanceRecords.length} records in ${totalMs}ms (DB ${dbMs}ms)`)    
     
     return NextResponse.json({ 
       success: true,
       message: 'Attendance saved successfully',
       count: attendanceRecords.length,
+      duration_ms: totalMs,
+      db_duration_ms: dbMs,
       timestamp: new Date().toISOString()
     })
     

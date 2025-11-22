@@ -44,15 +44,17 @@ interface NotificationSetting {
 
 interface ProfileTabProps {
   parentId: string
+  onChildSelect?: (childId: string) => void
+  currentSelectedChild?: string | null
 }
 
 // Notification Toggle Component
-const NotificationToggle = memo(({ 
-  label, 
+const NotificationToggle = memo(({
+  label,
   description,
   setting,
-  onChange 
-}: { 
+  onChange
+}: {
   label: string
   description: string
   setting: NotificationSetting
@@ -94,14 +96,12 @@ const NotificationToggle = memo(({
       </div>
       <button
         onClick={() => onChange({ ...setting, enabled: !setting.enabled })}
-        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-          setting.enabled ? 'bg-blue-600' : 'bg-gray-200'
-        }`}
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${setting.enabled ? 'bg-blue-600' : 'bg-gray-200'
+          }`}
       >
         <span
-          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-            setting.enabled ? 'translate-x-6' : 'translate-x-1'
-          }`}
+          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${setting.enabled ? 'translate-x-6' : 'translate-x-1'
+            }`}
         />
       </button>
     </div>
@@ -111,27 +111,26 @@ const NotificationToggle = memo(({
 NotificationToggle.displayName = 'NotificationToggle'
 
 // Child Card Component
-const ChildCard = memo(({ child, isActive, onClick }: { 
+const ChildCard = memo(({ child, isActive, onClick }: {
   child: Child
   isActive: boolean
-  onClick: () => void 
+  onClick: () => void
 }) => {
   return (
     <motion.button
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className={`w-full p-4 rounded-lg border transition-all ${
-        isActive 
-          ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 dark:border-blue-600 shadow-sm' 
+      className={`w-full p-4 rounded-lg border transition-all ${isActive
+          ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 dark:border-blue-600 shadow-sm'
           : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-      }`}
+        }`}
     >
       <div className="flex items-center gap-4">
         {child.avatarUrl ? (
           <div className="relative w-12 h-12">
-            <Image 
-              src={child.avatarUrl} 
+            <Image
+              src={child.avatarUrl}
               alt={child.name}
               fill
               className="rounded-full object-cover"
@@ -149,9 +148,8 @@ const ChildCard = memo(({ child, isActive, onClick }: {
           <p className="font-semibold text-slate-900 dark:text-white">{child.name}</p>
           <p className="text-sm text-slate-600 dark:text-slate-400">Grade {child.grade} • {child.school}</p>
         </div>
-        <ChevronRight className={`h-4 w-4 transition-colors ${
-          isActive ? 'text-blue-600' : 'text-gray-400'
-        }`} />
+        <ChevronRight className={`h-4 w-4 transition-colors ${isActive ? 'text-blue-600' : 'text-gray-400'
+          }`} />
       </div>
     </motion.button>
   )
@@ -159,7 +157,7 @@ const ChildCard = memo(({ child, isActive, onClick }: {
 
 ChildCard.displayName = 'ChildCard'
 
-export default function ProfileTab({ parentId }: ProfileTabProps) {
+export default function ProfileTab({ parentId, onChildSelect, currentSelectedChild }: ProfileTabProps) {
   const dispatch = useAppDispatch()
   const router = useRouter()
   const { isDarkMode, toggleDarkMode } = useDarkMode()
@@ -167,7 +165,9 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [data, setData] = useState<any>(null)
-  const [activeChild, setActiveChild] = useState<string | null>(null)
+  // Use parent's selected child or maintain local state
+  const [localActiveChild, setLocalActiveChild] = useState<string | null>(null)
+  const activeChild = currentSelectedChild !== undefined ? currentSelectedChild : localActiveChild
   const [notifications, setNotifications] = useState<Record<string, NotificationSetting>>({})
   const [profile, setProfile] = useState<any>({})
   const [showLinkModal, setShowLinkModal] = useState(false)
@@ -187,19 +187,26 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
     try {
       setLoading(true)
       const response = await fetch(`/api/v1/parents/settings?parent_id=${parentId}`)
-      
+
       if (!response.ok) throw new Error('Failed to fetch settings')
-      
+
       const result = await response.json()
       setData(result.data)
       setNotifications(result.data.notifications)
       setProfile(result.data.profile)
       // API returns avatarUrl in camelCase
       setAvatarUrl(result.data.profile?.avatarUrl)
-      
-      // Set first child as active if available
+
+      // Set first child as active if available and no child is selected
       if (result.data.children?.length > 0 && !activeChild) {
-        setActiveChild(result.data.children[0].id)
+        const firstChildId = result.data.children[0].id
+        if (currentSelectedChild === undefined) {
+          setLocalActiveChild(firstChildId)
+        }
+        // Notify parent if callback provided
+        if (onChildSelect && !currentSelectedChild) {
+          onChildSelect(firstChildId)
+        }
       }
     } catch (error) {
       console.error('Error fetching settings:', error)
@@ -224,7 +231,7 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
           }
         })
       })
-      
+
       if (response.ok) {
         setSaved(true)
         setTimeout(() => setSaved(false), 3000)
@@ -245,9 +252,9 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
     try {
       setLinkLoading(true)
       setLinkError('')
-      
+
       console.log('Sending link request with parentId:', parentId)
-      
+
       const response = await fetch('/api/v1/parents/link-child', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -405,7 +412,7 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
       >
         <div className="absolute inset-0 bg-black/10" />
         <div className="absolute top-3 right-3 flex gap-2">
-          <button 
+          <button
             onClick={toggleDarkMode}
             className="p-2 bg-white/90 hover:bg-white rounded-full transition-all shadow-md"
           >
@@ -431,8 +438,8 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
             <div className="relative -mt-12 lg:-mt-16">
               {avatarUrl ? (
                 <div className="relative w-24 h-24 lg:w-28 lg:h-28">
-                  <Image 
-                    src={avatarUrl} 
+                  <Image
+                    src={avatarUrl}
                     alt={`${profile.firstName} ${profile.lastName}`}
                     fill
                     className="rounded-full object-cover ring-4 ring-white dark:ring-gray-900"
@@ -446,7 +453,7 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
                   </span>
                 </div>
               )}
-              <button 
+              <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadingPhoto}
                 className="absolute bottom-0 right-0 w-7 h-7 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shadow-md border-2 border-white dark:border-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -470,7 +477,7 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
                   </h1>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Parent Account</p>
                 </div>
-                
+
                 {/* Status Pills - Compact */}
                 <div className="flex gap-2">
                   <button className="flex items-center gap-1 px-2.5 py-1 bg-gray-900 text-white rounded-full text-xs font-medium hover:bg-gray-800 transition-colors">
@@ -511,22 +518,19 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
                 <button
                   key={child.id}
                   onClick={() => {
-                    setActiveChild(child.id)
-                    if (typeof window !== 'undefined') {
-                      window.dispatchEvent(new CustomEvent('childSelected', { 
-                        detail: { 
-                          childId: child.id,
-                          childName: child.name,
-                          childGrade: child.grade
-                        } 
-                      }))
+                    // Update local state if not controlled
+                    if (currentSelectedChild === undefined) {
+                      setLocalActiveChild(child.id)
+                    }
+                    // Always notify parent if callback provided
+                    if (onChildSelect) {
+                      onChildSelect(child.id)
                     }
                   }}
-                  className={`flex items-center gap-3 p-3 rounded-lg transition-all border ${
-                    activeChild === child.id 
-                      ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 shadow-sm' 
+                  className={`flex items-center gap-3 p-3 rounded-lg transition-all border ${activeChild === child.id
+                      ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 shadow-sm'
                       : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'
-                  }`}
+                    }`}
                 >
                   {child.avatarUrl ? (
                     <div className="relative w-10 h-10">
@@ -540,9 +544,8 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
                     </div>
                   )}
                   <div className="flex-1 text-left min-w-0">
-                    <p className={`font-medium text-sm truncate ${
-                      activeChild === child.id ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 dark:text-gray-100'
-                    }`}>
+                    <p className={`font-medium text-sm truncate ${activeChild === child.id ? 'text-blue-700 dark:text-blue-400' : 'text-gray-900 dark:text-gray-100'
+                      }`}>
                       {child.name}
                     </p>
                     <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
@@ -577,86 +580,86 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
             transition={{ delay: 0.1 }}
             className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded-lg p-4 border border-emerald-200 dark:border-emerald-800"
           >
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center">
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-            </svg>
-          </div>
-          <div>
-            <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg">Payments</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Fee Status Overview</p>
-          </div>
-        </div>
-
-        {/* Payment Stats */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="bg-emerald-50 rounded-2xl p-4">
-            <p className="text-xs text-emerald-600 font-medium mb-1">Paid Amount</p>
-            <p className="text-2xl font-bold text-emerald-700">$2,450</p>
-            <p className="text-xs text-emerald-600 mt-1">✓ Up to date</p>
-          </div>
-          <div className="bg-orange-50 rounded-2xl p-4">
-            <p className="text-xs text-orange-600 font-medium mb-1">Pending</p>
-            <p className="text-2xl font-bold text-orange-700">$850</p>
-            <p className="text-xs text-orange-600 mt-1">Due: Dec 15</p>
-          </div>
-        </div>
-
-        {/* Total */}
-        <div className="bg-gray-50 rounded-2xl p-4 mb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Total Annual Fee</p>
-              <p className="text-xl font-bold text-gray-900">$3,300</p>
-            </div>
-            <div className="text-right">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-100 rounded-full">
-                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                <span className="text-xs font-semibold text-blue-700">74% Paid</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Payment History */}
-        <div className="space-y-2">
-          <p className="text-xs text-gray-500 mb-3">Recent Transactions</p>
-          <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-                <svg className="w-4 h-4 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                 </svg>
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-900">Term 2 Fees</p>
-                <p className="text-xs text-gray-500">Nov 1, 2024</p>
+                <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg">Payments</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Fee Status Overview</p>
               </div>
             </div>
-            <span className="text-sm font-bold text-emerald-600">$1,100</span>
-          </div>
-          <div className="flex items-center justify-between py-2">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-                <svg className="w-4 h-4 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-900">Term 1 Fees</p>
-                <p className="text-xs text-gray-500">Aug 15, 2024</p>
-              </div>
-            </div>
-            <span className="text-sm font-bold text-emerald-600">$1,350</span>
-          </div>
-        </div>
 
-        {/* Pay Now Button */}
-        <button className="w-full mt-4 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-semibold rounded-2xl hover:from-emerald-600 hover:to-green-700 transition-all shadow-lg">
-          Pay Pending Amount
-        </button>
-      </motion.div>
+            {/* Payment Stats */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-emerald-50 rounded-2xl p-4">
+                <p className="text-xs text-emerald-600 font-medium mb-1">Paid Amount</p>
+                <p className="text-2xl font-bold text-emerald-700">$2,450</p>
+                <p className="text-xs text-emerald-600 mt-1">✓ Up to date</p>
+              </div>
+              <div className="bg-orange-50 rounded-2xl p-4">
+                <p className="text-xs text-orange-600 font-medium mb-1">Pending</p>
+                <p className="text-2xl font-bold text-orange-700">$850</p>
+                <p className="text-xs text-orange-600 mt-1">Due: Dec 15</p>
+              </div>
+            </div>
+
+            {/* Total */}
+            <div className="bg-gray-50 rounded-2xl p-4 mb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Total Annual Fee</p>
+                  <p className="text-xl font-bold text-gray-900">$3,300</p>
+                </div>
+                <div className="text-right">
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-100 rounded-full">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                    <span className="text-xs font-semibold text-blue-700">74% Paid</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment History */}
+            <div className="space-y-2">
+              <p className="text-xs text-gray-500 mb-3">Recent Transactions</p>
+              <div className="flex items-center justify-between py-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
+                    <svg className="w-4 h-4 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">Term 2 Fees</p>
+                    <p className="text-xs text-gray-500">Nov 1, 2024</p>
+                  </div>
+                </div>
+                <span className="text-sm font-bold text-emerald-600">$1,100</span>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
+                    <svg className="w-4 h-4 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">Term 1 Fees</p>
+                    <p className="text-xs text-gray-500">Aug 15, 2024</p>
+                  </div>
+                </div>
+                <span className="text-sm font-bold text-emerald-600">$1,350</span>
+              </div>
+            </div>
+
+            {/* Pay Now Button */}
+            <button className="w-full mt-4 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-semibold rounded-2xl hover:from-emerald-600 hover:to-green-700 transition-all shadow-lg">
+              Pay Pending Amount
+            </button>
+          </motion.div>
 
           {/* Notification Settings Card */}
           <motion.div
@@ -665,59 +668,59 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
             transition={{ delay: 0.2 }}
             className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-800"
           >
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
-            <Bell className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg">Notifications</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Manage your alerts</p>
-          </div>
-        </div>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                <Bell className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg">Notifications</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Manage your alerts</p>
+              </div>
+            </div>
 
-        <div className="space-y-4">
-          <NotificationToggle
-            label="Grade Updates"
-            description="Get notified about new grades"
-            setting={notifications.gradeUpdates || { enabled: true, threshold: 80, frequency: 'immediate' }}
-            onChange={(setting) => setNotifications({ ...notifications, gradeUpdates: setting })}
-          />
-          <NotificationToggle
-            label="Attendance Alerts"
-            description="Notify when child is absent"
-            setting={notifications.attendance || { enabled: true, threshold: null, frequency: 'immediate' }}
-            onChange={(setting) => setNotifications({ ...notifications, attendance: setting })}
-          />
-          <NotificationToggle
-            label="Assignment Due"
-            description="Reminders for upcoming work"
-            setting={notifications.assignments || { enabled: true, threshold: null, frequency: 'daily' }}
-            onChange={(setting) => setNotifications({ ...notifications, assignments: setting })}
-          />
-        </div>
+            <div className="space-y-4">
+              <NotificationToggle
+                label="Grade Updates"
+                description="Get notified about new grades"
+                setting={notifications.gradeUpdates || { enabled: true, threshold: 80, frequency: 'immediate' }}
+                onChange={(setting) => setNotifications({ ...notifications, gradeUpdates: setting })}
+              />
+              <NotificationToggle
+                label="Attendance Alerts"
+                description="Notify when child is absent"
+                setting={notifications.attendance || { enabled: true, threshold: null, frequency: 'immediate' }}
+                onChange={(setting) => setNotifications({ ...notifications, attendance: setting })}
+              />
+              <NotificationToggle
+                label="Assignment Due"
+                description="Reminders for upcoming work"
+                setting={notifications.assignments || { enabled: true, threshold: null, frequency: 'daily' }}
+                onChange={(setting) => setNotifications({ ...notifications, assignments: setting })}
+              />
+            </div>
 
-        <button
-          onClick={handleSaveSettings}
-          disabled={saving}
-          className="w-full mt-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2"
-        >
-          {saving ? (
-            <>
-              <Loader className="w-5 h-5 animate-spin" />
-              Saving...
-            </>
-          ) : saved ? (
-            <>
-              <Check className="w-5 h-5" />
-              Saved!
-            </>
-          ) : (
-            <>
-              <Save className="w-5 h-5" />
-              Save Settings
-            </>
-          )}
-        </button>
+            <button
+              onClick={handleSaveSettings}
+              disabled={saving}
+              className="w-full mt-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2"
+            >
+              {saving ? (
+                <>
+                  <Loader className="w-5 h-5 animate-spin" />
+                  Saving...
+                </>
+              ) : saved ? (
+                <>
+                  <Check className="w-5 h-5" />
+                  Saved!
+                </>
+              ) : (
+                <>
+                  <Save className="w-5 h-5" />
+                  Save Settings
+                </>
+              )}
+            </button>
           </motion.div>
         </div>
 
@@ -731,7 +734,7 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
               <Settings className="w-4 h-4" />
               Account Settings
             </button>
-            <button 
+            <button
               onClick={async () => {
                 try {
                   await dispatch(signOut()).unwrap()
@@ -765,7 +768,7 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
           try {
             // Import the compression library
             const imageCompression = (await import('browser-image-compression')).default
-            
+
             // Compress the image
             const options = {
               maxSizeMB: 0.5,
@@ -774,15 +777,15 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
               fileType: 'image/jpeg',
               initialQuality: 0.9
             }
-            
+
             const compressedFile = await imageCompression(file, options)
             console.log('✅ Original:', (file.size / 1024 / 1024).toFixed(2), 'MB → Compressed:', (compressedFile.size / 1024 / 1024).toFixed(2), 'MB')
-            
+
             // Convert to base64 for upload
             const reader = new FileReader()
             reader.onloadend = async () => {
               const base64String = reader.result as string
-              
+
               try {
                 // Upload to backend
                 const response = await fetch('/api/v1/parents/profile-picture', {
@@ -798,7 +801,7 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
                   const result = await response.json()
                   setAvatarUrl(result.data.avatar_url)
                   console.log('✅ Profile picture uploaded successfully!')
-                  
+
                   // Show success feedback
                   setSaved(true)
                   setTimeout(() => setSaved(false), 3000)
@@ -820,7 +823,7 @@ export default function ProfileTab({ parentId }: ProfileTabProps) {
             alert('Error processing image. Please try a different image.')
             setUploadingPhoto(false)
           }
-          
+
           // Reset input
           e.target.value = ''
         }}

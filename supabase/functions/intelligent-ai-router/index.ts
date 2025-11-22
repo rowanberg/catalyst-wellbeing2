@@ -36,31 +36,31 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     tpmLimit: 1000000,
     fallbackPriority: 1
   },
-  'gemma-2-27b': {
-    name: 'gemma-2-27b',
+  'gemma-3-27b': {
+    name: 'gemma-3-27b',
     tableName: 'gemini_api_keys',
     columnPrefix: 'gemma_27b',
-    rpmLimit: 10,
-    rpdLimit: 100,
-    tpmLimit: 500000,
+    rpmLimit: 30,
+    rpdLimit: 14400,
+    tpmLimit: 15000,
     fallbackPriority: 2
   },
-  'gemma-2-12b': {
-    name: 'gemma-2-12b',
+  'gemma-3-12b': {
+    name: 'gemma-3-12b',
     tableName: 'gemini_api_keys',
     columnPrefix: 'gemma_12b',
-    rpmLimit: 15,
-    rpdLimit: 150,
-    tpmLimit: 750000,
+    rpmLimit: 30,
+    rpdLimit: 14400,
+    tpmLimit: 15000,
     fallbackPriority: 3
   },
-  'gemma-2-4b': {
-    name: 'gemma-2-4b',
+  'gemma-3-4b': {
+    name: 'gemma-3-4b',
     tableName: 'gemini_api_keys',
     columnPrefix: 'gemma_4b',
-    rpmLimit: 20,
-    rpdLimit: 200,
-    tpmLimit: 1000000,
+    rpmLimit: 30,
+    rpdLimit: 14400,
+    tpmLimit: 15000,
     fallbackPriority: 4
   }
 }
@@ -74,13 +74,13 @@ const FALLBACK_CHAIN = Object.values(MODEL_CONFIGS).sort((a, b) => a.fallbackPri
 async function decryptApiKey(encryptedData: string, encryptionKey: string): Promise<string> {
   try {
     const [ivHex, authTagHex, encryptedHex] = encryptedData.split(':')
-    
+
     const iv = new Uint8Array(ivHex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)))
     const authTag = new Uint8Array(authTagHex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)))
     const encrypted = new Uint8Array(encryptedHex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)))
-    
+
     const ciphertext = new Uint8Array([...encrypted, ...authTag])
-    
+
     const keyBuffer = new Uint8Array(encryptionKey.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)))
     const cryptoKey = await crypto.subtle.importKey(
       'raw',
@@ -89,13 +89,13 @@ async function decryptApiKey(encryptedData: string, encryptionKey: string): Prom
       false,
       ['decrypt']
     )
-    
+
     const decrypted = await crypto.subtle.decrypt(
       { name: 'AES-GCM', iv },
       cryptoKey,
       ciphertext
     )
-    
+
     return new TextDecoder().decode(decrypted)
   } catch (error) {
     console.error('Decryption error:', error)
@@ -130,7 +130,7 @@ async function selectAvailableKey(
     // ========================================================================
     // ON-DEMAND RESETS
     // ========================================================================
-    
+
     // 1. Clear expired cooldowns
     await supabase.from(tableName)
       .update({ [isCooldownCol]: false, [cooldownExpiresCol]: null })
@@ -150,7 +150,7 @@ async function selectAvailableKey(
     // ========================================================================
     // KEY SELECTION
     // ========================================================================
-    
+
     const { data: keys, error } = await supabase
       .from(tableName)
       .select('*')
@@ -177,7 +177,7 @@ async function selectAvailableKey(
     // ========================================================================
     // ATOMIC UPDATE
     // ========================================================================
-    
+
     const { data: updatedKey, error: updateError } = await supabase
       .from(tableName)
       .update({
@@ -222,21 +222,21 @@ async function getAvailableKeyWithFallback(
   }
 
   const startIndex = FALLBACK_CHAIN.findIndex(m => m.name === requestedModel)
-  
+
   // Try requested model first, then fall back through the chain
   for (let i = startIndex; i < FALLBACK_CHAIN.length; i++) {
     const config = FALLBACK_CHAIN[i]
-    
+
     console.log(`Attempting to get key from: ${config.name}`)
-    
+
     const key = await selectAvailableKey(supabase, config.tableName, config, estimatedTokens)
-    
+
     if (key) {
       if (i > startIndex) {
         fallbackCount = i - startIndex
         console.log(`Fallback successful: ${startModel} → ${config.name} (${fallbackCount} steps)`)
       }
-      
+
       // Log usage
       await logApiUsage(supabase, {
         model_requested: requestedModel,
@@ -249,7 +249,7 @@ async function getAvailableKeyWithFallback(
         user_id: userId,
         endpoint: endpoint
       })
-      
+
       return { key, modelUsed: config.name, fallbackCount }
     }
   }
@@ -320,8 +320,8 @@ serve(async (req) => {
     if (!MODEL_CONFIGS[model]) {
       const validModels = Object.keys(MODEL_CONFIGS)
       return new Response(
-        JSON.stringify({ 
-          error: `Invalid model: ${model}. Valid models: ${validModels.join(', ')}` 
+        JSON.stringify({
+          error: `Invalid model: ${model}. Valid models: ${validModels.join(', ')}`
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
@@ -334,10 +334,16 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const encryptionKey = Deno.env.get('GEMINI_ENCRYPTION_KEY')!
-    
-    if (!encryptionKey) {
+
+    console.log(`[Debug] Env Check - URL: ${!!supabaseUrl}, ServiceKey: ${!!supabaseServiceKey}, EncKey: ${!!encryptionKey}`)
+
+    if (!encryptionKey || !supabaseServiceKey) {
+      console.error('Missing required environment variables')
       return new Response(
-        JSON.stringify({ error: 'Service configuration error' }),
+        JSON.stringify({
+          error: 'Service configuration error',
+          details: `Missing: ${!encryptionKey ? 'GEMINI_ENCRYPTION_KEY ' : ''}${!supabaseServiceKey ? 'SUPABASE_SERVICE_ROLE_KEY' : ''}`
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -362,18 +368,18 @@ serve(async (req) => {
     } catch (error: any) {
       if (error.message === 'All model keys exhausted') {
         return new Response(
-          JSON.stringify({ 
+          JSON.stringify({
             error: 'All model keys exhausted',
             message: 'All API keys across all models are currently rate-limited. Please try again shortly.',
             retryAfter: 60
           }),
-          { 
-            status: 429, 
-            headers: { 
-              ...corsHeaders, 
+          {
+            status: 429,
+            headers: {
+              ...corsHeaders,
               'Content-Type': 'application/json',
               'Retry-After': '60'
-            } 
+            }
           }
         )
       }
@@ -412,18 +418,18 @@ serve(async (req) => {
         },
         request_duration_ms: requestDuration
       }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     )
 
   } catch (error: any) {
     console.error('Function error:', error)
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: 'Internal server error',
-        message: error.message 
+        message: error.message
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

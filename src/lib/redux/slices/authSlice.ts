@@ -9,6 +9,7 @@ interface Profile {
   user_id: string
   first_name: string
   last_name: string
+  full_name?: string
   email?: string
   role: string
   school_id?: string
@@ -46,22 +47,22 @@ export const signIn = createAsyncThunk(
       email,
       password,
     })
-    
+
     if (error) throw error
     if (!data.user || !data.session) throw new Error('Login failed')
-    
+
     // Check if email is confirmed
     if (!data.user.email_confirmed_at) {
       throw new Error('Please confirm your email before logging in. Check your inbox for a confirmation link.')
     }
-    
+
     // Force session refresh to ensure cookies are set properly
     // This is critical for server-side API routes to read the session
     await supabase.auth.refreshSession()
-    
+
     // Small delay to ensure cookies are propagated
     await new Promise(resolve => setTimeout(resolve, 100))
-    
+
     // Fetch user profile with deduplication
     const profile = await fetchProfileWithCache(data.user.id)
     console.log('✅ SignIn - Session established, profile fetched:', profile)
@@ -74,10 +75,10 @@ export const checkAuth = createAsyncThunk(
   'auth/checkAuth',
   async () => {
     const { data: { session }, error } = await supabase.auth.getSession()
-    
+
     if (error) throw error
     if (!session?.user) return null
-    
+
     // Fetch user profile with deduplication
     const profile = await fetchProfileWithCache(session.user.id)
     console.log('CheckAuth - Session restored:', { user: session.user, profile })
@@ -124,12 +125,12 @@ export const signUp = createAsyncThunk(
         className,
       }),
     })
-    
+
     if (!response.ok) {
       const errorData = await response.json()
       throw new Error(errorData.message || 'Failed to create account')
     }
-    
+
     const result = await response.json()
     return { user: result.user, profile: result.profile }
   }
@@ -138,7 +139,7 @@ export const signUp = createAsyncThunk(
 export const signOut = createAsyncThunk('auth/signOut', async () => {
   // Clear profile cache on logout
   await clearAllProfileCaches()
-  
+
   const { error } = await supabase.auth.signOut()
   if (error) throw error
 })

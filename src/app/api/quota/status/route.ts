@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, User, AuthError } from '@supabase/supabase-js'
 import { getUserQuotaStatus } from '@/lib/ai/quotaManager'
 
 export const dynamic = 'force-dynamic'
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    
+
     // Check cache first
     const now = Date.now()
     const cached = quotaCache.get(token)
@@ -39,21 +39,54 @@ export async function GET(req: NextRequest) {
           headers: {
             Authorization: `Bearer ${token}`
           }
+        },
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false
         }
       }
     )
 
-    const { data: { user }, error } = await supabase.auth.getUser(token)
-    
+    let user: User | null = null
+    let error: AuthError | null = null
+
+    // Retry logic for getUser with backoff
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const result = await supabase.auth.getUser(token)
+        user = result.data.user
+        error = result.error
+
+        if (user || (error && error.status === 401)) {
+          // If we got a user or a definitive auth error, stop retrying
+          break
+        }
+
+        // If other error (like timeout), throw to trigger retry
+        if (error) throw error
+
+      } catch (e) {
+        console.warn(`[QuotaStatus] Attempt ${attempt + 1} failed:`, e)
+        if (attempt === 2) {
+          // Last attempt failed
+          console.error('[QuotaStatus] All auth attempts failed')
+          return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
+        }
+        // Wait before retry (500ms, 1000ms)
+        await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, attempt)))
+      }
+    }
+
     if (error || !user) {
       return NextResponse.json({ error: 'Invalid authentication' }, { status: 401 })
     }
 
     const quotaStatus = await getUserQuotaStatus(user.id)
-    
+
     // Store in cache
     quotaCache.set(token, { data: quotaStatus, timestamp: now })
-    
+
     // Cleanup old cache entries (every 100 requests)
     if (quotaCache.size > 100) {
       const cutoff = now - CACHE_TTL

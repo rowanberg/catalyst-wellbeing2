@@ -14,17 +14,17 @@ try {
 
 const nextConfig = {
   // App Router is now stable in Next.js 13+, no experimental flag needed
-  
+
   // Suppress hydration warnings caused by browser extensions
   reactStrictMode: true,
-  
+
   // ESLint configuration
   eslint: {
     // Enable linting during builds
     ignoreDuringBuilds: false,
     dirs: ['src']
   },
-  
+
   // Static export DISABLED - Capacitor uses live backend URL instead
   // APK loads from https://catalystwells.netlify.app (configured in capacitor.config.ts)
   // output: 'export',
@@ -32,10 +32,10 @@ const nextConfig = {
   images: {
     unoptimized: true
   },
-  
+
   // Set the correct workspace root to silence lockfile warning
   outputFileTracingRoot: __dirname,
-  
+
   // Custom headers for performance and caching
   async headers() {
     return [
@@ -47,7 +47,7 @@ const nextConfig = {
             value: '*'
           },
           {
-            key: 'Access-Control-Allow-Methods', 
+            key: 'Access-Control-Allow-Methods',
             value: 'GET, POST, PUT, DELETE, OPTIONS'
           },
           {
@@ -89,9 +89,29 @@ const nextConfig = {
       },
     ]
   },
-  
+
   // Custom webpack configuration to handle hydration issues
   webpack: (config, { dev, isServer }) => {
+    // Exclude info folder from build (separate site for explore.catalystwells.in)
+    config.plugins.push(
+      new (require('webpack').IgnorePlugin)({
+        resourceRegExp: /^\.\/info/,
+        contextRegExp: /catalyst/
+      })
+    )
+
+    // Exclude info folder from module resolution
+    config.module = {
+      ...config.module,
+      rules: [
+        ...config.module.rules,
+        {
+          test: /info\/.*/,
+          loader: 'ignore-loader'
+        }
+      ]
+    }
+
     if (dev && !isServer) {
       // Suppress hydration warnings in development for form elements
       config.resolve.alias = {
@@ -100,7 +120,7 @@ const nextConfig = {
         'scheduler/tracing': 'scheduler/tracing-profiling',
       }
     }
-    
+
     // Handle Html import issues during build
     config.resolve.fallback = {
       ...config.resolve.fallback,
@@ -108,7 +128,7 @@ const nextConfig = {
       net: false,
       tls: false,
     }
-    
+
     // Prevent chunk corruption with streaming routes during dev hot reload
     if (dev) {
       config.optimization = {
@@ -117,7 +137,7 @@ const nextConfig = {
         removeEmptyChunks: false,
         splitChunks: false,
       }
-      
+
       // Enable webpack caching for faster rebuilds in dev
       config.cache = {
         type: 'filesystem',
@@ -127,7 +147,7 @@ const nextConfig = {
         },
       }
     }
-    
+
     // Optimize for client components in production
     if (!isServer && !dev) {
       config.optimization = {
@@ -146,10 +166,10 @@ const nextConfig = {
         },
       }
     }
-    
+
     return config
   },
-  
+
   // Optimize build for production
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production' ? {
@@ -157,23 +177,23 @@ const nextConfig = {
     } : false,
     // Note: SWC minification is now default in Next.js 13+ (no config needed)
   },
-  
+
   // Enable compression
   compress: true,
-  
+
   // Generate source maps for better debugging
   productionBrowserSourceMaps: false,
-  
+
   // Skip static generation for dynamic admin pages
   async redirects() {
     return []
   },
-  
+
   // Enable build caching for faster builds
   experimental: {
     // Optimize CSS
     optimizeCss: true,
-    
+
     // Enable modern optimizations for faster compilation
     optimizePackageImports: [
       // 'lucide-react', // Disabled due to webpack barrel optimization conflicts
@@ -182,15 +202,15 @@ const nextConfig = {
       '@supabase/supabase-js',
       'date-fns'
     ],
-    
+
     // Enable webpack build cache for much faster rebuilds
     webpackBuildWorker: true,
-    
+
     // Enable parallel compilation
     parallelServerCompiles: true,
     parallelServerBuildTraces: true,
   },
-  
+
   // Performance optimizations
   poweredByHeader: false,
   generateEtags: true,

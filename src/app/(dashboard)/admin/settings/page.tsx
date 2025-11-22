@@ -42,8 +42,24 @@ interface SchoolSettings {
   timezone: string
   academic_year_start: string
   academic_year_end: string
-  subscription_plan?: string
-  subscription_status?: string
+
+  // Subscription + billing data from schools table
+  subscription_plan?: string | null
+  subscription_status?: string | null
+  plan_type?: string | null
+  user_limit?: number | null
+  current_users?: number | null
+  student_count?: number | null
+  payment_status?: string | null
+  payment_due_date?: string | null
+  last_payment_date?: string | null
+  monthly_fee?: number | null
+  student_limit?: number | null
+  trial_end_date?: string | null
+  subscription_start_date?: string | null
+  subscription_end_date?: string | null
+  next_billing_date?: string | null
+  razorpay_subscription_id?: string | null
   notification_settings: {
     email_notifications: boolean
     sms_notifications: boolean
@@ -73,6 +89,17 @@ function SchoolSettingsContent() {
   const [saving, setSaving] = useState(false)
   const { addToast } = useToast()
   const router = useRouter()
+
+  const formatDate = (value?: string | null) => {
+    if (!value) return 'Not set'
+    const d = new Date(value)
+    if (Number.isNaN(d.getTime())) return 'Not set'
+    return d.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  }
 
   useEffect(() => {
     if (profile) {
@@ -263,15 +290,11 @@ function SchoolSettingsContent() {
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-3">
                     <div className={`px-4 py-2 rounded-lg font-bold text-base sm:text-lg ${
-                      settings.subscription_plan === 'catalyst_ai_extreme' ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white' :
-                      settings.subscription_plan === 'catalyst_ai_pro' ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white' :
-                      settings.subscription_plan === 'catalyst_ai' ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white' :
+                      settings.plan_type === 'premium' ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white' :
+                      settings.plan_type === 'basic' ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white' :
                       'bg-gradient-to-r from-gray-400 to-gray-500 text-white'
                     }`}>
-                      {settings.subscription_plan === 'catalyst_ai_extreme' ? '🚀 Catalyst AI Extreme' :
-                       settings.subscription_plan === 'catalyst_ai_pro' ? '⭐ Catalyst AI Pro' :
-                       settings.subscription_plan === 'catalyst_ai' ? '✨ Catalyst AI' :
-                       '📦 Free Plan'}
+                      {settings.subscription_plan || '📦 Free Plan'}
                     </div>
                     <div className={`px-3 py-1 rounded-full text-xs font-medium ${
                       settings.subscription_status === 'active' ? 'bg-green-100 text-green-700 border border-green-300' :
@@ -287,38 +310,88 @@ function SchoolSettingsContent() {
                   </div>
                   
                   {/* Plan Description & Pricing */}
-                  {settings.subscription_plan === 'catalyst_ai_extreme' ? (
-                    <>
-                      <p className="text-sm font-medium text-gray-900 mb-1">The ultimate all-inclusive partnership for visionary institutions.</p>
-                      <p className="text-2xl font-bold text-purple-600 mb-2">₹500/student/month</p>
-                    </>
-                  ) : settings.subscription_plan === 'catalyst_ai_pro' ? (
-                    <>
-                      <p className="text-sm font-medium text-gray-900 mb-1">The best-value plan for fully empowering your students and staff with AI.</p>
-                      <p className="text-2xl font-bold text-blue-600 mb-2">₹25/student/month</p>
-                    </>
-                  ) : settings.subscription_plan === 'catalyst_ai' ? (
-                    <>
-                      <p className="text-sm font-medium text-gray-900 mb-1">The essential plan to connect your school and introduce the power of AI.</p>
-                      <p className="text-2xl font-bold text-green-600 mb-2">₹15/student/month</p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-sm font-medium text-gray-900 mb-1">Basic features with limited access</p>
-                      <p className="text-2xl font-bold text-gray-600 mb-2">Free</p>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
-                          👨‍🎓 Up to 75 Students
-                        </span>
-                        <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium border border-green-200">
-                          👩‍🏫 Up to 10 Teachers
-                        </span>
-                        <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-medium border border-purple-200">
-                          👨‍👩‍👧 Up to 150 Parents
+                  <p className="text-sm font-medium text-gray-900 mb-1">
+                    {settings.plan_type === 'premium'
+                      ? 'Full-featured premium subscription for larger deployments.'
+                      : settings.plan_type === 'basic'
+                      ? 'Standard subscription with core features enabled.'
+                      : 'Basic features with limited access.'}
+                  </p>
+                  <p className="text-2xl font-bold text-blue-600 mb-2">
+                    {typeof settings.monthly_fee === 'number'
+                      ? `₹${settings.monthly_fee.toFixed(2)}/month`
+                      : '₹0.00/month'}
+                  </p>
+
+                  {/* Subscription metadata from schools table */}
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm text-gray-700">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Student limit</span>
+                      <span className="font-medium">
+                        {settings.student_limit ?? 'Not set'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">User limit</span>
+                      <span className="font-medium">
+                        {settings.user_limit ?? settings.student_limit ?? 'Not set'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Current users</span>
+                      <span className="font-medium">
+                        {settings.current_users ?? 'Not tracked'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Total students</span>
+                      <span className="font-medium">
+                        {settings.student_count ?? 'Not tracked'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Billing status</span>
+                      <span className="font-medium capitalize">
+                        {settings.payment_status || 'active'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Subscription period</span>
+                      <span className="font-medium text-right">
+                        {formatDate(settings.subscription_start_date)}
+                        {' '}–{' '}
+                        {formatDate(settings.subscription_end_date)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Next billing</span>
+                      <span className="font-medium">
+                        {formatDate(settings.next_billing_date)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Last payment</span>
+                      <span className="font-medium">
+                        {formatDate(settings.last_payment_date)}
+                      </span>
+                    </div>
+                    {settings.trial_end_date && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Trial ends</span>
+                        <span className="font-medium">
+                          {formatDate(settings.trial_end_date)}
                         </span>
                       </div>
-                    </>
-                  )}
+                    )}
+                    {settings.razorpay_subscription_id && (
+                      <div className="flex items-center justify-between col-span-1 sm:col-span-2">
+                        <span className="text-gray-600">Razorpay Subscription ID</span>
+                        <span className="font-mono text-[11px] sm:text-xs truncate max-w-[180px] sm:max-w-xs text-gray-800">
+                          {settings.razorpay_subscription_id}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="flex flex-col gap-2">
                   <Button

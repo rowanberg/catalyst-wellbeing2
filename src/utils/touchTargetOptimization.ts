@@ -7,13 +7,13 @@ export const TOUCH_TARGET_SIZE = 44 // Minimum touch target size in pixels (Appl
 export const touchTargetClasses = {
   // Minimum touch target size
   base: `min-h-[${TOUCH_TARGET_SIZE}px] min-w-[${TOUCH_TARGET_SIZE}px]`,
-  
+
   // Interactive feedback
   interactive: 'active:scale-95 transition-transform duration-150',
-  
+
   // Touch action optimization
   manipulation: 'touch-manipulation',
-  
+
   // Common button patterns
   button: {
     primary: `min-h-[${TOUCH_TARGET_SIZE}px] px-4 py-3 active:scale-95 transition-all duration-200`,
@@ -21,20 +21,20 @@ export const touchTargetClasses = {
     icon: `min-h-[${TOUCH_TARGET_SIZE}px] min-w-[${TOUCH_TARGET_SIZE}px] p-2 active:scale-95 transition-all duration-200`,
     fab: `h-14 w-14 active:scale-90 transition-all duration-200`, // Floating action button
   },
-  
+
   // Navigation patterns
   nav: {
     tab: `min-h-[${TOUCH_TARGET_SIZE}px] min-w-[${TOUCH_TARGET_SIZE}px] p-2 active:scale-95 transition-colors duration-200`,
     menu: `min-h-[${TOUCH_TARGET_SIZE}px] w-full px-4 py-3 active:scale-98 transition-all duration-200`,
   },
-  
+
   // Form elements
   form: {
     input: `min-h-[${TOUCH_TARGET_SIZE}px] px-3 py-2`,
     checkbox: `h-5 w-5 min-h-[${TOUCH_TARGET_SIZE}px] min-w-[${TOUCH_TARGET_SIZE}px] p-2`,
     radio: `h-5 w-5 min-h-[${TOUCH_TARGET_SIZE}px] min-w-[${TOUCH_TARGET_SIZE}px] p-2`,
   },
-  
+
   // Card interactions
   card: {
     clickable: `active:scale-98 transition-all duration-200 cursor-pointer`,
@@ -49,16 +49,16 @@ export const touchTargetStyles = {
     minWidth: `${TOUCH_TARGET_SIZE}px`,
     touchAction: 'manipulation' as const,
   },
-  
+
   interactive: {
     transition: 'transform 150ms ease-in-out',
     cursor: 'pointer',
   },
-  
+
   activeScale: {
     transform: 'scale(0.95)',
   },
-  
+
   button: {
     primary: {
       minHeight: `${TOUCH_TARGET_SIZE}px`,
@@ -66,7 +66,7 @@ export const touchTargetStyles = {
       touchAction: 'manipulation' as const,
       transition: 'all 200ms ease-in-out',
     },
-    
+
     icon: {
       minHeight: `${TOUCH_TARGET_SIZE}px`,
       minWidth: `${TOUCH_TARGET_SIZE}px`,
@@ -87,15 +87,15 @@ export const getTouchTargetViolations = (container: HTMLElement): HTMLElement[] 
   const interactiveElements = container.querySelectorAll(
     'button, a, input, select, textarea, [role="button"], [tabindex]:not([tabindex="-1"])'
   )
-  
+
   const violations: HTMLElement[] = []
-  
+
   interactiveElements.forEach((element) => {
     if (!validateTouchTarget(element as HTMLElement)) {
       violations.push(element as HTMLElement)
     }
   })
-  
+
   return violations
 }
 
@@ -103,13 +103,13 @@ export const getTouchTargetViolations = (container: HTMLElement): HTMLElement[] 
 export const useTouchTargetOptimization = (enabled: boolean = true) => {
   const checkTouchTargets = (containerRef: React.RefObject<HTMLElement>) => {
     if (!enabled || !containerRef.current) return []
-    
+
     return getTouchTargetViolations(containerRef.current)
   }
-  
+
   const logTouchTargetViolations = (containerRef: React.RefObject<HTMLElement>) => {
     const violations = checkTouchTargets(containerRef)
-    
+
     if (violations.length > 0) {
       console.warn(`Found ${violations.length} touch target violations:`, violations)
       violations.forEach((element, index) => {
@@ -123,10 +123,10 @@ export const useTouchTargetOptimization = (enabled: boolean = true) => {
         })
       })
     }
-    
+
     return violations
   }
-  
+
   return {
     checkTouchTargets,
     logTouchTargetViolations,
@@ -142,14 +142,14 @@ export const responsiveTouchTargets = {
     icon: `min-h-[${TOUCH_TARGET_SIZE}px] min-w-[${TOUCH_TARGET_SIZE}px] p-3`,
     nav: `min-h-[${TOUCH_TARGET_SIZE}px] px-3 py-2`,
   },
-  
+
   // Tablet adjustments
   tablet: {
     button: `md:min-h-[40px] md:px-6 md:py-2 md:text-sm`,
     icon: `md:min-h-[40px] md:min-w-[40px] md:p-2`,
     nav: `md:min-h-[40px] md:px-4 md:py-2`,
   },
-  
+
   // Desktop refinements
   desktop: {
     button: `lg:min-h-[36px] lg:px-4 lg:py-2 lg:text-sm`,
@@ -170,13 +170,13 @@ export const accessibilityEnhancements = {
     role: 'button',
     tabIndex: 0,
   },
-  
+
   // Focus management
   focusable: 'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
-  
+
   // High contrast mode support
   highContrast: 'border border-transparent hover:border-gray-300 dark:hover:border-gray-600',
-  
+
   // Reduced motion support
   reducedMotion: 'motion-reduce:transition-none motion-reduce:transform-none',
 }
@@ -185,13 +185,13 @@ export const accessibilityEnhancements = {
 export const performanceOptimizations = {
   // Use transform instead of changing layout properties
   transform: 'transform: scale(0.95)',
-  
+
   // Use will-change for smooth animations
   willChange: 'will-change-transform',
-  
+
   // Use contain for better performance
   contain: 'contain: layout style paint',
-  
+
   // Passive event listeners
   passive: { passive: true },
 }
@@ -209,20 +209,20 @@ export const createTouchOptimizedButton = (
     'select-none', // Prevent text selection
     'outline-none', // Remove default outline
   ]
-  
+
   const variantClasses = {
     primary: 'bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm hover:shadow-md',
     secondary: 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 font-medium rounded-lg',
     icon: 'rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400',
     nav: 'rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
   }
-  
+
   const sizeClasses = {
     sm: 'px-3 py-2 text-sm',
     md: 'px-4 py-3 text-base',
     lg: 'px-6 py-4 text-lg'
   }
-  
+
   return [
     ...baseClasses,
     variantClasses[variant],
@@ -230,7 +230,7 @@ export const createTouchOptimizedButton = (
   ].join(' ')
 }
 
-export default {
+const TouchTargetOptimization = {
   touchTargetClasses,
   touchTargetStyles,
   validateTouchTarget,
@@ -243,3 +243,5 @@ export default {
   createTouchOptimizedButton,
   TOUCH_TARGET_SIZE
 }
+
+export default TouchTargetOptimization

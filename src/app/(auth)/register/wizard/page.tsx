@@ -763,8 +763,8 @@ export default function SchoolRegistrationWizard() {
                               <h4 className="text-slate-900 dark:text-white font-semibold mb-2">Questions?</h4>
                               <p className="text-slate-600 dark:text-slate-300 text-sm">
                                 For questions about these terms, contact us at{' '}
-                                <a href="mailto:legal@catalyst-edu.com" className="text-blue-600 dark:text-blue-400 hover:underline">
-                                  legal@catalyst-edu.com
+                                <a href="mailto:legal@catalystwells.in" className="text-blue-600 dark:text-blue-400 hover:underline">
+                                  legal@catalystwells.in
                                 </a>
                               </p>
                             </div>

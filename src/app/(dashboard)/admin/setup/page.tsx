@@ -122,6 +122,156 @@ const setupSchema = z.object({
 
 type SetupFormData = z.infer<typeof setupSchema>
 
+const SCHOOL_TYPE_GROUPS = [
+  {
+    id: 'general',
+    label: 'General School Types',
+    options: [
+      { value: 'Public', label: 'Public School' },
+      { value: 'Private', label: 'Private School' },
+      { value: 'Charter', label: 'Charter School' },
+      { value: 'Magnet', label: 'Magnet School' },
+      { value: 'International', label: 'International School' }
+    ]
+  },
+  {
+    id: 'asia',
+    label: '1. ASIA',
+    options: [
+      { value: 'CBSE', label: 'CBSE' },
+      { value: 'ICSE / ISC', label: 'ICSE / ISC' },
+      { value: 'NIOS', label: 'NIOS' },
+      { value: 'All Indian State Boards', label: 'All Indian State Boards' },
+      { value: 'MEXT (Japan)', label: 'MEXT (Japan)' },
+      { value: 'National Curriculum of Korea', label: 'National Curriculum of Korea' },
+      { value: 'Singapore MOE', label: 'Singapore MOE' },
+      { value: 'SEAB', label: 'SEAB' },
+      { value: 'Cambridge O-Level (Singapore partnership)', label: 'Cambridge O-Level (Singapore partnership)' },
+      { value: 'Chinese National Curriculum', label: 'Chinese National Curriculum' },
+      { value: 'Gaokao Provincial Boards', label: 'Gaokao Provincial Boards' },
+      { value: 'Malaysian KSSM / KSSR', label: 'Malaysian KSSM / KSSR' },
+      { value: 'Thai Basic Education Commission', label: 'Thai Basic Education Commission' },
+      { value: 'UAE MOE Curriculum', label: 'UAE MOE Curriculum' },
+      { value: 'Saudi MOE Curriculum', label: 'Saudi MOE Curriculum' },
+      { value: 'Qatar MOE', label: 'Qatar MOE' },
+      { value: 'Kuwait National Curriculum', label: 'Kuwait National Curriculum' },
+      { value: 'Oman MOE', label: 'Oman MOE' },
+      { value: 'Bahrain MOE', label: 'Bahrain MOE' },
+      { value: 'Pakistan Federal Board (FBISE)', label: 'Pakistan Federal Board (FBISE)' },
+      { value: 'Punjab Board', label: 'Punjab Board' },
+      { value: 'Sindh Board', label: 'Sindh Board' },
+      { value: 'Bangladesh National Curriculum', label: 'Bangladesh National Curriculum' },
+      { value: 'Sri Lanka National Curriculum', label: 'Sri Lanka National Curriculum' },
+      { value: 'Nepal NEB', label: 'Nepal NEB' },
+      { value: 'Bhutan Education Board', label: 'Bhutan Education Board' }
+    ]
+  },
+  {
+    id: 'europe',
+    label: '🟩 2. EUROPE',
+    options: [
+      { value: 'Cambridge (CAIE)', label: 'Cambridge (CAIE)' },
+      { value: 'Pearson Edexcel', label: 'Pearson Edexcel' },
+      { value: 'AQA', label: 'AQA' },
+      { value: 'OCR', label: 'OCR' },
+      { value: 'WJEC', label: 'WJEC' },
+      { value: 'French National Curriculum', label: 'French National Curriculum' },
+      { value: 'Baccalauréat Board', label: 'Baccalauréat Board' },
+      { value: 'German State Boards (Länder)', label: 'German State Boards (Länder)' },
+      { value: 'KMK Standards', label: 'KMK Standards' },
+      { value: 'Swiss EDK', label: 'Swiss EDK' },
+      { value: 'Matura Boards', label: 'Matura Boards' },
+      { value: 'Italian MIUR', label: 'Italian MIUR' },
+      { value: 'Esame di Stato', label: 'Esame di Stato' },
+      { value: 'Spanish National Curriculum', label: 'Spanish National Curriculum' },
+      { value: 'ESO Board', label: 'ESO Board' },
+      { value: 'Bachillerato Board', label: 'Bachillerato Board' },
+      { value: 'Russian FSES', label: 'Russian FSES' },
+      { value: 'Finnish National Agency for Education', label: 'Finnish National Agency for Education' },
+      { value: 'Swedish National Agency for Education', label: 'Swedish National Agency for Education' },
+      { value: 'Norwegian UDIR', label: 'Norwegian UDIR' },
+      { value: 'Dutch CITO Board', label: 'Dutch CITO Board' },
+      { value: 'Belgian Education Ministries (Flanders, Wallonia)', label: 'Belgian Education Ministries (Flanders, Wallonia)' }
+    ]
+  },
+  {
+    id: 'africa',
+    label: '🟧 3. AFRICA',
+    options: [
+      { value: 'CAPS (South Africa)', label: 'CAPS (South Africa)' },
+      { value: 'IEB (South Africa)', label: 'IEB (South Africa)' },
+      { value: 'DBE (South Africa)', label: 'DBE (South Africa)' },
+      { value: 'Kenya KNEC', label: 'Kenya KNEC' },
+      { value: 'Nigeria WAEC', label: 'Nigeria WAEC' },
+      { value: 'NECO (Nigeria)', label: 'NECO (Nigeria)' },
+      { value: 'Ghana BECE / WASSCE Boards', label: 'Ghana BECE / WASSCE Boards' },
+      { value: 'Uganda UNEB', label: 'Uganda UNEB' },
+      { value: 'Tanzania NECTA', label: 'Tanzania NECTA' },
+      { value: 'Rwanda REB', label: 'Rwanda REB' }
+    ]
+  },
+  {
+    id: 'north-america',
+    label: '🟪 4. NORTH AMERICA',
+    options: [
+      { value: 'US State Boards (all 50 states)', label: 'US State Boards (all 50 states)' },
+      { value: 'Common Core', label: 'Common Core' },
+      { value: 'AP (Advanced Placement)', label: 'AP (Advanced Placement)' },
+      { value: 'US High School Diploma', label: 'US High School Diploma' },
+      { value: 'IB', label: 'IB' },
+      { value: 'Cambridge', label: 'Cambridge' },
+      { value: 'Canada Ontario Board', label: 'Canada Ontario Board' },
+      { value: 'BC Curriculum', label: 'BC Curriculum' },
+      { value: 'Alberta Education', label: 'Alberta Education' },
+      { value: 'Quebec Ministry', label: 'Quebec Ministry' },
+      { value: 'Manitoba Education', label: 'Manitoba Education' },
+      { value: 'Saskatchewan Education', label: 'Saskatchewan Education' },
+      { value: 'Nova Scotia Education', label: 'Nova Scotia Education' }
+    ]
+  },
+  {
+    id: 'south-america',
+    label: '🟫 5. SOUTH AMERICA',
+    options: [
+      { value: 'BNCC (Brazil)', label: 'BNCC (Brazil)' },
+      { value: 'Argentine National Education Council', label: 'Argentine National Education Council' },
+      { value: 'Chile Ministry of Education Curriculum', label: 'Chile Ministry of Education Curriculum' },
+      { value: 'Peru Ministry of Education', label: 'Peru Ministry of Education' },
+      { value: 'Colombia MEN Curriculum', label: 'Colombia MEN Curriculum' },
+      { value: 'Uruguay ANEP', label: 'Uruguay ANEP' },
+      { value: 'Paraguay MEC', label: 'Paraguay MEC' }
+    ]
+  },
+  {
+    id: 'australia-oceania',
+    label: '🟨 6. AUSTRALIA & OCEANIA',
+    options: [
+      { value: 'NESA (New South Wales)', label: 'NESA (New South Wales)' },
+      { value: 'VCAA (Victoria)', label: 'VCAA (Victoria)' },
+      { value: 'QCAA (Queensland)', label: 'QCAA (Queensland)' },
+      { value: 'SACE Board (South Australia)', label: 'SACE Board (South Australia)' },
+      { value: 'TASC (Tasmania)', label: 'TASC (Tasmania)' },
+      { value: 'WA School Curriculum Authority', label: 'WA School Curriculum Authority' },
+      { value: 'NT Board of Studies', label: 'NT Board of Studies' },
+      { value: 'New Zealand NCEA (NZQA)', label: 'New Zealand NCEA (NZQA)' }
+    ]
+  },
+  {
+    id: 'global',
+    label: '🟦 7. GLOBAL INTERNATIONAL BOARDS',
+    options: [
+      { value: 'IB (International Baccalaureate)', label: 'IB (International Baccalaureate)' },
+      { value: 'Cambridge Assessment (CAIE / IGCSE)', label: 'Cambridge Assessment (CAIE / IGCSE)' },
+      { value: 'Edexcel', label: 'Edexcel' },
+      { value: 'AP', label: 'AP' },
+      { value: 'American Common Core', label: 'American Common Core' },
+      { value: 'American High School Diploma', label: 'American High School Diploma' },
+      { value: 'IPC', label: 'IPC' },
+      { value: 'IMYC', label: 'IMYC' }
+    ]
+  }
+] as const
+
 function SchoolSetupContent() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -164,6 +314,8 @@ function SchoolSetupContent() {
       has_music_room: false
     }
   })
+
+  const selectedSchoolType = watch('school_type')
 
   // Fetch existing school data
   useEffect(() => {
@@ -483,21 +635,72 @@ function SchoolSetupContent() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <label className="block text-sm font-semibold text-slate-700">
                       School Type *
                     </label>
-                    <select
-                      {...register('school_type')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="Public">Public School</option>
-                      <option value="Private">Private School</option>
-                      <option value="Charter">Charter School</option>
-                      <option value="Magnet">Magnet School</option>
-                      <option value="International">International School</option>
-                    </select>
+
+                    {/* Desktop: grouped curriculum/board selector */}
+                    <div className="hidden md:block space-y-3">
+                      <div className="text-xs text-slate-500 mb-1">
+                        Select your primary curriculum or board. Groups are organized by region.
+                      </div>
+                      <div className="max-h-80 overflow-y-auto pr-1 space-y-3 rounded-xl border border-slate-200 bg-white/80 p-3">
+                        {SCHOOL_TYPE_GROUPS.map((group) => (
+                          <div key={group.id} className="border border-slate-100 rounded-lg bg-slate-50/70">
+                            <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100">
+                              <span className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                                {group.label}
+                              </span>
+                            </div>
+                            <div className="px-3 py-2 flex flex-wrap gap-2">
+                              {group.options.map((opt) => {
+                                const isSelected = selectedSchoolType === opt.value
+                                return (
+                                  <button
+                                    key={opt.value}
+                                    type="button"
+                                    onClick={() => setValue('school_type', opt.value, { shouldValidate: true })}
+                                    className={`px-3 py-1 rounded-full text-xs font-medium border transition-all duration-150 shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500
+                                      ${isSelected
+                                        ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                                        : 'bg-white text-slate-700 border-slate-200 hover:bg-blue-50 hover:border-blue-400'}
+                                    `}
+                                  >
+                                    {opt.label}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {errors.school_type && (
+                        <p className="text-red-500 text-xs mt-1">{errors.school_type.message}</p>
+                      )}
+                    </div>
+
+                    {/* Mobile: compact select (unchanged behavior) */}
+                    <div className="md:hidden">
+                      <select
+                        {...register('school_type')}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/90"
+                      >
+                        {SCHOOL_TYPE_GROUPS.map((group) => (
+                          <optgroup key={group.id} label={group.label}>
+                            {group.options.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ))}
+                      </select>
+                      {errors.school_type && (
+                        <p className="text-red-500 text-xs mt-1">{errors.school_type.message}</p>
+                      )}
+                    </div>
                   </div>
 
                   <div>

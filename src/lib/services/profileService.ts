@@ -13,6 +13,7 @@ export interface Profile {
   user_id: string
   first_name: string
   last_name: string
+  full_name?: string
   email: string
   role: 'student' | 'teacher' | 'admin' | 'parent'
   school_id?: string
@@ -53,7 +54,7 @@ class ProfileCache {
     if (!entry) return null
 
     const age = Date.now() - entry.timestamp
-    
+
     // Hard expiry - delete and return null
     if (age > CACHE_TTL + STALE_TTL) {
       this.cache.delete(key)
@@ -108,9 +109,15 @@ export const getCachedProfile = cache(async (userId: string): Promise<Profile | 
       throw error
     }
 
+    // Add full_name
+    const profileWithFullName = {
+      ...data,
+      full_name: `${data.first_name} ${data.last_name}`.trim()
+    }
+
     // Cache the result
-    profileCache.set(cacheKey, data)
-    return data
+    profileCache.set(cacheKey, profileWithFullName)
+    return profileWithFullName
   } catch (error: any) {
     // Only log actual errors, not missing profiles
     if (error.code !== 'PGRST116') {
@@ -120,10 +127,6 @@ export const getCachedProfile = cache(async (userId: string): Promise<Profile | 
   }
 })
 
-/**
- * Get profile with school information
- * Optimized single query with JOIN
- */
 export const getProfileWithSchool = cache(async (userId: string): Promise<ProfileWithSchool | null> => {
   const cacheKey = `profile-school:${userId}`
 
@@ -158,6 +161,7 @@ export const getProfileWithSchool = cache(async (userId: string): Promise<Profil
     // Normalize the response - schools is returned as array, convert to single object
     const normalizedData = {
       ...data,
+      full_name: `${data.first_name} ${data.last_name}`.trim(),
       school: Array.isArray(data.schools) ? data.schools[0] : data.schools
     }
     delete normalizedData.schools
@@ -225,7 +229,7 @@ export async function getDedupedProfileWithSchool(userId: string): Promise<Profi
  */
 export async function getProfilesBatch(userIds: string[]): Promise<Map<string, Profile>> {
   const cacheKey = `profiles-batch:${userIds.sort().join(',')}`
-  
+
   // Check cache
   const cached = profileCache.get(cacheKey)
   if (cached) return new Map(cached)

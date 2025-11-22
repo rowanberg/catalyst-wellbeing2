@@ -37,7 +37,7 @@ class ErrorBoundary extends Component<Props, State> {
   static getDerivedStateFromError(error: Error): Partial<State> {
     // Generate unique error ID for tracking
     const errorId = `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    
+
     return {
       hasError: true,
       error,
@@ -47,14 +47,14 @@ class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     this.setState({ errorInfo })
-    
+
     // Log error details
     console.error('ErrorBoundary caught an error:', error)
     console.error('Error Info:', errorInfo)
-    
+
     // Call custom error handler
     this.props.onError?.(error, errorInfo)
-    
+
     // Report to error tracking service (if available)
     this.reportError(error, errorInfo)
   }
@@ -72,14 +72,14 @@ class ErrorBoundary extends Component<Props, State> {
         url: window.location.href,
         level: this.props.level || 'component'
       }
-      
+
       // Example: Send to your error tracking service
       // fetch('/api/errors', {
       //   method: 'POST',
       //   headers: { 'Content-Type': 'application/json' },
       //   body: JSON.stringify(errorReport)
       // })
-      
+
       console.warn('Error report generated:', errorReport)
     } catch (reportingError) {
       console.error('Failed to report error:', reportingError)
@@ -156,7 +156,7 @@ class ErrorBoundary extends Component<Props, State> {
         <p className="text-sm text-red-800 dark:text-red-200">
           We're sorry, but this component failed to load properly. You can try refreshing this section or continue using other parts of the application.
         </p>
-        
+
         <div className="flex flex-col sm:flex-row gap-2">
           <Button
             onClick={this.handleRetry}
@@ -168,7 +168,7 @@ class ErrorBoundary extends Component<Props, State> {
             Try Again ({this.maxRetries - this.retryCount} left)
           </Button>
         </div>
-        
+
         {this.renderErrorDetails()}
       </CardContent>
     </Card>
@@ -190,7 +190,7 @@ class ErrorBoundary extends Component<Props, State> {
           <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
             We encountered an unexpected error. Please try refreshing the page or return to the home screen.
           </p>
-          
+
           <div className="flex flex-col gap-2">
             <Button
               onClick={this.handleRetry}
@@ -200,7 +200,7 @@ class ErrorBoundary extends Component<Props, State> {
               <RefreshCw className="h-4 w-4 mr-2" />
               {this.retryCount >= this.maxRetries ? 'Max Retries Reached' : `Try Again (${this.maxRetries - this.retryCount} left)`}
             </Button>
-            
+
             <Button
               onClick={this.handleGoHome}
               variant="outline"
@@ -209,7 +209,7 @@ class ErrorBoundary extends Component<Props, State> {
               <Home className="h-4 w-4 mr-2" />
               Go to Home
             </Button>
-            
+
             <Button
               onClick={this.handleReload}
               variant="ghost"
@@ -220,7 +220,7 @@ class ErrorBoundary extends Component<Props, State> {
               Reload Page
             </Button>
           </div>
-          
+
           {this.renderErrorDetails()}
         </CardContent>
       </Card>
@@ -248,7 +248,7 @@ class ErrorBoundary extends Component<Props, State> {
               Error ID: {this.state.errorId}
             </p>
           </div>
-          
+
           <div className="flex flex-col gap-3">
             <Button
               onClick={this.handleReload}
@@ -257,7 +257,7 @@ class ErrorBoundary extends Component<Props, State> {
               <RefreshCw className="h-4 w-4 mr-2" />
               Restart Application
             </Button>
-            
+
             <Button
               onClick={this.handleGoHome}
               variant="outline"
@@ -267,7 +267,7 @@ class ErrorBoundary extends Component<Props, State> {
               Go to Home Page
             </Button>
           </div>
-          
+
           {this.renderErrorDetails()}
         </CardContent>
       </Card>
@@ -307,28 +307,34 @@ export const withErrorBoundary = <P extends object>(
       <Component {...props} />
     </ErrorBoundary>
   )
-  
+
   WrappedComponent.displayName = `withErrorBoundary(${Component.displayName || Component.name})`
   return WrappedComponent
 }
 
 // Specialized error boundaries for different use cases
-export const PageErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }) => (
-  <ErrorBoundary level="page" showDetails={process.env.NODE_ENV === 'development'}>
-    {children}
-  </ErrorBoundary>
-)
+export function PageErrorBoundary({ children }: { children: ReactNode }) {
+  return (
+    <ErrorBoundary level="page" showDetails={process.env.NODE_ENV === 'development'}>
+      {children}
+    </ErrorBoundary>
+  )
+}
 
-export const ComponentErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }) => (
-  <ErrorBoundary level="component" showDetails={process.env.NODE_ENV === 'development'}>
-    {children}
-  </ErrorBoundary>
-)
+export function ComponentErrorBoundary({ children }: { children: ReactNode }) {
+  return (
+    <ErrorBoundary level="component" showDetails={process.env.NODE_ENV === 'development'}>
+      {children}
+    </ErrorBoundary>
+  )
+}
 
-export const CriticalErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }) => (
-  <ErrorBoundary level="critical" showDetails={process.env.NODE_ENV === 'development'}>
-    {children}
-  </ErrorBoundary>
-)
+export function CriticalErrorBoundary({ children }: { children: ReactNode }) {
+  return (
+    <ErrorBoundary level="critical" showDetails={process.env.NODE_ENV === 'development'}>
+      {children}
+    </ErrorBoundary>
+  )
+}
 
 export default ErrorBoundary

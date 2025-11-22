@@ -50,7 +50,7 @@ class AnalyticsManager {
 
   private initializeSession() {
     const sessionId = this.generateSessionId()
-    
+
     this.session = {
       sessionId,
       startTime: Date.now(),
@@ -146,7 +146,7 @@ class AnalyticsManager {
     }
 
     this.eventQueue.push(event)
-    
+
     if (this.session) {
       this.session.events.push(event)
       this.session.lastActivity = Date.now()
@@ -236,7 +236,7 @@ class AnalyticsManager {
     if (this.flushInterval) {
       clearInterval(this.flushInterval)
     }
-    
+
     if (this.performanceObserver) {
       this.performanceObserver.disconnect()
     }
@@ -266,19 +266,19 @@ export const useAnalytics = () => {
     track: (eventName: string, properties?: Record<string, any>) => {
       analytics?.track(eventName, properties)
     },
-    
+
     page: (pageName?: string, properties?: Record<string, any>) => {
       analytics?.page(pageName, properties)
     },
-    
+
     timing: (name: string, duration: number, properties?: Record<string, any>) => {
       analytics?.timing(name, duration, properties)
     },
-    
+
     error: (error: Error, context?: Record<string, any>) => {
       analytics?.error(error, context)
     },
-    
+
     setUser: (userId: string, userRole: string, properties?: Record<string, any>) => {
       analytics?.setUser(userId, userRole, properties)
     }
@@ -290,7 +290,7 @@ export const trackPageLoad = () => {
   if (typeof window !== 'undefined') {
     window.addEventListener('load', () => {
       const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming
-      
+
       analytics?.timing('page_load', navigation.loadEventEnd - navigation.fetchStart, {
         dns_time: navigation.domainLookupEnd - navigation.domainLookupStart,
         tcp_time: navigation.connectEnd - navigation.connectStart,
@@ -306,7 +306,7 @@ export const trackPageLoad = () => {
 // User interaction tracking
 export const trackUserInteraction = (element: HTMLElement, action: string) => {
   const rect = element.getBoundingClientRect()
-  
+
   analytics?.track('user_interaction', {
     action,
     element: element.tagName.toLowerCase(),
@@ -326,7 +326,7 @@ export const trackUserInteraction = (element: HTMLElement, action: string) => {
 export const trackFormInteraction = (formElement: HTMLFormElement, action: 'start' | 'submit' | 'abandon') => {
   const formData = new FormData(formElement)
   const fields = Array.from(formData.keys())
-  
+
   analytics?.track('form_interaction', {
     action,
     formId: formElement.id,
@@ -346,7 +346,7 @@ export const trackErrorBoundary = (error: Error, errorInfo: any) => {
   })
 }
 
-export default {
+const Analytics = {
   initializeAnalytics,
   useAnalytics,
   trackPageLoad,
@@ -354,3 +354,5 @@ export default {
   trackFormInteraction,
   trackErrorBoundary
 }
+
+export default Analytics

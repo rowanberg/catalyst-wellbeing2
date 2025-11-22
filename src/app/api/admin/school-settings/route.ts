@@ -83,14 +83,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Layer 3: School ID Verification
-    if (profile.school_id !== schoolId) {
-      console.warn('[Security] School ID mismatch:', {
-        requested: schoolId,
-        userSchool: profile.school_id,
-        user: session.user.email
-      })
+    // Use the authenticated admin's school_id as the source of truth to prevent cross-school access,
+    // while avoiding false rejections when the client sends a stale or mismatched ID.
+    const effectiveSchoolId = profile.school_id
+
+    if (!effectiveSchoolId) {
+      console.error('[Security] Admin profile missing school_id for user:', session.user.email)
       return NextResponse.json(
-        { message: 'Access denied - Invalid school access' },
+        { message: 'Access denied - No school associated with this admin' },
         { status: 403 }
       )
     }
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     const { data: school, error } = await supabaseAdmin
       .from('schools')
       .select('*')
-      .eq('id', schoolId)
+      .eq('id', effectiveSchoolId)
       .single()
 
     if (error) {
@@ -108,30 +108,6 @@ export async function POST(request: NextRequest) {
         { message: `Failed to fetch school settings: ${error.message}` },
         { status: 500 }
       )
-    }
-
-    // Fetch subscription data from subscription_sync table
-    const { data: subscriptionSync, error: syncError } = await supabaseAdmin
-      .from('subscription_sync')
-      .select('*')
-      .eq('school_id', schoolId)
-      .order('sync_timestamp', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (syncError) {
-      console.error('[Database] Subscription sync fetch error:', syncError)
-    }
-
-    // Fetch from active_subscriptions view
-    const { data: activeSubscription, error: activeError } = await supabaseAdmin
-      .from('active_subscriptions')
-      .select('*')
-      .eq('id', schoolId)
-      .maybeSingle()
-
-    if (activeError) {
-      console.error('[Database] Active subscription fetch error:', activeError)
     }
 
     // Layer 6: Audit logging
@@ -153,33 +129,24 @@ export async function POST(request: NextRequest) {
       timezone: school.timezone || 'America/New_York',
       academic_year_start: school.academic_year_start || '2024-09-01',
       academic_year_end: school.academic_year_end || '2025-06-30',
-      
-      // Subscription data from multiple sources (subscription_sync takes priority)
-      subscription_plan: subscriptionSync?.data?.plan || 
-                        activeSubscription?.subscription_plan || 
-                        school.subscription_plan || 
-                        'free',
-      subscription_status: subscriptionSync?.sync_status === 'completed' 
-                          ? (activeSubscription?.subscription_status || school.subscription_status || 'trial')
-                          : 'pending',
-      subscription_sync_data: subscriptionSync ? {
-        landing_subscription_id: subscriptionSync.landing_page_subscription_id,
-        razorpay_order_id: subscriptionSync.razorpay_order_id,
-        razorpay_payment_id: subscriptionSync.razorpay_payment_id,
-        amount_paid: subscriptionSync.amount_paid,
-        sync_timestamp: subscriptionSync.sync_timestamp,
-        sync_source: subscriptionSync.sync_source,
-        sync_status: subscriptionSync.sync_status
-      } : null,
-      active_subscription_data: activeSubscription ? {
-        student_limit: activeSubscription.student_limit,
-        trial_end_date: activeSubscription.trial_end_date,
-        subscription_start_date: activeSubscription.subscription_start_date,
-        subscription_end_date: activeSubscription.subscription_end_date,
-        next_billing_date: activeSubscription.next_billing_date,
-        total_users: activeSubscription.total_users,
-        student_count: activeSubscription.student_count
-      } : null,
+
+      // Subscription data: taken directly from schools table
+      subscription_status: school.subscription_status || 'trial',
+      subscription_plan: school.subscription_plan || 'free',
+      plan_type: (school as any).plan_type || 'free',
+      user_limit: (school as any).user_limit ?? null,
+      current_users: (school as any).current_users ?? null,
+      payment_status: (school as any).payment_status || 'active',
+      payment_due_date: (school as any).payment_due_date || null,
+      last_payment_date: (school as any).last_payment_date || null,
+      monthly_fee: (school as any).monthly_fee ?? null,
+      student_limit: (school as any).student_limit ?? null,
+      student_count: (school as any).student_count ?? null,
+      trial_end_date: (school as any).trial_end_date || null,
+      subscription_start_date: (school as any).subscription_start_date || null,
+      subscription_end_date: (school as any).subscription_end_date || null,
+      next_billing_date: (school as any).next_billing_date || null,
+      razorpay_subscription_id: (school as any).razorpay_subscription_id || null,
       
       notification_settings: school.notification_settings || {
         email_notifications: true,

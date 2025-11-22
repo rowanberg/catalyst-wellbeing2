@@ -5,9 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 import { useAppSelector } from '@/lib/redux/hooks'
 import { usePerformanceOptimizer } from '@/hooks/usePerformanceOptimizer'
-import { 
+import {
   Brain, Send, Lightbulb, Target, CheckCircle2, Clock, Sparkles,
   Paperclip, Plus, MessageCircle, Copy, Check, X, Menu, History,
   CreditCard, ChevronLeft, ChevronRight, RotateCw, Maximize, Minimize,
@@ -66,7 +67,7 @@ const loadSessions = (currentUserId: string | undefined): ChatSession[] => {
   try {
     const storedUserId = localStorage.getItem(USER_ID_KEY)
     const stored = localStorage.getItem(SESSIONS_KEY)
-    
+
     // If different user, clear all data
     if (storedUserId && storedUserId !== currentUserId) {
       console.log('Different user detected, clearing previous history')
@@ -74,31 +75,31 @@ const loadSessions = (currentUserId: string | undefined): ChatSession[] => {
       localStorage.setItem(USER_ID_KEY, currentUserId)
       return []
     }
-    
+
     // Set user ID if not set
     if (!storedUserId) {
       localStorage.setItem(USER_ID_KEY, currentUserId)
     }
-    
+
     if (!stored) return []
-    
+
     const sessions: ChatSession[] = JSON.parse(stored)
-    
+
     // Clean up sessions older than 30 months
     const retentionDate = new Date()
     retentionDate.setMonth(retentionDate.getMonth() - RETENTION_MONTHS)
-    
+
     const validSessions = sessions.filter(session => {
       const sessionDate = new Date(session.createdAt)
       return sessionDate > retentionDate
     })
-    
+
     // If we filtered any out, save the cleaned list
     if (validSessions.length !== sessions.length) {
       console.log(`Cleaned up ${sessions.length - validSessions.length} sessions older than ${RETENTION_MONTHS} months`)
       localStorage.setItem(SESSIONS_KEY, JSON.stringify(validSessions))
     }
-    
+
     return validSessions
   } catch (error) {
     console.error('Failed to load sessions:', error)
@@ -133,28 +134,28 @@ const getRateLimit = (userId: string | undefined): { remaining: number; resetDat
   if (typeof window === 'undefined' || !userId) {
     return { remaining: DAILY_REQUEST_LIMIT, resetDate: new Date() }
   }
-  
+
   try {
     const stored = localStorage.getItem(RATE_LIMIT_KEY)
     if (!stored) {
       return { remaining: DAILY_REQUEST_LIMIT, resetDate: new Date() }
     }
-    
+
     const data: RateLimitData = JSON.parse(stored)
-    
+
     // Check if it's a different user
     if (data.userId !== userId) {
       return { remaining: DAILY_REQUEST_LIMIT, resetDate: new Date() }
     }
-    
+
     const resetDate = new Date(data.resetDate)
     const now = new Date()
-    
+
     // Check if we need to reset (new day)
     if (now >= resetDate) {
       return { remaining: DAILY_REQUEST_LIMIT, resetDate: getNextResetDate() }
     }
-    
+
     const remaining = Math.max(0, DAILY_REQUEST_LIMIT - data.count)
     return { remaining, resetDate }
   } catch (error) {
@@ -165,22 +166,22 @@ const getRateLimit = (userId: string | undefined): { remaining: number; resetDat
 
 const incrementRateLimit = (userId: string | undefined): boolean => {
   if (typeof window === 'undefined' || !userId) return false
-  
+
   try {
     const { remaining, resetDate } = getRateLimit(userId)
-    
+
     if (remaining <= 0) {
       return false // Limit exceeded
     }
-    
+
     const stored = localStorage.getItem(RATE_LIMIT_KEY)
     let data: RateLimitData
-    
+
     if (stored) {
       data = JSON.parse(stored)
       const storedResetDate = new Date(data.resetDate)
       const now = new Date()
-      
+
       // Reset if new day or different user
       if (now >= storedResetDate || data.userId !== userId) {
         data = {
@@ -198,7 +199,7 @@ const incrementRateLimit = (userId: string | undefined): boolean => {
         resetDate: getNextResetDate().toISOString()
       }
     }
-    
+
     localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(data))
     return true
   } catch (error) {
@@ -217,18 +218,18 @@ const getNextResetDate = (): Date => {
 // Data table component for rendering JSON arrays
 function DataTable({ data }: { data: any[] }) {
   if (!Array.isArray(data) || data.length === 0) return null
-  
+
   // Get all unique keys from all objects
   const allKeys = Array.from(new Set(data.flatMap(obj => Object.keys(obj))))
-  
+
   return (
     <div className="my-4 overflow-x-auto rounded-xl shadow-md" style={{ borderColor: '#ffc8dd60' }}>
       <table className="w-full">
         <thead>
           <tr style={{ background: 'linear-gradient(to right, #cdb4db, #ffc8dd, #ffafcc)' }}>
             {allKeys.map((key, idx) => (
-              <th 
-                key={idx} 
+              <th
+                key={idx}
                 className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider border-r last:border-r-0"
                 style={{ borderRightColor: '#ffc8dd80' }}
               >
@@ -239,13 +240,13 @@ function DataTable({ data }: { data: any[] }) {
         </thead>
         <tbody className="bg-white divide-y divide-slate-200">
           {data.map((row, rowIndex) => (
-            <tr 
-              key={rowIndex} 
+            <tr
+              key={rowIndex}
               className="hover:bg-slate-50 transition-colors"
             >
               {allKeys.map((key) => (
-                <td 
-                  key={key} 
+                <td
+                  key={key}
                   className="px-4 py-3 text-sm text-slate-700 border-r border-slate-100 last:border-r-0"
                 >
                   {row[key] !== undefined ? String(row[key]) : '—'}
@@ -262,20 +263,20 @@ function DataTable({ data }: { data: any[] }) {
 // Code block component with syntax highlighting
 function CodeBlock({ code, onCopy, enableHighlighting = true }: { code: string; onCopy?: (code: string) => void; enableHighlighting?: boolean }) {
   const [copied, setCopied] = React.useState(false)
-  
+
   // Extract language from code block (e.g., "python\ncode here")
   const lines = code.split('\n')
   const firstLine = lines[0]?.trim().toLowerCase()
   let language = 'text'
   let actualCode = code
-  
+
   // Check if first line is a language identifier
   const languageKeywords = ['python', 'javascript', 'typescript', 'java', 'cpp', 'c', 'html', 'css', 'sql', 'bash', 'json', 'xml', 'yaml', 'markdown', 'tsx', 'jsx']
   if (languageKeywords.some(lang => firstLine === lang || firstLine.includes(lang))) {
     language = firstLine.split(' ')[0]
     actualCode = lines.slice(1).join('\n')
   }
-  
+
   // Try to detect and render JSON arrays as tables
   if (language === 'json' || actualCode.trim().startsWith('[')) {
     try {
@@ -287,7 +288,7 @@ function CodeBlock({ code, onCopy, enableHighlighting = true }: { code: string; 
       // Not valid JSON or not a table structure, render as code
     }
   }
-  
+
   const handleCopy = () => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(actualCode)
@@ -296,7 +297,7 @@ function CodeBlock({ code, onCopy, enableHighlighting = true }: { code: string; 
       setTimeout(() => setCopied(false), 2000)
     }
   }
-  
+
   // Language badge color mapping
   const languageColors: Record<string, { bg: string; text: string; label: string }> = {
     python: { bg: 'bg-blue-500', text: 'text-white', label: 'Python' },
@@ -313,9 +314,9 @@ function CodeBlock({ code, onCopy, enableHighlighting = true }: { code: string; 
     bash: { bg: 'bg-slate-700', text: 'text-white', label: 'Bash' },
     json: { bg: 'bg-green-600', text: 'text-white', label: 'JSON' },
   }
-  
+
   const langStyle = languageColors[language] || { bg: 'bg-slate-600', text: 'text-white', label: 'Code' }
-  
+
   return (
     <div className="relative my-4 group rounded-xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-700">
       {/* Header with language badge and copy button */}
@@ -323,8 +324,8 @@ function CodeBlock({ code, onCopy, enableHighlighting = true }: { code: string; 
         <span className={`px-3 py-1 rounded-md text-xs font-semibold ${langStyle.bg} ${langStyle.text}`}>
           {langStyle.label}
         </span>
-        <button 
-          onClick={handleCopy} 
+        <button
+          onClick={handleCopy}
           className="flex items-center gap-2 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-all text-xs font-medium"
         >
           {copied ? (
@@ -340,7 +341,7 @@ function CodeBlock({ code, onCopy, enableHighlighting = true }: { code: string; 
           )}
         </button>
       </div>
-      
+
       {/* Code content with syntax highlighting colors */}
       <pre className="bg-slate-900 p-4 overflow-x-auto">
         <code className="text-sm font-mono leading-relaxed block">
@@ -358,49 +359,49 @@ function CodeBlock({ code, onCopy, enableHighlighting = true }: { code: string; 
 // Simple syntax highlighter component using only React JSX
 function SyntaxHighlight({ code, language }: { code: string; language: string }) {
   const lines = code.split('\n')
-  
+
   const keywords = {
     python: ['def', 'class', 'if', 'else', 'elif', 'for', 'while', 'return', 'import', 'from', 'as', 'try', 'except', 'with', 'lambda', 'yield', 'async', 'await', 'pass', 'break', 'continue', 'in', 'not', 'and', 'or', 'is'],
     javascript: ['const', 'let', 'var', 'function', 'async', 'await', 'return', 'if', 'else', 'for', 'while', 'switch', 'case', 'break', 'import', 'export', 'from', 'default', 'class', 'extends', 'super', 'this', 'new', 'typeof', 'instanceof'],
     typescript: ['const', 'let', 'var', 'function', 'async', 'await', 'return', 'if', 'else', 'for', 'while', 'switch', 'case', 'break', 'import', 'export', 'from', 'default', 'class', 'extends', 'super', 'this', 'new', 'typeof', 'instanceof', 'interface', 'type', 'enum'],
   }
-  
+
   const langKeywords = keywords[language as keyof typeof keywords] || keywords.python
-  
+
   const getTokenColor = (token: string, nextToken?: string): string => {
     const trimmed = token.trim()
-    
+
     // Comments
     if (trimmed.startsWith('#') || trimmed.startsWith('//')) return 'text-slate-500'
-    
+
     // Strings
     if (trimmed.startsWith('"') || trimmed.startsWith("'") || trimmed.startsWith('`')) return 'text-green-400'
-    
+
     // Keywords
     if (langKeywords.includes(trimmed)) return 'text-purple-400'
-    
+
     // Constants
     if (['True', 'False', 'None', 'true', 'false', 'null', 'undefined', 'self'].includes(trimmed)) return 'text-blue-400'
-    
+
     // Numbers
     if (/^\d+(\.\d+)?$/.test(trimmed)) return 'text-orange-400'
-    
+
     // Function names (before parenthesis)
     if (nextToken === '(') return 'text-yellow-400'
-    
+
     return 'text-slate-100'
   }
-  
+
   return (
     <>
       {lines.map((line, lineIdx) => {
         if (!line.trim()) {
           return <div key={lineIdx}>&nbsp;</div>
         }
-        
+
         // Split by word boundaries but keep the delimiters
         const tokens = line.split(/(\s+|[(){}\[\].,;:"'`])/)
-        
+
         return (
           <div key={lineIdx} className="leading-relaxed">
             {tokens.map((token, tokenIdx) => {
@@ -429,7 +430,7 @@ function preprocessMathNotation(text: string): string {
     }
     return match
   })
-  
+
   // Convert subscript patterns: C2, H2O style to subscripts
   text = text.replace(/([A-Z])([0-9]+)(?=[A-Z]|\s|,|\)|\])/g, (match, letter, number) => {
     if (number.length <= 2 && parseInt(number) <= 20) {
@@ -437,11 +438,11 @@ function preprocessMathNotation(text: string): string {
     }
     return match
   })
-  
+
   // Convert common superscript patterns at word boundaries
   text = text.replace(/\^([0-9]+)/g, '<sup>$1</sup>')
   text = text.replace(/\^\{([^}]+)\}/g, '<sup>$1</sup>')
-  
+
   return text
 }
 
@@ -449,16 +450,16 @@ function preprocessMathNotation(text: string): string {
 function parseInlineMarkdown(text: string): React.ReactNode[] {
   // First preprocess mathematical notation
   const processedText = preprocessMathNotation(text)
-  
+
   const parts: React.ReactNode[] = []
   let key = 0
-  
+
   // Combined regex for markdown and HTML tags
   // Matches: **bold**, *italic*, <sup>text</sup>, <sub>text</sub>, <b>text</b>, <i>text</i>
   const regex = /\*\*(.+?)\*\*|\*(.+?)\*|<sup>(.+?)<\/sup>|<sub>(.+?)<\/sub>|<b>(.+?)<\/b>|<i>(.+?)<\/i>|<strong>(.+?)<\/strong>|<em>(.+?)<\/em>/g
   let lastIndex = 0
   let match
-  
+
   while ((match = regex.exec(processedText)) !== null) {
     // Add text before the match
     if (match.index > lastIndex) {
@@ -466,7 +467,7 @@ function parseInlineMarkdown(text: string): React.ReactNode[] {
         <span key={`text-${key++}`}>{processedText.slice(lastIndex, match.index)}</span>
       )
     }
-    
+
     // Add the formatted text based on what matched
     if (match[1]) {
       // **bold**
@@ -501,22 +502,22 @@ function parseInlineMarkdown(text: string): React.ReactNode[] {
         <em key={`italic-${key++}`} className="italic text-slate-100">{content}</em>
       )
     }
-    
+
     lastIndex = regex.lastIndex
   }
-  
+
   // Add remaining text
   if (lastIndex < processedText.length) {
     parts.push(
       <span key={`text-${key++}`}>{processedText.slice(lastIndex)}</span>
     )
   }
-  
+
   return parts.length > 0 ? parts : [<span key="0">{processedText}</span>]
 }
 
 // Flash Card Component with flip animation
-function FlashCard({ question, answer, index, total, onNext, onPrev }: { 
+function FlashCard({ question, answer, index, total, onNext, onPrev }: {
   question: string
   answer: string
   index: number
@@ -566,9 +567,9 @@ function FlashCard({ question, answer, index, total, onNext, onPrev }: {
   // Listen for fullscreen changes (e.g., ESC key)
   React.useEffect(() => {
     const handleFullscreenChange = () => {
-      const isCurrentlyFullscreen = !!(document.fullscreenElement || 
-        (document as any).webkitFullscreenElement || 
-        (document as any).mozFullScreenElement || 
+      const isCurrentlyFullscreen = !!(document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
         (document as any).msFullscreenElement)
       setIsFullscreen(isCurrentlyFullscreen)
     }
@@ -587,12 +588,12 @@ function FlashCard({ question, answer, index, total, onNext, onPrev }: {
   }, [])
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className={cn(
         "w-full mx-auto transition-all",
-        isFullscreen 
-          ? "fixed inset-0 z-50 bg-slate-900 p-6 sm:p-12 flex flex-col items-center justify-center max-w-none" 
+        isFullscreen
+          ? "fixed inset-0 z-50 bg-slate-900 p-6 sm:p-12 flex flex-col items-center justify-center max-w-none"
           : "max-w-2xl"
       )}
     >
@@ -756,15 +757,15 @@ function FlashCard({ question, answer, index, total, onNext, onPrev }: {
 }
 
 // Quiz Component
-function Quiz({ 
-  questions, 
-  quizState, 
-  onAnswerSelect, 
-  onNextQuestion, 
-  onPrevQuestion, 
-  onShowResults, 
-  onRestart 
-}: { 
+function Quiz({
+  questions,
+  quizState,
+  onAnswerSelect,
+  onNextQuestion,
+  onPrevQuestion,
+  onShowResults,
+  onRestart
+}: {
   questions: QuizQuestion[]
   quizState: QuizState
   onAnswerSelect: (questionIndex: number, answerIndex: number) => void
@@ -906,19 +907,18 @@ function Quiz({
           <div className="text-slate-300 mb-6">
             You scored {Math.round((quizState.score / questions.length) * 100)}%
           </div>
-          
+
           {/* Results breakdown */}
           <div className="space-y-3 mb-6">
             {questions.map((question, index) => {
               const userAnswer = quizState.selectedAnswers[index]
               const isCorrect = userAnswer === question.correctAnswer
-              
+
               return (
                 <div key={index} className="bg-slate-700/30 rounded-lg p-3 text-left">
                   <div className="flex items-start gap-3">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      isCorrect ? 'bg-green-500' : 'bg-red-500'
-                    }`}>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${isCorrect ? 'bg-green-500' : 'bg-red-500'
+                      }`}>
                       {isCorrect ? (
                         <CheckCircle2 className="h-4 w-4 text-white" />
                       ) : (
@@ -943,7 +943,7 @@ function Quiz({
               )
             })}
           </div>
-          
+
           <Button
             onClick={onRestart}
             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-lg"
@@ -1012,17 +1012,19 @@ function Quiz({
         <h4 className="text-lg font-semibold text-white mb-4 leading-relaxed">
           {currentQuestion.question}
         </h4>
-        
+
         {/* Answer Options */}
         <div className="space-y-3">
           {currentQuestion.options.map((option, index) => {
             const isSelected = selectedAnswer === index
             const optionLetter = String.fromCharCode(65 + index) // A, B, C, D
-            
+
             return (
               <motion.button
                 key={index}
-                onClick={() => onAnswerSelect(quizState.currentQuestionIndex, index)}
+                // Use clampedIndex so we always record the answer for the question
+                // that is actually being displayed
+                onClick={() => onAnswerSelect(clampedIndex, index)}
                 className={cn(
                   "w-full p-4 rounded-lg border-2 text-left transition-all duration-200 flex items-center gap-3",
                   isSelected
@@ -1032,12 +1034,14 @@ function Quiz({
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
               >
-                <div className={cn(
-                  "w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold text-sm",
-                  isSelected
-                    ? "bg-blue-500 border-blue-400 text-white"
-                    : "border-slate-500 text-slate-400"
-                )}>
+                <div
+                  className={cn(
+                    "w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold text-sm",
+                    isSelected
+                      ? "bg-blue-500 border-blue-400 text-white"
+                      : "border-slate-500 text-slate-400"
+                  )}
+                >
                   {optionLetter}
                 </div>
                 <span className="flex-1">{option}</span>
@@ -1059,11 +1063,11 @@ function Quiz({
           <ChevronLeft className="h-4 w-4 mr-1" />
           Previous
         </Button>
-        
+
         {isLastQuestion ? (
           <Button
             onClick={onShowResults}
-            disabled={selectedAnswer === null}
+            disabled={selectedAnswer == null}
             className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
           >
             <Award className="h-4 w-4 mr-2" />
@@ -1072,7 +1076,7 @@ function Quiz({
         ) : (
           <Button
             onClick={onNextQuestion}
-            disabled={selectedAnswer === null}
+            disabled={selectedAnswer == null}
             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
           >
             Next
@@ -1103,9 +1107,9 @@ function parseFlashCards(content: string): { question: string; answer: string }[
 // Parse quiz questions from AI response with flexible format detection
 function parseQuizQuestions(content: string): QuizQuestion[] {
   console.log('🔍 Parsing quiz content:', content.substring(0, 200) + '...')
-  
+
   const quizQuestions: QuizQuestion[] = []
-  
+
   // Try the strict format first
   const strictRegex = /<<<QUIZ>>>\s*Q:\s*([\s\S]*?)\s*A:\s*([\s\S]*?)\s*B:\s*([\s\S]*?)\s*C:\s*([\s\S]*?)\s*D:\s*([\s\S]*?)\s*CORRECT:\s*([A-D])\s*EXPLANATION:\s*([\s\S]*?)\s*<<<END_QUIZ>>>/g
   let match
@@ -1120,12 +1124,12 @@ function parseQuizQuestions(content: string): QuizQuestion[] {
     ]
     const correctLetter = match[6].trim()
     const explanation = match[7].trim()
-    
+
     // Convert letter to index (A=0, B=1, C=2, D=3)
     const correctAnswer = correctLetter.charCodeAt(0) - 'A'.charCodeAt(0)
-    
+
     console.log('✅ Found strict format quiz question:', { question, options, correctAnswer, explanation })
-    
+
     quizQuestions.push({
       question,
       options,
@@ -1137,21 +1141,21 @@ function parseQuizQuestions(content: string): QuizQuestion[] {
   // If no strict format found, try flexible parsing for regular quiz content
   if (quizQuestions.length === 0) {
     console.log('🔄 No strict format found, trying flexible parsing...')
-    
+
     // Split content into lines and look for question patterns
     const lines = content.split('\n').map(line => line.trim()).filter(line => line.length > 0)
-    
+
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
-      
+
       // Look for question headers: "Question 1:", "Question 2:", etc.
       if (line.match(/^Question\s*\d+:/i)) {
         console.log('🔍 Found question header:', line)
-        
+
         // Get the question text (might be on the same line or next lines)
         let questionText = line.replace(/^Question\s*\d+:\s*/i, '').trim()
         let j = i + 1
-        
+
         // If question text is empty, look for it in the next lines
         while (j < lines.length && !questionText && !lines[j].match(/^[a-d]\)/i)) {
           if (lines[j] && !lines[j].match(/^Question\s*\d+:/i)) {
@@ -1159,47 +1163,47 @@ function parseQuizQuestions(content: string): QuizQuestion[] {
           }
           j++
         }
-        
+
         // Now look for options starting from current position
         const options: string[] = []
         let currentPos = questionText ? j : i + 1
-        
+
         // Look for a), b), c), d) options
         for (let optionLetter of ['a', 'b', 'c', 'd']) {
           while (currentPos < lines.length) {
             const optionLine = lines[currentPos]
             const optionRegex = new RegExp(`^${optionLetter}\\)\\s*(.+)`, 'i')
             const optionMatch = optionLine.match(optionRegex)
-            
+
             if (optionMatch) {
               options.push(optionMatch[1].trim())
               currentPos++
               break
             }
             currentPos++
-            
+
             // Don't go too far looking for options
             if (currentPos - (questionText ? j : i + 1) > 10) break
           }
         }
-        
+
         // If we found a question and at least 2 options, create a quiz question
         if (questionText && options.length >= 2) {
           // Pad options to 4 if needed
           while (options.length < 4) {
             options.push(`Option ${options.length + 1}`)
           }
-          
+
           const correctAnswer = Math.floor(Math.random() * options.length) // Random for now
           const explanation = "This is a practice question. The correct answer may vary - check your study materials!"
-          
-          console.log('✅ Found flexible format quiz question:', { 
-            question: questionText, 
-            options, 
-            correctAnswer, 
-            explanation 
+
+          console.log('✅ Found flexible format quiz question:', {
+            question: questionText,
+            options,
+            correctAnswer,
+            explanation
           })
-          
+
           quizQuestions.push({
             question: questionText,
             options,
@@ -1207,23 +1211,23 @@ function parseQuizQuestions(content: string): QuizQuestion[] {
             explanation
           })
         }
-        
+
         // Move to next question
         i = currentPos - 1
       }
     }
-    
+
     // If still no questions found, try a more aggressive approach
     if (quizQuestions.length === 0) {
       console.log('🔄 Trying more aggressive parsing...')
-      
+
       // Look for any line that ends with a question mark and has options below it
       for (let i = 0; i < lines.length - 4; i++) {
         const line = lines[i]
-        
+
         if (line.includes('?') && line.length > 10) {
           const options: string[] = []
-          
+
           // Check next 4 lines for a), b), c), d) pattern
           for (let j = i + 1; j < Math.min(i + 8, lines.length); j++) {
             const optionMatch = lines[j].match(/^[a-d]\)\s*(.+)/i)
@@ -1231,19 +1235,19 @@ function parseQuizQuestions(content: string): QuizQuestion[] {
               options.push(optionMatch[1].trim())
             }
           }
-          
+
           if (options.length >= 3) {
             while (options.length < 4) {
               options.push(`Additional option ${options.length + 1}`)
             }
-            
-            console.log('✅ Found aggressive parsing quiz question:', { 
-              question: line, 
-              options, 
-              correctAnswer: 0, 
-              explanation: "Practice question - verify the correct answer in your materials." 
+
+            console.log('✅ Found aggressive parsing quiz question:', {
+              question: line,
+              options,
+              correctAnswer: 0,
+              explanation: "Practice question - verify the correct answer in your materials."
             })
-            
+
             quizQuestions.push({
               question: line,
               options,
@@ -1263,7 +1267,7 @@ function parseQuizQuestions(content: string): QuizQuestion[] {
 // Component to render formatted message content
 function MessageContent({ content, onCopy, showCopyButton }: { content: string; onCopy?: (code: string) => void; showCopyButton?: boolean }) {
   const [copied, setCopied] = React.useState(false)
-  
+
   const handleCopyAll = () => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(content)
@@ -1271,16 +1275,16 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
       setTimeout(() => setCopied(false), 2000)
     }
   }
-  
+
   const formatContent = (text: string) => {
     // Check for explicit graph markers: <<<GRAPH:type>>> ... <<<END_GRAPH>>>
     const graphPattern = /<<<GRAPH:(line|bar|area|scatter)>>>\s*({[\s\S]*?})\s*<<<END_GRAPH>>>/g
     const graphMatches = Array.from(text.matchAll(graphPattern))
-    
+
     if (graphMatches.length > 0) {
       const elements: React.ReactNode[] = []
       let lastIndex = 0
-      
+
       graphMatches.forEach((match, idx) => {
         // Add text before graph
         if (match.index! > lastIndex) {
@@ -1293,7 +1297,7 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
             )
           }
         }
-        
+
         // Parse and render graph
         try {
           const graphType = match[1] as 'line' | 'bar' | 'area' | 'scatter'
@@ -1315,10 +1319,10 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
             </div>
           )
         }
-        
+
         lastIndex = match.index! + match[0].length
       })
-      
+
       // Add remaining text after last graph
       if (lastIndex < text.length) {
         const textAfter = text.substring(lastIndex)
@@ -1330,38 +1334,38 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
           )
         }
       }
-      
+
       return <>{elements}</>
     }
-    
+
     // No graphs found, process normally
     return formatTextContent(text)
   }
-  
+
   const formatTextContent = (text: string) => {
     const parts = text.split(/(```[\s\S]*?```)/g)
-    
+
     return parts.map((part, partIndex) => {
       if (part.startsWith('```') && part.endsWith('```')) {
         const code = part.slice(3, -3).trim()
         // Performance optimization will be passed from parent component
         return <CodeBlock key={partIndex} code={code} onCopy={onCopy} />
       }
-      
+
       const lines = part.split('\n')
       const elements: JSX.Element[] = []
-      
+
       let i = 0
       while (i < lines.length) {
         const line = lines[i]
         const key = `${partIndex}-${i}`
-        
+
         if (!line.trim()) {
           elements.push(<div key={key} className="h-3" />)
           i++
           continue
         }
-        
+
         // Markdown tables (| Header | Header |)
         if (line.includes('|') && line.trim().startsWith('|')) {
           // Collect all consecutive lines that look like table rows
@@ -1371,7 +1375,7 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
             tableLines.push(lines[j])
             j++
           }
-          
+
           // Check if we have at least 2 lines (header + separator or header + data)
           if (tableLines.length >= 2) {
             // Parse table - better handling of pipe-separated values
@@ -1384,18 +1388,18 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
                   return cell !== '' || (idx > 0 && idx < arr.length - 1)
                 })
             }
-            
+
             const headers = parseTableRow(tableLines[0])
-            
+
             // Check if second line is a separator (contains dashes)
             const isSeparator = tableLines[1].includes('-') && tableLines[1].includes('|')
             const startDataRow = isSeparator ? 2 : 1
-            
+
             if (headers.length > 0 && tableLines.length > startDataRow) {
               const rows = tableLines.slice(startDataRow)
                 .map(row => parseTableRow(row))
                 .filter(row => row.length > 0 && !row.every(cell => cell === ''))
-              
+
               if (rows.length > 0) {
                 // Calculate column widths based on content
                 const colCount = headers.length
@@ -1406,14 +1410,14 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
                   )
                   return `${Math.max(15, Math.min(35, maxLength * 1.2))}%`
                 })
-                
+
                 elements.push(
                   <div key={key} className="my-4 overflow-x-auto rounded-xl shadow-lg border border-purple-500/30">
                     <table className="w-full table-fixed" style={{ minWidth: `${colCount * 200}px` }}>
                       <thead>
                         <tr style={{ background: 'linear-gradient(to right, #a855f7, #ec4899, #f472b6)' }}>
                           {headers.map((header, idx) => (
-                            <th 
+                            <th
                               key={idx}
                               style={{ width: colWidths[idx] }}
                               className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider border-r border-purple-400/30 last:border-r-0"
@@ -1427,7 +1431,7 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
                         {rows.map((row, rowIdx) => (
                           <tr key={rowIdx} className="hover:bg-slate-700/50 transition-colors">
                             {headers.map((_, cellIdx) => (
-                              <td 
+                              <td
                                 key={cellIdx}
                                 style={{ width: colWidths[cellIdx] }}
                                 className="px-4 py-3 text-sm text-slate-200 border-r border-slate-700/30 last:border-r-0"
@@ -1449,12 +1453,12 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
             }
           }
         }
-        
+
         // Headers (##, ###, ####)
         if (line.match(/^#{1,4}\s/)) {
           const level = line.match(/^#+/)?.[0].length || 1
           const heading = line.replace(/^#+\s/, '').trim()
-          
+
           if (level === 1 || level === 2) {
             elements.push(
               <h2 key={key} className="text-xl font-bold mt-6 mb-4 text-white border-b border-slate-700/50 pb-2">
@@ -1477,12 +1481,12 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
           i++
           continue
         }
-        
+
         // Numbered lists with potential nested bullets
         if (line.match(/^\d+\.\s/)) {
           const number = line.match(/^\d+/)?.[0]
           const content = line.replace(/^\d+\.\s*/, '')
-          
+
           // Check for nested bullets in following lines
           const nestedItems: JSX.Element[] = []
           let j = i + 1
@@ -1496,7 +1500,7 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
             )
             j++
           }
-          
+
           elements.push(
             <div key={key} className="flex gap-3 my-2">
               <span className="font-bold min-w-[2rem] text-sm mt-0.5 flex-shrink-0" style={{ color: '#c084fc' }}>{number}.</span>
@@ -1512,11 +1516,11 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
               </div>
             </div>
           )
-          
+
           i = j
           continue
         }
-        
+
         // Standalone bullets (no parent number)
         if (line.match(/^[*-]\s/)) {
           const content = line.replace(/^[*-]\s/, '')
@@ -1529,14 +1533,14 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
           i++
           continue
         }
-        
+
         // Links [text](url)
         if (line.includes('[') && line.includes('](')) {
           const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g
           const parts: React.ReactNode[] = []
           let lastIndex = 0
           let match
-          
+
           while ((match = linkRegex.exec(line)) !== null) {
             // Add text before link
             if (match.index > lastIndex) {
@@ -1544,10 +1548,10 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
             }
             // Add link
             parts.push(
-              <a 
+              <a
                 key={match.index}
-                href={match[2]} 
-                target="_blank" 
+                href={match[2]}
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-purple-400 hover:text-purple-300 underline decoration-purple-400/50 hover:decoration-purple-300 transition-colors"
               >
@@ -1556,12 +1560,12 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
             )
             lastIndex = match.index + match[0].length
           }
-          
+
           // Add remaining text
           if (lastIndex < line.length) {
             parts.push(parseInlineMarkdown(line.substring(lastIndex)))
           }
-          
+
           elements.push(
             <p key={key} className="my-2 leading-relaxed text-slate-200">
               {parts}
@@ -1570,7 +1574,7 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
           i++
           continue
         }
-        
+
         // Regular paragraphs
         const parsedLine = parseInlineMarkdown(line)
         elements.push(
@@ -1580,11 +1584,11 @@ function MessageContent({ content, onCopy, showCopyButton }: { content: string; 
         )
         i++
       }
-      
+
       return <React.Fragment key={partIndex}>{elements}</React.Fragment>
     })
   }
-  
+
   return (
     <div className="space-y-2 text-[15px] leading-relaxed">
       {formatContent(content)}
@@ -1649,15 +1653,15 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  
+
   // Performance optimization for mobile
   const { capabilities, settings, isOptimized } = usePerformanceOptimizer()
-  
+
   // Apply message limit based on device capabilities
   const maxVisibleMessages = useMemo(() => {
     return settings.maxMessagesInView
   }, [settings.maxMessagesInView])
-  
+
   // Fetch today's topics (slightly deferred to avoid work on first paint)
   useEffect(() => {
     let timeoutId: any
@@ -1675,7 +1679,7 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
         setLoadingTopics(false)
       }
     }
-    
+
     if (profile?.id) {
       timeoutId = setTimeout(fetchTodayTopics, 1500)
     }
@@ -1696,15 +1700,15 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
     }
   }, [profile, isOptimized, capabilities])
 
-// ...
+  // ...
   // Load sessions from localStorage on mount (wait for profile to be loaded)
   useEffect(() => {
     const userId = profile?.id
     if (!userId) return // Wait for profile to load
-    
+
     const loadedSessions = loadSessions(userId)
     setSessions(loadedSessions)
-    
+
     // If no sessions, create a new one
     if (loadedSessions.length === 0) {
       const newSession: ChatSession = {
@@ -1728,18 +1732,18 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
   useEffect(() => {
     const userId = profile?.id
     if (!userId) return
-    
+
     const { remaining, resetDate: reset } = getRateLimit(userId)
     setRemainingRequests(remaining)
     setResetDate(reset)
-    
+
     // Set up interval to check if it's a new day
     const interval = setInterval(() => {
       const { remaining: newRemaining, resetDate: newReset } = getRateLimit(userId)
       setRemainingRequests(newRemaining)
       setResetDate(newReset)
     }, 60000) // Check every minute
-    
+
     return () => clearInterval(interval)
   }, [profile?.id])
 
@@ -1813,7 +1817,7 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
     setInputMessage(value)
     const words = value.trim().split(/\s+/).filter(word => word.length > 0)
     setWordCount(words.length)
-    
+
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
@@ -1823,13 +1827,13 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
   // Send message
   const sendMessage = useCallback(async () => {
     if (!inputMessage.trim() && !selectedImage) return
-    
+
     const userId = profile?.id
     if (!userId) return
 
     // If only image is sent without text, provide a default message
     const messageContent = inputMessage.trim() || (selectedImage ? 'Analyze this image for me.' : '')
-    
+
     const userMessage: ChatMessage = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type: 'user',
@@ -1849,34 +1853,41 @@ export function AIHomeworkHelper({ onBack }: { onBack?: () => void }) {
     try {
       // Get auth token for Supabase Edge Function
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-      
+
       if (sessionError || !session) {
         throw new Error('Authentication failed')
       }
 
       // Use Supabase Edge Function instead of Vercel API
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const response = await fetch(`${supabaseUrl}/functions/v1/ai-homework-chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          message: currentInput,
-          imageData: currentImage,
-          conversationHistory: messages.slice(-6).map(msg => ({
-            role: msg.type === 'user' ? 'user' : 'assistant',
-            content: msg.content
-          })),
-          schoolContext: {
-            studentName: profile?.full_name,
-            schoolName: profile?.school_name,
-            imageAttached: !!currentImage,
-            todayTopics
-          },
-          flashCardMode: flashCardMode,
-          flashCardInstructions: flashCardMode ? `
+
+      let response;
+      let lastError;
+
+      // Retry loop
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          response = await fetch(`${supabaseUrl}/functions/v1/ai-homework-chat`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`
+            },
+            body: JSON.stringify({
+              message: currentInput,
+              imageData: currentImage,
+              conversationHistory: messages.slice(-6).map(msg => ({
+                role: msg.type === 'user' ? 'user' : 'assistant',
+                content: msg.content
+              })),
+              schoolContext: {
+                studentName: profile?.full_name,
+                schoolName: profile?.school_name,
+                imageAttached: !!currentImage,
+                todayTopics
+              },
+              flashCardMode: flashCardMode,
+              flashCardInstructions: flashCardMode ? `
 
 🚨🚨🚨 FLASH CARD MODE IS ACTIVE - YOU MUST FOLLOW THIS FORMAT EXACTLY 🚨🚨🚨
 
@@ -1911,17 +1922,36 @@ MANDATORY REQUIREMENTS:
 
 NOTE: When appropriate for study materials (formulas, definitions, key concepts), you can mention to the student:
 "💡 Tip: You can enable Flash Cards mode using the button at the top to get interactive study cards for this topic!"`
-        })
-      })
+            })
+          })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        console.error('❌ AI Homework Helper Error:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorData
-        })
-        throw new Error(errorData.error || errorData.message || 'Failed to process request with Luminex AI')
+          if (!response.ok) {
+            const errorData = await response.json()
+            console.error('❌ AI Homework Helper Error Status:', response.status, response.statusText)
+            console.error('❌ AI Homework Helper Error Body:', JSON.stringify(errorData, null, 2))
+
+            // If 503 (Service Unavailable) or 429 (Too Many Requests), retry
+            if ((response.status === 503 || response.status === 429) && attempt < 1) {
+              throw new Error(errorData.error || 'Service temporarily unavailable')
+            }
+
+            throw new Error(errorData.error || errorData.message || 'Failed to process request with Luminex AI')
+          }
+
+          // If success, break loop
+          break;
+        } catch (e: any) {
+          lastError = e;
+          if (attempt < 1) {
+            console.log(`Attempt ${attempt + 1} failed, retrying...`);
+            toast.loading("Connection unstable, retrying...", { duration: 2000 });
+            await new Promise(r => setTimeout(r, 1500));
+          }
+        }
+      }
+
+      if (!response || !response.ok) {
+        throw lastError || new Error('Failed to connect to AI service');
       }
 
       // Handle streaming response with ultra-smooth requestAnimationFrame updates
@@ -1947,12 +1977,12 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
       const smoothUpdate = () => {
         pendingUpdate = false
         const shouldAutoScroll = isNearBottom()
-        
+
         setMessages(prev => {
           const existing = prev.find(m => m.id === aiMessageId)
           if (existing) {
-            return prev.map(m => 
-              m.id === aiMessageId 
+            return prev.map(m =>
+              m.id === aiMessageId
                 ? { ...m, content: accumulatedText }
                 : m
             )
@@ -1967,7 +1997,7 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
             }]
           }
         })
-        
+
         // Only auto-scroll if user is near bottom (smart scroll)
         if (shouldAutoScroll) {
           requestAnimationFrame(() => {
@@ -1995,21 +2025,21 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               const data = line.slice(6)
-              if (data === '[DONE]') {
-                break
-              }
+              if (data === '[DONE]') continue
               try {
                 const parsed = JSON.parse(data)
-                if (parsed.text) {
-                  accumulatedText += parsed.text
-                  
+                const text = parsed.text
+
+                if (text) {
+                  accumulatedText += text
+
                   // Hide typing indicator and start streaming on first chunk
                   if (isFirstChunk) {
                     setIsTyping(false)
                     setIsStreaming(true)
                     isFirstChunk = false
                   }
-                  
+
                   // Request smooth update on next animation frame
                   requestUpdate()
                 }
@@ -2019,13 +2049,13 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
             }
           }
         }
-        
+
         // Final update with all accumulated text
         setMessages(prev => {
           const existing = prev.find(m => m.id === aiMessageId)
           if (existing) {
-            return prev.map(m => 
-              m.id === aiMessageId 
+            return prev.map(m =>
+              m.id === aiMessageId
                 ? { ...m, content: accumulatedText }
                 : m
             )
@@ -2037,20 +2067,20 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
       // Ensure typing indicator is hidden and streaming is stopped
       setIsTyping(false)
       setIsStreaming(false)
-      
+
       // Trigger quota indicator refresh only every 20 chats
       if ((helpCount + 1) % 20 === 0) {
         window.dispatchEvent(new Event('refresh-quota'))
       }
-      
+
       // Final smooth scroll to ensure full message is visible
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
       }, 100)
-      
+
     } catch (error: any) {
       console.error('Error calling Gemini API:', error)
-      
+
       // Show error message to user
       const errorMessage: ChatMessage = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -2082,7 +2112,8 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
   const handleNextQuestion = useCallback(() => {
     setQuizState(prev => ({
       ...prev,
-      currentQuestionIndex: Math.min(prev.currentQuestionIndex + 1, prev.selectedAnswers.length - 1)
+      // Always move forward one question; clamping is handled inside the Quiz component
+      currentQuestionIndex: prev.currentQuestionIndex + 1
     }))
   }, [])
 
@@ -2137,18 +2168,18 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
   }, [messages.length, isTyping])
-  
+
   // Scroll to bottom to hide previous messages and show only thinking animation
   useEffect(() => {
     if (isTyping && messagesContainerRef.current) {
       // Scroll to bottom so previous messages are hidden above
       const container = messagesContainerRef.current
-      
+
       // Add small delay to let thinking animation render first
       setTimeout(() => {
-        container.scrollTo({ 
-          top: container.scrollHeight, 
-          behavior: 'smooth' 
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: 'smooth'
         })
       }, 50)
     }
@@ -2217,220 +2248,83 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
     return (
       <div className="w-full sm:max-w-3xl lg:max-w-4xl sm:mx-auto px-2 sm:px-4">
         {selectedImage && (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            className="mb-4 relative inline-block"
-          >
+          <div className="mb-4 relative inline-block">
             <div className="relative h-32 rounded-xl overflow-hidden border-2 border-slate-700 shadow-lg">
-              <Image 
-                src={selectedImage} 
-                alt="Preview" 
-                width={150} 
-                height={128} 
-                className="h-full w-auto object-cover" 
-                style={{ width: 'auto', height: '100%' }} 
+              <Image
+                src={selectedImage}
+                alt="Preview"
+                width={150}
+                height={128}
+                className="h-full w-auto object-cover"
+                style={{ width: 'auto', height: '100%' }}
               />
             </div>
-            <Button 
-              onClick={removeImage} 
-              size="sm" 
+            <Button
+              onClick={removeImage}
+              size="sm"
               className="absolute -top-2 -right-2 h-7 w-7 p-0 rounded-full bg-red-500 hover:bg-red-600 border-2 border-white shadow-md transition-all hover:scale-110"
             >
               <X className="h-3.5 w-3.5 text-white" />
             </Button>
-          </motion.div>
-        )}
-        
-        <div className="flex items-end gap-3">
-          <div className="flex-1 relative bg-slate-900/50 backdrop-blur-xl rounded-2xl border-2 shadow-2xl hover:shadow-purple-500/20 transition-all duration-200"
-          style={{
-            borderColor: 'rgba(168, 85, 247, 0.3)'
-          }}
-          onFocus={(e) => {
-            if (e.currentTarget.contains(e.target)) {
-              e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.6)'
-              e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(168, 85, 247, 0.2), 0 10px 10px -5px rgba(168, 85, 247, 0.1)'
-            }
-          }}
-          onBlur={(e) => {
-            if (e.currentTarget.contains(e.target)) {
-              e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.3)'
-            }
-          }}>
-            <textarea
-              ref={textareaRef}
-              value={inputMessage}
-              onChange={handleInputChange}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  sendMessage()
-                }
-              }}
-              placeholder="Ask me anything about your homework..."
-              rows={1}
-              className="w-full bg-transparent text-white placeholder:text-slate-500 px-5 sm:px-6 py-4 sm:py-5 pr-16 text-base sm:text-lg focus:outline-none resize-none overflow-y-auto min-h-[72px] sm:min-h-[80px] max-h-[180px] sm:max-h-[200px]"
-              style={{ scrollbarWidth: 'none' }}
-              autoFocus
-            />
-            
-            <div className="absolute right-3 sm:right-4 bottom-3 sm:bottom-4">
-              <Button 
-                onClick={() => fileInputRef.current?.click()} 
-                size="sm" 
-                variant="ghost" 
-                type="button" 
-                title="Attach image" 
-                className="h-10 w-10 sm:h-11 sm:w-11 p-0 text-slate-400 rounded-lg transition-all"
-                style={{
-                  '--hover-bg': 'rgba(168, 85, 247, 0.15)',
-                  '--hover-color': '#c084fc'
-                } as React.CSSProperties}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(168, 85, 247, 0.15)'
-                  e.currentTarget.style.color = '#c084fc'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                  e.currentTarget.style.color = '#94a3b8'
-                }}
-              >
-                <Paperclip className="h-4 w-4" />
-              </Button>
-            </div>
-            
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" aria-label="Upload image" />
           </div>
-          
-          <motion.button
-            onClick={sendMessage}
-            disabled={!inputMessage.trim() && !selectedImage}
-            title="Send message"
-            className={cn(
-              "relative h-[72px] w-[72px] sm:h-[80px] sm:w-[80px] rounded-2xl transition-all duration-300 flex items-center justify-center overflow-hidden group",
-              (!inputMessage.trim() && !selectedImage)
-                ? "bg-slate-800 cursor-not-allowed"
-                : "cursor-pointer"
-            )}
-            whileHover={(!inputMessage.trim() && !selectedImage) ? {} : { scale: 1.08 }}
-            whileTap={(!inputMessage.trim() && !selectedImage) ? {} : { scale: 0.92 }}
-            animate={(!inputMessage.trim() && !selectedImage) ? {} : {
-              boxShadow: [
-                '0 0 20px rgba(168, 85, 247, 0.4)',
-                '0 0 30px rgba(236, 72, 153, 0.5)',
-                '0 0 20px rgba(168, 85, 247, 0.4)',
-              ]
+        )}
+
+        <div className="flex-1 relative bg-slate-900/50 backdrop-blur-xl rounded-2xl border-2 shadow-2xl hover:shadow-purple-500/20 transition-all duration-200">
+          <textarea
+            ref={textareaRef}
+            value={inputMessage}
+            onChange={handleInputChange}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                sendMessage()
+              }
             }}
-            transition={{
-              boxShadow: { duration: 2, repeat: Infinity, ease: 'easeInOut' },
-              scale: { duration: 0.15 }
-            }}
-          >
-            {/* Animated gradient border */}
-            {(!inputMessage.trim() && !selectedImage) ? null : (
-              <motion.div
-                className="absolute inset-0 rounded-2xl"
-                style={{
-                  background: 'linear-gradient(45deg, #a855f7, #ec4899, #8b5cf6, #d946ef)',
-                  backgroundSize: '400% 400%'
-                }}
-                animate={{
-                  backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
-                }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  ease: 'linear'
-                }}
-              />
-            )}
-            
-            {/* Inner content */}
-            <div className={cn(
-              "relative z-10 w-[calc(100%-4px)] h-[calc(100%-4px)] rounded-[14px] flex items-center justify-center",
-              (!inputMessage.trim() && !selectedImage)
-                ? "bg-slate-800"
-                : "bg-gradient-to-br from-purple-600 via-pink-600 to-purple-700"
-            )}>
-              {/* Shine effect */}
-              {(!inputMessage.trim() && !selectedImage) ? null : (
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                  animate={{
-                    x: ['-100%', '200%']
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: 'linear',
-                    repeatDelay: 1
-                  }}
-                />
-              )}
-              
-              {/* Icon with pulse */}
-              <motion.div
-                animate={(!inputMessage.trim() && !selectedImage) ? {} : {
-                  scale: [1, 1.1, 1]
-                }}
-                transition={{
-                  duration: 1.5,
-                  repeat: Infinity,
-                  ease: 'easeInOut'
-                }}
-              >
-                <Send className={cn(
-                  "h-6 w-6 sm:h-7 sm:w-7",
-                  (!inputMessage.trim() && !selectedImage) ? "text-slate-600" : "text-white drop-shadow-lg"
-                )} />
-              </motion.div>
-              
-              {/* Sparkle particles */}
-              {(!inputMessage.trim() && !selectedImage) ? null : (
-                <>
-                  <motion.div
-                    className="absolute top-2 right-2 w-1 h-1 bg-white rounded-full"
-                    animate={{
-                      scale: [0, 1, 0],
-                      opacity: [0, 1, 0]
-                    }}
-                    transition={{
-                      duration: 1.5,
-                      repeat: Infinity,
-                      delay: 0
-                    }}
-                  />
-                  <motion.div
-                    className="absolute bottom-3 left-3 w-1 h-1 bg-white rounded-full"
-                    animate={{
-                      scale: [0, 1, 0],
-                      opacity: [0, 1, 0]
-                    }}
-                    transition={{
-                      duration: 1.5,
-                      repeat: Infinity,
-                      delay: 0.5
-                    }}
-                  />
-                  <motion.div
-                    className="absolute top-1/2 left-2 w-1 h-1 bg-white rounded-full"
-                    animate={{
-                      scale: [0, 1, 0],
-                      opacity: [0, 1, 0]
-                    }}
-                    transition={{
-                      duration: 1.5,
-                      repeat: Infinity,
-                      delay: 1
-                    }}
-                  />
-                </>
-              )}
-            </div>
-          </motion.button>
+            placeholder="Ask me anything about your homework..."
+            rows={1}
+            className="w-full bg-transparent text-white placeholder:text-slate-500 px-5 sm:px-6 py-4 sm:py-5 pr-16 text-base sm:text-lg focus:outline-none resize-none overflow-y-auto min-h-[72px] sm:min-h-[80px] max-h-[180px] sm:max-h-[200px]"
+            style={{ scrollbarWidth: 'none' }}
+            autoFocus
+          />
+
+          <div className="absolute right-3 sm:right-4 bottom-3 sm:bottom-4">
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              size="sm"
+              variant="ghost"
+              type="button"
+              title="Attach image"
+              className="h-10 w-10 sm:h-11 sm:w-11 p-0 text-slate-400 rounded-lg transition-colors hover:bg-slate-800 hover:text-slate-200"
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="hidden"
+            aria-label="Upload image"
+          />
         </div>
-        
+
+        <button
+          type="button"
+          onClick={sendMessage}
+          disabled={!inputMessage.trim() && !selectedImage}
+          title="Send message"
+          className={cn(
+            "mt-3 h-[72px] w-[72px] sm:h-[80px] sm:w-[80px] rounded-2xl flex items-center justify-center transition-colors duration-200",
+            (!inputMessage.trim() && !selectedImage)
+              ? "bg-slate-800 cursor-not-allowed text-slate-600"
+              : "bg-gradient-to-br from-purple-600 via-pink-600 to-purple-700 text-white hover:from-purple-700 hover:to-pink-700 shadow-lg"
+          )}
+        >
+          <Send className="h-6 w-6 sm:h-7 sm:w-7" />
+        </button>
+
         <div className="mt-4 flex items-center justify-center gap-4 text-xs text-slate-500">
           <span className="flex items-center gap-1.5">
             <kbd className="px-2 py-1 bg-slate-800 border border-slate-700 rounded text-slate-300 font-mono text-[10px]">Enter</kbd>
@@ -2563,8 +2457,8 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
                   <p className="text-[10px] text-slate-400 font-medium">Your Homework Assistant</p>
                 </div>
               </div>
-              <Button 
-                onClick={createNewSession} 
+              <Button
+                onClick={createNewSession}
                 className="w-full text-white text-sm font-semibold h-10 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-xl hover:scale-[1.02] active:scale-95 border border-purple-500/30"
                 style={{
                   background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #f472b6 100%)'
@@ -2633,7 +2527,7 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
               </div>
               <span className="text-slate-500 font-medium">Saved locally</span>
             </div>
-            
+
             <div className="bg-gradient-to-r from-blue-900/20 to-purple-900/20 rounded-lg p-2 border border-blue-500/20">
               <div className="text-[9px] text-slate-400 space-y-0.5">
                 <div className="flex items-center gap-1.5">
@@ -2775,11 +2669,11 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
                   <X className="h-5 w-5 text-slate-300" />
                 </button>
               </div>
-              <Button 
+              <Button
                 onClick={() => {
                   createNewSession()
                   setIsMobileSidebarOpen(false)
-                }} 
+                }}
                 className="w-full text-white text-xs h-9 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 hover:shadow-xl border border-purple-500/30"
                 style={{
                   background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #f472b6 100%)'
@@ -2836,7 +2730,7 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
               <div className="flex flex-col gap-3">
                 {/* AI Quota Indicator */}
                 <QuotaIndicator />
-                
+
                 <div className="flex items-center justify-between text-[10px] text-slate-300">
                   <span className="flex items-center gap-1">
                     <MessageCircle className="h-3 w-3 text-slate-500" />
@@ -2856,10 +2750,10 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
       {/* Main Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {messages.length > 0 && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            transition={{ duration: 0.3 }} 
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
             className="px-3 sm:px-6 py-3 sm:py-4 border-b border-slate-700/50 bg-gradient-to-r from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-xl shadow-lg"
           >
             <div className="flex items-center justify-between w-full sm:max-w-4xl sm:mx-auto">
@@ -2898,7 +2792,7 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
                   <span className="hidden sm:inline">{flashCardMode ? 'Flash Cards ON' : 'Flash Cards'}</span>
                   <span className="sm:hidden">Cards</span>
                 </Button>
-                
+
                 <div className="hidden sm:flex items-center gap-2 text-[10px] text-slate-400">
                   <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-lg shadow-emerald-500/50"></div>
                   <span className="font-semibold">Online</span>
@@ -2911,7 +2805,7 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
         <div ref={messagesContainerRef} onScroll={handleScroll} className={cn("flex-1 overflow-y-auto transition-all duration-500", inputPosition === 'center' ? 'flex items-center justify-center' : '')} style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
           <div className={cn("w-full transition-all duration-500", inputPosition === 'center' ? 'px-4 sm:max-w-2xl sm:mx-auto sm:px-6' : 'px-2 sm:px-4 lg:max-w-5xl lg:mx-auto py-3 sm:py-6 lg:py-8 space-y-3 sm:space-y-6')}>
             {inputPosition === 'center' && displayedMessages.length === 0 && (
-              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }} className="w-full">
+              <div className="w-full">
                 {/* Mobile Menu Button - Fixed Position */}
                 <motion.button
                   onClick={() => setIsMobileSidebarOpen(true)}
@@ -2921,7 +2815,7 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
                 >
                   <Menu className="h-5 w-5 text-slate-300" />
                 </motion.button>
-                
+
                 <div className="text-center mb-8">
                   <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.4 }}>
                     <div className="mx-auto mb-6 flex justify-center">
@@ -2961,13 +2855,13 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
                             <p className="text-xs text-slate-400">What your teacher covered today</p>
                           </div>
                         </div>
-                        
+
                         <div className="space-y-3">
                           {todayTopics.map((topic: any, index: number) => {
                             const teacherName = topic.profiles ? `${topic.profiles.first_name} ${topic.profiles.last_name}` : 'Teacher'
                             const className = topic.classes?.class_name || 'Class'
                             const subject = topic.classes?.subject || ''
-                            
+
                             return (
                               <motion.div
                                 key={index}
@@ -3005,7 +2899,7 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
                             )
                           })}
                         </div>
-                        
+
                         <div className="mt-4 pt-3 border-t border-slate-700/50">
                           <p className="text-xs text-slate-400 text-center">
                             💡 Click "Ask about this" for personalized help with today's lessons
@@ -3016,21 +2910,14 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
                   )}
                 </div>
                 {renderCenteredInput()}
-              </motion.div>
+              </div>
             )}
-            
-            {displayedMessages.map((message, index) => (
-              <motion.div 
-                key={message.id} 
-                className="flex gap-2 sm:gap-4 group relative" 
-                initial={{ opacity: 0, y: 15, scale: 0.97 }} 
-                animate={{ opacity: 1, y: 0, scale: 1 }} 
-                transition={{ 
-                  delay: index * 0.02, 
-                  duration: message.type === 'ai' ? 0.5 : 0.3,
-                  ease: [0.16, 1, 0.3, 1] // Custom easing for ultra-smooth animation
-                }} 
-                onMouseEnter={() => setHoveredMessage(message.id)} 
+
+            {displayedMessages.map((message) => (
+              <div
+                key={message.id}
+                className="flex gap-2 sm:gap-4 group relative"
+                onMouseEnter={() => setHoveredMessage(message.id)}
                 onMouseLeave={() => setHoveredMessage(null)}
               >
                 <div className="flex-shrink-0 pt-1">
@@ -3040,21 +2927,21 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
                     <UserAvatar size={28} name={profile?.first_name || profile?.last_name} />
                   )}
                 </div>
-                
+
                 <div className="flex-1 space-y-3 min-w-0">
                   {/* Header with name and actions */}
                   <div className="flex items-center justify-between">
-                    <span 
+                    <span
                       className="text-xs font-semibold"
                       style={{ color: message.type === 'ai' ? '#c084fc' : '#60a5fa' }}
                     >
                       {message.type === 'user' ? (profile?.first_name || 'You') : 'Luminex AI'}
                     </span>
                     {hoveredMessage === message.id && (
-                      <motion.div initial={{ opacity: 0, x: -5 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-1">
-                        <button 
-                          onClick={() => { if (typeof navigator !== 'undefined' && navigator.clipboard) { navigator.clipboard.writeText(message.content); setCopiedCode(message.id); setTimeout(() => setCopiedCode(null), 2000) } }} 
-                          className="px-2 py-1 rounded-md text-xs text-slate-400 hover:text-white hover:bg-slate-700 transition-all flex items-center gap-1" 
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => { if (typeof navigator !== 'undefined' && navigator.clipboard) { navigator.clipboard.writeText(message.content); setCopiedCode(message.id); setTimeout(() => setCopiedCode(null), 2000) } }}
+                          className="px-2 py-1 rounded-md text-xs text-slate-400 hover:text-white hover:bg-slate-700 transition-all flex items-center gap-1"
                           title="Copy message"
                         >
                           {copiedCode === message.id ? (
@@ -3063,36 +2950,36 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
                             <><Copy className="h-3 w-3" /> Copy</>
                           )}
                         </button>
-                      </motion.div>
+                      </div>
                     )}
                   </div>
-                  
+
                   {/* Message card */}
                   <div className={cn(
                     "rounded-2xl p-3 sm:p-4 shadow-lg transition-all duration-200",
-                    message.type === 'ai' 
-                      ? 'border hover:shadow-xl backdrop-blur-xl' 
+                    message.type === 'ai'
+                      ? 'border hover:shadow-xl backdrop-blur-xl'
                       : 'border hover:shadow-xl backdrop-blur-xl'
                   )}
-                  style={{
-                    background: message.type === 'ai'
-                      ? 'linear-gradient(to bottom right, rgba(168, 85, 247, 0.15), rgba(236, 72, 153, 0.1), rgba(139, 92, 246, 0.05))'
-                      : 'linear-gradient(to bottom right, rgba(59, 130, 246, 0.15), rgba(96, 165, 250, 0.1))',
-                    borderColor: message.type === 'ai' ? 'rgba(168, 85, 247, 0.3)' : 'rgba(59, 130, 246, 0.3)'
-                  }}>
+                    style={{
+                      background: message.type === 'ai'
+                        ? 'linear-gradient(to bottom right, rgba(168, 85, 247, 0.15), rgba(236, 72, 153, 0.1), rgba(139, 92, 246, 0.05))'
+                        : 'linear-gradient(to bottom right, rgba(59, 130, 246, 0.15), rgba(96, 165, 250, 0.1))',
+                      borderColor: message.type === 'ai' ? 'rgba(168, 85, 247, 0.3)' : 'rgba(59, 130, 246, 0.3)'
+                    }}>
                     {message.imageData && (
                       <div className="relative max-w-full sm:max-w-md mb-4">
-                        <Image 
-                          src={message.imageData} 
-                          alt="Uploaded" 
-                          width={400} 
-                          height={300} 
-                          className="rounded-xl border border-slate-200 shadow-sm" 
-                          style={{ width: '100%', height: 'auto' }} 
+                        <Image
+                          src={message.imageData}
+                          alt="Uploaded"
+                          width={400}
+                          height={300}
+                          className="rounded-xl border border-slate-200 shadow-sm"
+                          style={{ width: '100%', height: 'auto' }}
                         />
                       </div>
                     )}
-                    
+
                     <div className="relative">
                       {(() => {
                         // Detect quiz directly from message content rather than relying only on isQuiz flag
@@ -3116,7 +3003,7 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
                           }
                           // No quiz questions found, fall back to normal message display
                         }
-                        
+
                         // If it's marked as flash card and it's AI response, check if we have actual cards
                         if (message.isFlashCard && message.type === 'ai') {
                           const flashCards = parseFlashCards(message.content)
@@ -3135,16 +3022,16 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
                           }
                           // No flash cards found, fall back to normal message display
                         }
-                        
+
                         // Normal message rendering
                         return (
                           <div>
-                            <MessageContent 
-                              content={message.content} 
+                            <MessageContent
+                              content={message.content}
                               onCopy={(code) => { setCopiedCode(`${message.id}-code`); setTimeout(() => setCopiedCode(null), 2000) }}
                               showCopyButton={message.type === 'ai' && !isStreaming}
                             />
-                            
+
                           </div>
                         )
                       })()}
@@ -3155,16 +3042,11 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
                     </div>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             ))}
-            
+
             {isTyping && (
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                className="flex gap-2 sm:gap-4"
-              >
+              <div className="flex gap-2 sm:gap-4">
                 <div className="flex-shrink-0 pt-1">
                   <LuminexAvatar size={28} animated={true} />
                 </div>
@@ -3175,86 +3057,86 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
                     <span className="text-sm text-slate-300 italic">Thinking...</span>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             )}
-            
+
             <div ref={messagesEndRef} />
           </div>
         </div>
 
         {inputPosition === 'bottom' && (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            transition={{ duration: 0.4 }} 
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
             className="px-2 sm:px-4 py-3 sm:py-4 border-t border-slate-700/50 bg-slate-900/50 backdrop-blur-xl"
           >
             <div className="w-full sm:max-w-4xl lg:max-w-5xl sm:mx-auto">
               {selectedImage && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }} 
-                  animate={{ opacity: 1, y: 0 }} 
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
                   className="mb-3 relative inline-block"
                 >
                   <div className="relative h-24 sm:h-32 rounded-xl overflow-hidden border-2 border-slate-700 shadow-lg">
-                    <Image 
-                      src={selectedImage} 
-                      alt="Preview" 
-                      width={150} 
-                      height={128} 
-                      className="h-full w-auto object-cover" 
-                      style={{ width: 'auto', height: '100%' }} 
+                    <Image
+                      src={selectedImage}
+                      alt="Preview"
+                      width={150}
+                      height={128}
+                      className="h-full w-auto object-cover"
+                      style={{ width: 'auto', height: '100%' }}
                     />
                   </div>
-                  <Button 
-                    onClick={removeImage} 
-                    size="sm" 
+                  <Button
+                    onClick={removeImage}
+                    size="sm"
                     className="absolute -top-2 -right-2 h-7 w-7 p-0 rounded-full bg-red-500 hover:bg-red-600 border-2 border-white shadow-md transition-all hover:scale-110"
                   >
                     <X className="h-3.5 w-3.5 text-white" />
                   </Button>
                 </motion.div>
               )}
-              
+
               <div className="flex items-end gap-3">
                 <div className="flex-1 relative bg-slate-900/50 backdrop-blur-xl rounded-2xl border-2 shadow-2xl hover:shadow-purple-500/20 transition-all duration-200"
-                style={{
-                  borderColor: 'rgba(168, 85, 247, 0.3)'
-                }}
-                onFocus={(e) => {
-                  if (e.currentTarget.contains(e.target)) {
-                    e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.6)'
-                    e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(168, 85, 247, 0.2), 0 4px 6px -2px rgba(168, 85, 247, 0.1)'
-                  }
-                }}
-                onBlur={(e) => {
-                  if (e.currentTarget.contains(e.target)) {
-                    e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.3)'
-                  }
-                }}>
-                  <textarea 
-                    ref={textareaRef} 
-                    value={inputMessage} 
-                    onChange={handleInputChange} 
-                    onKeyPress={(e) => { 
-                      if (e.key === 'Enter' && !e.shiftKey) { 
-                        e.preventDefault(); 
-                        sendMessage() 
-                      } 
-                    }} 
-                    placeholder="Ask me anything about your homework..." 
-                    rows={1} 
-                    className="w-full bg-transparent text-white placeholder:text-slate-500 px-4 sm:px-5 py-3 sm:py-4 pr-12 sm:pr-14 text-sm sm:text-base focus:outline-none resize-none overflow-y-auto min-h-[60px] sm:min-h-[68px] max-h-[160px] sm:max-h-[180px]" 
-                    style={{ scrollbarWidth: 'none' }} 
+                  style={{
+                    borderColor: 'rgba(168, 85, 247, 0.3)'
+                  }}
+                  onFocus={(e) => {
+                    if (e.currentTarget.contains(e.target)) {
+                      e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.6)'
+                      e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(168, 85, 247, 0.2), 0 4px 6px -2px rgba(168, 85, 247, 0.1)'
+                    }
+                  }}
+                  onBlur={(e) => {
+                    if (e.currentTarget.contains(e.target)) {
+                      e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.3)'
+                    }
+                  }}>
+                  <textarea
+                    ref={textareaRef}
+                    value={inputMessage}
+                    onChange={handleInputChange}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage()
+                      }
+                    }}
+                    placeholder="Ask me anything about your homework..."
+                    rows={1}
+                    className="w-full bg-transparent text-white placeholder:text-slate-500 px-4 sm:px-5 py-3 sm:py-4 pr-12 sm:pr-14 text-sm sm:text-base focus:outline-none resize-none overflow-y-auto min-h-[60px] sm:min-h-[68px] max-h-[160px] sm:max-h-[180px]"
+                    style={{ scrollbarWidth: 'none' }}
                   />
-                  
+
                   <div className="absolute right-3 sm:right-4 bottom-3 sm:bottom-4">
-                    <Button 
-                      onClick={() => fileInputRef.current?.click()} 
-                      size="sm" 
-                      variant="ghost" 
-                      type="button" 
-                      title="Attach image" 
+                    <Button
+                      onClick={() => fileInputRef.current?.click()}
+                      size="sm"
+                      variant="ghost"
+                      type="button"
+                      title="Attach image"
                       className="h-9 w-9 sm:h-10 sm:w-10 p-0 text-slate-400 rounded-lg transition-all"
                       style={{
                         '--hover-bg': 'rgba(168, 85, 247, 0.15)',
@@ -3272,14 +3154,14 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
                       <Paperclip className="h-4 w-4 sm:h-5 sm:w-5" />
                     </Button>
                   </div>
-                  
+
                   <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                 </div>
-                
-                <Button 
-                  onClick={sendMessage} 
-                  disabled={!inputMessage.trim() && !selectedImage} 
-                  title="Send message" 
+
+                <Button
+                  onClick={sendMessage}
+                  disabled={!inputMessage.trim() && !selectedImage}
+                  title="Send message"
                   className={cn(
                     "h-[60px] w-[60px] sm:h-[68px] sm:w-[68px] p-0 rounded-xl shadow-2xl transition-all duration-200 flex items-center justify-center border",
                     (!inputMessage.trim() && !selectedImage)
@@ -3290,7 +3172,7 @@ NOTE: When appropriate for study materials (formulas, definitions, key concepts)
                   <Send className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </Button>
               </div>
-              
+
               {/* Helper text */}
               <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
                 <span>Press <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-slate-300 font-mono">Enter</kbd> to send</span>

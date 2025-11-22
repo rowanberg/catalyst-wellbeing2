@@ -779,21 +779,6 @@ export default function TeacherStudentsPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          {/* Minimal spinner */}
-          <div className="relative">
-            <div className="w-10 h-10 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
-          </div>
-          {/* Simple text */}
-          <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">Loading...</p>
-        </div>
-      </div>
-    )
-  }
-
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -2144,21 +2129,21 @@ export default function TeacherStudentsPage() {
                             <div className="hidden sm:flex items-center gap-6">
                               <div className="text-center">
                                 <div className="flex items-center gap-1 text-gray-700">
-                                  <Zap className="h-3.5 w-3.5 text-amber-500" />
+                                  <Activity className="h-3.5 w-3.5 text-blue-500" />
                                   <span className="text-sm font-semibold">{student.xp || 0}</span>
                                 </div>
                                 <div className="text-xs text-gray-500">XP</div>
                               </div>
                               <div className="text-center">
                                 <div className="flex items-center gap-1 text-gray-700">
-                                  <Star className="h-3.5 w-3.5 text-blue-500" />
+                                  <Award className="h-3.5 w-3.5 text-amber-500" />
                                   <span className="text-sm font-semibold">{student.level || 1}</span>
                                 </div>
                                 <div className="text-xs text-gray-500">Level</div>
                               </div>
                               <div className="text-center">
                                 <div className="flex items-center gap-1 text-gray-700">
-                                  <TrendingUp className="h-3.5 w-3.5 text-green-500" />
+                                  <Clock className="h-3.5 w-3.5 text-purple-500" />
                                   <span className="text-sm font-semibold">{student.streak_days || 0}</span>
                                 </div>
                                 <div className="text-xs text-gray-500">Streak</div>
@@ -2191,21 +2176,21 @@ export default function TeacherStudentsPage() {
                                   <div className="sm:hidden grid grid-cols-3 gap-3 pb-4 border-b border-gray-200">
                                     <div className="text-center p-2 bg-white rounded-lg">
                                       <div className="flex items-center justify-center gap-1 text-gray-700 mb-1">
-                                        <Zap className="h-4 w-4 text-amber-500" />
+                                        <Activity className="h-4 w-4 text-blue-500" />
                                         <span className="text-sm font-bold">{student.xp || 0}</span>
                                       </div>
                                       <div className="text-xs text-gray-500">XP Points</div>
                                     </div>
                                     <div className="text-center p-2 bg-white rounded-lg">
                                       <div className="flex items-center justify-center gap-1 text-gray-700 mb-1">
-                                        <Star className="h-4 w-4 text-blue-500" />
+                                        <Award className="h-4 w-4 text-amber-500" />
                                         <span className="text-sm font-bold">{student.level || 1}</span>
                                       </div>
                                       <div className="text-xs text-gray-500">Level</div>
                                     </div>
                                     <div className="text-center p-2 bg-white rounded-lg">
                                       <div className="flex items-center justify-center gap-1 text-gray-700 mb-1">
-                                        <TrendingUp className="h-4 w-4 text-green-500" />
+                                        <Clock className="h-4 w-4 text-purple-500" />
                                         <span className="text-sm font-bold">{student.streak_days || 0}</span>
                                       </div>
                                       <div className="text-xs text-gray-500">Day Streak</div>

@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
+import NextImage from 'next/image'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
-import { 
+import {
   AlertTriangle, Heart, Brain, Users, TrendingUp, TrendingDown,
   Search, Filter, Download, ArrowLeft, RefreshCw, Eye,
   Target, Activity, Zap, Clock, CheckCircle, AlertCircle,
@@ -90,7 +91,7 @@ export default function WellbeingSeverityPage() {
   const [summary, setSummary] = useState<SummaryStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Search & Filters
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -98,7 +99,7 @@ export default function WellbeingSeverityPage() {
   const [riskLevelFilter, setRiskLevelFilter] = useState('all')
   const [sortBy, setSortBy] = useState('risk_score')
   const [sortOrder, setSortOrder] = useState('desc')
-  
+
   // UI State
   const [selectedStudent, setSelectedStudent] = useState<WellbeingAnalytic | null>(null)
   const [showInterventionModal, setShowInterventionModal] = useState(false)
@@ -110,7 +111,7 @@ export default function WellbeingSeverityPage() {
   const [activeTab, setActiveTab] = useState('neural')
   const [showFilters, setShowFilters] = useState(false)
   const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null)
-  
+
   // Advanced Features
   const [viewMode, setViewMode] = useState<'grid' | 'neural' | 'heatmap' | 'predictive'>('neural')
   const [aiInsights, setAiInsights] = useState<any[]>([])
@@ -122,25 +123,14 @@ export default function WellbeingSeverityPage() {
   const [realTimeUpdates, setRealTimeUpdates] = useState(true)
   const [darkMode, setDarkMode] = useState(false)
   const [particleSystem, setParticleSystem] = useState(true)
-  
+
   // Responsive
   const isMobile = useMediaQuery('(max-width: 768px)')
   const isTablet = useMediaQuery('(max-width: 1024px)')
-  
+
   // Refs for advanced animations
-  const containerRef = useRef<HTMLDivElement>(null)
-  const headerRef = useRef<HTMLDivElement>(null)
-  
   // Scroll animations
-  const { scrollYProgress } = useScroll({ target: containerRef })
-  const yTransform = useTransform(scrollYProgress, [0, 1], [0, -50])
-  const opacityTransform = useTransform(scrollYProgress, [0, 0.2], [1, 0.8])
-  const scaleTransform = useTransform(scrollYProgress, [0, 0.5], [1, 0.98])
-  
   // Spring animations
-  const springConfig = { stiffness: 100, damping: 30, restDelta: 0.001 }
-  const scaleSpring = useSpring(1, springConfig)
-  const opacitySpring = useSpring(1, springConfig)
 
   // Debounce search
   useEffect(() => {
@@ -153,23 +143,23 @@ export default function WellbeingSeverityPage() {
     try {
       setLoading(true)
       setError(null)
-      
+
       const params = new URLSearchParams({
         period_type: periodType,
         risk_level: riskLevelFilter,
         sort_by: sortBy,
         sort_order: sortOrder
       })
-      
+
       const response = await fetch(`/api/admin/wellbeing-severity?${params}`)
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || 'Failed to fetch analytics')
       }
 
       const data = await response.json()
-      
+
       // Ensure data structure
       const analyticsData = Array.isArray(data.analytics) ? data.analytics : []
       const summaryData = data.summary || {
@@ -184,11 +174,11 @@ export default function WellbeingSeverityPage() {
         by_risk_level: {},
         by_intervention_priority: {}
       }
-      
+
       setAnalytics(analyticsData)
       setSummary(summaryData)
       setLastFetchTime(new Date())
-      
+
       if (analyticsData.length > 0) {
         toast.success(`Loaded ${analyticsData.length} student record${analyticsData.length > 1 ? 's' : ''}`)
       }
@@ -242,7 +232,7 @@ export default function WellbeingSeverityPage() {
   }, [])
 
   const toggleIntervention = useCallback((interventionId: string) => {
-    setSelectedInterventions(prev => 
+    setSelectedInterventions(prev =>
       prev.includes(interventionId)
         ? prev.filter(id => id !== interventionId)
         : [...prev, interventionId]
@@ -257,10 +247,10 @@ export default function WellbeingSeverityPage() {
 
     try {
       setInterventionLoading(true)
-      
+
       // Add a small delay to show the loading state
       await new Promise(resolve => setTimeout(resolve, 500))
-      
+
       const interventionData = {
         student_id: interventionStudent.student_id,
         student_name: interventionStudent.student_name,
@@ -275,9 +265,9 @@ export default function WellbeingSeverityPage() {
       }
 
       console.log('Submitting intervention data:', interventionData)
-      
+
       let response: Response
-      
+
       try {
         response = await fetch('/api/admin/interventions', {
           method: 'POST',
@@ -294,14 +284,14 @@ export default function WellbeingSeverityPage() {
       if (!response.ok) {
         let errorData: { error?: string } = {}
         let responseText = ''
-        
+
         try {
           responseText = await response.text()
           errorData = JSON.parse(responseText)
         } catch (parseError) {
           console.warn('Failed to parse error response:', responseText)
         }
-        
+
         console.error('API Error Details:', {
           status: response.status,
           statusText: response.statusText,
@@ -309,7 +299,7 @@ export default function WellbeingSeverityPage() {
           errorData,
           url: response.url
         })
-        
+
         // Provide specific error messages for different status codes
         if (response.status === 401) {
           throw new Error('You are not authorized to create interventions. Please log in again.')
@@ -329,7 +319,7 @@ export default function WellbeingSeverityPage() {
       toast.success(`Intervention plan created successfully for ${interventionStudent.student_name}`)
       closeInterventionModal()
       setSelectedStudent(null)
-      
+
       // Refresh analytics data to show updated status
       fetchAnalytics()
     } catch (error) {
@@ -342,7 +332,7 @@ export default function WellbeingSeverityPage() {
         interventions: selectedInterventions,
         priority: interventionPriority
       })
-      
+
       // Show user-friendly error message
       if (error instanceof Error && error.message) {
         toast.error(error.message)
@@ -375,7 +365,7 @@ export default function WellbeingSeverityPage() {
         }
         return
       }
-      
+
       // Ctrl/Cmd + R to refresh
       if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
         e.preventDefault()
@@ -395,7 +385,7 @@ export default function WellbeingSeverityPage() {
   // Filtered analytics
   const filteredAnalytics = useMemo(() => {
     if (!debouncedSearch) return analytics
-    
+
     const search = debouncedSearch.toLowerCase()
     return analytics.filter(analytic =>
       analytic.student_name.toLowerCase().includes(search) ||
@@ -494,7 +484,7 @@ export default function WellbeingSeverityPage() {
     link.click()
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
-    
+
     toast.success(`Exported ${filteredAnalytics.length} records to CSV`)
   }
 
@@ -615,15 +605,13 @@ export default function WellbeingSeverityPage() {
           }
         }
       `}</style>
-      
-      <motion.div 
-        ref={containerRef}
-        className={`min-h-screen transition-all duration-1000 ${
-          darkMode 
-            ? 'bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900' 
-            : 'bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50'
-        }`}
-        style={{ 
+
+      <div
+        className={`min-h-screen transition-all duration-1000 ${darkMode
+          ? 'bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900'
+          : 'bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50'
+          }`}
+        style={{
           backgroundImage: particleSystem ? `
             radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
             radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.1) 0%, transparent 50%),
@@ -632,37 +620,19 @@ export default function WellbeingSeverityPage() {
         }}
       >
         {/* Futuristic Neural Header */}
-        <motion.div 
-          ref={headerRef}
-          style={{ y: yTransform, opacity: opacityTransform, scale: scaleTransform }}
+        <div
           className="relative overflow-hidden"
         >
           {/* Background Neural Network Animation */}
           <div className="absolute inset-0 opacity-20">
             <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-pink-500/10 animate-pulse"></div>
-            {particleSystem && (
-              <div className="absolute inset-0">
-                {[...Array(20)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="absolute w-1 h-1 bg-blue-400 rounded-full particle-float opacity-60"
-                    style={{
-                      left: `${Math.random() * 100}%`,
-                      top: `${Math.random() * 100}%`,
-                      animationDelay: `${Math.random() * 6}s`
-                    }}
-                  />
-                ))}
-              </div>
-            )}
           </div>
-          
+
           {/* Glassmorphism Header */}
-          <div className={`relative backdrop-blur-xl border-b ${
-            darkMode 
-              ? 'bg-white/5 border-white/10' 
-              : 'bg-white/80 border-white/20'
-          } shadow-2xl sticky top-0 z-10`}>
+          <div className={`relative backdrop-blur-xl border-b ${darkMode
+            ? 'bg-white/5 border-white/10'
+            : 'bg-white/80 border-white/20'
+            } shadow-2xl sticky top-0 z-10`}>
             <div className="relative z-10">
               <div className="max-w-7xl mx-auto mobile-optimized py-4 md:py-8">
                 {/* Mobile-Optimized Header */}
@@ -677,20 +647,18 @@ export default function WellbeingSeverityPage() {
                       <div className="flex items-center gap-3">
                         <Link
                           href="/admin"
-                          className={`touch-target p-2 rounded-xl ${
-                            darkMode 
-                              ? 'bg-white/10 hover:bg-white/20' 
-                              : 'bg-gray-100 hover:bg-gray-200'
-                          } transition-colors`}
+                          className={`touch-target p-2 rounded-xl ${darkMode
+                            ? 'bg-white/10 hover:bg-white/20'
+                            : 'bg-gray-100 hover:bg-gray-200'
+                            } transition-colors`}
                           aria-label="Back to admin dashboard"
                         >
                           <ArrowLeft className={`h-5 w-5 ${darkMode ? 'text-white' : 'text-gray-700'}`} />
                         </Link>
-                        
+
                         <div>
-                          <h1 className={`text-lg md:text-2xl lg:text-3xl font-bold tracking-tight ${
-                            darkMode ? 'text-white' : 'text-slate-900'
-                          }`}>
+                          <h1 className={`text-lg md:text-2xl lg:text-3xl font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'
+                            }`}>
                             Student Wellbeing
                           </h1>
                           <div className="flex items-center gap-2 mt-1">
@@ -703,17 +671,9 @@ export default function WellbeingSeverityPage() {
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* Mobile Actions */}
                       <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setDarkMode(!darkMode)}
-                          className="touch-target p-2"
-                        >
-                          {darkMode ? '☀️' : '🌙'}
-                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -725,7 +685,7 @@ export default function WellbeingSeverityPage() {
                         </Button>
                       </div>
                     </div>
-                    
+
                     {/* Mobile Status Indicators */}
                     <div className="flex flex-wrap items-center gap-2 text-xs">
                       <div className="flex items-center gap-1 px-2 py-1 bg-white/10 dark:bg-black/10 rounded-lg backdrop-blur-sm">
@@ -734,14 +694,14 @@ export default function WellbeingSeverityPage() {
                           Live
                         </span>
                       </div>
-                      
+
                       <div className="flex items-center gap-1 px-2 py-1 bg-white/10 dark:bg-black/10 rounded-lg backdrop-blur-sm">
                         <Shield className="h-3 w-3 text-blue-400" />
                         <span className={`font-medium ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
                           FERPA
                         </span>
                       </div>
-                      
+
                       <div className="flex items-center gap-1 px-2 py-1 bg-white/10 dark:bg-black/10 rounded-lg backdrop-blur-sm">
                         <Users className="h-3 w-3 text-purple-400" />
                         <span className={`font-medium ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
@@ -754,23 +714,23 @@ export default function WellbeingSeverityPage() {
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Futuristic Main Container */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          
+
           {/* Advanced Analytics Dashboard */}
           <div className="space-y-8">
-            
+
             {/* Neural Network Summary Stats */}
             {loading ? (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
               >
                 {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} 
+                  <div key={i}
                     className={`${darkMode ? 'dark-glassmorphism' : 'glassmorphism'} rounded-2xl p-6 quantum-pulse`}
                   >
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl mb-4 animate-pulse" />
@@ -780,17 +740,15 @@ export default function WellbeingSeverityPage() {
                 ))}
               </motion.div>
             ) : summary && (
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+              <div
                 className={`grid gap-3 ${isMobile ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6'} ${isMobile ? 'gap-2' : 'md:gap-4'}`}
               >
                 {/* Professional Enterprise KPI Cards */}
                 {[
-                  { 
-                    label: 'Students Monitored', 
-                    value: summary.total, 
-                    icon: Users, 
+                  {
+                    label: 'Students Monitored',
+                    value: summary.total,
+                    icon: Users,
                     change: '+2.3%',
                     trend: 'up',
                     subtitle: 'Active this week',
@@ -798,10 +756,10 @@ export default function WellbeingSeverityPage() {
                     lightBg: 'bg-blue-50',
                     darkBg: 'bg-blue-950/50'
                   },
-                  { 
-                    label: 'Risk Alerts', 
-                    value: summary.high_risk_count, 
-                    icon: AlertTriangle, 
+                  {
+                    label: 'Risk Alerts',
+                    value: summary.high_risk_count,
+                    icon: AlertTriangle,
                     change: '-12%',
                     trend: 'down',
                     subtitle: 'Requiring attention',
@@ -809,10 +767,10 @@ export default function WellbeingSeverityPage() {
                     lightBg: 'bg-red-50',
                     darkBg: 'bg-red-950/50'
                   },
-                  { 
-                    label: 'Active Interventions', 
-                    value: summary.interventions_needed, 
-                    icon: Target, 
+                  {
+                    label: 'Active Interventions',
+                    value: summary.interventions_needed,
+                    icon: Target,
                     change: '+8.1%',
                     trend: 'up',
                     subtitle: 'In progress',
@@ -820,10 +778,10 @@ export default function WellbeingSeverityPage() {
                     lightBg: 'bg-amber-50',
                     darkBg: 'bg-amber-950/50'
                   },
-                  { 
-                    label: 'Positive Trends', 
-                    value: summary.improving_trend, 
-                    icon: TrendingUp, 
+                  {
+                    label: 'Positive Trends',
+                    value: summary.improving_trend,
+                    icon: TrendingUp,
                     change: '+15.2%',
                     trend: 'up',
                     subtitle: 'Showing improvement',
@@ -831,10 +789,10 @@ export default function WellbeingSeverityPage() {
                     lightBg: 'bg-emerald-50',
                     darkBg: 'bg-emerald-950/50'
                   },
-                  { 
-                    label: 'Wellbeing Score', 
-                    value: formatScore(summary.average_scores?.overall || 0), 
-                    icon: Heart, 
+                  {
+                    label: 'Wellbeing Score',
+                    value: formatScore(summary.average_scores?.overall || 0),
+                    icon: Heart,
                     change: '+3.7%',
                     trend: 'up',
                     subtitle: 'School average',
@@ -842,10 +800,10 @@ export default function WellbeingSeverityPage() {
                     lightBg: 'bg-purple-50',
                     darkBg: 'bg-purple-950/50'
                   },
-                  { 
-                    label: 'Support Referrals', 
-                    value: Math.round((summary.declining_trend / summary.total) * 100) || 0, 
-                    icon: BookOpen, 
+                  {
+                    label: 'Support Referrals',
+                    value: Math.round((summary.declining_trend / summary.total) * 100) || 0,
+                    icon: BookOpen,
                     change: '-5.4%',
                     trend: 'down',
                     subtitle: 'This month',
@@ -853,26 +811,21 @@ export default function WellbeingSeverityPage() {
                     lightBg: 'bg-indigo-50',
                     darkBg: 'bg-indigo-950/50'
                   }
-                ].map((kpi, index) => (
-                  <motion.div
+                ].map((kpi) => (
+                  <div
                     key={kpi.label}
-                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ delay: index * 0.08 }}
-                    className={`enterprise-card metric-card relative overflow-hidden rounded-xl ${isMobile ? 'p-3' : 'p-3 md:p-4 lg:p-6'} ${
-                      darkMode ? kpi.darkBg : kpi.lightBg
-                    } border border-white/20 shadow-lg hover:shadow-xl`}
+                    className={`enterprise-card metric-card relative overflow-hidden rounded-xl ${isMobile ? 'p-3' : 'p-3 md:p-4 lg:p-6'} ${darkMode ? kpi.darkBg : kpi.lightBg
+                      } border border-white/20 shadow-lg hover:shadow-xl`}
                   >
                     <div className={`flex items-start justify-between ${isMobile ? 'mb-2' : 'mb-4'}`}>
                       <div className={`${isMobile ? 'p-2' : 'p-3'} rounded-xl ${kpi.color} shadow-lg`}>
                         <kpi.icon className={`text-white ${isMobile ? 'h-4 w-4' : 'h-5 w-5'}`} />
                       </div>
                       {!isMobile && (
-                        <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
-                          kpi.trend === 'up' 
-                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' 
-                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                        }`}>
+                        <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${kpi.trend === 'up'
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                          : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                          }`}>
                           {kpi.trend === 'up' ? (
                             <TrendingUp className="h-3 w-3" />
                           ) : (
@@ -882,46 +835,38 @@ export default function WellbeingSeverityPage() {
                         </div>
                       )}
                     </div>
-                    
+
                     <div className={`space-y-1 ${isMobile ? 'space-y-0.5' : 'space-y-2'}`}>
-                      <div className={`font-bold ${isMobile ? 'text-xl' : 'text-3xl'} ${
-                        darkMode ? 'text-white' : 'text-gray-900'
-                      }`}>
+                      <div className={`font-bold ${isMobile ? 'text-xl' : 'text-3xl'} ${darkMode ? 'text-white' : 'text-gray-900'
+                        }`}>
                         {kpi.value}
                       </div>
-                      <div className={`font-semibold ${isMobile ? 'text-xs' : 'text-sm'} ${
-                        darkMode ? 'text-gray-200' : 'text-gray-700'
-                      } ${isMobile ? 'leading-tight' : ''}`}>
+                      <div className={`font-semibold ${isMobile ? 'text-xs' : 'text-sm'} ${darkMode ? 'text-gray-200' : 'text-gray-700'
+                        } ${isMobile ? 'leading-tight' : ''}`}>
                         {isMobile ? kpi.label.split(' ').slice(0, 2).join(' ') : kpi.label}
                       </div>
                       {!isMobile && (
-                        <div className={`text-xs ${
-                          darkMode ? 'text-gray-400' : 'text-gray-500'
-                        }`}>
+                        <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'
+                          }`}>
                           {kpi.subtitle}
                         </div>
                       )}
                     </div>
-                    
+
                     {/* Progress indicator */}
                     <div className="mt-4 h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${Math.min((Number(kpi.value) / (summary.total || 1)) * 100, 100)}%` }}
-                        transition={{ delay: index * 0.1 + 0.5, duration: 0.8 }}
+                      <div
                         className={`h-full rounded-full ${kpi.color}`}
+                        style={{ width: `${Math.min((Number(kpi.value) / (summary.total || 1)) * 100, 100)}%` }}
                       />
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
-              </motion.div>
+              </div>
             )}
-            
+
             {/* Professional Search & Analytics Controls */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
+            <div
               className={`enterprise-card rounded-xl space-y-4 md:space-y-6 ${isMobile ? 'p-3' : 'p-3 md:p-4 lg:p-6'}`}
             >
               {/* Search Section */}
@@ -973,7 +918,7 @@ export default function WellbeingSeverityPage() {
                       </button>
                     )}
                   </div>
-                  
+
                   <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                     <Select value={periodType} onValueChange={setPeriodType}>
                       <SelectTrigger className="w-full sm:w-32 md:w-40 h-10 text-xs md:text-sm">
@@ -987,7 +932,7 @@ export default function WellbeingSeverityPage() {
                         <SelectItem value="quarterly">Quarterly</SelectItem>
                       </SelectContent>
                     </Select>
-                    
+
                     <Select value={riskLevelFilter} onValueChange={setRiskLevelFilter}>
                       <SelectTrigger className="w-full sm:w-36 md:w-44 h-10 text-xs md:text-sm">
                         <AlertTriangle className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
@@ -1006,9 +951,8 @@ export default function WellbeingSeverityPage() {
                 </div>
 
                 {/* Results Summary */}
-                <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs md:text-sm ${
-                  darkMode ? 'text-gray-300' : 'text-gray-600'
-                }`}>
+                <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs md:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'
+                  }`}>
                   <div>
                     <span className="font-semibold">{filteredAnalytics.length}</span> of{' '}
                     <span className="font-semibold">{analytics.length}</span> students
@@ -1024,15 +968,10 @@ export default function WellbeingSeverityPage() {
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </div>
 
             {/* Student Cards Grid - Enhanced View */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="space-y-6"
-            >
+            <div className="space-y-6">
               {/* Neural Network Student Grid */}
               {error ? (
                 <motion.div
@@ -1066,21 +1005,18 @@ export default function WellbeingSeverityPage() {
                 </motion.div>
               ) : (
                 <div className="professional-grid">
-                  {filteredAnalytics.map((analytic, index) => {
+                  {filteredAnalytics.map((analytic) => {
                     const RiskIcon = getRiskLevelIcon(analytic.risk_level)
-                    const riskColor = 
+                    const riskColor =
                       analytic.risk_level === 'critical' ? 'from-red-600 to-red-700' :
-                      analytic.risk_level === 'high' ? 'from-orange-600 to-red-600' :
-                      analytic.risk_level === 'medium' ? 'from-yellow-600 to-orange-600' :
-                      analytic.risk_level === 'low' ? 'from-green-600 to-emerald-600' :
-                      'from-emerald-600 to-green-600'
-                    
+                        analytic.risk_level === 'high' ? 'from-orange-600 to-red-600' :
+                          analytic.risk_level === 'medium' ? 'from-yellow-600 to-orange-600' :
+                            analytic.risk_level === 'low' ? 'from-green-600 to-emerald-600' :
+                              'from-emerald-600 to-green-600'
+
                     return (
-                      <motion.div
+                      <div
                         key={analytic.id}
-                        initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        transition={{ delay: index * 0.05 }}
                         className={`enterprise-card metric-card rounded-xl cursor-pointer group enterprise-fade-in ${isMobile ? 'p-3' : 'p-3 md:p-4 lg:p-6'}`}
                         onClick={() => setSelectedStudent(analytic)}
                       >
@@ -1090,9 +1026,11 @@ export default function WellbeingSeverityPage() {
                             {/* Avatar or Icon */}
                             <div className="relative">
                               {analytic.student_avatar ? (
-                                <img 
-                                  src={analytic.student_avatar} 
+                                <NextImage
+                                  src={analytic.student_avatar}
                                   alt={analytic.student_name}
+                                  width={48}
+                                  height={48}
                                   className={`object-cover border-2 border-white shadow-sm ${isMobile ? 'w-8 h-8 rounded-lg' : 'w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 rounded-lg md:rounded-xl'}`}
                                 />
                               ) : (
@@ -1100,38 +1038,34 @@ export default function WellbeingSeverityPage() {
                                   <User className="h-4 w-4 md:h-5 md:w-5 lg:h-6 lg:w-6 text-white" />
                                 </div>
                               )}
-                              <div className={`absolute -bottom-0.5 -right-0.5 md:-bottom-1 md:-right-1 w-3 h-3 md:w-4 md:h-4 rounded-full border-2 border-white ${
-                                analytic.risk_level === 'critical' ? 'bg-red-500' :
+                              <div className={`absolute -bottom-0.5 -right-0.5 md:-bottom-1 md:-right-1 w-3 h-3 md:w-4 md:h-4 rounded-full border-2 border-white ${analytic.risk_level === 'critical' ? 'bg-red-500' :
                                 analytic.risk_level === 'high' ? 'bg-orange-500' :
-                                analytic.risk_level === 'medium' ? 'bg-yellow-500' :
-                                analytic.risk_level === 'low' ? 'bg-green-500' :
-                                'bg-emerald-500'
-                              }`}></div>
+                                  analytic.risk_level === 'medium' ? 'bg-yellow-500' :
+                                    analytic.risk_level === 'low' ? 'bg-green-500' :
+                                      'bg-emerald-500'
+                                }`}></div>
                             </div>
-                            
+
                             <div className="flex-1 min-w-0">
-                              <h3 className={`font-semibold truncate ${isMobile ? 'text-sm' : 'text-sm md:text-base'} ${
-                                darkMode ? 'text-white' : 'text-gray-900'
-                              }`}>
+                              <h3 className={`font-semibold truncate ${isMobile ? 'text-sm' : 'text-sm md:text-base'} ${darkMode ? 'text-white' : 'text-gray-900'
+                                }`}>
                                 {analytic.student_name}
                               </h3>
-                              <p className={`${isMobile ? 'text-xs' : 'text-xs md:text-sm'} ${
-                                darkMode ? 'text-gray-400' : 'text-gray-600'
-                              }`}>
+                              <p className={`${isMobile ? 'text-xs' : 'text-xs md:text-sm'} ${darkMode ? 'text-gray-400' : 'text-gray-600'
+                                }`}>
                                 {isMobile ? analytic.student_grade.replace('Grade ', 'G') : analytic.student_grade} • {analytic.student_id.slice(-4)}
                               </p>
                             </div>
                           </div>
-                          
+
                           {/* Risk Status */}
                           <div className={`flex flex-col items-end ${isMobile ? 'gap-1' : 'gap-2'}`}>
-                            <div className={`${isMobile ? 'px-1.5 py-0.5' : 'px-2 py-1'} rounded-lg ${isMobile ? 'text-[10px]' : 'text-xs'} font-medium ${
-                              analytic.risk_level === 'critical' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
+                            <div className={`${isMobile ? 'px-1.5 py-0.5' : 'px-2 py-1'} rounded-lg ${isMobile ? 'text-[10px]' : 'text-xs'} font-medium ${analytic.risk_level === 'critical' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
                               analytic.risk_level === 'high' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' :
-                              analytic.risk_level === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
-                              analytic.risk_level === 'low' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
-                              'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
-                            }`}>
+                                analytic.risk_level === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                                  analytic.risk_level === 'low' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                                    'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
+                              }`}>
                               {isMobile ? analytic.risk_level.charAt(0).toUpperCase() + analytic.risk_level.slice(1) : analytic.risk_level.toUpperCase()}
                             </div>
                             {!isMobile && (
@@ -1153,7 +1087,7 @@ export default function WellbeingSeverityPage() {
                                 {formatScore(analytic.emotional_wellbeing_score)}
                               </div>
                               <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                <div 
+                                <div
                                   className="h-full bg-blue-500 rounded-full transition-all duration-500"
                                   style={{ width: `${(analytic.emotional_wellbeing_score / 10) * 100}%` }}
                                 />
@@ -1169,7 +1103,7 @@ export default function WellbeingSeverityPage() {
                                 {formatScore(analytic.academic_wellbeing_score)}
                               </div>
                               <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                <div 
+                                <div
                                   className="h-full bg-green-500 rounded-full transition-all duration-500"
                                   style={{ width: `${(analytic.academic_wellbeing_score / 10) * 100}%` }}
                                 />
@@ -1181,23 +1115,21 @@ export default function WellbeingSeverityPage() {
                         {/* Action Buttons */}
                         <div className="flex items-center justify-between pt-2 md:pt-3 lg:pt-4 border-t border-gray-100 dark:border-gray-700">
                           <div className="flex items-center gap-2 md:gap-3 text-xs">
-                            <div className={`flex items-center gap-1 ${
-                              darkMode ? 'text-gray-400' : 'text-gray-600'
-                            }`}>
+                            <div className={`flex items-center gap-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'
+                              }`}>
                               <Activity className="h-2.5 w-2.5 md:h-3 md:w-3" />
                               <span className="text-xs">{analytic.risk_factor_count}</span>
                             </div>
-                            <div className={`flex items-center gap-1 ${
-                              darkMode ? 'text-gray-400' : 'text-gray-600'
-                            }`}>
+                            <div className={`flex items-center gap-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'
+                              }`}>
                               <CheckCircle className="h-2.5 w-2.5 md:h-3 md:w-3" />
                               <span className="text-xs">{analytic.protective_factor_count}</span>
                             </div>
                           </div>
-                          
+
                           <div className={`flex ${isMobile ? 'gap-1' : 'gap-1.5 md:gap-2'}`}>
-                            <Button 
-                              variant="outline" 
+                            <Button
+                              variant="outline"
                               size="sm"
                               className={`touch-target ${isMobile ? 'h-6 text-[10px] px-1.5' : 'h-7 md:h-8 text-xs px-2 md:px-3'}`}
                               onClick={(e) => {
@@ -1209,7 +1141,7 @@ export default function WellbeingSeverityPage() {
                               <span className={isMobile ? 'sr-only' : 'hidden md:inline'}>View</span>
                             </Button>
                             {analytic.intervention_recommended && (
-                              <Button 
+                              <Button
                                 size="sm"
                                 className={`bg-red-600 hover:bg-red-700 touch-target ${isMobile ? 'h-6 text-[10px] px-1.5' : 'h-7 md:h-8 text-xs px-2 md:px-3'}`}
                                 onClick={(e) => {
@@ -1224,15 +1156,15 @@ export default function WellbeingSeverityPage() {
                             )}
                           </div>
                         </div>
-                      </motion.div>
+                      </div>
                     )
                   })}
                 </div>
               )}
-            </motion.div>
+            </div>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* Student Details Modal */}
       <AnimatePresence>
@@ -1257,29 +1189,29 @@ export default function WellbeingSeverityPage() {
                   <div className="flex items-start gap-4">
                     <div className="relative">
                       {selectedStudent.student_avatar ? (
-                        <img 
-                          src={selectedStudent.student_avatar} 
+                        <NextImage
+                          src={selectedStudent.student_avatar}
                           alt={selectedStudent.student_name}
+                          width={64}
+                          height={64}
                           className="w-16 h-16 rounded-xl object-cover border-2 border-white shadow-lg"
                         />
                       ) : (
-                        <div className={`w-16 h-16 rounded-xl bg-gradient-to-r ${
-                          selectedStudent.risk_level === 'critical' ? 'from-red-600 to-red-700' :
+                        <div className={`w-16 h-16 rounded-xl bg-gradient-to-r ${selectedStudent.risk_level === 'critical' ? 'from-red-600 to-red-700' :
                           selectedStudent.risk_level === 'high' ? 'from-orange-600 to-red-600' :
-                          selectedStudent.risk_level === 'medium' ? 'from-yellow-600 to-orange-600' :
-                          selectedStudent.risk_level === 'low' ? 'from-green-600 to-emerald-600' :
-                          'from-emerald-600 to-green-600'
-                        } flex items-center justify-center shadow-lg`}>
+                            selectedStudent.risk_level === 'medium' ? 'from-yellow-600 to-orange-600' :
+                              selectedStudent.risk_level === 'low' ? 'from-green-600 to-emerald-600' :
+                                'from-emerald-600 to-green-600'
+                          } flex items-center justify-center shadow-lg`}>
                           <User className="h-8 w-8 text-white" />
                         </div>
                       )}
-                      <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white ${
-                        selectedStudent.risk_level === 'critical' ? 'bg-red-500' :
+                      <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white ${selectedStudent.risk_level === 'critical' ? 'bg-red-500' :
                         selectedStudent.risk_level === 'high' ? 'bg-orange-500' :
-                        selectedStudent.risk_level === 'medium' ? 'bg-yellow-500' :
-                        selectedStudent.risk_level === 'low' ? 'bg-green-500' :
-                        'bg-emerald-500'
-                      }`}></div>
+                          selectedStudent.risk_level === 'medium' ? 'bg-yellow-500' :
+                            selectedStudent.risk_level === 'low' ? 'bg-green-500' :
+                              'bg-emerald-500'
+                        }`}></div>
                     </div>
                     <div>
                       <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -1289,22 +1221,20 @@ export default function WellbeingSeverityPage() {
                         {selectedStudent.student_grade} • {selectedStudent.student_class} • ID: {selectedStudent.student_id.slice(-6)}
                       </p>
                       <div className="flex items-center gap-2 mt-2">
-                        <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          selectedStudent.risk_level === 'critical' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
+                        <div className={`px-3 py-1 rounded-full text-sm font-medium ${selectedStudent.risk_level === 'critical' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
                           selectedStudent.risk_level === 'high' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' :
-                          selectedStudent.risk_level === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
-                          selectedStudent.risk_level === 'low' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
-                          'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
-                        }`}>
+                            selectedStudent.risk_level === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                              selectedStudent.risk_level === 'low' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                                'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
+                          }`}>
                           {selectedStudent.risk_level.toUpperCase()} RISK
                         </div>
-                        <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          selectedStudent.overall_score_trend === 'improving' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                        <div className={`px-3 py-1 rounded-full text-sm font-medium ${selectedStudent.overall_score_trend === 'improving' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
                           selectedStudent.overall_score_trend === 'declining' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
-                          'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'
-                        }`}>
+                            'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'
+                          }`}>
                           {selectedStudent.overall_score_trend === 'improving' ? '📈 IMPROVING' :
-                           selectedStudent.overall_score_trend === 'declining' ? '📉 DECLINING' : '➡️ STABLE'}
+                            selectedStudent.overall_score_trend === 'declining' ? '📉 DECLINING' : '➡️ STABLE'}
                         </div>
                       </div>
                     </div>
@@ -1350,13 +1280,12 @@ export default function WellbeingSeverityPage() {
                               initial={{ width: 0 }}
                               animate={{ width: `${(score.value / 10) * 100}%` }}
                               transition={{ duration: 0.8, delay: 0.2 }}
-                              className={`h-3 rounded-full bg-gradient-to-r ${
-                                score.color === 'blue' ? 'from-blue-500 to-blue-600' :
+                              className={`h-3 rounded-full bg-gradient-to-r ${score.color === 'blue' ? 'from-blue-500 to-blue-600' :
                                 score.color === 'purple' ? 'from-purple-500 to-purple-600' :
-                                score.color === 'green' ? 'from-green-500 to-green-600' :
-                                score.color === 'yellow' ? 'from-yellow-500 to-yellow-600' :
-                                'from-red-500 to-red-600'
-                              }`}
+                                  score.color === 'green' ? 'from-green-500 to-green-600' :
+                                    score.color === 'yellow' ? 'from-yellow-500 to-yellow-600' :
+                                      'from-red-500 to-red-600'
+                                }`}
                             />
                           </div>
                         </div>
@@ -1597,10 +1526,8 @@ export default function WellbeingSeverityPage() {
 
                 {/* Intervention Options */}
                 <div>
-                  <motion.div 
-                    ref={headerRef}
+                  <div
                     className={`mb-6 ${isMobile ? 'mb-4' : 'mb-8'}`}
-                    style={{ y: yTransform, opacity: opacityTransform }}
                   >
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
                       <div className="flex items-center gap-4">
@@ -1626,7 +1553,7 @@ export default function WellbeingSeverityPage() {
                         </div>
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                   <label className={`block text-sm font-medium mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                     Select Interventions ({selectedInterventions.length} selected)
                   </label>
@@ -1635,11 +1562,10 @@ export default function WellbeingSeverityPage() {
                       <div
                         key={option.id}
                         onClick={() => toggleIntervention(option.id)}
-                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                          selectedInterventions.includes(option.id)
-                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
-                        }`}
+                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedInterventions.includes(option.id)
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                          }`}
                       >
                         <div className="flex items-start gap-3">
                           <span className="text-2xl">{option.icon}</span>
@@ -1669,11 +1595,10 @@ export default function WellbeingSeverityPage() {
                     value={interventionNotes}
                     onChange={(e) => setInterventionNotes(e.target.value)}
                     placeholder="Add any specific notes, observations, or instructions..."
-                    className={`w-full p-3 rounded-xl border resize-none ${
-                      darkMode 
-                        ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400' 
-                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                    }`}
+                    className={`w-full p-3 rounded-xl border resize-none ${darkMode
+                      ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400'
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                      }`}
                     rows={4}
                   />
                 </div>

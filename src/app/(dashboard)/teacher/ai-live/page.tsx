@@ -230,8 +230,10 @@ export default function TeacherAiLivePage() {
                 <Brain className="h-6 w-6" />
               </div>
               <div>
-                <h1 className="text-xl font-bold">Luminex Live</h1>
-                <p className="text-sm text-slate-600">Securely activate your live AI classroom session</p>
+                <h1 className="text-xl font-bold tracking-tight">Luminex Live</h1>
+                <p className="text-sm text-slate-600">
+                  Securely link your classroom Smartboard session with CatalystWells in under a minute.
+                </p>
               </div>
               <div className="ml-auto hidden sm:block">
                 <Badge variant="secondary" className="bg-slate-100 border border-slate-200 text-slate-700">
@@ -301,20 +303,34 @@ export default function TeacherAiLivePage() {
                   )}
                   <div className="space-y-3">
                     <select
-                      className="w-full rounded-xl border-2 border-slate-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-fuchsia-500"
+                      className="w-full rounded-xl border-2 border-slate-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-fuchsia-500 disabled:bg-slate-50 disabled:text-slate-400"
                       value={selectedClassId}
                       onChange={(e) => setSelectedClassId(e.target.value)}
                       disabled={loading || classes.length === 0}
                     >
-                      {classes.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.class_name} {c.subject ? `• ${c.subject}` : ''}
+                      {classes.length > 0 ? (
+                        classes.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.class_name} {c.subject ? `• ${c.subject}` : ''}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="">
+                          {loading ? 'Loading classes…' : 'No active classes found'}
                         </option>
-                      ))}
+                      )}
                     </select>
                     <div className="text-xs text-slate-500">
-                      Ensure the selected class matches the Smartboard room.
+                      Ensure the selected class matches the Smartboard room where Luminex Live is running.
                     </div>
+                    {!loading && classes.length === 0 && !error && (
+                      <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                        <Info className="h-3.5 w-3.5 mt-0.5" />
+                        <span>
+                          We couldn't find any active class assignments for your profile. Please check your timetable or contact your school admin to assign you to a class.
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </Card>
 
