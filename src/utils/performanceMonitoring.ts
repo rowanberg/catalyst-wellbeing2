@@ -421,7 +421,16 @@ class PerformanceMonitor {
 
   recordError(error: ErrorReport) {
     this.errors.push(error)
-    console.error('[Performance] Error recorded:', error)
+
+    // Only log if error has meaningful content
+    if (error.message || error.stack || error.filename) {
+      console.error('[Performance] Error recorded:', {
+        message: error.message,
+        filename: error.filename,
+        line: error.lineno,
+        timestamp: new Date(error.timestamp).toLocaleTimeString()
+      })
+    }
   }
 
   recordCustomTiming(name: string, startTime: number, endTime?: number) {

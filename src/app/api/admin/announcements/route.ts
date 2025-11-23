@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       if (schoolError || !school) {
         return NextResponse.json({ error: 'School not found with provided school code' }, { status: 404 })
       }
-      
+
       finalSchoolId = school.id
     }
 
@@ -36,12 +36,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Check cache first for announcements
-    const cacheKey = createCacheKey('announcements', { 
-      schoolId: finalSchoolId, 
-      status, 
-      type, 
+    const cacheKey = createCacheKey('announcements', {
+      schoolId: finalSchoolId,
+      status,
+      type,
       audience,
-      limit 
+      limit
     })
     const cachedData = apiCache.get(cacheKey)
     if (cachedData) {
@@ -86,13 +86,13 @@ export async function GET(request: NextRequest) {
         // Filter active announcements (handle missing is_active column)
         const isActive = announcement.is_active !== undefined ? announcement.is_active : true;
         const notExpired = !announcement.expires_at || new Date(announcement.expires_at) > new Date();
-        console.log('Filtering announcement:', { 
-          id: announcement.id, 
+        console.log('Filtering announcement:', {
+          id: announcement.id,
           title: announcement.title,
-          isActive, 
-          notExpired, 
+          isActive,
+          notExpired,
           expires_at: announcement.expires_at,
-          is_active: announcement.is_active 
+          is_active: announcement.is_active
         });
         return isActive && notExpired;
       })
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
       }))
 
     const responseData = { announcements: transformedAnnouncements || [] }
-    
+
     // Cache the response for 5 minutes to reduce database load
     apiCache.set(cacheKey, responseData, 5)
     console.log('✅ [ANNOUNCEMENTS-API] Announcements cached for school:', finalSchoolId)
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
 
     // Get the current user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
+
     if (authError || !user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
@@ -147,12 +147,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 
-    const { 
-      title, 
-      content, 
-      priority, 
+    const {
+      title,
+      content,
+      priority,
       target_audience,
-      expires_at
+      expires_at,
+      send_notification
     } = await request.json()
 
     // Validate required fields
@@ -184,7 +185,7 @@ export async function POST(request: NextRequest) {
 
     if (tableError && tableError.code === '42P01') {
       console.error('Table school_announcements does not exist')
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Database table not found. Please run the schema setup first.',
         details: 'school_announcements table does not exist'
       }, { status: 500 })
@@ -205,8 +206,8 @@ export async function POST(request: NextRequest) {
         hint: insertError.hint,
         details: insertError.details
       })
-      return NextResponse.json({ 
-        error: 'Failed to create announcement', 
+      return NextResponse.json({
+        error: 'Failed to create announcement',
         details: insertError.message,
         code: insertError.code,
         hint: insertError.hint
@@ -219,7 +220,42 @@ export async function POST(request: NextRequest) {
       author: `${profile.first_name} ${profile.last_name}`
     }
 
-    return NextResponse.json({ announcement: responseAnnouncement })
+    // Send notifications if requested
+    let notificationsSent = 0
+    if (send_notification) {
+      try {
+        const notifyResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/admin/announcements/notify`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cookie': request.headers.get('Cookie') || ''
+          },
+          body: JSON.stringify({
+            announcement_id: announcement.id,
+            school_id: profile.school_id,
+            target_audience: target_audience || 'all',
+            title: title,
+            message: content
+          })
+        })
+
+        if (notifyResponse.ok) {
+          const notifyData = await notifyResponse.json()
+          notificationsSent = notifyData.notifications_sent || 0
+          console.log(`✅ [ANNOUNCEMENTS] Notifications sent: ${notificationsSent}`)
+        } else {
+          console.error('Failed to send notifications:', await notifyResponse.text())
+        }
+      } catch (notifyError) {
+        console.error('Error sending notifications:', notifyError)
+        // Don't fail the announcement creation if notifications fail
+      }
+    }
+
+    return NextResponse.json({
+      announcement: responseAnnouncement,
+      notifications_sent: send_notification ? notificationsSent : undefined
+    })
   } catch (error) {
     console.error('Create announcement error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -243,7 +279,7 @@ export async function PATCH(request: NextRequest) {
 
     // Get the current user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
+
     if (authError || !user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
@@ -320,7 +356,7 @@ export async function DELETE(request: NextRequest) {
 
     // Get the current user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
+
     if (authError || !user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }

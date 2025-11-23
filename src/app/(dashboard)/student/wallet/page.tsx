@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Wallet, Send, ArrowDownLeft, RefreshCw, History, 
+import {
+  Wallet, Send, ArrowDownLeft, RefreshCw, History,
   Eye, EyeOff, Copy, Check, QrCode, Gem, Zap, Users, BarChart3
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -122,16 +122,16 @@ export default function WalletPage() {
   // Optimized data fetching with caching and parallel requests
   const fetchAllData = useCallback(async () => {
     if (!user || !profile) return;
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       // Check cache first
       const cachedWallet = getCachedData('wallet');
       const cachedTransactions = getCachedData('transactions');
       const cachedStudent = getCachedData('currentStudent');
-      
+
       if (cachedWallet && cachedTransactions && cachedStudent) {
         setWallet(cachedWallet);
         setTransactions(cachedTransactions);
@@ -159,7 +159,7 @@ export default function WalletPage() {
           const data = responseData.wallet || responseData;
           setWallet(data);
           setCachedData('wallet', data, 60000); // Cache for 1 minute
-          
+
           // Only show password setup if not already set in current state
           // This prevents the modal from reappearing after it's been set
           if (!data.hasTransactionPassword && !wallet?.hasTransactionPassword && !passwordJustSet) {
@@ -177,7 +177,7 @@ export default function WalletPage() {
       if (transactionsResponse.status === 'fulfilled' && transactionsResponse.value.ok) {
         const data = await transactionsResponse.value.json();
         setTransactions(data);
-        setCachedData('transactions', data, 30000); // Cache for 30 seconds
+        setCachedData('transactions', data, 300000); // Cache for 5 minutes
       }
 
       // Handle student response
@@ -246,25 +246,25 @@ export default function WalletPage() {
 
       if (response.ok) {
         toast.success('Transaction password set successfully!');
-        
+
         // Set flag to prevent modal from reappearing
         setPasswordJustSet(true);
-        
+
         // Update wallet state immediately to reflect password is set
         setWallet(prev => prev ? { ...prev, hasTransactionPassword: true } : null);
-        
+
         // Close the modal immediately
         setShowPasswordSetup(false);
         setNewPassword('');
         setConfirmPassword('');
-        
+
         // Clear cache and refresh data with force_refresh parameter
         cache.clear();
-        
+
         // Force refresh after delay with cache busting
         setTimeout(async () => {
           try {
-            const freshResponse = await fetch('/api/student/wallet?force_refresh=true', { 
+            const freshResponse = await fetch('/api/student/wallet?force_refresh=true', {
               credentials: 'include',
               cache: 'no-store'
             });
@@ -398,8 +398,8 @@ export default function WalletPage() {
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div
           className="absolute top-20 left-10 w-96 h-96 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 rounded-full blur-3xl"
-          animate={{ 
-            x: [0, 100, 0], 
+          animate={{
+            x: [0, 100, 0],
             y: [0, -50, 0],
             scale: [1, 1.2, 1]
           }}
@@ -407,8 +407,8 @@ export default function WalletPage() {
         />
         <motion.div
           className="absolute bottom-20 right-10 w-[500px] h-[500px] bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-full blur-3xl"
-          animate={{ 
-            x: [0, -100, 0], 
+          animate={{
+            x: [0, -100, 0],
             y: [0, 50, 0],
             scale: [1.2, 1, 1.2]
           }}
@@ -416,7 +416,7 @@ export default function WalletPage() {
         />
         <motion.div
           className="absolute top-1/2 left-1/3 w-80 h-80 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 rounded-full blur-3xl"
-          animate={{ 
+          animate={{
             rotate: [0, 360],
             scale: [1, 1.3, 1]
           }}
@@ -435,9 +435,9 @@ export default function WalletPage() {
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <motion.div 
+                  <motion.div
                     className="p-3 sm:p-4 bg-gradient-to-br from-cyan-500 via-blue-500 to-purple-600 rounded-2xl shadow-[0_0_30px_rgba(6,182,212,0.5)]"
-                    animate={{ 
+                    animate={{
                       boxShadow: [
                         '0 0 30px rgba(6,182,212,0.5)',
                         '0 0 50px rgba(139,92,246,0.6)',
@@ -462,50 +462,50 @@ export default function WalletPage() {
 
               {wallet && (
                 <div className="grid grid-cols-2 gap-2 sm:gap-4">
-                    <motion.div 
-                      className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.2)]"
-                      whileHover={{ scale: 1.02, boxShadow: '0 0 30px rgba(168,85,247,0.4)' }}
-                    >
-                      <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
-                        <Gem className="h-4 w-4 sm:h-5 sm:w-5 text-purple-400" />
-                        <span className="text-purple-200 text-xs sm:text-sm font-medium">Mind Gems</span>
-                        <button
-                          onClick={toggleBalanceVisibility}
-                          className="ml-auto text-purple-300/50 hover:text-purple-300 transition-colors"
-                        >
-                          {showBalance ? <Eye className="h-3 w-3 sm:h-4 sm:w-4" /> : <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" />}
-                        </button>
-                      </div>
-                      <p className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text text-transparent">
-                        {showBalance ? wallet.mindGemsBalance : '••••••'}
-                      </p>
-                      <p className="text-purple-400/60 text-[10px] sm:text-xs mt-0.5 sm:mt-1">MGM</p>
-                      {/* Temporary fix button for missing tags */}
-                      {(!wallet?.studentTag || wallet?.studentTag === '000000000000') && (
-                        <button
-                          onClick={fixStudentTags}
-                          className="mt-2 px-3 py-1 bg-red-500 text-white text-xs rounded"
-                        >
-                          Fix Missing Tags
-                        </button>
-                      )}
-                    </motion.div>
+                  <motion.div
+                    className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.2)]"
+                    whileHover={{ scale: 1.02, boxShadow: '0 0 30px rgba(168,85,247,0.4)' }}
+                  >
+                    <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                      <Gem className="h-4 w-4 sm:h-5 sm:w-5 text-purple-400" />
+                      <span className="text-purple-200 text-xs sm:text-sm font-medium">Mind Gems</span>
+                      <button
+                        onClick={toggleBalanceVisibility}
+                        className="ml-auto text-purple-300/50 hover:text-purple-300 transition-colors"
+                      >
+                        {showBalance ? <Eye className="h-3 w-3 sm:h-4 sm:w-4" /> : <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" />}
+                      </button>
+                    </div>
+                    <p className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text text-transparent">
+                      {showBalance ? wallet.mindGemsBalance : '••••••'}
+                    </p>
+                    <p className="text-purple-400/60 text-[10px] sm:text-xs mt-0.5 sm:mt-1">MGM</p>
+                    {/* Temporary fix button for missing tags */}
+                    {(!wallet?.studentTag || wallet?.studentTag === '000000000000') && (
+                      <button
+                        onClick={fixStudentTags}
+                        className="mt-2 px-3 py-1 bg-red-500 text-white text-xs rounded"
+                      >
+                        Fix Missing Tags
+                      </button>
+                    )}
+                  </motion.div>
 
-                    <motion.div 
-                      className="bg-gradient-to-br from-yellow-900/50 to-orange-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-yellow-500/30 shadow-[0_0_20px_rgba(234,179,8,0.2)]"
-                      whileHover={{ scale: 1.02, boxShadow: '0 0 30px rgba(234,179,8,0.4)' }}
-                    >
-                      <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
-                        <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400" />
-                        <span className="text-yellow-200 text-xs sm:text-sm font-medium">Fluxon</span>
-                      </div>
-                      <p className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent">
-                        {showBalance ? (wallet?.fluxonBalance ?? 0).toFixed(4) : '••••••'}
-                      </p>
-                      <p className="text-yellow-400/60 text-[10px] sm:text-xs mt-0.5 sm:mt-1">FLX</p>
-                    </motion.div>
-                  </div>
-                )
+                  <motion.div
+                    className="bg-gradient-to-br from-yellow-900/50 to-orange-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-yellow-500/30 shadow-[0_0_20px_rgba(234,179,8,0.2)]"
+                    whileHover={{ scale: 1.02, boxShadow: '0 0 30px rgba(234,179,8,0.4)' }}
+                  >
+                    <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                      <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400" />
+                      <span className="text-yellow-200 text-xs sm:text-sm font-medium">Fluxon</span>
+                    </div>
+                    <p className="text-xl sm:text-3xl font-bold bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent">
+                      {showBalance ? (wallet?.fluxonBalance ?? 0).toFixed(4) : '••••••'}
+                    </p>
+                    <p className="text-yellow-400/60 text-[10px] sm:text-xs mt-0.5 sm:mt-1">FLX</p>
+                  </motion.div>
+                </div>
+              )
               }
             </div>
 
@@ -571,7 +571,7 @@ export default function WalletPage() {
         </div>
 
         {/* Navigation Tabs - Bottom */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="fixed bottom-3 sm:bottom-4 left-0 right-0 z-50 flex justify-center px-3 sm:px-4"
@@ -590,11 +590,10 @@ export default function WalletPage() {
                     onClick={() => setActiveTab(tab.id as any)}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className={`relative flex flex-col items-center gap-0.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-medium transition-all ${
-                      activeTab === tab.id
+                    className={`relative flex flex-col items-center gap-0.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-medium transition-all ${activeTab === tab.id
                         ? 'bg-gradient-to-br from-cyan-500/30 to-blue-500/30 text-cyan-300'
                         : 'text-cyan-300/50 hover:text-cyan-300'
-                    }`}
+                      }`}
                   >
                     <tab.icon className="h-4 w-4 sm:h-5 sm:w-5" />
                     <span className="text-[9px] sm:text-[10px] whitespace-nowrap">{tab.label}</span>
@@ -607,11 +606,10 @@ export default function WalletPage() {
                 onClick={() => setActiveTab('send')}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
-                className={`relative flex flex-col items-center gap-0.5 sm:gap-1 px-5 sm:px-6 py-2 sm:py-3 rounded-full font-bold transition-all flex-shrink-0 ${
-                  activeTab === 'send'
+                className={`relative flex flex-col items-center gap-0.5 sm:gap-1 px-5 sm:px-6 py-2 sm:py-3 rounded-full font-bold transition-all flex-shrink-0 ${activeTab === 'send'
                     ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-[0_0_30px_rgba(168,85,247,0.6)]'
                     : 'bg-gradient-to-r from-purple-500/80 to-pink-500/80 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)]'
-                }`}
+                  }`}
               >
                 <Send className="h-5 w-5 sm:h-6 sm:w-6" />
                 <span className="text-[10px] sm:text-xs">Send</span>
@@ -628,11 +626,10 @@ export default function WalletPage() {
                     onClick={() => setActiveTab(tab.id as any)}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className={`relative flex flex-col items-center gap-0.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-medium transition-all ${
-                      activeTab === tab.id
+                    className={`relative flex flex-col items-center gap-0.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-medium transition-all ${activeTab === tab.id
                         ? 'bg-gradient-to-br from-cyan-500/30 to-blue-500/30 text-cyan-300'
                         : 'text-cyan-300/50 hover:text-cyan-300'
-                    }`}
+                      }`}
                   >
                     <tab.icon className="h-4 w-4 sm:h-5 sm:w-5" />
                     <span className="text-[9px] sm:text-[10px] whitespace-nowrap">{tab.label}</span>
@@ -657,7 +654,7 @@ export default function WalletPage() {
               <p className="text-white/70 mb-6">
                 Create a secure password to protect your transactions. You'll need this password every time you send currency.
               </p>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="text-white/70 text-sm mb-2 block">New Password</label>
@@ -669,7 +666,7 @@ export default function WalletPage() {
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-purple-400"
                   />
                 </div>
-                
+
                 <div>
                   <label className="text-white/70 text-sm mb-2 block">Confirm Password</label>
                   <input

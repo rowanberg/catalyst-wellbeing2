@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { MoodHistoryTracker } from '@/components/student/MoodHistoryTracker'
-import { 
-  Heart, Smile, Frown, Meh, Angry, Laugh, Shield, AlertCircle, 
+import {
+  Heart, Smile, Frown, Meh, Angry, Laugh, Shield, AlertCircle,
   Wind, Sparkles, Moon, Droplets, Brain, HelpCircle, ChevronRight,
   Activity, Clock, TrendingUp, Star, Send, MessageSquare, Lock, CheckCircle2
 } from 'lucide-react'
@@ -62,7 +62,7 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
   // Function to get mood-specific greeting
   const getMoodGreeting = useCallback((moodId: string) => {
     const firstName = profile?.full_name?.split(' ')[0] || 'friend'
-    
+
     const moodGreetings: Record<string, { title: string, message: string }> = {
       happy: {
         title: 'Wonderful to See You Happy! 😊',
@@ -89,8 +89,8 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
         message: `${firstName}, anxiety can be overwhelming, but you're stronger than you think. Let's work through this together. Try some breathing exercises - you've got this! 🌈🤗`
       }
     }
-    
-    return moodGreetings[moodId] || { 
+
+    return moodGreetings[moodId] || {
       title: 'Thank You for Sharing! 💙',
       message: `${firstName}, we appreciate you checking in with us. Your well-being matters! 🌟`
     }
@@ -100,14 +100,14 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
   useEffect(() => {
     const hour = new Date().getHours()
     const firstName = profile?.full_name?.split(' ')[0] || 'friend'
-    
+
     // Check if we have a stored mood greeting first
     const storedMoodGreeting = sessionStorage.getItem('wellbeing-mood-greeting')
     if (storedMoodGreeting) {
       setGreeting(JSON.parse(storedMoodGreeting))
       return
     }
-    
+
     const greetings = {
       morning: [
         { title: 'Good Morning, Sunshine! ☀️', message: `Hey ${firstName}! You're starting a new day full of possibilities. Let's make it amazing together! 🌟` },
@@ -128,7 +128,7 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
         { title: 'Proud of You! 🌸', message: `Hey ${firstName}! Another day of growth and learning. You should be proud of yourself! 🦋` }
       ]
     }
-    
+
     let timeOfDay: 'morning' | 'afternoon' | 'evening'
     if (hour < 12) {
       timeOfDay = 'morning'
@@ -137,11 +137,11 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
     } else {
       timeOfDay = 'evening'
     }
-    
+
     // Check if we have a stored greeting for this time period
     const storedGreeting = sessionStorage.getItem('wellbeing-greeting')
     const storedTimePeriod = sessionStorage.getItem('wellbeing-time-period')
-    
+
     if (storedGreeting && storedTimePeriod === timeOfDay) {
       // Use stored greeting if same time period
       setGreeting(JSON.parse(storedGreeting))
@@ -165,7 +165,7 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
   // ALL HOOKS BEFORE CONDITIONAL RETURNS
   const handleMoodUpdate = useCallback(async (moodId: string) => {
     const today = new Date().toISOString().split('T')[0]
-    
+
     // Check if mood is already locked for today
     if (wellbeingData.mood?.lockedDate === today) {
       const firstName = profile?.full_name?.split(' ')[0] || 'there'
@@ -191,10 +191,10 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
       if (response.ok) {
         const result = await response.json()
         console.log('Mood update result:', result)
-        
+
         setSelectedMood(moodId)
         setMoodLocked(true) // Lock all moods immediately
-        
+
         // Update greeting with mood-specific message
         const moodGreeting = getMoodGreeting(moodId)
         setGreeting(moodGreeting)
@@ -202,15 +202,15 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
         // Clear time-based greeting
         sessionStorage.removeItem('wellbeing-greeting')
         sessionStorage.removeItem('wellbeing-time-period')
-        
+
         if (typeof navigator !== 'undefined' && navigator.vibrate) {
           navigator.vibrate([10, 50, 10])
         }
-        
+
         // Show celebration confetti
         setShowConfetti(true)
         setTimeout(() => setShowConfetti(false), 3000)
-        
+
         // Show success toast with personalized message
         const moodLabel = moodOptions.find(m => m.id === moodId)?.label || 'Mood'
         const firstName = profile?.full_name?.split(' ')[0] || 'there'
@@ -226,7 +226,7 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
           `You're feeling ${moodLabel.toLowerCase()} today. ${randomPhrase}`,
           'success'
         )
-        
+
         onRefresh()
       } else {
         const errorData = await response.json()
@@ -253,11 +253,11 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
       rotate: [0, -10, 10, -10, 0],
       transition: { duration: 0.6 }
     })
-    
+
     if (navigator.vibrate) {
       navigator.vibrate([10, 50, 10])
     }
-    
+
     setTimeout(() => setPetAnimation('idle'), 1000)
   }, [controls])
 
@@ -296,7 +296,7 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
             className="fixed top-16 sm:top-20 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] sm:max-w-md mx-auto px-2"
           >
-            <div 
+            <div
               className="relative rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-2xl overflow-hidden"
               style={toastMessage.type === 'success' ? {
                 background: 'linear-gradient(135deg, #10b981, #14b8a6)'
@@ -308,11 +308,11 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
             >
               {/* Decorative glow effect */}
               <div className="absolute inset-0 bg-white/10 backdrop-blur-sm" />
-              
+
               <div className="relative flex items-start gap-2.5 sm:gap-3">
-                <motion.div 
+                <motion.div
                   className="text-2xl sm:text-3xl flex-shrink-0"
-                  animate={toastMessage.type === 'success' ? { 
+                  animate={toastMessage.type === 'success' ? {
                     scale: [1, 1.2, 1],
                     rotate: [0, 10, -10, 0]
                   } : {}}
@@ -398,20 +398,20 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
                     {[...Array(20)].map((_, i) => (
                       <motion.div
                         key={i}
-                        initial={{ 
-                          y: '50%', 
+                        initial={{
+                          y: '50%',
                           x: `${50 + (Math.random() - 0.5) * 20}%`,
                           opacity: 1,
                           scale: 1
                         }}
-                        animate={{ 
+                        animate={{
                           y: '-20%',
                           x: `${50 + (Math.random() - 0.5) * 100}%`,
                           opacity: 0,
                           scale: 0,
                           rotate: Math.random() * 360
                         }}
-                        transition={{ 
+                        transition={{
                           duration: 2 + Math.random(),
                           ease: 'easeOut'
                         }}
@@ -433,28 +433,19 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
                   const isSelected = selectedMood === mood.id || wellbeingData.mood?.current === mood.id
                   const today = new Date().toISOString().split('T')[0]
                   const isLocked = moodLocked || wellbeingData.mood?.lockedDate === today
-                  
+
                   return (
-                    <motion.button
+                    <button
                       key={mood.id}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ 
-                        opacity: 1, 
-                        scale: 1,
-                        ...(isLocked && !isSelected ? { opacity: 0.4 } : {})
-                      }}
-                      transition={{ delay: index * 0.05 }}
-                      whileHover={{ scale: isLocked && !isSelected ? 1 : 1.08, y: isLocked && !isSelected ? 0 : -4 }}
-                      whileTap={{ scale: isLocked && !isSelected ? 1 : 0.92 }}
                       disabled={isLocked && !isSelected}
                       onClick={() => !isLocked && handleMoodUpdate(mood.id)}
                       className={cn(
-                        "relative p-3 rounded-xl text-center transition-all h-[105px] flex flex-col justify-center items-center touch-manipulation",
+                        "relative p-3 rounded-xl text-center transition-all duration-200 h-[105px] flex flex-col justify-center items-center touch-manipulation",
                         isSelected
                           ? "shadow-lg ring-2 ring-offset-1"
                           : isLocked
-                          ? "bg-slate-50 cursor-not-allowed"
-                          : "bg-white border-2 border-slate-200 hover:shadow-md hover:border-slate-300 active:shadow-sm"
+                            ? "bg-slate-50 cursor-not-allowed opacity-40"
+                            : "bg-white border-2 border-slate-200 hover:shadow-md hover:border-slate-300 active:shadow-sm"
                       )}
                       style={isSelected ? {
                         background: `linear-gradient(135deg, ${mood.color})`,
@@ -469,26 +460,13 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
                         </div>
                       )}
 
-                      {/* Emoji with pulse animation for unselected */}
-                      <motion.div 
-                        className="text-4xl mb-1.5"
-                        animate={isSelected ? { 
-                          scale: [1, 1.2, 1],
-                          rotate: [0, -5, 5, 0]
-                        } : !isLocked ? {
-                          scale: [1, 1.05, 1]
-                        } : {}}
-                        transition={{ 
-                          duration: isSelected ? 0.5 : 2,
-                          repeat: !isLocked && !isSelected ? Infinity : 0,
-                          repeatType: 'reverse'
-                        }}
-                      >
+                      {/* Emoji - static */}
+                      <div className="text-4xl mb-1.5">
                         {mood.emoji}
-                      </motion.div>
-                      
+                      </div>
+
                       {/* Label */}
-                      <div 
+                      <div
                         className={cn(
                           "text-sm font-extrabold",
                           isSelected ? "text-white" : "text-slate-700"
@@ -497,21 +475,17 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
                       >
                         {mood.label}
                       </div>
-                      
-                      {/* Selected Badge - Absolutely positioned to prevent layout shift */}
+
+                      {/* Selected Badge */}
                       {isSelected && (
-                        <motion.div
-                          initial={{ scale: 0, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                          className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex items-center gap-0.5 text-[10px] font-extrabold text-white bg-black/40 px-2 py-0.5 rounded-full backdrop-blur-sm whitespace-nowrap"
+                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex items-center gap-0.5 text-[10px] font-extrabold text-white bg-black/40 px-2 py-0.5 rounded-full backdrop-blur-sm whitespace-nowrap"
                           style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}
                         >
                           <CheckCircle2 className="h-2.5 w-2.5" />
                           <span>Today</span>
-                        </motion.div>
+                        </div>
                       )}
-                    </motion.button>
+                    </button>
                   )
                 })}
               </div>
@@ -563,7 +537,7 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
             </CardHeader>
             <CardContent className="pt-6">
               <div className="text-center">
-                <motion.div 
+                <motion.div
                   className="text-8xl mb-4 inline-block cursor-pointer select-none"
                   animate={controls}
                   whileHover={{ scale: 1.1 }}
@@ -754,7 +728,7 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
             </CardHeader>
             <CardContent className="pt-6">
               <div className="grid grid-cols-1 gap-4">
-                <motion.div 
+                <motion.div
                   whileHover={{ scale: 1.02, y: -2 }}
                   whileTap={{ scale: 0.98 }}
                   className="p-4 bg-white rounded-xl border-2 border-cyan-200 hover:border-cyan-300 cursor-pointer hover:shadow-md transition-all"
@@ -782,7 +756,7 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
                   </div>
                 </motion.div>
 
-                <motion.div 
+                <motion.div
                   whileHover={{ scale: 1.02, y: -2 }}
                   whileTap={{ scale: 0.98 }}
                   className="p-4 bg-white rounded-xl border-2 border-pink-200 hover:border-pink-300 cursor-pointer hover:shadow-md transition-all"
@@ -837,7 +811,7 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
                 <p className="text-slate-600 text-sm">
                   If you're feeling overwhelmed or need support, reach out anytime.
                 </p>
-                
+
                 <motion.div whileTap={{ scale: 0.98 }}>
                   <Button
                     className="w-full bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white shadow-md hover:shadow-lg transition-all h-12"
@@ -897,7 +871,7 @@ function WellbeingTabSkeleton() {
           <div className="h-8 bg-gray-200 rounded w-48 mb-2 animate-pulse" />
           <div className="h-4 bg-gray-200 rounded w-64 animate-pulse" />
         </div>
-        
+
         {/* Cards skeleton */}
         {[1, 2, 3, 4].map((i) => (
           <Card key={i} className="p-6">

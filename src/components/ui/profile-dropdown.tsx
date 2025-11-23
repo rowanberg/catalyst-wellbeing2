@@ -5,11 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { useAppDispatch, useAppSelector } from '@/lib/redux/hooks'
 import { signOut } from '@/lib/redux/slices/authSlice'
-import { 
-  User, 
-  School, 
-  Settings, 
-  LogOut, 
+import {
+  User,
+  School,
+  Settings,
+  LogOut,
   ChevronDown,
   Shield,
   Bell,
@@ -117,13 +117,10 @@ export function ProfileDropdown({ className = '' }: ProfileDropdownProps) {
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
       {/* Profile Button - Matching Enterprise Header Design */}
-      <motion.button
+      <button
         onClick={() => setIsOpen(!isOpen)}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        className={`flex items-center gap-3 px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/70 rounded-xl border border-slate-200/80 dark:border-slate-700/80 transition-all duration-300 ${
-          isOpen ? 'ring-2 ring-blue-500/20 border-blue-300/50 dark:border-blue-600/50' : ''
-        }`}
+        className={`flex items-center gap-3 px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800/70 rounded-xl border border-slate-200/80 dark:border-slate-700/80 transition-colors duration-200 ${isOpen ? 'ring-2 ring-blue-500/20 border-blue-300/50 dark:border-blue-600/50' : ''
+          }`}
         style={{ fontFamily: 'var(--font-jakarta)' }}
       >
         {/* Avatar with enterprise styling */}
@@ -145,26 +142,17 @@ export function ProfileDropdown({ className = '' }: ProfileDropdownProps) {
           </p>
         </div>
 
-        {/* Chevron with enterprise styling */}
-        <motion.div
-          animate={{ rotate: isOpen ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
-          className="hidden sm:block"
-        >
-          <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-        </motion.div>
-      </motion.button>
+        {/* Chevron - static */}
+        <div className="hidden sm:block">
+          <ChevronDown className={`w-4 h-4 text-slate-400 dark:text-slate-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''
+            }`} />
+        </div>
+      </button>
 
       {/* Dropdown Menu */}
       <AnimatePresence>
         {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: -10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -10 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute right-0 top-full mt-2 w-72 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200/50 dark:border-slate-700/50 rounded-2xl shadow-2xl z-50 overflow-hidden"
-          >
+          <div className="absolute right-0 top-full mt-2 w-72 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200/50 dark:border-slate-700/50 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
             {/* Header */}
             <div className="px-4 py-3 border-b border-slate-100/50 dark:border-slate-700/50 bg-gradient-to-r from-slate-50/50 to-slate-100/50 dark:from-slate-800/50 dark:to-slate-700/50">
               <div className="flex items-center space-x-3">
@@ -193,41 +181,35 @@ export function ProfileDropdown({ className = '' }: ProfileDropdownProps) {
               {menuItems.map((item, index) => {
                 const Icon = item.icon
                 return (
-                  <motion.button
+                  <button
                     key={item.label}
                     onClick={item.action}
-                    whileHover={{ x: 4 }}
-                    whileTap={{ scale: 0.98 }}
-                    className={`w-full flex items-center space-x-3 px-4 py-3 text-left transition-all duration-150 ${
-                      item.isDanger 
-                        ? 'hover:bg-red-50 dark:hover:bg-red-950/20 border-t border-slate-100/50 dark:border-slate-700/50 mt-1' 
+                    className={`w-full flex items-center space-x-3 px-4 py-3 text-left transition-colors duration-150 ${item.isDanger
+                        ? 'hover:bg-red-50 dark:hover:bg-red-950/20 border-t border-slate-100/50 dark:border-slate-700/50 mt-1'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'
-                    }`}
+                      }`}
                   >
-                    <div className={`p-2 rounded-lg ${
-                      item.isDanger 
-                        ? 'bg-red-100 dark:bg-red-900/30' 
-                        : item.label === 'Profile' 
-                          ? 'bg-blue-100 dark:bg-blue-900/30' 
+                    <div className={`p-2 rounded-lg ${item.isDanger
+                        ? 'bg-red-100 dark:bg-red-900/30'
+                        : item.label === 'Profile'
+                          ? 'bg-blue-100 dark:bg-blue-900/30'
                           : item.label === 'Your School'
                             ? 'bg-emerald-100 dark:bg-emerald-900/30'
                             : 'bg-slate-100 dark:bg-slate-700/50'
-                    }`}>
+                      }`}>
                       <Icon className={`w-4 h-4 ${item.color} ${item.isDanger ? '' : 'dark:text-slate-300'}`} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-bold ${
-                        item.isDanger ? 'text-red-700 dark:text-red-400' : 'text-gray-900 dark:text-slate-100'
-                      }`} style={{ fontFamily: 'var(--font-jakarta)' }}>
+                      <p className={`text-sm font-bold ${item.isDanger ? 'text-red-700 dark:text-red-400' : 'text-gray-900 dark:text-slate-100'
+                        }`} style={{ fontFamily: 'var(--font-jakarta)' }}>
                         {item.label}
                       </p>
-                      <p className={`text-xs font-medium ${
-                        item.isDanger ? 'text-red-500 dark:text-red-400' : 'text-gray-600 dark:text-slate-400'
-                      }`} style={{ fontFamily: 'var(--font-dm-sans)' }}>
+                      <p className={`text-xs font-medium ${item.isDanger ? 'text-red-500 dark:text-red-400' : 'text-gray-600 dark:text-slate-400'
+                        }`} style={{ fontFamily: 'var(--font-dm-sans)' }}>
                         {item.description}
                       </p>
                     </div>
-                  </motion.button>
+                  </button>
                 )
               })}
             </div>
@@ -242,7 +224,7 @@ export function ProfileDropdown({ className = '' }: ProfileDropdownProps) {
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

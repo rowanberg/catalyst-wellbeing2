@@ -22,7 +22,7 @@ export async function GET(request: Request) {
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
+
     if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -141,19 +141,19 @@ export async function GET(request: Request) {
     analytics.sort((a, b) => {
       let aValue = a[sort_by as keyof typeof a]
       let bValue = b[sort_by as keyof typeof b]
-      
+
       // Handle string sorting (like student names)
       if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sort_order === 'asc' 
+        return sort_order === 'asc'
           ? aValue.localeCompare(bValue)
           : bValue.localeCompare(aValue)
       }
-      
+
       // Handle numeric sorting
       if (typeof aValue === 'number' && typeof bValue === 'number') {
         return sort_order === 'asc' ? aValue - bValue : bValue - aValue
       }
-      
+
       return 0
     })
 
@@ -165,15 +165,16 @@ export async function GET(request: Request) {
     let studentProfiles: Record<string, any> = {}
 
     if (studentIds.length > 0) {
-      // Get basic student profiles first
+      // Get basic student profiles - check BOTH user_id AND id fields
+      // because student_id in analytics could map to either
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, user_id, first_name, last_name, avatar_url, role')
         .eq('school_id', profile.school_id)
         .eq('role', 'student')
-        .in('user_id', studentIds)
+        .or(`user_id.in.(${studentIds.join(',')}),id.in.(${studentIds.join(',')})`)
 
-      // Get class assignments with grade information
+      // Get class assignments with grade information - also check both fields
       const { data: classAssignments } = await supabase
         .from('student_class_assignments')
         .select(`
@@ -186,11 +187,11 @@ export async function GET(request: Request) {
         `)
         .eq('school_id', profile.school_id)
         .eq('is_active', true)
-        .in('student_id', studentIds)
+        .or(`student_id.in.(${studentIds.join(',')})`)
 
       console.log('Found profiles:', profiles?.length || 0)
       console.log('Found class assignments:', classAssignments?.length || 0)
-      
+
       if (profiles && profiles.length > 0) {
         // Create a mapping of student_id to class info
         const classMap: Record<string, any> = {}
@@ -203,20 +204,20 @@ export async function GET(request: Request) {
         // Enrich profiles with class information
         profiles.forEach(student => {
           const classInfo = classMap[student.user_id] || classMap[student.id]
-          
+
           const enrichedProfile = {
             ...student,
             class_name: classInfo?.class_name,
             grade_level: classInfo?.grade_level,
           }
-          
+
           if (student.user_id) studentProfiles[student.user_id] = enrichedProfile
           if (student.id) studentProfiles[student.id] = enrichedProfile
         })
-        
+
         console.log('Profile keys created:', Object.keys(studentProfiles).slice(0, 5))
         console.log('Sample enriched profile:', Object.values(studentProfiles)[0])
-        
+
         // Check matching profiles
         const matchingProfiles = studentIds.filter(id => studentProfiles[id])
         console.log('Matching profiles found:', matchingProfiles.length)
@@ -228,7 +229,7 @@ export async function GET(request: Request) {
     // Transform analytics with student information
     const transformedAnalytics = analytics?.map(analytic => {
       const studentProfile = studentProfiles[analytic.student_id]
-      
+
       let studentName = 'Unknown Student'
       if (studentProfile) {
         if (studentProfile.first_name && studentProfile.last_name) {
@@ -239,7 +240,7 @@ export async function GET(request: Request) {
           studentName = studentProfile.last_name
         }
       }
-      
+
       return {
         ...analytic,
         student_name: studentName,
@@ -304,7 +305,7 @@ export async function GET(request: Request) {
 
     // Add caching headers
     response.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=120')
-    
+
     return response
 
   } catch (error) {

@@ -7,8 +7,8 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import imageCompression from 'browser-image-compression'
-import { 
-  ArrowLeft, Users, BookOpen, Image as ImageIcon, 
+import {
+  ArrowLeft, Users, BookOpen, Image as ImageIcon,
   Heart, MessageCircle, Send, MoreVertical, Pin,
   Plus, Search, Filter, Sparkles, TrendingUp, X, AlertCircle
 } from 'lucide-react'
@@ -123,32 +123,32 @@ function TeacherCommunityContent() {
         setLoadingMore(true)
       }
       setError(null)
-      
+
       // Initial load: 5 posts (< 7), subsequent loads: 10 posts
       const limit = reset ? 5 : 10
       const offset = reset ? 0 : (pageNum === 2 ? 5 : 5 + (pageNum - 2) * 10)
-      
+
       const response = await fetch(
         `/api/teacher/community/posts?class_id=${classId}&teacher_id=${user.id}&limit=${limit}&offset=${offset}`
       )
-      
+
       if (!response.ok) {
         const errorData = await response.json()
         throw new Error(errorData.error || 'Failed to load posts')
       }
-      
+
       const data = await response.json()
       const newPosts = data.posts || []
-      
+
       if (reset) {
         setPosts(newPosts)
       } else {
         setPosts(prev => [...prev, ...newPosts])
       }
-      
+
       // Check if there are more posts
       setHasMore(newPosts.length === limit)
-      
+
     } catch (error) {
       console.error('Error fetching posts:', error)
       setError(error instanceof Error ? error.message : 'Failed to load posts. Please try again.')
@@ -216,7 +216,7 @@ function TeacherCommunityContent() {
 
   const handleCreatePost = async () => {
     if (!newPostContent.trim() || !selectedClass || !user?.id) return
-    
+
     try {
       setCreating(true)
       setError(null)
@@ -240,10 +240,10 @@ function TeacherCommunityContent() {
       }
 
       const data = await response.json()
-      
-      // Refresh posts to show the new one
-      await fetchPosts(selectedClass.id)
-      
+
+      // Refresh posts to show the new one (reset to page 1)
+      await fetchPosts(selectedClass.id, 1, true)
+
       // Reset form
       setNewPostContent('')
       setSelectedImage(null)
@@ -309,14 +309,14 @@ function TeacherCommunityContent() {
                     <span className="font-semibold">{classItem.total_students}</span>
                   </div>
                 </div>
-                
+
                 <h3 className="text-base lg:text-lg font-bold text-gray-900 dark:text-white mb-1 truncate" style={{ fontFamily: 'var(--font-jakarta)', letterSpacing: '-0.01em' }}>
                   {classItem.class_name}
                 </h3>
                 <p className="text-xs lg:text-sm text-gray-600 dark:text-slate-400 mb-3 truncate font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                   {classItem.subject} • {classItem.grade_level}
                 </p>
-                
+
                 <div className="flex items-center justify-between pt-2.5 border-t border-gray-100 dark:border-slate-700">
                   <span className="text-xs font-medium text-gray-500 dark:text-slate-400">
                     Room {classItem.room_number}
@@ -543,7 +543,7 @@ function TeacherCommunityContent() {
               </div>
             </div>
           )}
-          
+
           {postsLoading ? (
             <div className="text-center py-12">
               <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
@@ -594,8 +594,8 @@ function TeacherCommunityContent() {
                             )}
                           </div>
                           <p className="text-sm text-gray-600 dark:text-gray-400 font-medium" style={{ fontFamily: 'var(--font-dm-sans)' }}>
-                            {new Date(post.created_at).toLocaleDateString('en-US', { 
-                              month: 'short', 
+                            {new Date(post.created_at).toLocaleDateString('en-US', {
+                              month: 'short',
                               day: 'numeric',
                               hour: 'numeric',
                               minute: '2-digit'
@@ -603,21 +603,20 @@ function TeacherCommunityContent() {
                           </p>
                         </div>
                       </div>
-                      
+
                       {post.content && (
                         <p className="text-gray-900 dark:text-white whitespace-pre-wrap leading-relaxed" style={{ fontFamily: 'var(--font-dm-sans)' }}>
                           {post.content}
                         </p>
                       )}
-                      
+
                       {/* Simplified Like Button */}
                       <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                         <button
-                          className={`flex items-center space-x-2 px-4 py-2.5 rounded-full transition-all ${
-                            post.has_reacted
+                          className={`flex items-center space-x-2 px-4 py-2.5 rounded-full transition-all ${post.has_reacted
                               ? 'text-red-600 bg-red-50 dark:bg-red-900/20'
                               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                          }`}
+                            }`}
                         >
                           <Heart className={`w-5 h-5 ${post.has_reacted ? 'fill-current' : ''}`} />
                           <span className="font-semibold">{post.reactions_count} {post.reactions_count === 1 ? 'like' : 'likes'}</span>

@@ -98,14 +98,27 @@ export async function middleware(req: NextRequest) {
       }
     }
   }
-  // Handle root path redirect
-  else if (pathname === '/') {
+  // Define public routes that don't require authentication
+  // These routes should be accessible to crawlers and unauthenticated users
+  const publicRoutes = [
+    '/',
+    '/features',
+    '/about',
+    '/privacy',
+    '/terms',
+    '/login',
+    '/register'
+  ]
+  const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'))
+
+  // Handle root path - allow public access for SEO
+  if (pathname === '/') {
     if (user) {
       // Has valid session - will redirect via client (needs profile lookup)
       response = NextResponse.next()
     } else {
-      // No session - redirect directly to login (server-side)
-      return NextResponse.redirect(new URL('/login', req.url))
+      // No session - allow public access (landing page visible to crawlers)
+      response = NextResponse.next()
     }
   }
   // For protected routes, redirect to login if no valid session
@@ -114,6 +127,10 @@ export async function middleware(req: NextRequest) {
     if (!user) {
       return NextResponse.redirect(new URL('/login', req.url))
     }
+  }
+  // For other non-public routes, redirect to login if not authenticated
+  else if (!isPublicRoute && !user) {
+    return NextResponse.redirect(new URL('/login', req.url))
   }
 
   // Apply comprehensive security headers to all responses
@@ -152,9 +169,9 @@ export async function middleware(req: NextRequest) {
       "default-src 'self'",
       "script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://*.supabase.co https://cdn.jsdelivr.net https://accounts.google.com https://apis.google.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com",
-      "font-src 'self' https://fonts.gstatic.com data:",
+      "font-src 'self' https://fonts.gstatic.com https://images.simplycodes.com data:",
       "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://*.googleusercontent.com",
-      "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co wss://*.supabase.in https://accounts.google.com https://www.googleapis.com",
+      "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co wss://*.supabase.in https://accounts.google.com https://www.googleapis.com https://fonts.googleapis.com https://fonts.gstatic.com https://images.simplycodes.com https://*.googleusercontent.com",
       "frame-src 'self' https://accounts.google.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
@@ -184,6 +201,6 @@ export const config = {
   matcher: [
     // Match all paths except API routes, static files, and images
     // CRITICAL: Exclude /api/* to prevent redirect loops
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|sw.js|manifest.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

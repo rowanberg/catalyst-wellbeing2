@@ -1,0 +1,27 @@
+# ============================================================================
+# ADD THESE TO YOUR .env.local FILE
+# ============================================================================
+
+# Assessment Redis - REST API Format (recommended)
+# Get these from: Upstash Console → Your Database → REST API section
+UPSTASH_REDIS_ASSESSMENTS_URL=https://your-database-name.upstash.io
+UPSTASH_REDIS_ASSESSMENTS_TOKEN=your-token-here
+
+# ============================================================================
+# STEPS TO GET YOUR CREDENTIALS:
+# ============================================================================
+# 1. Go to https://console.upstash.com/
+# 2. Create new Redis database: "catalyst-assessments"
+# 3. Click on your database
+# 4. Go to "REST API" tab
+# 5. Copy:
+#    - UPSTASH_REDIS_REST_URL → use as UPSTASH_REDIS_ASSESSMENTS_URL
+#    - UPSTASH_REDIS_REST_TOKEN → use as UPSTASH_REDIS_ASSESSMENTS_TOKEN
+# 6. Paste above
+# 7. Save .env.local
+# 8. Restart: npm run dev
+# ============================================================================
+
+# Expected logs after restart:
+# ✅ [Assessment Redis] Connected successfully
+# ⚡ [Cache HIT] teacher:assessments:...

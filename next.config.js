@@ -30,7 +30,21 @@ const nextConfig = {
   // output: 'export',
   // trailingSlash removed - was causing 404 on API routes
   images: {
-    unoptimized: true
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.supabase.co',
+        pathname: '/storage/v1/object/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'supabase.co',
+      },
+    ],
+    formats: ['image/webp', 'image/avif'],
+    minimumCacheTTL: 604800, // 7 days cache
+    deviceSizes: [40, 44, 640, 750, 828, 1080, 1200],
+    imageSizes: [16, 32, 40, 44, 48, 64, 96],
   },
 
   // Set the correct workspace root to silence lockfile warning

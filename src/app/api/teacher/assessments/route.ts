@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import {
+  assessmentRedis,
+  getCachedAssessments,
+  getTeacherAssessmentsKey,
+  invalidateTeacherAssessments,
+  invalidateAssessment,
+  CACHE_TTL
+} from '@/lib/cache/redis-assessments'
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createSupabaseServerClient()
-    
+
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
@@ -22,32 +30,45 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Teacher access required' }, { status: 403 })
     }
 
-    // Get teacher's assessments
-    const { data: assessments, error: assessmentsError } = await supabase
-      .from('assessments')
-      .select(`
-        id,
-        title,
-        type,
-        max_score,
-        pass_mark,
-        created_at,
-        class_id,
-        due_date,
-        assessment_date,
-        rubric_criteria
-      `)
-      .eq('teacher_id', user.id)
-      .eq('school_id', profile.school_id)
-      .order('created_at', { ascending: false })
+    // Generate cache key for this teacher's assessments
+    const cacheKey = getTeacherAssessmentsKey(user.id, profile.school_id)
 
-    if (assessmentsError) {
-      return NextResponse.json({ error: 'Failed to fetch assessments' }, { status: 500 })
-    }
+    // Fetch assessments with Redis caching
+    const assessments = await getCachedAssessments(
+      cacheKey,
+      async () => {
+        // This fetcher only runs on cache miss
+        const { data, error } = await supabase
+          .from('assessments')
+          .select(`
+            id,
+            title,
+            type,
+            max_score,
+            pass_mark,
+            created_at,
+            class_id,
+            due_date,
+            assessment_date,
+            rubric_criteria
+          `)
+          .eq('teacher_id', user.id)
+          .eq('school_id', profile.school_id)
+          .order('created_at', { ascending: false })
 
-    return NextResponse.json({ assessments: assessments || [] })
+        if (error) {
+          throw new Error(`Failed to fetch assessments: ${error.message}`)
+        }
+
+        return data || []
+      },
+      CACHE_TTL.ASSESSMENTS_LIST // 15 minutes
+    )
+
+    return NextResponse.json({ assessments })
 
   } catch (error) {
+    console.error('[Assessments GET] Error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -55,7 +76,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createSupabaseServerClient()
-    
+
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
@@ -103,9 +124,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create assessment', details: createError.message }, { status: 500 })
     }
 
+    // Invalidate teacher's assessment cache after creating new assessment
+    await invalidateTeacherAssessments(user.id, profile.school_id)
+
     return NextResponse.json({ assessment })
 
   } catch (error) {
+    console.error('[Assessments POST] Error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -113,7 +138,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const supabase = await createSupabaseServerClient()
-    
+
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
@@ -162,12 +187,19 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to delete assessment', details: deleteError.message }, { status: 500 })
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Assessment deleted successfully' 
+    // Invalidate caches after successful deletion
+    await Promise.all([
+      invalidateAssessment(assessmentId),
+      invalidateTeacherAssessments(user.id, profile.school_id)
+    ])
+
+    return NextResponse.json({
+      success: true,
+      message: 'Assessment deleted successfully'
     })
 
   } catch (error) {
+    console.error('[Assessments DELETE] Error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
