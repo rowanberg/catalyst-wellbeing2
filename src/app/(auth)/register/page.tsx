@@ -13,7 +13,7 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { useToast } from '@/components/ui/toast'
 import { handleError, ValidationError, AuthError } from '@/lib/utils/errorHandling'
 import Link from 'next/link'
-import { Eye, EyeOff, User, Mail, Lock, GraduationCap, AlertCircle, CheckCircle, XCircle, UserPlus, ArrowRight, ArrowLeft, Shield, Users } from 'lucide-react'
+import { Eye, EyeOff, User, Mail, Lock, GraduationCap, AlertCircle, CheckCircle, XCircle, UserPlus, ArrowRight, ArrowLeft, Shield, Users, Info } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button'
 import StudentWelcomeScreen from '@/components/registration/StudentWelcomeScreenEnterprise'
 import ParentWelcomeScreen from '@/components/registration/ParentWelcomeScreen'
 import TeacherWelcomeScreen from '@/components/registration/TeacherWelcomeScreen'
+import { OTPInput } from '@/components/auth/OTPInput'
 
 const registerSchema = z.object({
   schoolId: z.string().length(12, 'School ID must be exactly 12 characters'),
@@ -45,11 +46,12 @@ const registerSchema = z.object({
 type RegisterForm = z.infer<typeof registerSchema>
 
 export default function RegisterPage() {
-  const [currentStep, setCurrentStep] = useState(1)
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1)
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [schoolId, setSchoolId] = useState('')
+  const [schoolUuid, setSchoolUuid] = useState('')  // Store the actual UUID for API calls
   const [schoolVerified, setSchoolVerified] = useState(false)
   const [schoolName, setSchoolName] = useState('')
   const [schoolError, setSchoolError] = useState('')
@@ -59,7 +61,7 @@ export default function RegisterPage() {
     allowedEmailDomain: string
   } | null>(null)
   const [passwordStrength, setPasswordStrength] = useState(0)
-  
+
   // Student welcome screen state
   const [showStudentWelcome, setShowStudentWelcome] = useState(false)
   const [studentWelcomeData, setStudentWelcomeData] = useState<{
@@ -79,11 +81,11 @@ export default function RegisterPage() {
     name: string
     schoolName: string
   } | null>(null)
-  
+
   // Google OAuth state
   const [isGoogleUser, setIsGoogleUser] = useState(false)
   const [googleUserData, setGoogleUserData] = useState<any>(null)
-  
+
   // Parent-specific state
   const [children, setChildren] = useState<Array<{
     email: string
@@ -109,13 +111,20 @@ export default function RegisterPage() {
   const [isLoadingClasses, setIsLoadingClasses] = useState(false)
   const [selectedGradeLevel, setSelectedGradeLevel] = useState<string>('')
   const [selectedClassName, setSelectedClassName] = useState<string>('')
-  
+
   // Teacher-specific state
   const [selectedGrades, setSelectedGrades] = useState<string[]>([])
   const [primaryGrade, setPrimaryGrade] = useState<string>('')
   const [gradeSubjects, setGradeSubjects] = useState<any[]>([])
   const [loadingGrades, setLoadingGrades] = useState(false)
-  
+
+  // OTP Verification state
+  const [showOTPVerification, setShowOTPVerification] = useState(false)
+  const [otpEmail, setOtpEmail] = useState('')
+  const [otpRole, setOtpRole] = useState<'student' | 'teacher' | 'parent' | 'admin'>('student')
+  const [isSendingOTP, setIsSendingOTP] = useState(false)
+  const [registrationData, setRegistrationData] = useState<any>(null)
+
   const router = useRouter()
   const dispatch = useAppDispatch()
   const { user, profile, isLoading: authLoading, error: authError } = useAppSelector((state) => state.auth)
@@ -135,20 +144,20 @@ export default function RegisterPage() {
     }
 
     let strength = 0
-    
+
     // Length check
     if (password.length >= 8) strength += 20
     if (password.length >= 12) strength += 10
-    
+
     // Character variety checks
     if (/[a-z]/.test(password)) strength += 20
     if (/[A-Z]/.test(password)) strength += 20
     if (/[0-9]/.test(password)) strength += 20
     if (/[^A-Za-z0-9]/.test(password)) strength += 20
-    
+
     // Bonus for length
     if (password.length >= 16) strength += 10
-    
+
     setPasswordStrength(Math.min(strength, 100))
   }, [password, isGoogleUser])
 
@@ -160,12 +169,12 @@ export default function RegisterPage() {
         const userData = JSON.parse(googleOAuthData)
         setGoogleUserData(userData)
         setIsGoogleUser(true)
-        
+
         // Pre-fill form with Google data
         setValue('firstName', userData.firstName || '')
         setValue('lastName', userData.lastName || '')
         setValue('email', userData.email || '')
-        
+
         addToast({
           type: 'success',
           title: 'Welcome!',
@@ -194,12 +203,13 @@ export default function RegisterPage() {
     }
   }, [watchedSchoolId])
 
-  // Fetch available grade levels when school is verified
+  // Fetch available grade levels when school UUID is available
   useEffect(() => {
-    if (schoolVerified && schoolName) {
+    if (schoolUuid) {
+      console.log('🎯 School UUID available, fetching grade levels:', schoolUuid)
       fetchAvailableGradeLevels()
     }
-  }, [schoolVerified, schoolName])
+  }, [schoolUuid])
 
   // Load classes when school is verified and role is teacher
   useEffect(() => {
@@ -210,18 +220,28 @@ export default function RegisterPage() {
 
   // Load classes when grade is selected for students
   useEffect(() => {
+    console.log('📚 [Student Classes Effect]:', {
+      schoolVerified,
+      selectedRole,
+      watchedSchoolId,
+      selectedGradeLevel,
+      shouldLoad: schoolVerified && selectedRole === 'student' && watchedSchoolId && selectedGradeLevel
+    })
+
+    // Effect to load classes for students
     if (schoolVerified && selectedRole === 'student' && watchedSchoolId && selectedGradeLevel) {
+      console.log('🔄 Loading classes for student...')
       loadAvailableClasses(watchedSchoolId, selectedGradeLevel)
     }
   }, [schoolVerified, selectedRole, watchedSchoolId, selectedGradeLevel])
 
   // Validate email domain in real-time
   useEffect(() => {
-    console.log('📧 Email validation:', { 
-      email: watchedEmail, 
+    console.log('📧 Email validation:', {
+      email: watchedEmail,
       isGoogleUser,
       restrictEmailDomains: schoolSettings?.restrictEmailDomains,
-      allowedEmailDomain: schoolSettings?.allowedEmailDomain 
+      allowedEmailDomain: schoolSettings?.allowedEmailDomain
     })
 
     if (!watchedEmail || isGoogleUser) {
@@ -234,9 +254,9 @@ export default function RegisterPage() {
       if (emailParts.length === 2) {
         const emailDomain = emailParts[1].toLowerCase()
         const allowedDomain = schoolSettings.allowedEmailDomain.toLowerCase()
-        
+
         console.log('🔍 Domain check:', { emailDomain, allowedDomain, matches: emailDomain === allowedDomain })
-        
+
         if (emailDomain !== allowedDomain) {
           setEmailDomainError(`Email must be from @${allowedDomain}`)
           console.log('❌ Invalid domain')
@@ -272,7 +292,7 @@ export default function RegisterPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        
+
         // User-friendly error messages based on status code
         if (response.status === 404) {
           throw new ValidationError('SCHOOL_NOT_FOUND', 'School ID not found. Please check and try again.')
@@ -299,7 +319,9 @@ export default function RegisterPage() {
       if (data.schoolName) {
         setSchoolName(data.schoolName)
         setSchoolVerified(true)
-        
+        setSchoolUuid(data.schoolUuid)  // Store UUID for API calls
+        console.log('✅ School UUID stored:', data.schoolUuid)
+
         // Fetch school settings for email domain validation
         if (data.schoolUuid) {
           try {
@@ -308,7 +330,7 @@ export default function RegisterPage() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ schoolId: data.schoolUuid })
             })
-            
+
             if (settingsResponse.ok) {
               const settingsData = await settingsResponse.json()
               if (settingsData.privacy_settings) {
@@ -325,12 +347,12 @@ export default function RegisterPage() {
             console.error('❌ Failed to fetch school settings:', err)
           }
         }
-        
+
         // Show success message with available slots info
-        const slotsInfo = data.availableSlots !== undefined 
-          ? ` (${data.availableSlots} spots available)` 
+        const slotsInfo = data.availableSlots !== undefined
+          ? ` (${data.availableSlots} spots available)`
           : ''
-        
+
         addToast({
           type: 'success',
           title: 'School Verified ✓',
@@ -351,37 +373,44 @@ export default function RegisterPage() {
 
   // Fetch available grade levels
   const fetchAvailableGradeLevels = async () => {
-    if (!schoolId) return
+    if (!schoolUuid) {
+      console.warn('⚠️ No schoolUuid available for fetching grades')
+      return
+    }
 
     try {
       setLoadingGrades(true)
-      
-      const schoolResponse = await fetch('/api/verify-school', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schoolId }),
-      })
+      console.log('🔍 Fetching grade levels for schoolUuid:', schoolUuid)
 
-      if (!schoolResponse.ok) {
-        throw new Error('Failed to verify school')
-      }
-
-      const schoolData = await schoolResponse.json()
-      
       const response = await fetch('/api/admin/grade-levels', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schoolId: schoolData.schoolUuid }),
+        body: JSON.stringify({ schoolId: schoolUuid }),  // Use UUID directly
       })
 
       if (!response.ok) {
+        console.error('❌ Failed to fetch grade levels, status:', response.status)
+        const errorData = await response.json().catch(() => ({}))
+        console.error('❌ Error details:', errorData)
         throw new Error('Failed to fetch grade levels')
       }
 
       const data = await response.json()
+      console.log('📚 Grade levels received:', data.gradeLevels)
+      console.log('📊 Total grades:', data.gradeLevels?.length || 0)
+
+      // Show unique grade_level values
+      if (data.gradeLevels && data.gradeLevels.length > 0) {
+        const uniqueLevels = Array.from(new Set(data.gradeLevels.map((g: any) => g.grade_level)))
+        console.log('🔢 Unique grade levels:', uniqueLevels)
+        console.log('📋 Grade details:', data.gradeLevels.map((g: any) =>
+          `${g.grade_name} (Level: ${g.grade_level}, Active: ${g.is_active})`
+        ))
+      }
+
       setGradeSubjects(data.gradeLevels || [])
     } catch (error) {
-      console.error('Error fetching grade levels:', error)
+      console.error('❌ Error fetching grade levels:', error)
       setGradeSubjects([])
     } finally {
       setLoadingGrades(false)
@@ -433,7 +462,7 @@ export default function RegisterPage() {
       if (response.ok) {
         const data = await response.json()
         const student = data.student
-        
+
         setChildren(prev => [...prev, {
           email: student.email,
           name: student.name,
@@ -441,17 +470,17 @@ export default function RegisterPage() {
           verified: true,
           loading: false
         }])
-        
+
         setCurrentChildEmail('')
         setCurrentChildId('')
-        addToast({ 
+        addToast({
           title: 'Student Verified',
           description: `${student.name} from ${student.school}`,
           type: 'success'
         })
       } else {
         const errorData = await response.json()
-        addToast({ 
+        addToast({
           title: 'Error',
           description: errorData.error || 'Student not found',
           type: 'error'
@@ -459,7 +488,7 @@ export default function RegisterPage() {
       }
     } catch (error) {
       console.error('Error verifying student:', error)
-      addToast({ 
+      addToast({
         title: 'Error',
         description: 'Failed to verify student email',
         type: 'error'
@@ -502,19 +531,28 @@ export default function RegisterPage() {
   }
 
   const onSubmit = async (data: RegisterForm) => {
-    console.log('🚀 [REGISTRATION] Form submitted:', { role: data.role, gradeLevel: data.gradeLevel, className: data.className })
-    
+    console.log('🚀 [REGISTRATION] ========== FORM SUBMITTED ==========')
+    console.log('🚀 [REGISTRATION] Form data received:', {
+      role: data.role,
+      email: data.email,
+      gradeLevel: data.gradeLevel,
+      className: data.className,
+      schoolVerified,
+      currentStep
+    })
+
     if (!schoolVerified) {
+      console.error('❌ [REGISTRATION] BLOCKED: School not verified')
       setSubmitError('Please verify your school ID first')
-      console.error('❌ [REGISTRATION] School not verified')
       return
     }
-    
+    console.log('✅ [REGISTRATION] School verification passed')
+
     // Validate email domain if school restricts it
     if (schoolSettings?.restrictEmailDomains && schoolSettings.allowedEmailDomain && !isGoogleUser) {
       const emailDomain = data.email.split('@')[1]?.toLowerCase()
       const allowedDomain = schoolSettings.allowedEmailDomain.toLowerCase()
-      
+
       if (emailDomain !== allowedDomain) {
         setSubmitError(`Email must be from @${allowedDomain}. Your school only allows registration with school email addresses.`)
         console.error('❌ [REGISTRATION] Email domain not allowed:', emailDomain)
@@ -548,12 +586,13 @@ export default function RegisterPage() {
       return
     }
 
-    console.log('✅ [REGISTRATION] All validations passed')
-    setIsLoading(true)
+    console.log('✅ [REGISTRATION] All validations passed - sending OTP for email verification')
+    setIsSendingOTP(true)
     setSubmitError(null)
-    
+
     try {
-      const registrationData: any = {
+      // Prepare registration data to save for after OTP verification
+      const regData: any = {
         email: data.email,
         firstName: data.firstName,
         lastName: data.lastName,
@@ -568,37 +607,93 @@ export default function RegisterPage() {
 
       // Only include password for non-Google users
       if (!isGoogleUser) {
-        registrationData.password = data.password
+        regData.password = data.password
       }
 
+      // Save registration data for after OTP verification
+      setRegistrationData(regData)
+
+      // Send OTP to email
+      const otpResponse = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: data.email,
+          role: data.role,
+          firstName: data.firstName,
+          lastName: data.lastName
+        }),
+      })
+
+      if (!otpResponse.ok) {
+        const errorData = await otpResponse.json()
+        throw new Error(errorData.error || 'Failed to send OTP')
+      }
+
+      setOtpEmail(data.email)
+      setOtpRole(data.role)
+      setShowOTPVerification(true)
+      setCurrentStep(3)  // Move to OTP verification step
+
+      addToast({
+        type: 'success',
+        title: 'Verification Code Sent',
+        description: `Please check ${data.email} for your verification code`
+      })
+    } catch (error) {
+      console.error('❌ [OTP] Failed to send OTP:', error)
+      const appError = handleError(error, 'send OTP')
+      setSubmitError(appError.message)
+      addToast({
+        type: 'error',
+        title: 'Failed to Send Verification Code',
+        description: appError.message
+      })
+    } finally {
+      setIsSendingOTP(false)
+      setIsLoading(false)
+    }
+  }
+
+  // Complete registration after OTP verification
+  const completeRegistration = async () => {
+    if (!registrationData) {
+      console.error('❌ [REGISTRATION] No registration data found')
+      return
+    }
+
+    console.log('🚀 [REGISTRATION] Completing registration with verified email')
+    setIsLoading(true)
+
+    try {
       console.log('📤 [REGISTRATION] Dispatching signUp action:', registrationData)
       const result = await dispatch(signUp(registrationData))
       console.log('📥 [REGISTRATION] SignUp result:', result)
-      
+
       if (signUp.fulfilled.match(result)) {
         console.log('✅ [REGISTRATION] Sign up successful!')
         // If student role, show welcome screen
-        if (data.role === 'student') {
+        if (registrationData.role === 'student') {
           console.log('🎓 [REGISTRATION] Student registration - showing welcome screen')
           setStudentWelcomeData({
-            name: `${data.firstName} ${data.lastName}`,
+            name: `${registrationData.firstName} ${registrationData.lastName}`,
             schoolName: schoolName,
-            grade: data.gradeLevel || '10',
+            grade: registrationData.gradeLevel || '10',
             className: selectedClassName || 'A'
           })
           setShowStudentWelcome(true)
-        } else if (data.role === 'parent') {
+        } else if (registrationData.role === 'parent') {
           console.log('👨‍👩‍👧‍👦 [REGISTRATION] Parent registration - showing welcome screen')
           setParentWelcomeData({
-            name: `${data.firstName} ${data.lastName}`,
+            name: `${registrationData.firstName} ${registrationData.lastName}`,
             schoolName: schoolName,
             childrenCount: children.length
           })
           setShowParentWelcome(true)
-        } else if (data.role === 'teacher') {
+        } else if (registrationData.role === 'teacher') {
           console.log('👩‍🏫 [REGISTRATION] Teacher registration - showing welcome screen')
           setTeacherWelcomeData({
-            name: `${data.firstName} ${data.lastName}`,
+            name: `${registrationData.firstName} ${registrationData.lastName}`,
             schoolName: schoolName
           })
           setShowTeacherWelcome(true)
@@ -636,17 +731,20 @@ export default function RegisterPage() {
     }
   }
 
-  const canProceedToStep2 = schoolVerified && 
-    watch('firstName') && 
-    watch('lastName') && 
-    watch('email') && 
-    watch('role') && 
+  const canProceedToStep2 = schoolVerified &&
+    watch('firstName') &&
+    watch('lastName') &&
+    watch('email') &&
+    watch('role') &&
     (isGoogleUser || (watch('password') && passwordStrength >= 100)) &&
     !emailDomainError  // Block if email domain doesn't match school requirements
 
   const handleNextStep = () => {
     if (canProceedToStep2) {
+      console.log('➡️ Moving to Step 2:', { selectedRole, gradeSubjects: gradeSubjects.length, loadingGrades })
       setCurrentStep(2)
+    } else {
+      console.warn('⚠️ Cannot proceed to Step 2:', { canProceedToStep2, selectedRole })
     }
   }
 
@@ -715,7 +813,7 @@ export default function RegisterPage() {
           animation-delay: 4s;
         }
       `}</style>
-      
+
       {/* Left Panel - Enterprise Branding */}
       <div className="lg:flex-1 relative overflow-hidden flex items-center justify-center p-8 lg:p-16">
         {/* Professional Gradient Background */}
@@ -726,12 +824,12 @@ export default function RegisterPage() {
             <div className="h-full w-full bg-[linear-gradient(to_right,#4f4f4f12_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f12_1px,transparent_1px)] bg-[size:24px_24px]"></div>
           </div>
         </div>
-        
+
         {/* Animated Gradient Orbs */}
         <div className="absolute top-20 left-20 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
         <div className="absolute top-40 right-20 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
         <div className="absolute bottom-20 left-1/2 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
-        
+
         <div className="relative z-10 max-w-lg">
           {/* Enterprise Logo Section */}
           <div className="mb-12">
@@ -747,7 +845,7 @@ export default function RegisterPage() {
               Enterprise Education Management System
             </p>
           </div>
-          
+
           {/* Key Features with Professional Icons */}
           <div className="space-y-6">
             <div className="flex items-start space-x-4 group cursor-pointer">
@@ -759,7 +857,7 @@ export default function RegisterPage() {
                 <p className="text-gray-400 text-sm leading-relaxed">Bank-level encryption with FERPA & COPPA compliance</p>
               </div>
             </div>
-            
+
             <div className="flex items-start space-x-4 group cursor-pointer">
               <div className="w-12 h-12 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 backdrop-blur-xl rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform border border-white/10">
                 <Users className="w-6 h-6 text-blue-300" />
@@ -769,7 +867,7 @@ export default function RegisterPage() {
                 <p className="text-gray-400 text-sm leading-relaxed">Seamlessly connect all stakeholders in one platform</p>
               </div>
             </div>
-            
+
             <div className="flex items-start space-x-4 group cursor-pointer">
               <div className="w-12 h-12 bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-xl rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform border border-white/10">
                 <GraduationCap className="w-6 h-6 text-purple-300" />
@@ -780,7 +878,7 @@ export default function RegisterPage() {
               </div>
             </div>
           </div>
-          
+
           {/* Enterprise Trust Indicators */}
           <div className="mt-12 pt-8 border-t border-white/10">
             <p className="text-gray-400 text-xs uppercase tracking-wider mb-4">Trusted by leading institutions</p>
@@ -813,7 +911,7 @@ export default function RegisterPage() {
             <p className="text-gray-600 text-sm lg:text-base">
               Enterprise education management platform
             </p>
-            
+
             {/* Premium Step Indicator */}
             <div className="mt-4 lg:mt-6">
               <div className="flex items-center justify-center">
@@ -822,44 +920,41 @@ export default function RegisterPage() {
                   <div className="absolute inset-0 flex items-center z-0">
                     <div className="h-1 w-full bg-gradient-to-r from-gray-200 via-gray-200 to-gray-200 rounded-full shadow-inner"></div>
                   </div>
-                  
+
                   {/* Animated Progress Line */}
                   <div className="absolute inset-0 flex items-center z-10">
-                    <div 
-                      className={`h-1 rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 shadow-sm transition-all duration-700 ease-out ${
-                        currentStep === 2 ? 'w-full' : 'w-1/2'
-                      }`}
+                    <div
+                      className={`h-1 rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 shadow-sm transition-all duration-700 ease-out ${currentStep === 1 ? 'w-1/6' : currentStep === 2 ? 'w-1/2' : 'w-full'
+                        }`}
                       style={{
                         boxShadow: '0 0 8px rgba(99, 102, 241, 0.4)'
                       }}
                     ></div>
                   </div>
-                  
+
                   {/* Step Nodes */}
                   <div className="relative flex justify-between z-20">
                     {/* Step 1 */}
                     <div className="flex flex-col items-center group">
-                      <div className={`relative w-10 h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-500 transform ${
-                        currentStep >= 1 
-                          ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-xl border-2 border-white scale-110' 
-                          : 'bg-white border-2 border-gray-300 text-gray-500 shadow-md hover:border-indigo-300'
-                      }`}>
+                      <div className={`relative w-10 h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-500 transform ${currentStep >= 1
+                        ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-xl border-2 border-white scale-110'
+                        : 'bg-white border-2 border-gray-300 text-gray-500 shadow-md hover:border-indigo-300'
+                        }`}>
                         {currentStep > 1 ? (
                           <CheckCircle className="w-5 h-5 lg:w-6 lg:h-6 animate-in zoom-in duration-300" />
                         ) : (
                           <span className="font-bold">1</span>
                         )}
-                        
+
                         {/* Premium Glow Effect */}
                         {currentStep >= 1 && (
                           <div className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 opacity-50 blur-sm -z-10 animate-pulse"></div>
                         )}
                       </div>
-                      
+
                       <div className="mt-2 text-center">
-                        <span className={`block text-xs lg:text-sm font-medium transition-colors duration-300 ${
-                          currentStep >= 1 ? 'text-indigo-700' : 'text-gray-500'
-                        }`}>
+                        <span className={`block text-xs lg:text-sm font-medium transition-colors duration-300 ${currentStep >= 1 ? 'text-indigo-700' : 'text-gray-500'
+                          }`}>
                           Basic Info
                         </span>
                         <span className="text-xs text-gray-400 hidden lg:block">Account Setup</span>
@@ -868,44 +963,71 @@ export default function RegisterPage() {
 
                     {/* Step 2 */}
                     <div className="flex flex-col items-center group">
-                      <div className={`relative w-10 h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-500 transform ${
-                        currentStep === 2 
-                          ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-xl border-2 border-white scale-110' 
-                          : currentStep > 2 
+                      <div className={`relative w-10 h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-500 transform ${currentStep === 2
+                        ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-xl border-2 border-white scale-110'
+                        : currentStep > 2
                           ? 'bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-xl border-2 border-white'
                           : 'bg-white border-2 border-gray-300 text-gray-500 shadow-md hover:border-indigo-300'
-                      }`}>
+                        }`}>
                         {currentStep > 2 ? (
                           <CheckCircle className="w-5 h-5 lg:w-6 lg:h-6" />
                         ) : (
                           <span className="font-bold">2</span>
                         )}
-                        
+
                         {/* Premium Glow Effect */}
                         {currentStep === 2 && (
                           <div className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 opacity-50 blur-sm -z-10 animate-pulse"></div>
                         )}
                       </div>
-                      
+
                       <div className="mt-2 text-center">
-                        <span className={`block text-xs lg:text-sm font-medium transition-colors duration-300 ${
-                          currentStep >= 2 ? 'text-indigo-700' : 'text-gray-500'
-                        }`}>
+                        <span className={`block text-xs lg:text-sm font-medium transition-colors duration-300 ${currentStep >= 2 ? 'text-indigo-700' : 'text-gray-500'
+                          }`}>
                           Role Setup
                         </span>
                         <span className="text-xs text-gray-400 hidden lg:block">Profile Details</span>
                       </div>
                     </div>
+
+                    {/* Step 3 */}
+                    <div className="flex flex-col items-center group">
+                      <div className={`relative w-10 h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-500 transform ${currentStep === 3
+                        ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-xl border-2 border-white scale-110'
+                        : currentStep > 3
+                          ? 'bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-xl border-2 border-white'
+                          : 'bg-white border-2 border-gray-300 text-gray-500 shadow-md hover:border-indigo-300'
+                        }`}>
+                        {currentStep > 3 ? (
+                          <CheckCircle className="w-5 h-5 lg:w-6 lg:h-6" />
+                        ) : (
+                          <span className="font-bold">3</span>
+                        )}
+
+                        {/* Premium Glow Effect */}
+                        {currentStep === 3 && (
+                          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 opacity-50 blur-sm -z-10 animate-pulse"></div>
+                        )}
+                      </div>
+
+                      <div className="mt-2 text-center">
+                        <span className={`block text-xs lg:text-sm font-medium transition-colors duration-300 ${currentStep >= 3 ? 'text-indigo-700' : 'text-gray-500'
+                          }`}>
+                          Verification
+                        </span>
+                        <span className="text-xs text-gray-400 hidden lg:block">Confirm Email</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-              
+
               {/* Premium Progress Percentage */}
               <div className="mt-3 lg:mt-4 text-center">
                 <div className="inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200">
                   <div className="w-2 h-2 rounded-full bg-indigo-500 mr-2 animate-pulse"></div>
                   <span className="text-xs font-medium text-indigo-700">
-                    Step {currentStep} of 2 • {currentStep === 1 ? '50' : '100'}% Complete
+                    Step {currentStep} of 3 • {currentStep === 1 ? '33' : currentStep === 2 ? '66' : '100'}% Complete
                   </span>
                 </div>
               </div>
@@ -920,10 +1042,10 @@ export default function RegisterPage() {
                   <div className="flex-shrink-0">
                     <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
                       <svg className="w-5 h-5 text-white" viewBox="0 0 24 24">
-                        <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                        <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                        <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                        <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                        <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                        <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                        <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                        <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                       </svg>
                     </div>
                   </div>
@@ -949,7 +1071,7 @@ export default function RegisterPage() {
                     <Shield className="h-4 w-4 lg:h-5 lg:w-5 text-indigo-600 mr-2" />
                     <h4 className="text-base lg:text-lg font-semibold text-gray-800">Institution Verification</h4>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       School ID <span className="text-red-500">*</span>
@@ -967,13 +1089,12 @@ export default function RegisterPage() {
                           e.target.value = upperValue
                           setValue('schoolId', upperValue)
                         }}
-                        className={`w-full pl-10 lg:pl-12 pr-10 lg:pr-12 py-3 lg:py-3.5 text-base lg:text-lg font-mono tracking-wider border-2 rounded-lg lg:rounded-xl transition-all focus:outline-none text-gray-900 ${
-                          schoolVerified 
-                            ? 'border-green-400 bg-green-50 focus:border-green-500' 
-                            : schoolError 
+                        className={`w-full pl-10 lg:pl-12 pr-10 lg:pr-12 py-3 lg:py-3.5 text-base lg:text-lg font-mono tracking-wider border-2 rounded-lg lg:rounded-xl transition-all focus:outline-none text-gray-900 ${schoolVerified
+                          ? 'border-green-400 bg-green-50 focus:border-green-500'
+                          : schoolError
                             ? 'border-red-400 bg-red-50 focus:border-red-500'
                             : 'border-gray-200 bg-white focus:border-indigo-500 focus:ring-2 lg:focus:ring-4 focus:ring-indigo-50'
-                        }`}
+                          }`}
                         placeholder="XXXX-XXXX-XXXX"
                       />
                       <div className="absolute right-3 lg:right-4 top-1/2 transform -translate-y-1/2">
@@ -1132,10 +1253,10 @@ export default function RegisterPage() {
                         {isGoogleUser && (
                           <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
                             <svg className="w-3 h-3 mr-1" viewBox="0 0 24 24">
-                              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                             </svg>
                             Google Account
                           </span>
@@ -1149,11 +1270,10 @@ export default function RegisterPage() {
                           {...register('email')}
                           type="email"
                           disabled={isGoogleUser}
-                          className={`w-full pl-9 pr-3 py-3 border-2 rounded-lg transition-all focus:outline-none text-sm ${
-                            isGoogleUser 
-                              ? 'border-blue-200 bg-blue-50 text-blue-900 cursor-not-allowed' 
-                              : 'border-gray-200 bg-gray-50 text-gray-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-50'
-                          }`}
+                          className={`w-full pl-9 pr-3 py-3 border-2 rounded-lg transition-all focus:outline-none text-sm ${isGoogleUser
+                            ? 'border-blue-200 bg-blue-50 text-blue-900 cursor-not-allowed'
+                            : 'border-gray-200 bg-gray-50 text-gray-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-50'
+                            }`}
                           placeholder="your.email@school.edu"
                         />
                       </div>
@@ -1211,38 +1331,36 @@ export default function RegisterPage() {
                             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                           </button>
                         </div>
-                        
+
                         {/* Password Strength Indicator */}
                         {password && password.length > 0 && (
                           <div className="mt-3">
                             <div className="flex items-center justify-between mb-2">
                               <span className="text-xs font-medium text-gray-600">Password Strength</span>
-                              <span className={`text-xs font-semibold ${
-                                passwordStrength >= 80 ? 'text-green-600' :
+                              <span className={`text-xs font-semibold ${passwordStrength >= 80 ? 'text-green-600' :
                                 passwordStrength >= 60 ? 'text-yellow-600' :
-                                passwordStrength >= 40 ? 'text-orange-600' :
-                                'text-red-600'
-                              }`}>
+                                  passwordStrength >= 40 ? 'text-orange-600' :
+                                    'text-red-600'
+                                }`}>
                                 {passwordStrength >= 80 ? 'Strong' :
-                                 passwordStrength >= 60 ? 'Good' :
-                                 passwordStrength >= 40 ? 'Fair' :
-                                 'Weak'}
+                                  passwordStrength >= 60 ? 'Good' :
+                                    passwordStrength >= 40 ? 'Fair' :
+                                      'Weak'}
                               </span>
                             </div>
                             <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                              <div 
-                                className={`h-full transition-all duration-300 ${
-                                  passwordStrength >= 80 ? 'bg-gradient-to-r from-green-500 to-emerald-600' :
+                              <div
+                                className={`h-full transition-all duration-300 ${passwordStrength >= 80 ? 'bg-gradient-to-r from-green-500 to-emerald-600' :
                                   passwordStrength >= 60 ? 'bg-gradient-to-r from-yellow-500 to-amber-600' :
-                                  passwordStrength >= 40 ? 'bg-gradient-to-r from-orange-500 to-red-500' :
-                                  'bg-red-500'
-                                }`}
+                                    passwordStrength >= 40 ? 'bg-gradient-to-r from-orange-500 to-red-500' :
+                                      'bg-red-500'
+                                  }`}
                                 style={{ width: `${passwordStrength}%` }}
                               />
                             </div>
                           </div>
                         )}
-                        
+
                         {/* Password Requirements Checklist */}
                         <div className="mt-3 bg-gray-50 rounded-lg p-3 border border-gray-200">
                           <p className="text-xs font-semibold text-gray-700 mb-2">Password Requirements:</p>
@@ -1381,364 +1499,531 @@ export default function RegisterPage() {
             )}
 
             {/* Step 2: Role-specific Information */}
-            {currentStep === 2 && (
-              <div className="space-y-4 lg:space-y-6">
-                {/* Step 2 Header */}
-                <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl lg:rounded-2xl p-4 lg:p-5 border border-indigo-100">
-                  <h4 className="text-lg lg:text-xl font-semibold text-gray-800 mb-1 lg:mb-2">Configure Your Account</h4>
-                  <p className="text-gray-600 text-sm lg:text-base">Complete your profile based on your role</p>
-                </div>
+            {currentStep === 2 && (() => {
+              console.log('📋 Step 2 Rendering:', {
+                selectedRole,
+                gradeSubjects: gradeSubjects.length,
+                loadingGrades,
+                availableClasses: availableClasses.length,
+                isLoadingClasses
+              })
+              return (
+                <div className="space-y-4 lg:space-y-6">
+                  {/* Step 2 Header */}
+                  <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl lg:rounded-2xl p-4 lg:p-5 border border-indigo-100">
+                    <h4 className="text-lg lg:text-xl font-semibold text-gray-800 mb-1 lg:mb-2">Configure Your Account</h4>
+                    <p className="text-gray-600 text-sm lg:text-base">Complete your profile based on your role</p>
+                  </div>
 
-                {/* Student-specific fields */}
-                {selectedRole === 'student' && (
-                  <div className="bg-white rounded-xl lg:rounded-2xl p-4 lg:p-5 border-2 border-gray-200">
-                    <div className="flex items-center mb-4 lg:mb-5">
-                      <div className="w-8 h-8 lg:w-10 lg:h-10 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-lg lg:rounded-xl flex items-center justify-center mr-3">
-                        <GraduationCap className="h-4 w-4 lg:h-5 lg:w-5 text-white" />
+                  {/* Student-specific fields */}
+                  {selectedRole === 'student' && (
+                    <div className="bg-white rounded-xl lg:rounded-2xl p-4 lg:p-5 border-2 border-gray-200">
+                      <div className="flex items-center mb-4 lg:mb-5">
+                        <div className="w-8 h-8 lg:w-10 lg:h-10 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-lg lg:rounded-xl flex items-center justify-center mr-3">
+                          <GraduationCap className="h-4 w-4 lg:h-5 lg:w-5 text-white" />
+                        </div>
+                        <h4 className="text-base lg:text-lg font-semibold text-gray-800">Academic Details</h4>
                       </div>
-                      <h4 className="text-base lg:text-lg font-semibold text-gray-800">Academic Details</h4>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5">
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                          Grade Level
-                          <span className="text-red-500 ml-1">*</span>
-                          <span className="text-xs text-gray-500 font-normal ml-2">(Required)</span>
-                        </Label>
-                        <Select onValueChange={(value) => {
-                          setValue('gradeLevel', value)
-                          setSelectedGradeLevel(value)
-                        }}>
-                          <SelectTrigger className="h-11 lg:h-12 text-sm lg:text-base border-2 rounded-lg lg:rounded-xl focus:ring-2 focus:ring-indigo-50">
-                            <SelectValue placeholder="Select grade *" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {gradeSubjects.length > 0 ? (
-                              Array.from(new Set(gradeSubjects.map((grade: any) => grade.grade_level)))
-                                .sort((a: any, b: any) => parseInt(a) - parseInt(b))
-                                .map((gradeLevel: any) => (
-                                  <SelectItem key={gradeLevel} value={gradeLevel} className="py-2">
-                                    Grade {gradeLevel}
-                                  </SelectItem>
-                                ))
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5">
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                            Grade Level
+                            <span className="text-red-500 ml-1">*</span>
+                            <span className="text-xs text-gray-500 font-normal ml-2">(Required)</span>
+                          </Label>
+                          <Select onValueChange={(value) => {
+                            console.log('🎓 Student grade selection:', { value, totalGrades: gradeSubjects.length })
+                            setValue('gradeLevel', value)
+                            setSelectedGradeLevel(value)
+                          }}>
+                            <SelectTrigger className="h-11 lg:h-12 text-sm lg:text-base border-2 rounded-lg lg:rounded-xl focus:ring-2 focus:ring-indigo-50">
+                              <SelectValue placeholder="Select grade *" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {gradeSubjects.length > 0 ? (
+                                Array.from(new Set(gradeSubjects.map((grade: any) => grade.grade_level)))
+                                  .sort((a: any, b: any) => {
+                                    // Smart sort: handle numeric and non-numeric grades
+                                    const aNum = parseInt(a)
+                                    const bNum = parseInt(b)
+
+                                    // Both are numbers - sort numerically
+                                    if (!isNaN(aNum) && !isNaN(bNum)) {
+                                      return aNum - bNum
+                                    }
+
+                                    // One is number, one is not - numbers come first
+                                    if (!isNaN(aNum)) return -1
+                                    if (!isNaN(bNum)) return 1
+
+                                    // Both are non-numeric - sort alphabetically
+                                    return String(a).localeCompare(String(b))
+                                  })
+                                  .map((gradeLevel: any) => {
+                                    // Find the full grade name from gradeSubjects
+                                    const gradeInfo = gradeSubjects.find((g: any) => g.grade_level === gradeLevel)
+                                    const displayName = gradeInfo?.grade_name || `Grade ${gradeLevel}`
+
+                                    return (
+                                      <SelectItem key={gradeLevel} value={gradeLevel} className="py-2">
+                                        {displayName}
+                                      </SelectItem>
+                                    )
+                                  })
+                              ) : (
+                                <SelectItem value="no-grades" disabled>
+                                  {loadingGrades ? 'Loading grades...' : 'No grades configured. Please contact your school administrator.'}
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700 mb-2 block">Class Section</Label>
+                          {selectedGradeLevel ? (
+                            isLoadingClasses ? (
+                              <div className="flex items-center justify-center h-11 lg:h-12 border-2 border-gray-200 rounded-lg lg:rounded-xl bg-gray-50">
+                                <LoadingSpinner size="sm" text="Loading..." />
+                              </div>
+                            ) : availableClasses.length > 0 ? (
+                              <Select onValueChange={(value) => {
+                                setValue('className', value)
+                                const selectedClass = availableClasses.find(cls => cls.id === value)
+                                setSelectedClassName(selectedClass?.class_name || 'A')
+                              }}>
+                                <SelectTrigger className="h-11 lg:h-12 text-sm lg:text-base border-2 rounded-lg lg:rounded-xl focus:ring-2 focus:ring-indigo-50">
+                                  <SelectValue placeholder="Select class" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {availableClasses.map((cls) => (
+                                    <SelectItem key={cls.id} value={cls.id} className="py-2">
+                                      <div>
+                                        <div className="font-medium text-sm">{cls.class_name}</div>
+                                        {cls.subject && (
+                                          <div className="text-xs text-gray-500">{cls.subject}</div>
+                                        )}
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             ) : (
-                              <SelectItem value="no-grades" disabled>
-                                {loadingGrades ? 'Loading...' : 'No grades available'}
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
+                              <div className="h-11 lg:h-12 px-3 bg-amber-50 border-2 border-amber-200 rounded-lg lg:rounded-xl flex items-center">
+                                <AlertCircle className="h-4 w-4 text-amber-600 mr-2 flex-shrink-0" />
+                                <p className="text-xs lg:text-sm text-amber-800">No classes available</p>
+                              </div>
+                            )
+                          ) : (
+                            <div className="h-11 lg:h-12 px-3 bg-gray-50 border-2 border-gray-200 rounded-lg lg:rounded-xl flex items-center">
+                              <p className="text-xs lg:text-sm text-gray-500">Select grade first</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Parent-specific fields */}
+                  {selectedRole === 'parent' && (
+                    <div className="bg-white rounded-xl lg:rounded-2xl p-4 lg:p-5 border-2 border-gray-200">
+                      <div className="flex items-center mb-4 lg:mb-5">
+                        <div className="w-8 h-8 lg:w-10 lg:h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg lg:rounded-xl flex items-center justify-center mr-3">
+                          <Users className="h-4 w-4 lg:h-5 lg:w-5 text-white" />
+                        </div>
+                        <h4 className="text-base lg:text-lg font-semibold text-gray-800">
+                          Link Your Children
+                          <span className="text-red-500 ml-1">*</span>
+                        </h4>
                       </div>
 
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700 mb-2 block">Class Section</Label>
-                        {selectedGradeLevel ? (
-                          isLoadingClasses ? (
-                            <div className="flex items-center justify-center h-11 lg:h-12 border-2 border-gray-200 rounded-lg lg:rounded-xl bg-gray-50">
-                              <LoadingSpinner size="sm" text="Loading..." />
+                      <div className="space-y-3 lg:space-y-4">
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg lg:rounded-xl p-3 lg:p-4">
+                          <div className="flex items-center gap-2 mb-1">
+                            <AlertCircle className="h-4 w-4 text-amber-600" />
+                            <span className="text-sm font-medium text-amber-800">Required</span>
+                          </div>
+                          <p className="text-xs lg:text-sm text-amber-700">
+                            You must add at least one child's account to complete parent registration
+                          </p>
+                        </div>
+
+                        <div className="space-y-2 lg:space-y-3">
+                          <Label className="text-sm font-medium text-gray-700 block">
+                            Add Child Account
+                            <span className="text-red-500 ml-1">*</span>
+                          </Label>
+                          <div className="flex gap-2 lg:gap-3">
+                            <div className="flex-1">
+                              <Input
+                                value={currentChildEmail}
+                                onChange={(e) => setCurrentChildEmail(e.target.value)}
+                                type="email"
+                                placeholder="Child's email"
+                                disabled={isVerifyingChild}
+                                className="h-10 lg:h-11 border-2 rounded-lg lg:rounded-xl focus:ring-2 focus:ring-indigo-50 text-sm"
+                              />
                             </div>
-                          ) : availableClasses.length > 0 ? (
-                            <Select onValueChange={(value) => {
-                              setValue('className', value)
-                              const selectedClass = availableClasses.find(cls => cls.id === value)
-                              setSelectedClassName(selectedClass?.class_name || 'A')
-                            }}>
-                              <SelectTrigger className="h-11 lg:h-12 text-sm lg:text-base border-2 rounded-lg lg:rounded-xl focus:ring-2 focus:ring-indigo-50">
-                                <SelectValue placeholder="Select class" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {availableClasses.map((cls) => (
-                                  <SelectItem key={cls.id} value={cls.id} className="py-2">
-                                    <div>
-                                      <div className="font-medium text-sm">{cls.class_name}</div>
-                                      {cls.subject && (
-                                        <div className="text-xs text-gray-500">{cls.subject}</div>
-                                      )}
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <div className="h-11 lg:h-12 px-3 bg-amber-50 border-2 border-amber-200 rounded-lg lg:rounded-xl flex items-center">
-                              <AlertCircle className="h-4 w-4 text-amber-600 mr-2 flex-shrink-0" />
-                              <p className="text-xs lg:text-sm text-amber-800">No classes available</p>
+                            <div className="flex-1">
+                              <Input
+                                value={currentChildId}
+                                onChange={(e) => setCurrentChildId(e.target.value)}
+                                type="text"
+                                placeholder="Student ID"
+                                disabled={isVerifyingChild}
+                                className="h-10 lg:h-11 border-2 rounded-lg lg:rounded-xl focus:ring-2 focus:ring-indigo-50 text-sm"
+                              />
                             </div>
-                          )
-                        ) : (
-                          <div className="h-11 lg:h-12 px-3 bg-gray-50 border-2 border-gray-200 rounded-lg lg:rounded-xl flex items-center">
-                            <p className="text-xs lg:text-sm text-gray-500">Select grade first</p>
+                            <Button
+                              type="button"
+                              onClick={addChildEmail}
+                              disabled={!currentChildEmail || !currentChildId || isVerifyingChild}
+                              className="h-10 lg:h-11 px-4 lg:px-5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-lg lg:rounded-xl shadow-lg transition-all"
+                            >
+                              {isVerifyingChild ? (
+                                <LoadingSpinner size="sm" />
+                              ) : (
+                                <UserPlus className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+
+                        {children.length > 0 && (
+                          <div className="space-y-2 lg:space-y-3">
+                            <Label className="text-sm font-medium text-gray-700 block">
+                              Linked Children ({children.length})
+                            </Label>
+                            {children.map((child, index) => (
+                              <div key={index} className="flex items-center justify-between p-3 lg:p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg lg:rounded-xl">
+                                <div className="flex items-center gap-2 lg:gap-3">
+                                  <div className="w-8 h-8 lg:w-9 lg:h-9 bg-green-100 rounded-full flex items-center justify-center">
+                                    <CheckCircle className="h-4 w-4 lg:h-5 lg:w-5 text-green-600" />
+                                  </div>
+                                  <div>
+                                    <p className="font-semibold text-gray-800 text-sm lg:text-base">{child.name}</p>
+                                    <p className="text-xs lg:text-sm text-gray-600">{child.email}</p>
+                                    <p className="text-xs text-green-600">{child.school}</p>
+                                  </div>
+                                </div>
+                                <Button
+                                  type="button"
+                                  onClick={() => removeChild(child.email)}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                                >
+                                  <XCircle className="h-4 w-4 lg:h-5 lg:w-5" />
+                                </Button>
+                              </div>
+                            ))}
                           </div>
                         )}
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Parent-specific fields */}
-                {selectedRole === 'parent' && (
-                  <div className="bg-white rounded-xl lg:rounded-2xl p-4 lg:p-5 border-2 border-gray-200">
-                    <div className="flex items-center mb-4 lg:mb-5">
-                      <div className="w-8 h-8 lg:w-10 lg:h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg lg:rounded-xl flex items-center justify-center mr-3">
-                        <Users className="h-4 w-4 lg:h-5 lg:w-5 text-white" />
-                      </div>
-                      <h4 className="text-base lg:text-lg font-semibold text-gray-800">
-                        Link Your Children
-                        <span className="text-red-500 ml-1">*</span>
-                      </h4>
-                    </div>
-                    
-                    <div className="space-y-3 lg:space-y-4">
-                      <div className="bg-amber-50 border border-amber-200 rounded-lg lg:rounded-xl p-3 lg:p-4">
-                        <div className="flex items-center gap-2 mb-1">
-                          <AlertCircle className="h-4 w-4 text-amber-600" />
-                          <span className="text-sm font-medium text-amber-800">Required</span>
+                  {/* Teacher-specific fields */}
+                  {selectedRole === 'teacher' && (
+                    <div className="bg-white rounded-2xl p-6 border-2 border-gray-200">
+                      <div className="flex items-center mb-6">
+                        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mr-3">
+                          <User className="h-5 w-5 text-white" />
                         </div>
-                        <p className="text-xs lg:text-sm text-amber-700">
-                          You must add at least one child's account to complete parent registration
-                        </p>
+                        <h4 className="text-lg font-semibold text-gray-800">Teaching Assignments</h4>
                       </div>
-                      
-                      <div className="space-y-2 lg:space-y-3">
-                        <Label className="text-sm font-medium text-gray-700 block">
-                          Add Child Account
-                          <span className="text-red-500 ml-1">*</span>
-                        </Label>
-                        <div className="flex gap-2 lg:gap-3">
-                          <div className="flex-1">
-                            <Input
-                              value={currentChildEmail}
-                              onChange={(e) => setCurrentChildEmail(e.target.value)}
-                              type="email"
-                              placeholder="Child's email"
-                              disabled={isVerifyingChild}
-                              className="h-10 lg:h-11 border-2 rounded-lg lg:rounded-xl focus:ring-2 focus:ring-indigo-50 text-sm"
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <Input
-                              value={currentChildId}
-                              onChange={(e) => setCurrentChildId(e.target.value)}
-                              type="text"
-                              placeholder="Student ID"
-                              disabled={isVerifyingChild}
-                              className="h-10 lg:h-11 border-2 rounded-lg lg:rounded-xl focus:ring-2 focus:ring-indigo-50 text-sm"
-                            />
-                          </div>
-                          <Button
-                            type="button"
-                            onClick={addChildEmail}
-                            disabled={!currentChildEmail || !currentChildId || isVerifyingChild}
-                            className="h-10 lg:h-11 px-4 lg:px-5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-lg lg:rounded-xl shadow-lg transition-all"
-                          >
-                            {isVerifyingChild ? (
-                              <LoadingSpinner size="sm" />
-                            ) : (
-                              <UserPlus className="h-4 w-4" />
-                            )}
-                          </Button>
+
+                      <div className="space-y-4">
+                        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+                          <p className="text-sm text-purple-800">
+                            Select the grade levels and subjects you'll be teaching this academic year
+                          </p>
                         </div>
-                      </div>
-                      
-                      {children.length > 0 && (
-                        <div className="space-y-2 lg:space-y-3">
-                          <Label className="text-sm font-medium text-gray-700 block">
-                            Linked Children ({children.length})
-                          </Label>
-                          {children.map((child, index) => (
-                            <div key={index} className="flex items-center justify-between p-3 lg:p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg lg:rounded-xl">
-                              <div className="flex items-center gap-2 lg:gap-3">
-                                <div className="w-8 h-8 lg:w-9 lg:h-9 bg-green-100 rounded-full flex items-center justify-center">
-                                  <CheckCircle className="h-4 w-4 lg:h-5 lg:w-5 text-green-600" />
-                                </div>
-                                <div>
-                                  <p className="font-semibold text-gray-800 text-sm lg:text-base">{child.name}</p>
-                                  <p className="text-xs lg:text-sm text-gray-600">{child.email}</p>
-                                  <p className="text-xs text-green-600">{child.school}</p>
-                                </div>
-                              </div>
-                              <Button
-                                type="button"
-                                onClick={() => removeChild(child.email)}
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                              >
-                                <XCircle className="h-4 w-4 lg:h-5 lg:w-5" />
-                              </Button>
+
+                        {loadingGrades ? (
+                          <div className="flex justify-center py-12">
+                            <div className="text-center">
+                              <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto"></div>
+                              <p className="mt-4 text-gray-600">Loading available grade levels...</p>
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Teacher-specific fields */}
-                {selectedRole === 'teacher' && (
-                  <div className="bg-white rounded-2xl p-6 border-2 border-gray-200">
-                    <div className="flex items-center mb-6">
-                      <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mr-3">
-                        <User className="h-5 w-5 text-white" />
-                      </div>
-                      <h4 className="text-lg font-semibold text-gray-800">Teaching Assignments</h4>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
-                        <p className="text-sm text-purple-800">
-                          Select the grade levels and subjects you'll be teaching this academic year
-                        </p>
-                      </div>
-                      
-                      {loadingGrades ? (
-                        <div className="flex justify-center py-12">
-                          <div className="text-center">
-                            <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto"></div>
-                            <p className="mt-4 text-gray-600">Loading available grade levels...</p>
                           </div>
-                        </div>
-                      ) : gradeSubjects.length > 0 ? (
-                        <>
-                          <Label className="text-sm font-medium text-gray-700 block">
-                            Select Your Teaching Grades
-                          </Label>
-                          <div className="grid grid-cols-2 gap-4 max-h-80 overflow-y-auto p-1">
-                            {gradeSubjects.map((grade: any) => (
-                              <div
-                                key={grade.id}
-                                className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all transform hover:scale-[1.02] ${
-                                  selectedGrades.includes(grade.id)
+                        ) : gradeSubjects.length > 0 ? (
+                          <>
+                            <Label className="text-sm font-medium text-gray-700 block">
+                              Select Your Teaching Grades
+                            </Label>
+                            <div className="grid grid-cols-2 gap-4 max-h-80 overflow-y-auto p-1">
+                              {gradeSubjects.map((grade: any) => (
+                                <div
+                                  key={grade.id}
+                                  className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all transform hover:scale-[1.02] ${selectedGrades.includes(grade.id)
                                     ? 'bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-400 shadow-md'
                                     : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm'
-                                }`}
-                                onClick={() => handleGradeSelection(grade.id, !selectedGrades.includes(grade.id))}
-                              >
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1">
-                                    <h5 className="font-semibold text-gray-800">{grade.name}</h5>
-                                    <p className="text-sm text-gray-600 mt-1">Grade {grade.grade_level}</p>
-                                    {grade.subject && (
-                                      <span className="inline-block mt-2 px-2 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-lg">
-                                        {grade.subject}
-                                      </span>
-                                    )}
+                                    }`}
+                                  onClick={() => handleGradeSelection(grade.id, !selectedGrades.includes(grade.id))}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                      <h5 className="font-semibold text-gray-800">{grade.name}</h5>
+                                      <p className="text-sm text-gray-600 mt-1">Grade {grade.grade_level}</p>
+                                      {grade.subject && (
+                                        <span className="inline-block mt-2 px-2 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-lg">
+                                          {grade.subject}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="ml-3">
+                                      <input
+                                        type="checkbox"
+                                        checked={selectedGrades.includes(grade.id)}
+                                        onChange={(e) => {
+                                          e.stopPropagation();
+                                          handleGradeSelection(grade.id, e.target.checked);
+                                        }}
+                                        className="w-5 h-5 text-indigo-600 border-2 rounded focus:ring-2 focus:ring-indigo-500"
+                                      />
+                                    </div>
                                   </div>
-                                  <div className="ml-3">
-                                    <input
-                                      type="checkbox"
-                                      checked={selectedGrades.includes(grade.id)}
-                                      onChange={(e) => {
+                                  {selectedGrades.includes(grade.id) && primaryGrade === grade.id && (
+                                    <div className="absolute -top-2 -right-2 bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-xs px-2 py-1 rounded-full shadow-md">
+                                      Primary
+                                    </div>
+                                  )}
+                                  {selectedGrades.includes(grade.id) && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
                                         e.stopPropagation();
-                                        handleGradeSelection(grade.id, e.target.checked);
+                                        handlePrimaryGradeSelection(grade.id);
                                       }}
-                                      className="w-5 h-5 text-indigo-600 border-2 rounded focus:ring-2 focus:ring-indigo-500"
-                                    />
-                                  </div>
-                                </div>
-                                {selectedGrades.includes(grade.id) && primaryGrade === grade.id && (
-                                  <div className="absolute -top-2 -right-2 bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-xs px-2 py-1 rounded-full shadow-md">
-                                    Primary
-                                  </div>
-                                )}
-                                {selectedGrades.includes(grade.id) && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handlePrimaryGradeSelection(grade.id);
-                                    }}
-                                    className={`mt-3 w-full py-2 text-xs font-medium rounded-lg transition-all ${
-                                      primaryGrade === grade.id
+                                      className={`mt-3 w-full py-2 text-xs font-medium rounded-lg transition-all ${primaryGrade === grade.id
                                         ? 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white'
                                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                    }`}
-                                  >
-                                    {primaryGrade === grade.id ? 'Primary Assignment' : 'Set as Primary'}
-                                  </button>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                          {selectedGrades.length > 0 && (
-                            <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                              <p className="text-sm text-green-800">
-                                ✓ {selectedGrades.length} grade level{selectedGrades.length !== 1 ? 's' : ''} selected
-                                {primaryGrade && (
-                                  <span className="ml-2">
-                                    • Primary: {gradeSubjects.find((g: any) => g.id === primaryGrade)?.name}
-                                  </span>
-                                )}
-                              </p>
+                                        }`}
+                                    >
+                                      {primaryGrade === grade.id ? 'Primary Assignment' : 'Set as Primary'}
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
                             </div>
-                          )}
-                        </>
-                      ) : (
-                        <div className="text-center py-12 bg-gray-50 rounded-xl">
-                          <GraduationCap className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                          <p className="text-gray-600 font-medium">No grade levels available</p>
-                          <p className="text-sm text-gray-500 mt-2">Please contact your school administrator</p>
-                        </div>
-                      )}
+                            {selectedGrades.length > 0 && (
+                              <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                                <p className="text-sm text-green-800">
+                                  ✓ {selectedGrades.length} grade level{selectedGrades.length !== 1 ? 's' : ''} selected
+                                  {primaryGrade && (
+                                    <span className="ml-2">
+                                      • Primary: {gradeSubjects.find((g: any) => g.id === primaryGrade)?.name}
+                                    </span>
+                                  )}
+                                </p>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="text-center py-12 bg-gray-50 rounded-xl">
+                            <GraduationCap className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                            <p className="text-gray-600 font-medium">No grade levels available</p>
+                            <p className="text-sm text-gray-500 mt-2">Please contact your school administrator</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+
+
+                  {/* Error Messages */}
+                  {(authError || submitError) && (
+                    <div className="flex items-start gap-3 p-4 bg-red-50 border-2 border-red-200 rounded-xl">
+                      <div className="flex-shrink-0">
+                        <AlertCircle className="h-6 w-6 text-red-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-red-800">Registration Error</p>
+                        <p className="text-sm text-red-700 mt-1">{authError || submitError}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 2 Action Buttons */}
+                  <div className="pt-6">
+                    <div className="flex gap-4">
+                      <button
+                        type="button"
+                        onClick={handlePreviousStep}
+                        className="px-6 py-4 bg-white border-2 border-gray-300 hover:border-gray-400 text-gray-700 font-semibold rounded-xl transition-all duration-200 flex items-center justify-center transform hover:scale-[1.02] active:scale-[0.98]"
+                      >
+                        <ArrowLeft className="mr-2 h-5 w-5" />
+                        <span>Previous Step</span>
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isLoading || isSendingOTP || authLoading}
+                        className="flex-1 py-4 px-6 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 disabled:from-gray-300 disabled:to-gray-400 text-white font-semibold rounded-xl shadow-lg transition-all duration-200 disabled:cursor-not-allowed flex items-center justify-center transform hover:scale-[1.02] active:scale-[0.98]"
+                      >
+                        {isSendingOTP || isLoading || authLoading ? (
+                          <>
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                            <span>Sending Code...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Mail className="mr-2 h-5 w-5" />
+                            <span className="text-base">Send Verification Code</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="mt-6 text-center">
+                      <p className="text-sm text-gray-600">
+                        By creating an account, you agree to our{' '}
+                        <Link href="/terms" className="text-indigo-600 hover:text-indigo-500 font-medium">
+                          Terms of Service
+                        </Link>
+                        {' '}and{' '}
+                        <Link href="/privacy" className="text-indigo-600 hover:text-indigo-500 font-medium">
+                          Privacy Policy
+                        </Link>
+                      </p>
                     </div>
                   </div>
-                )}
+                </div>
+              )
+            })()}
 
-                {/* Error Messages */}
-                {(authError || submitError) && (
-                  <div className="flex items-start gap-3 p-4 bg-red-50 border-2 border-red-200 rounded-xl">
-                    <div className="flex-shrink-0">
-                      <AlertCircle className="h-6 w-6 text-red-600" />
+            {/* Step 3: OTP Verification */}
+            {currentStep === 3 && (
+              <div className="space-y-4 lg:space-y-6" data-step="3">
+                {/* Step 3 Header */}
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl lg:rounded-2xl p-4 lg:p-6 border border-green-100">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-3">
+                    <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-green-600 to-emerald-600 rounded-lg lg:rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                      <Mail className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-semibold text-red-800">Registration Error</p>
-                      <p className="text-sm text-red-700 mt-1">{authError || submitError}</p>
+                      <h4 className="text-lg lg:text-xl font-semibold text-gray-800">Verify Your Email</h4>
+                      <p className="text-gray-600 text-sm lg:text-base mt-1">
+                        We've sent a code to <span className="font-medium text-green-700 break-all">{otpEmail}</span>
+                      </p>
                     </div>
                   </div>
-                )}
+                  <p className="text-xs lg:text-sm text-gray-600 bg-white/50 rounded-lg p-3 border border-green-200">
+                    ✉️ Check your inbox (and spam folder) for the 6-digit verification code
+                  </p>
+                </div>
 
-                {/* Step 2 Action Buttons */}
-                <div className="pt-6">
-                  <div className="flex gap-4">
+                {/* OTP Input */}
+                <div className="bg-white rounded-xl lg:rounded-2xl p-6 lg:p-8 border-2 border-gray-200">
+                  <OTPInput
+                    length={6}
+                    onComplete={async (otpCode) => {
+                      console.log('🔐 [OTP] Code entered:', otpCode.substring(0, 2) + '****')
+                      try {
+                        const response = await fetch('/api/auth/verify-otp', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ email: otpEmail, otp: otpCode, role: otpRole }),
+                        })
+
+                        if (response.ok) {
+                          console.log('✅ [OTP] Verification successful')
+                          addToast({
+                            type: 'success',
+                            title: 'Email Verified',
+                            description: 'Completing your registration...'
+                          })
+                          await completeRegistration()
+                        } else {
+                          const errorData = await response.json()
+                          throw new Error(errorData.error || 'Invalid OTP code')
+                        }
+                      } catch (error) {
+                        console.error('❌ [OTP] Verification failed:', error)
+                        addToast({
+                          type: 'error',
+                          title: 'Verification Failed',
+                          description: error instanceof Error ? error.message : 'Invalid OTP code'
+                        })
+                      }
+                    }}
+                    loading={isLoading}
+                  />
+
+                  {/* Action Buttons */}
+                  <div className="mt-6 flex flex-col gap-3">
                     <button
                       type="button"
-                      onClick={handlePreviousStep}
-                      className="px-6 py-4 bg-white border-2 border-gray-300 hover:border-gray-400 text-gray-700 font-semibold rounded-xl transition-all duration-200 flex items-center justify-center transform hover:scale-[1.02] active:scale-[0.98]"
+                      onClick={async () => {
+                        try {
+                          setIsSendingOTP(true)
+                          const response = await fetch('/api/auth/send-otp', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              email: otpEmail,
+                              role: otpRole,
+                              firstName: registrationData?.firstName,
+                              lastName: registrationData?.lastName
+                            }),
+                          })
+
+                          if (response.ok) {
+                            addToast({
+                              type: 'success',
+                              title: 'Code Resent',
+                              description: 'A new verification code has been sent to your email'
+                            })
+                          } else {
+                            throw new Error('Failed to resend code')
+                          }
+                        } catch (error) {
+                          addToast({
+                            type: 'error',
+                            title: 'Resend Failed',
+                            description: 'Could not resend verification code. Please try again.'
+                          })
+                        } finally {
+                          setIsSendingOTP(false)
+                        }
+                      }}
+                      disabled={isSendingOTP}
+                      className="text-sm text-indigo-600 hover:text-indigo-500 font-medium disabled:opacity-50"
                     >
-                      <ArrowLeft className="mr-2 h-5 w-5" />
-                      <span>Previous Step</span>
+                      {isSendingOTP ? 'Sending...' : 'Resend Code'}
                     </button>
+
                     <button
-                      type="submit"
-                      disabled={isLoading || authLoading}
-                      className="flex-1 py-4 px-6 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 disabled:from-gray-300 disabled:to-gray-400 text-white font-semibold rounded-xl shadow-lg transition-all duration-200 disabled:cursor-not-allowed flex items-center justify-center transform hover:scale-[1.02] active:scale-[0.98]"
+                      type="button"
+                      onClick={() => {
+                        console.log('🔙 [OTP] Verification cancelled')
+                        setShowOTPVerification(false)
+                        setCurrentStep(2)
+                        setOtpEmail('')
+                        setRegistrationData(null)
+                      }}
+                      className="text-sm text-gray-600 hover:text-gray-500 font-medium"
                     >
-                      {isLoading || authLoading ? (
-                        <>
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                          <span>Creating Your Account...</span>
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className="mr-2 h-5 w-5" />
-                          <span className="text-base">Complete Registration</span>
-                        </>
-                      )}
+                      Go Back
                     </button>
                   </div>
-                  
-                  <div className="mt-6 text-center">
-                    <p className="text-sm text-gray-600">
-                      By creating an account, you agree to our{' '}
-                      <Link href="/terms" className="text-indigo-600 hover:text-indigo-500 font-medium">
-                        Terms of Service
-                      </Link>
-                      {' '}and{' '}
-                      <Link href="/privacy" className="text-indigo-600 hover:text-indigo-500 font-medium">
-                        Privacy Policy
-                      </Link>
-                    </p>
+                </div>
+
+                {/* Step 3 Info */}
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <div className="flex items-start gap-3">
+                    <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-blue-800">
+                      <p className="font-medium mb-1">Having trouble receiving the code?</p>
+                      <ul className="space-y-1 text-blue-700">
+                        <li>• Check your spam/junk folder</li>
+                        <li>• Make sure {otpEmail} is correct</li>
+                        <li>• Wait a few minutes for the email to arrive</li>
+                        <li>• Use the "Resend Code" button if needed</li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
               </div>

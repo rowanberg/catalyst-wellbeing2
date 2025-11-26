@@ -10,12 +10,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { useAppSelector } from '@/lib/redux/hooks'
-import { 
+import {
   Compass, Rocket, Flower2, ScanFace, Menu, X, BellDot, RefreshCcw,
   Sparkles, Users, LogOut, Settings, HelpCircle, BookOpen, MessageSquare,
   BarChart3, ChevronRight, Shield
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { VerificationBadge } from '@/components/ui/verification-badge'
 
 // Tab Components (will be enhanced)
 import { TodayTab } from '@/components/student/tabs/TodayTab'
@@ -40,33 +41,33 @@ interface TabData {
 
 // Premium icon tabs with dynamic theme colors using CSS variables
 const tabs: TabData[] = [
-  { 
-    id: 'today', 
-    label: 'Dashboard', 
+  {
+    id: 'today',
+    label: 'Dashboard',
     icon: Compass,
     color: 'text-slate-400',
     activeColor: '', // Will use CSS variable
     bgGradient: '' // Will use CSS variable
   },
-  { 
-    id: 'growth', 
-    label: 'Growth', 
+  {
+    id: 'growth',
+    label: 'Growth',
     icon: Rocket,
     color: 'text-slate-400',
     activeColor: '', // Will use CSS variable
     bgGradient: '' // Will use CSS variable
   },
-  { 
-    id: 'wellbeing', 
-    label: 'Well-being', 
-    icon: Flower2, 
+  {
+    id: 'wellbeing',
+    label: 'Well-being',
+    icon: Flower2,
     color: 'text-slate-400',
     activeColor: '', // Will use CSS variable
     bgGradient: '' // Will use CSS variable
   },
-  { 
-    id: 'profile', 
-    label: 'Profile', 
+  {
+    id: 'profile',
+    label: 'Profile',
     icon: ScanFace,
     color: 'text-slate-400',
     activeColor: 'text-[#F4978E]',
@@ -75,26 +76,26 @@ const tabs: TabData[] = [
 ]
 
 // Memoized Mobile Header for performance
-const MobileHeader = memo(({ 
-  profile, 
-  greeting, 
-  isPullRefreshing, 
-  showMobileMenu, 
+const MobileHeader = memo(({
+  profile,
+  greeting,
+  isPullRefreshing,
+  showMobileMenu,
   onMenuToggle,
-  activeTab 
+  activeTab
 }: any) => (
   <motion.header
     initial={{ y: -60 }}
     animate={{ y: 0 }}
     transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}  // 250ms standard
     className="fixed top-0 left-0 right-0 z-40 shadow-sm"
-    style={{ 
+    style={{
       background: 'linear-gradient(to right, var(--theme-highlight), var(--theme-tertiary))',
       borderBottom: '1px solid color-mix(in srgb, var(--theme-accent) 30%, transparent)'
     }}
   >
     {isPullRefreshing && (
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.15 }}
@@ -103,7 +104,7 @@ const MobileHeader = memo(({
         <RefreshCcw className="w-4 h-4 animate-spin" strokeWidth={2} style={{ color: 'var(--theme-primary)' }} />
       </motion.div>
     )}
-    
+
     <div className="px-4 py-3">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -121,9 +122,12 @@ const MobileHeader = memo(({
           </div>
 
           <div className="flex-1 min-w-0">
-            <h1 className="text-sm font-semibold text-slate-900 truncate">
-              {greeting}, {profile?.firstName || profile?.first_name || 'Student'}
-            </h1>
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-sm font-semibold text-slate-900 truncate">
+                {greeting}, {profile?.firstName || profile?.first_name || 'Student'}
+              </h1>
+              <VerificationBadge size="sm" showText={false} />
+            </div>
             <p className="text-xs text-slate-500 truncate">
               {profile?.school?.name || 'Catalyst Wells'}
             </p>
@@ -131,7 +135,7 @@ const MobileHeader = memo(({
         </div>
 
         <div className="flex items-center gap-1">
-          <motion.button 
+          <motion.button
             whileTap={{ scale: 0.9 }}
             transition={{ duration: 0.15 }}
             className="relative p-2 rounded-lg transition-colors duration-250"
@@ -141,7 +145,7 @@ const MobileHeader = memo(({
           >
             <BellDot className="w-5 h-5 text-slate-600" strokeWidth={2} />
           </motion.button>
-          
+
           <motion.button
             onClick={onMenuToggle}
             whileTap={{ scale: 0.9 }}
@@ -200,14 +204,14 @@ const TabButton = memo(({ tab, isActive, isLoading, onClick }: any) => {
           style={{
             background: 'linear-gradient(to right, var(--theme-primary), var(--theme-secondary))'
           }}
-          transition={{ 
+          transition={{
             duration: 0.2,
             ease: [0.4, 0, 0.2, 1]
           }}
         />
       )}
-      
-      <Icon 
+
+      <Icon
         className={cn(
           "w-5 h-5 transition-all duration-250",
           isActive ? '' : tab.color
@@ -217,8 +221,8 @@ const TabButton = memo(({ tab, isActive, isLoading, onClick }: any) => {
         }}
         strokeWidth={isActive ? 2.5 : 2}
       />
-      
-      <span 
+
+      <span
         className={cn(
           "text-[10px] font-medium mt-1 transition-colors duration-250",
           isActive ? '' : tab.color
@@ -229,7 +233,7 @@ const TabButton = memo(({ tab, isActive, isLoading, onClick }: any) => {
       >
         {tab.label}
       </span>
-      
+
       {isLoading && (
         <div className="absolute top-1 right-1">
           <div className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: 'var(--theme-primary)' }} />
@@ -243,10 +247,10 @@ TabButton.displayName = 'TabButton'
 export default function EnhancedStudentDashboard() {
   const router = useRouter()
   const { profile, user, isLoading: authLoading } = useAppSelector((state) => state.auth)
-  
+
   // Mounted state to prevent hydration mismatch
   const [mounted, setMounted] = useState(false)
-  
+
   // Tab state
   const [activeTab, setActiveTab] = useState<TabData['id']>('today')
   const [showMobileMenu, setShowMobileMenu] = useState(false)
@@ -254,25 +258,25 @@ export default function EnhancedStudentDashboard() {
   const [greeting, setGreeting] = useState('Hello')
   const [isPullRefreshing, setIsPullRefreshing] = useState(false)
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null)
-  
+
   // Refs for pull-to-refresh
   const pullYRef = useRef(0)
   const startY = useRef(0)
-  
+
   const [tabLoading, setTabLoading] = useState<Record<TabData['id'], boolean>>({
     today: true,
     growth: false,
     wellbeing: false,
     profile: false
   })
-  
+
   const [tabData, setTabData] = useState<Record<TabData['id'], any>>({
     today: null,
     growth: null,
     wellbeing: null,
     profile: null
   })
-  
+
   const [tabErrors, setTabErrors] = useState<Record<TabData['id'], string | null>>({
     today: null,
     growth: null,
@@ -343,7 +347,7 @@ export default function EnhancedStudentDashboard() {
       const data = await response.json()
       cache.set(tabId, data)
       setTabData(prev => ({ ...prev, [tabId]: data }))
-      
+
       // Haptic feedback on successful load
       if ('vibrate' in navigator) {
         navigator.vibrate(10)
@@ -351,7 +355,7 @@ export default function EnhancedStudentDashboard() {
     } catch (error: any) {
       console.error(`Error loading ${tabId} tab:`, error)
       setTabErrors(prev => ({ ...prev, [tabId]: error.message }))
-      
+
       // Error haptic feedback
       if ('vibrate' in navigator) {
         navigator.vibrate([50, 50, 50])
@@ -379,14 +383,14 @@ export default function EnhancedStudentDashboard() {
   const handleTabChange = useCallback((newTab: TabData['id']) => {
     const currentIndex = tabs.findIndex(t => t.id === activeTab)
     const newIndex = tabs.findIndex(t => t.id === newTab)
-    
+
     // Set swipe direction based on tab order
     if (newIndex > currentIndex) {
       setSwipeDirection('left')
     } else if (newIndex < currentIndex) {
       setSwipeDirection('right')
     }
-    
+
     setActiveTab(newTab)
     // Data will be loaded on-demand by useEffect
   }, [activeTab])
@@ -396,14 +400,14 @@ export default function EnhancedStudentDashboard() {
     await loadTabData(activeTab, true)
     setTimeout(() => setIsPullRefreshing(false), 500)
   }
-  
+
   // Pull-to-refresh gesture handlers
   const handleTouchStart = (e: React.TouchEvent) => {
     if (window.scrollY === 0) {
       startY.current = e.touches[0].clientY
     }
   }
-  
+
   const handleTouchMove = (e: React.TouchEvent) => {
     if (startY.current > 0) {
       const currentY = e.touches[0].clientY
@@ -413,7 +417,7 @@ export default function EnhancedStudentDashboard() {
       }
     }
   }
-  
+
   const handleTouchEnd = () => {
     if (pullYRef.current > 80) {
       handleRefresh()
@@ -431,11 +435,11 @@ export default function EnhancedStudentDashboard() {
     <div className="min-h-screen" style={{ background: 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 30%, transparent), white, color-mix(in srgb, var(--theme-tertiary) 20%, transparent))' }}>
       {/* Theme Loader - Applies theme CSS variables */}
       <ThemeLoader />
-      
+
       {/* Desktop Sidebar */}
       {isDesktop && (
-        <Sidebar 
-          activeTab={activeTab} 
+        <Sidebar
+          activeTab={activeTab}
           onTabChange={handleTabChange}
           profile={profile}
         />
@@ -459,7 +463,7 @@ export default function EnhancedStudentDashboard() {
         )}
 
         {/* Tab Content with pull-to-refresh */}
-        <div 
+        <div
           className={cn(
             "min-h-screen",
             !isDesktop && "pt-[88px]"
@@ -474,14 +478,14 @@ export default function EnhancedStudentDashboard() {
               initial={{ opacity: 0, y: 8, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -8, scale: 0.98 }}
-              transition={{ 
+              transition={{
                 duration: 0.3,
                 ease: [0.4, 0, 0.2, 1]
               }}
               className="w-full"
             >
               {/* Subtle gradient background */}
-              <motion.div 
+              <motion.div
                 key={`bg-${activeTab}`}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 0.15 }}
@@ -493,9 +497,9 @@ export default function EnhancedStudentDashboard() {
                   activeTab === 'growth' && "from-[#FBC4AB]/20 to-transparent",
                   activeTab === 'wellbeing' && "from-[#F8AD9D]/20 to-transparent",
                   activeTab === 'profile' && "from-[#F4978E]/20 to-transparent"
-                )} 
+                )}
               />
-              
+
               {/* Tab Components with smooth slide animations */}
               <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-6">
                 <AnimatePresence mode="wait" initial={false}>
@@ -505,12 +509,12 @@ export default function EnhancedStudentDashboard() {
                       initial={{ opacity: 0, x: swipeDirection === 'left' ? 20 : -20, scale: 0.98 }}
                       animate={{ opacity: 1, x: 0, scale: 1 }}
                       exit={{ opacity: 0, x: swipeDirection === 'left' ? -20 : 20, scale: 0.98 }}
-                      transition={{ 
-                        duration: 0.3, 
+                      transition={{
+                        duration: 0.3,
                         ease: [0.4, 0, 0.2, 1]
                       }}
                     >
-                      <TodayTab 
+                      <TodayTab
                         data={tabData.today}
                         loading={tabLoading.today}
                         error={tabErrors.today}
@@ -525,12 +529,12 @@ export default function EnhancedStudentDashboard() {
                       initial={{ opacity: 0, x: swipeDirection === 'left' ? 20 : -20, scale: 0.98 }}
                       animate={{ opacity: 1, x: 0, scale: 1 }}
                       exit={{ opacity: 0, x: swipeDirection === 'left' ? -20 : 20, scale: 0.98 }}
-                      transition={{ 
-                        duration: 0.3, 
+                      transition={{
+                        duration: 0.3,
                         ease: [0.4, 0, 0.2, 1]
                       }}
                     >
-                      <GrowthTab 
+                      <GrowthTab
                         data={tabData.growth}
                         loading={tabLoading.growth}
                         error={tabErrors.growth}
@@ -545,12 +549,12 @@ export default function EnhancedStudentDashboard() {
                       initial={{ opacity: 0, x: swipeDirection === 'left' ? 20 : -20, scale: 0.98 }}
                       animate={{ opacity: 1, x: 0, scale: 1 }}
                       exit={{ opacity: 0, x: swipeDirection === 'left' ? -20 : 20, scale: 0.98 }}
-                      transition={{ 
-                        duration: 0.3, 
+                      transition={{
+                        duration: 0.3,
                         ease: [0.4, 0, 0.2, 1]
                       }}
                     >
-                      <WellbeingTab 
+                      <WellbeingTab
                         data={tabData.wellbeing}
                         loading={tabLoading.wellbeing}
                         error={tabErrors.wellbeing}
@@ -565,12 +569,12 @@ export default function EnhancedStudentDashboard() {
                       initial={{ opacity: 0, x: swipeDirection === 'left' ? 20 : -20, scale: 0.98 }}
                       animate={{ opacity: 1, x: 0, scale: 1 }}
                       exit={{ opacity: 0, x: swipeDirection === 'left' ? -20 : 20, scale: 0.98 }}
-                      transition={{ 
-                        duration: 0.3, 
+                      transition={{
+                        duration: 0.3,
                         ease: [0.4, 0, 0.2, 1]
                       }}
                     >
-                      <ProfileTab 
+                      <ProfileTab
                         data={tabData.profile}
                         loading={tabLoading.profile}
                         error={tabErrors.profile}

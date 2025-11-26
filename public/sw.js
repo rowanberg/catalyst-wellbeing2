@@ -90,6 +90,16 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
+  // Skip OAuth callback routes (they redirect)
+  if (url.pathname.startsWith('/auth/callback')) {
+    return
+  }
+
+  // Skip auth API routes (session, login, logout) - never cache these
+  if (url.pathname.startsWith('/api/auth/')) {
+    return
+  }
+
   event.respondWith(handleRequest(request))
 })
 

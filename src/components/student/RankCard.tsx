@@ -53,9 +53,9 @@ export const RankCard = ({ rankData, type = 'class', className }: RankCardProps)
     try {
       setIsGenerating(true)
       toast.loading('Generating your Rank Card...')
-      
+
       const result = await generatePDF(rankData)
-      
+
       if (result.success) {
         toast.success(`Rank Card downloaded successfully: ${result.fileName}`)
       } else {
@@ -73,11 +73,11 @@ export const RankCard = ({ rankData, type = 'class', className }: RankCardProps)
     try {
       setIsRefreshing(true)
       toast.loading('Refreshing rankings...')
-      
+
       const response = await fetch('/api/student/rank/refresh', {
         method: 'POST'
       })
-      
+
       if (response.ok) {
         const data = await response.json()
         toast.success('Rankings updated! Please refresh the page to see latest data.')
@@ -129,26 +129,20 @@ export const RankCard = ({ rankData, type = 'class', className }: RankCardProps)
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20, scale: 0.95 }}
-      animate={isVisible ? { opacity: 1, y: 0, scale: 1 } : {}}
-      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+    <div
       className={cn(
-        'relative overflow-hidden rounded-2xl bg-gradient-to-br p-6',
-        isClassRank 
-          ? 'from-indigo-50 via-purple-50 to-pink-50 border border-indigo-200/50'
-          : 'from-emerald-50 via-teal-50 to-cyan-50 border border-emerald-200/50',
+        'relative overflow-hidden rounded-2xl bg-white border-2 shadow-sm p-4 sm:p-6',
+        isClassRank
+          ? 'border-indigo-100'
+          : 'border-emerald-100',
         className
       )}
     >
-      {/* Animated gradient background orb */}
-      <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full blur-3xl opacity-30"
-        style={{
-          background: isClassRank 
-            ? 'linear-gradient(135deg, #818cf8 0%, #c084fc 100%)'
-            : 'linear-gradient(135deg, #34d399 0%, #06b6d4 100%)'
-        }}
-      />
+      {/* Professional header stripe */}
+      <div className={cn(
+        "absolute top-0 left-0 right-0 h-1",
+        isClassRank ? "bg-gradient-to-r from-indigo-500 to-purple-500" : "bg-gradient-to-r from-emerald-500 to-teal-500"
+      )} />
 
       {/* Header */}
       <div className="relative flex items-start sm:items-center justify-between mb-3 sm:mb-4 gap-2">
@@ -168,7 +162,7 @@ export const RankCard = ({ rankData, type = 'class', className }: RankCardProps)
               {isClassRank ? 'Academic Class Standing' : 'Grade-Level Academic Ranking'}
             </h3>
             <p className="text-[10px] sm:text-xs text-gray-600 font-medium mt-0.5 truncate">
-              {isClassRank 
+              {isClassRank
                 ? `${rankData.class_name || 'N/A'} • Grade ${rankData.grade_level}`
                 : `Grade ${rankData.grade_level} • Academic Year ${new Date().getFullYear()}`}
             </p>
@@ -177,162 +171,122 @@ export const RankCard = ({ rankData, type = 'class', className }: RankCardProps)
 
         {/* Trend indicator */}
         {rankChange !== undefined && (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
+          <div
             className={cn(
-              'flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-semibold flex-shrink-0',
-              rankChange > 0 ? 'bg-green-100' : rankChange < 0 ? 'bg-red-100' : 'bg-gray-100'
+              'flex items-center gap-0.5 sm:gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-semibold flex-shrink-0 border',
+              rankChange > 0 ? 'bg-green-50 border-green-200 text-green-700' : rankChange < 0 ? 'bg-red-50 border-red-200 text-red-700' : 'bg-gray-50 border-gray-200 text-gray-600'
             )}
           >
-            <span className={getTrendColor()}>
+            <span>
               {getTrendIcon()}
             </span>
-            <span className={cn(getTrendColor(), 'hidden sm:inline')}>
+            <span className="hidden sm:inline">
               {getTrendText()}
             </span>
-            <span className={cn(getTrendColor(), 'sm:hidden')}>
+            <span className="sm:hidden">
               {rankChange > 0 ? `↑${Math.abs(rankChange)}` : rankChange < 0 ? `↓${Math.abs(rankChange)}` : '—'}
             </span>
-          </motion.div>
+          </div>
         )}
       </div>
 
       {/* Main rank display */}
-      <div className="relative flex items-baseline gap-2 sm:gap-3 mb-3 sm:mb-4">
+      <div className="relative flex items-baseline gap-3 sm:gap-4 mb-4 sm:mb-5">
         {medalGradient ? (
-          <motion.div
-            initial={{ scale: 0, rotate: -180 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ delay: 0.2, type: 'spring', stiffness: 150 }}
-            className="relative"
-          >
+          <div className="relative flex-shrink-0">
             <div className={cn(
-              'w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center bg-gradient-to-br shadow-lg',
+              'w-16 h-16 sm:w-20 sm:h-20 rounded-xl flex items-center justify-center bg-gradient-to-br shadow-md border-2 border-white',
               medalGradient
             )}>
-              <Trophy className="w-7 h-7 sm:w-8 sm:h-8 text-white drop-shadow-lg" />
+              <Trophy className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
             </div>
-            <motion.div
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-              className="absolute inset-0 rounded-full bg-gradient-to-br opacity-50 blur-md"
-              style={{ background: `linear-gradient(135deg, ${medalGradient})` }}
-            />
-          </motion.div>
+          </div>
         ) : (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+          <div
             className={cn(
-              'w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center font-bold text-xl sm:text-2xl shadow-lg',
-              isClassRank 
+              'w-16 h-16 sm:w-20 sm:h-20 rounded-xl flex items-center justify-center font-bold text-2xl sm:text-3xl shadow-md border-2 border-white flex-shrink-0',
+              isClassRank
                 ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white'
                 : 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white'
             )}
           >
             {rank}
-          </motion.div>
+          </div>
         )}
 
-        <div>
-          <motion.div
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-            className="flex items-baseline gap-2"
-          >
-            <span className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2">
+            <span className="text-4xl sm:text-5xl font-bold text-gray-900">
               #{rank}
             </span>
-            <span className="text-base sm:text-lg text-gray-500">
+            <span className="text-lg sm:text-xl text-gray-500 font-medium">
               of {totalStudents}
             </span>
-          </motion.div>
-          
+          </div>
+
           {percentile !== undefined && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="mt-1 space-y-0.5"
-            >
-              <p className="text-xs sm:text-sm font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            <div className="mt-2 sm:mt-3 space-y-1">
+              <p className={cn(
+                "text-sm sm:text-base font-bold",
+                isClassRank ? "text-indigo-600" : "text-emerald-600"
+              )}>
                 Top {(100 - percentile).toFixed(1)}% Performer
               </p>
-              <p className="text-[10px] sm:text-xs text-gray-500">
-                Outperforming {percentile?.toFixed(0)}% of peers
+              <p className="text-xs sm:text-sm text-gray-600">
+                Outperforming {percentile?.toFixed(0)}% of students
               </p>
-            </motion.div>
+            </div>
           )}
         </div>
       </div>
 
       {/* Stats bar */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="relative pt-3 sm:pt-4 border-t border-gray-200"
-      >
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
-          <div>
-            <p className="text-[10px] sm:text-xs font-medium text-gray-600 mb-1 uppercase tracking-wide">Cumulative Average</p>
-            <div className="flex items-baseline gap-0.5 sm:gap-1">
-              <p className="text-xl sm:text-2xl font-bold text-gray-900">
+      <div className="relative pt-4 sm:pt-5 border-t-2 border-gray-100">
+        <div className="grid grid-cols-2 gap-4 sm:gap-6">
+          <div className="space-y-1">
+            <p className="text-xs sm:text-sm font-semibold text-gray-500 uppercase tracking-wide">Average Score</p>
+            <div className="flex items-baseline gap-1">
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900">
                 {rankData.average_score.toFixed(1)}
               </p>
-              <span className="text-xs sm:text-sm text-gray-500 font-medium">%</span>
+              <span className="text-sm sm:text-base text-gray-500 font-semibold">%</span>
             </div>
-            <p className="text-[9px] sm:text-[10px] text-gray-500 mt-0.5 leading-tight">Overall academic performance</p>
+            <p className="text-xs text-gray-500">Overall performance</p>
           </div>
-          <div>
-            <p className="text-[10px] sm:text-xs font-medium text-gray-600 mb-1 uppercase tracking-wide">Evaluations</p>
-            <div className="flex items-baseline gap-0.5 sm:gap-1">
-              <p className="text-xl sm:text-2xl font-bold text-gray-900">
+          <div className="space-y-1">
+            <p className="text-xs sm:text-sm font-semibold text-gray-500 uppercase tracking-wide">Assessments</p>
+            <div className="flex items-baseline gap-1">
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900">
                 {rankData.total_assessments}
               </p>
-              <span className="text-xs sm:text-sm text-gray-500 font-medium">taken</span>
+              <span className="text-sm sm:text-base text-gray-500 font-semibold">total</span>
             </div>
-            <p className="text-[9px] sm:text-[10px] text-gray-500 mt-0.5 leading-tight">Assessments completed</p>
+            <p className="text-xs text-gray-500">Completed</p>
           </div>
         </div>
 
         {/* Progress bar */}
-        <div className="mt-3">
-          <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${percentile}%` }}
-              transition={{ delay: 0.6, duration: 1, ease: 'easeOut' }}
+        <div className="mt-4 sm:mt-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs sm:text-sm font-semibold text-gray-600">Percentile Ranking</span>
+            <span className="text-sm sm:text-base font-bold text-gray-900">{percentile?.toFixed(1)}%</span>
+          </div>
+          <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden border border-gray-200">
+            <div
+              style={{ width: `${percentile}%` }}
               className={cn(
-                'h-full rounded-full',
+                'h-full rounded-full transition-all duration-1000',
                 isClassRank
-                  ? 'bg-gradient-to-r from-indigo-500 to-purple-600'
-                  : 'bg-gradient-to-r from-emerald-500 to-teal-600'
+                  ? 'bg-gradient-to-r from-indigo-500 to-purple-500'
+                  : 'bg-gradient-to-r from-emerald-500 to-teal-500'
               )}
             />
           </div>
-          <p className="text-[10px] sm:text-xs font-medium text-gray-600 mt-1 sm:mt-1.5 text-right">
-            <span className="text-gray-900">{percentile?.toFixed(1)}</span>th Percentile
-          </p>
         </div>
-      </motion.div>
-
-      {/* Decorative elements */}
-      <div className="absolute top-4 right-4 opacity-10">
-        <Target className="w-20 h-20 text-gray-900" />
       </div>
 
       {/* Action Buttons */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7 }}
-        className="mt-3 sm:mt-4 space-y-2"
-      >
+      <div className="mt-4 sm:mt-5 space-y-2 sm:space-y-3">
         {/* Refresh Rankings Button */}
         <Button
           onClick={handleRefreshRankings}
@@ -379,8 +333,8 @@ export const RankCard = ({ rankData, type = 'class', className }: RankCardProps)
             </>
           )}
         </Button>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   )
 }
 
@@ -403,7 +357,7 @@ export function RankCardSkeleton({ type }: { type: 'class' | 'grade' }) {
         </div>
         <div className="w-16 h-6 bg-gray-300 rounded-lg" />
       </div>
-      
+
       <div className="flex items-baseline gap-3 mb-4">
         <div className="w-16 h-16 rounded-full bg-gray-300" />
         <div className="space-y-2">
@@ -411,7 +365,7 @@ export function RankCardSkeleton({ type }: { type: 'class' | 'grade' }) {
           <div className="w-24 h-4 bg-gray-200 rounded" />
         </div>
       </div>
-      
+
       <div className="pt-4 border-t border-gray-200">
         <div className="grid grid-cols-2 gap-4 mb-3">
           <div className="space-y-2">

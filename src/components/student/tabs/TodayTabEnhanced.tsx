@@ -6,8 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Calendar, Clock, Target, Star, ChevronRight, TrendingUp, 
+import {
+  Calendar, Clock, Target, Star, ChevronRight, TrendingUp,
   BookOpen, BarChart3, Trophy, Sparkles, CheckCircle2, Circle,
   AlertCircle, ArrowRight, Bell, Zap, Award, Sun, Moon, Cloud
 } from 'lucide-react'
@@ -33,7 +33,7 @@ export function TodayTabEnhanced({ data, loading, error, onRefresh, profile }: T
     const updateGreeting = () => {
       const hour = new Date().getHours()
       const name = profile?.first_name || 'Student'
-      
+
       if (hour < 12) {
         setGreeting(`Good morning, ${name}! ☀️`)
         setTimeContext('Start your day with energy')
@@ -45,7 +45,7 @@ export function TodayTabEnhanced({ data, loading, error, onRefresh, profile }: T
         setTimeContext('Let\'s finish the day strong')
       }
     }
-    
+
     updateGreeting()
     const interval = setInterval(updateGreeting, 60000)
     return () => clearInterval(interval)
@@ -62,7 +62,7 @@ export function TodayTabEnhanced({ data, loading, error, onRefresh, profile }: T
           <CardContent className="pt-6 text-center">
             <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
             <p className="text-red-600 mb-4 font-medium">{error}</p>
-            <Button 
+            <Button
               onClick={onRefresh}
               className="bg-gradient-to-r from-red-500 to-red-600 text-white"
             >
@@ -81,8 +81,8 @@ export function TodayTabEnhanced({ data, loading, error, onRefresh, profile }: T
     schoolUpdates: { polls: [], announcements: [] }
   }
 
-  const questProgress = todayData.quests.total > 0 
-    ? (todayData.quests.completed / todayData.quests.total) * 100 
+  const questProgress = todayData.quests.total > 0
+    ? (todayData.quests.completed / todayData.quests.total) * 100
     : 0
 
   return (
@@ -95,7 +95,7 @@ export function TodayTabEnhanced({ data, loading, error, onRefresh, profile }: T
       >
         <h1 className="text-2xl sm:text-3xl font-bold mb-2">{greeting}</h1>
         <p className="text-blue-100 text-sm sm:text-base mb-4">{timeContext}</p>
-        
+
         {/* Contextual prompt */}
         {todayData.upcomingExams?.length > 0 && (
           <motion.div
@@ -209,7 +209,7 @@ export function TodayTabEnhanced({ data, loading, error, onRefresh, profile }: T
         transition={{ delay: 0.3 }}
       >
         <Card className="border-0 shadow-lg overflow-hidden">
-          <CardHeader 
+          <CardHeader
             className="bg-gradient-to-r from-slate-50 to-slate-100 cursor-pointer"
             onClick={() => setQuestsExpanded(!questsExpanded)}
           >
@@ -233,7 +233,7 @@ export function TodayTabEnhanced({ data, loading, error, onRefresh, profile }: T
               </motion.div>
             </div>
           </CardHeader>
-          
+
           <AnimatePresence>
             {questsExpanded && (
               <motion.div
@@ -274,10 +274,18 @@ export function TodayTabEnhanced({ data, loading, error, onRefresh, profile }: T
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
                         whileTap={{ scale: 0.98 }}
-                        onClick={() => router.push(`/student/${quest.type}`)}
+                        onClick={() => {
+                          if (quest.type === 'sleep' || quest.type === 'water') {
+                            router.push('/student/habits')
+                          } else if (quest.type === 'courage') {
+                            router.push('/student/courage-log')
+                          } else {
+                            router.push(`/student/${quest.type}`)
+                          }
+                        }}
                         className={cn(
                           "p-4 rounded-xl border-2 transition-all text-left",
-                          quest.completed 
+                          quest.completed
                             ? "bg-gradient-to-br from-green-50 to-emerald-50 border-green-300"
                             : "bg-white border-slate-200 hover:border-blue-300 hover:shadow-md active:scale-[0.98]"
                         )}
@@ -289,8 +297,8 @@ export function TodayTabEnhanced({ data, loading, error, onRefresh, profile }: T
                               transition={{ duration: 0.3 }}
                               className={cn(
                                 "p-2 rounded-full mt-0.5",
-                                quest.completed 
-                                  ? "bg-green-100" 
+                                quest.completed
+                                  ? "bg-green-100"
                                   : "bg-slate-100"
                               )}
                             >
@@ -316,12 +324,12 @@ export function TodayTabEnhanced({ data, loading, error, onRefresh, profile }: T
                             </div>
                           </div>
                           <div className="flex flex-col items-end">
-                            <Badge 
+                            <Badge
                               variant="secondary"
                               className={cn(
                                 "text-xs",
-                                quest.completed 
-                                  ? "bg-green-100 text-green-700" 
+                                quest.completed
+                                  ? "bg-green-100 text-green-700"
                                   : "bg-slate-100 text-slate-600"
                               )}
                             >
@@ -472,7 +480,7 @@ export function TodayTabEnhanced({ data, loading, error, onRefresh, profile }: T
                     </p>
                   </motion.div>
                 ))}
-                
+
                 {todayData.schoolUpdates?.announcements?.slice(0, 2).map((announcement: any) => (
                   <motion.div
                     key={announcement.id}
@@ -514,7 +522,7 @@ function TodayTabSkeleton() {
         <div className="h-8 bg-white/20 rounded w-48 mb-2" />
         <div className="h-4 bg-white/20 rounded w-32" />
       </div>
-      
+
       {/* Stats skeleton */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[1, 2, 3, 4].map((i) => (
@@ -524,7 +532,7 @@ function TodayTabSkeleton() {
           </Card>
         ))}
       </div>
-      
+
       {/* Content skeleton */}
       <Card className="p-6">
         <div className="space-y-3">

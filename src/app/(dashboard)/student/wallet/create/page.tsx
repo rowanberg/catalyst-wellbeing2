@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Wallet, Shield, Key, Sparkles, ArrowRight, 
+import {
+  Wallet, Shield, Key, Sparkles, ArrowRight,
   CheckCircle2, Lock, Eye, EyeOff, Copy, Check,
-  Fingerprint, QrCode, Download, AlertCircle
+  Fingerprint, QrCode, Download, AlertCircle, Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -27,45 +27,73 @@ export default function CreateWalletPage() {
 
 
   const handleCreateWallet = async () => {
+    console.log('🚀 [Wallet Create] Starting wallet creation process...');
+    console.log('📝 [Wallet Create] Current wallet data:', {
+      hasNickname: !!walletData.walletNickname,
+      pinLength: walletData.securityPin.length,
+      confirmPinLength: walletData.confirmPin.length,
+      pinsMatch: walletData.securityPin === walletData.confirmPin
+    });
+
     if (walletData.securityPin !== walletData.confirmPin) {
+      console.error('❌ [Wallet Create] PINs do not match');
       toast.error('Security PINs do not match');
       return;
     }
 
     if (walletData.securityPin.length < 6) {
+      console.error('❌ [Wallet Create] PIN too short:', walletData.securityPin.length);
       toast.error('PIN must be at least 6 digits');
       return;
     }
 
+    console.log('✅ [Wallet Create] Validation passed, initiating API call...');
     setIsCreating(true);
+    toast.loading('Creating your crypto wallet...', { id: 'wallet-creation' });
 
     try {
+      const requestBody = {
+        walletNickname: walletData.walletNickname || 'My Wallet',
+        securityPin: walletData.securityPin
+      };
+
+      console.log('📤 [Wallet Create] Sending request to /api/student/wallet/create');
+      console.log('📦 [Wallet Create] Request body:', {
+        walletNickname: requestBody.walletNickname,
+        pinLength: requestBody.securityPin.length
+      });
+
       const response = await fetch('/api/student/wallet/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',  // Include cookies for authentication
-        body: JSON.stringify({
-          walletNickname: walletData.walletNickname || 'My Wallet',
-          securityPin: walletData.securityPin
-        }),
+        body: JSON.stringify(requestBody),
       });
 
+      console.log('📥 [Wallet Create] Response status:', response.status, response.statusText);
+
       const result = await response.json();
+      console.log('📋 [Wallet Create] Response data:', result);
 
       if (response.ok) {
+        console.log('✅ [Wallet Create] Wallet created successfully!');
+        toast.success('Wallet created successfully! 🎉', { id: 'wallet-creation' });
         setWalletData({
           ...walletData,
           studentTag: result.studentTag,
           walletAddress: result.walletAddress
         });
+        console.log('📍 [Wallet Create] Moving to step 3');
         setStep(3);
       } else {
-        toast.error(result.error || 'Failed to create wallet');
+        console.error('❌ [Wallet Create] Server error:', result);
+        toast.error(result.error || 'Failed to create wallet', { id: 'wallet-creation' });
       }
     } catch (error) {
-      console.error('Error creating wallet:', error);
-      toast.error('An error occurred');
+      console.error('❌ [Wallet Create] Exception caught:', error);
+      toast.error('An error occurred while creating your wallet', { id: 'wallet-creation' });
     } finally {
+      console.log('🏁 [Wallet Create] Process complete, isCreating = false');
       setIsCreating(false);
     }
   };
@@ -135,11 +163,10 @@ Created: ${new Date().toLocaleDateString()}
               {[1, 2, 3].map((s) => (
                 <div key={s} className="flex items-center">
                   <motion.div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                      step >= s
-                        ? 'bg-gradient-to-r from-cyan-500 to-purple-500 text-white'
-                        : 'bg-white/10 text-white/50'
-                    }`}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${step >= s
+                      ? 'bg-gradient-to-r from-cyan-500 to-purple-500 text-white'
+                      : 'bg-white/10 text-white/50'
+                      }`}
                     animate={step === s ? { scale: [1, 1.1, 1] } : {}}
                     transition={{ duration: 0.5, repeat: step === s ? Infinity : 0, repeatDelay: 1 }}
                   >
@@ -261,12 +288,14 @@ Created: ${new Date().toLocaleDateString()}
                         value={walletData.securityPin}
                         onChange={(e) => setWalletData({ ...walletData, securityPin: e.target.value.replace(/\D/g, '').slice(0, 6) })}
                         placeholder="Enter 6-digit PIN"
-                        className="w-full bg-white/5 border border-purple-500/30 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-purple-400 transition-all pr-12"
+                        className="w-full bg-white/5 border border-purple-500/30 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-purple-400 transition-all pr-12 disabled:opacity-50 disabled:cursor-not-allowed"
                         maxLength={6}
+                        disabled={isCreating}
                       />
                       <button
                         onClick={() => setShowPin(!showPin)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-purple-400 hover:text-purple-300"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-purple-400 hover:text-purple-300 disabled:opacity-50"
+                        disabled={isCreating}
                       >
                         {showPin ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
@@ -283,12 +312,14 @@ Created: ${new Date().toLocaleDateString()}
                         value={walletData.confirmPin}
                         onChange={(e) => setWalletData({ ...walletData, confirmPin: e.target.value.replace(/\D/g, '').slice(0, 6) })}
                         placeholder="Re-enter PIN"
-                        className="w-full bg-white/5 border border-purple-500/30 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-purple-400 transition-all pr-12"
+                        className="w-full bg-white/5 border border-purple-500/30 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-purple-400 transition-all pr-12 disabled:opacity-50 disabled:cursor-not-allowed"
                         maxLength={6}
+                        disabled={isCreating}
                       />
                       <button
                         onClick={() => setShowConfirmPin(!showConfirmPin)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-purple-400 hover:text-purple-300"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-purple-400 hover:text-purple-300 disabled:opacity-50"
+                        disabled={isCreating}
                       >
                         {showConfirmPin ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
@@ -313,11 +344,12 @@ Created: ${new Date().toLocaleDateString()}
                 <div className="flex gap-3 mt-6">
                   <button
                     onClick={() => setStep(1)}
-                    className="flex-1 bg-white/10 text-white font-medium py-4 rounded-xl hover:bg-white/20 transition-all"
+                    disabled={isCreating}
+                    className="flex-1 bg-white/10 text-white font-medium py-4 rounded-xl hover:bg-white/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Back
                   </button>
-                  <button
+                  <motion.button
                     onClick={() => {
                       if (walletData.securityPin.length === 6 && walletData.securityPin === walletData.confirmPin) {
                         handleCreateWallet();
@@ -326,11 +358,28 @@ Created: ${new Date().toLocaleDateString()}
                       }
                     }}
                     disabled={isCreating}
-                    className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-4 rounded-xl hover:shadow-[0_0_30px_rgba(168,85,247,0.5)] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                    animate={isCreating ? {
+                      boxShadow: [
+                        '0 0 20px rgba(168,85,247,0.3)',
+                        '0 0 40px rgba(168,85,247,0.5)',
+                        '0 0 20px rgba(168,85,247,0.3)'
+                      ]
+                    } : {}}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                    className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-4 rounded-xl hover:shadow-[0_0_30px_rgba(168,85,247,0.5)] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                   >
-                    {isCreating ? 'Creating Wallet...' : 'Create Wallet'}
-                    {!isCreating && <ArrowRight className="h-5 w-5" />}
-                  </button>
+                    {isCreating ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        Creating Your Wallet...
+                      </>
+                    ) : (
+                      <>
+                        Create Wallet
+                        <ArrowRight className="h-5 w-5" />
+                      </>
+                    )}
+                  </motion.button>
                 </div>
               </motion.div>
             )}

@@ -117,6 +117,17 @@ const saveSessions = (sessions: ChatSession[], currentUserId: string | undefined
   }
 }
 
+// Debounced version to prevent excessive localStorage writes
+let saveSessionsTimeout: NodeJS.Timeout | null = null
+const debouncedSaveSessions = (sessions: ChatSession[], currentUserId: string | undefined, delay = 250) => {
+  if (saveSessionsTimeout) {
+    clearTimeout(saveSessionsTimeout)
+  }
+  saveSessionsTimeout = setTimeout(() => {
+    saveSessions(sessions, currentUserId)
+  }, delay)
+}
+
 const generateSessionTitle = (firstMessage: string): string => {
   // Extract first 40 chars or until first punctuation
   const cleaned = firstMessage.trim().split(/[.!?\n]/)[0]
@@ -260,8 +271,8 @@ function DataTable({ data }: { data: any[] }) {
   )
 }
 
-// Code block component with syntax highlighting
-function CodeBlock({ code, onCopy, enableHighlighting = true }: { code: string; onCopy?: (code: string) => void; enableHighlighting?: boolean }) {
+// Code block component with syntax highlighting (memoized for performance)
+const CodeBlock = React.memo(function CodeBlock({ code, onCopy, enableHighlighting = true }: { code: string; onCopy?: (code: string) => void; enableHighlighting?: boolean }) {
   const [copied, setCopied] = React.useState(false)
 
   // Extract language from code block (e.g., "python\ncode here")
@@ -354,7 +365,7 @@ function CodeBlock({ code, onCopy, enableHighlighting = true }: { code: string; 
       </pre>
     </div>
   )
-}
+})
 
 // Simple syntax highlighter component using only React JSX
 function SyntaxHighlight({ code, language }: { code: string; language: string }) {
@@ -516,8 +527,8 @@ function parseInlineMarkdown(text: string): React.ReactNode[] {
   return parts.length > 0 ? parts : [<span key="0">{processedText}</span>]
 }
 
-// Flash Card Component with flip animation
-function FlashCard({ question, answer, index, total, onNext, onPrev }: {
+// Flash Card Component with flip animation (memoized for performance)
+const FlashCard = React.memo(function FlashCard({ question, answer, index, total, onNext, onPrev }: {
   question: string
   answer: string
   index: number
@@ -754,10 +765,10 @@ function FlashCard({ question, answer, index, total, onNext, onPrev }: {
       </div>
     </div>
   )
-}
+})
 
-// Quiz Component
-function Quiz({
+// Quiz Component (memoized for performance)
+const Quiz = React.memo(function Quiz({
   questions,
   quizState,
   onAnswerSelect,
@@ -1086,7 +1097,7 @@ function Quiz({
       </div>
     </div>
   )
-}
+})
 
 // Parse flash cards from AI response
 function parseFlashCards(content: string): { question: string; answer: string }[] {

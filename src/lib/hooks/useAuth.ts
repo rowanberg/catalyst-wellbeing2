@@ -44,21 +44,21 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
       try {
         console.log('🔄 [useAuth] Initializing authentication...')
         console.log('🔄 [useAuth] Current Redux state - user:', !!currentUser, 'profile:', !!currentProfile, 'isLoading:', currentIsLoading)
-        
+
         // If Redux already has user and profile, don't interfere
         if (currentUser && currentProfile && !currentIsLoading) {
           console.log('✅ [useAuth] Redux state already authenticated, skipping initialization')
           setInitializing(false)
           return
         }
-        
+
         // If Redux is still loading, wait for it
         if (currentIsLoading) {
           console.log('🔄 [useAuth] Redux is loading, waiting...')
           setInitializing(false)
           return
         }
-        
+
         // First, clear any invalid session data
         const wasCleared = await clearInvalidSession()
         if (wasCleared) {
@@ -68,10 +68,10 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
           router.push(redirectTo)
           return
         }
-        
+
         // Check if we have a valid session locally
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-        
+
         if (sessionError) {
           console.log('🔄 [useAuth] Local session error:', sessionError.message)
           if (sessionError.message?.includes('Invalid Refresh Token') || sessionError.message?.includes('Refresh Token Not Found')) {
@@ -90,27 +90,33 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
           }
         })
         const sessionData = await response.json()
-        
+
         if (!response.ok) {
           console.log(`🔄 [useAuth] Session API returned ${response.status}:`, sessionData?.error)
-          
+
           // Handle refresh token errors specifically
-          if (sessionData?.code === 'REFRESH_TOKEN_INVALID' || 
-              sessionData?.error?.includes('Invalid refresh token')) {
+          if (sessionData?.code === 'REFRESH_TOKEN_INVALID' ||
+            sessionData?.error?.includes('Invalid refresh token')) {
             console.log('🔄 [useAuth] Invalid refresh token from API, signing out...')
             await supabase.auth.signOut()
             router.push(redirectTo)
             return
           }
-          
+
           // Only log unexpected errors (not 401 unauthorized)
           if (response.status !== 401) {
+            // Handle 503 Service Unavailable (Offline mode) gracefully
+            if (response.status === 503 || sessionData?.code === 'SUPABASE_OFFLINE') {
+              console.warn('⚠️ [useAuth] Supabase is offline or unreachable. Retrying later.')
+              return // Exit without signing out, keeping local session if possible
+            }
+
             console.error('Session API error:', response.status, response.statusText)
             if (sessionData?.error) {
               console.error('Session error details:', sessionData.error)
             }
           }
-          
+
           // If we have a local session but API fails, try to refresh
           if (session && response.status === 401) {
             console.log('🔄 [useAuth] Local session exists but API auth failed, attempting refresh...')
@@ -124,20 +130,20 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
             // Retry after refresh
             return initializeAuth()
           }
-          
+
           setAuthError('Authentication required')
           setInitializing(false)
           router.push(redirectTo)
           return
         }
-        
+
         if (sessionData.error) {
           console.error('Session error:', sessionData.error)
           setAuthError('Authentication required')
           setInitializing(false)
           return
         }
-        
+
         const user = sessionData.user
 
         if (!user) {
@@ -151,7 +157,7 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
           try {
             const response = await fetch('/api/get-profile', {
               method: 'POST',
-              headers: { 
+              headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
               },
@@ -160,7 +166,7 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
 
             if (response.ok) {
               const profileData = await response.json()
-              
+
               // Set user data from profile
               // Pass the full Supabase user object to match expected type
               dispatch(setUser(user))
@@ -172,17 +178,17 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
                 return
               }
 
-              
+
               setInitializing(false)
             } else {
               // Check if this is a Google OAuth user without a profile
               const errorData = await response.json().catch(() => ({}))
-              
+
               if (response.status === 404 && errorData.code === 'PROFILE_NOT_FOUND') {
                 // Check if user has Google provider
                 if (user.app_metadata?.provider === 'google') {
                   console.log('🔄 Google OAuth user without profile detected in useAuth, redirecting to registration...')
-                  
+
                   // Store Google OAuth data for registration
                   const googleUserData = {
                     email: user.email,
@@ -192,13 +198,13 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
                     userId: user.id,
                     provider: 'google'
                   }
-                  
+
                   sessionStorage.setItem('google_oauth_data', JSON.stringify(googleUserData))
                   router.push('/register')
                   return
                 }
               }
-              
+
               // For development/testing only - create mock profile
               if (process.env.NODE_ENV === 'development') {
                 console.warn('Profile fetch failed, using mock profile for development')
@@ -218,7 +224,7 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
                   created_at: new Date().toISOString(),
                   updated_at: new Date().toISOString()
                 }
-                
+
                 // Pass the Supabase user object directly
                 dispatch(setUser(user))
                 dispatch(setProfile(mockProfileData))
@@ -247,7 +253,7 @@ export function useAuth(options: UseAuthOptions = {}): AuthState {
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             }
-            
+
             // Pass the Supabase user object directly
             dispatch(setUser(user))
             dispatch(setProfile(mockProfileData))

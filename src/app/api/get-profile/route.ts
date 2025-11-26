@@ -3,7 +3,15 @@ import { getDedupedProfileWithSchool } from '@/lib/services/profileService'
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await request.json()
+    // Check for empty body
+    const text = await request.text()
+    if (!text) {
+      return NextResponse.json(
+        { message: 'Request body is empty' },
+        { status: 400 }
+      )
+    }
+    const { userId } = JSON.parse(text)
 
     if (!userId) {
       return NextResponse.json(
@@ -17,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     if (!profile) {
       return NextResponse.json(
-        { 
+        {
           message: 'Profile not found. Your account may not be fully set up yet. Please contact your school administrator.',
           code: 'PROFILE_NOT_FOUND'
         },

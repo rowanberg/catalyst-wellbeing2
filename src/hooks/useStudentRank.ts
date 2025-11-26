@@ -18,9 +18,11 @@ export function useStudentRank(studentId: string | undefined) {
         setError(null)
 
         const response = await fetch(`/api/student/rank?student_id=${studentId}`)
-        
+
         if (!response.ok) {
-          if (response.status === 404) {
+          // Handle specific error codes gracefully
+          if (response.status === 404 || response.status === 503) {
+            // 404: Not found, 503: Service unavailable (offline mode)
             setError('Rank data not available yet. Check back after assessments.')
             return
           }

@@ -13,19 +13,19 @@ export async function POST(request: NextRequest) {
       // Check if email already exists
       const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
       const emailExists = existingUsers?.users?.some((u: any) => u.email?.toLowerCase() === email.toLowerCase())
-      
+
       if (emailExists) {
         return NextResponse.json(
           { message: 'An account with this email already exists' },
           { status: 400 }
         )
       }
-      
+
       // Create user with admin client - Supabase automatically sends confirmation email
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email,
         password,
-        email_confirm: false, // Supabase sends verification email when false
+        email_confirm: true, // We already verified via OTP, so mark as confirmed
         user_metadata: {
           first_name: firstName,
           last_name: lastName,
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
             .select('class_name')
             .eq('id', className)
             .single()
-          
+
           profileData.class_name = classData?.class_name || className
         } catch (error) {
           console.warn('Could not fetch class name, using provided value:', error)
@@ -124,13 +124,13 @@ export async function POST(request: NextRequest) {
 
     if (profileError) {
       console.error('Profile creation error:', profileError)
-      
+
       // ROLLBACK: Delete auth user if profile creation fails
       if (shouldCreateUser && user?.id) {
         console.log('Rolling back auth user creation due to profile error')
         await supabaseAdmin.auth.admin.deleteUser(user.id)
       }
-      
+
       return NextResponse.json(
         { message: `Failed to create profile: ${profileError.message}` },
         { status: 500 }
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
       try {
         // className now contains the class ID (UUID) from the frontend
         const classId = className;
-        
+
         // Verify the class exists and belongs to the school
         const { data: classData, error: classError } = await supabaseAdmin
           .from('classes')
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
             school_id: school.id,
             class_name: classData.class_name
           })
-          
+
           const { error: assignmentError } = await supabaseAdmin
             .from('student_class_assignments')
             .insert({
@@ -185,20 +185,20 @@ export async function POST(request: NextRequest) {
             console.warn(`⚠️ Warning: Could not assign student ${firstName} ${lastName} to class "${classData.class_name}"`)
           } else {
             console.log(`✅ Successfully assigned student ${firstName} ${lastName} to class "${classData.class_name}"`)
-            
+
             // Update the class student count
             const { data: countData } = await supabaseAdmin
               .from('student_class_assignments')
               .select('student_id', { count: 'exact' })
               .eq('class_id', classData.id)
               .eq('is_active', true)
-            
+
             if (countData) {
               await supabaseAdmin
                 .from('classes')
                 .update({ current_students: countData.length })
                 .eq('id', classData.id)
-              
+
               console.log(`📊 Updated class "${classData.class_name}" student count to ${countData.length}`)
             }
           }
@@ -209,8 +209,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ 
-      user: shouldCreateUser ? user : null, 
+    return NextResponse.json({
+      user: shouldCreateUser ? user : null,
       profile,
       message: 'Profile created successfully'
     })

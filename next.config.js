@@ -180,7 +180,23 @@ const nextConfig = {
 
   // Skip static generation for dynamic admin pages
   async redirects() {
-    return []
+    return [
+      {
+        source: '/student/sleep',
+        destination: '/student/habits',
+        permanent: true,
+      },
+      {
+        source: '/student/water',
+        destination: '/student/habits',
+        permanent: true,
+      },
+      {
+        source: '/student/courage',
+        destination: '/student/courage-log',
+        permanent: true,
+      },
+    ]
   },
 
   // Enable build caching for faster builds

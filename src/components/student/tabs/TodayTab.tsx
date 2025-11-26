@@ -6,8 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Calendar, Clock, Target, Star, ChevronRight, TrendingUp, 
+import {
+  Calendar, Clock, Target, Star, ChevronRight, TrendingUp,
   BookOpen, BarChart3, Trophy, Sparkles, CheckCircle2, Circle,
   AlertCircle, ArrowRight, Bell, Zap, Award, Sun, Moon, Cloud
 } from 'lucide-react'
@@ -15,6 +15,8 @@ import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useStudentRank } from '@/hooks/useStudentRank'
 import { detectDevicePerformance, getAnimationConfig } from '@/lib/utils/devicePerformance'
+import { NotificationPrompt } from '@/components/student/NotificationPrompt'
+import { VerificationBadge } from '@/components/ui/verification-badge'
 
 interface TodayTabProps {
   data: any
@@ -31,11 +33,11 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
   const [questsExpanded, setQuestsExpanded] = useState(true)
   const [upcomingAssessments, setUpcomingAssessments] = useState<any[]>([])
   const [assessmentsLoading, setAssessmentsLoading] = useState(true)
-  
+
   // Detect device performance and adjust animations
   const devicePerf = useMemo(() => detectDevicePerformance(), [])
   const animConfig = useMemo(() => getAnimationConfig(devicePerf.mode), [devicePerf.mode])
-  
+
   // Fetch student rank data
   const { rankData, loading: rankLoading } = useStudentRank(profile?.id)
 
@@ -43,7 +45,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
   useEffect(() => {
     const fetchUpcomingAssessments = async () => {
       if (!profile?.id) return
-      
+
       try {
         setAssessmentsLoading(true)
         const response = await fetch('/api/student/upcoming-assessments')
@@ -73,35 +75,35 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
     const hour = new Date().getHours()
     const name = profile?.first_name || 'Student'
     const dayIndex = Math.floor(Date.now() / (24 * 60 * 60 * 1000))
-    
+
     const midnightGreetings = [
       { greeting: `Midnight Scholar, ${name}! 🌌`, context: 'Burning the midnight oil? You\'re dedicated!' },
       { greeting: `Night Warrior, ${name}! ✨`, context: 'Late night hustle = morning success!' },
       { greeting: `Hello Night Owl, ${name}! 🦉`, context: 'The stars are cheering you on!' },
       { greeting: `Hey ${name}! 🌠`, context: 'Making magic happen at midnight!' }
     ]
-    
+
     const morningGreetings = [
       { greeting: `Rise & Shine, ${name}! ☀️`, context: 'Time to make today amazing!' },
       { greeting: `Good Morning, ${name}! 🌅`, context: 'Let\'s start with some awesome learning!' },
       { greeting: `Wakey Wakey, ${name}! 🌞`, context: 'Today is full of new adventures!' },
       { greeting: `Hello Sunshine, ${name}! ✨`, context: 'Ready to shine bright today?' }
     ]
-    
+
     const afternoonGreetings = [
       { greeting: `Hey ${name}! 🌤️`, context: 'Keep that energy flowing!' },
       { greeting: `Great Afternoon, ${name}! ⚡`, context: 'You\'re doing amazing!' },
       { greeting: `Still Rocking, ${name}! 🎯`, context: 'Keep crushing those goals!' },
       { greeting: `Hello ${name}! 🚀`, context: 'Halfway there, keep going!' }
     ]
-    
+
     const eveningGreetings = [
       { greeting: `Good Evening, ${name}! 🌙`, context: 'Let\'s finish strong together!' },
       { greeting: `Hey Night Owl, ${name}! ⭐`, context: 'Almost there, you got this!' },
       { greeting: `Evening Star, ${name}! 🌟`, context: 'End the day on a high note!' },
       { greeting: `Hello ${name}! 🌠`, context: 'You\'re amazing, keep it up!' }
     ]
-    
+
     let greetingSet, timeOfDay
     // Midnight: 11 PM - 5 AM
     if (hour >= 23 || hour < 5) {
@@ -117,9 +119,9 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
       greetingSet = eveningGreetings
       timeOfDay = 'evening'
     }
-    
+
     const selected = greetingSet[dayIndex % greetingSet.length]
-    
+
     return {
       greeting: selected.greeting,
       timeContext: selected.context,
@@ -136,16 +138,22 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
   }
 
   // Calculate quest progress - memoized
-  const questProgress = useMemo(() => 
-    todayData.quests.total > 0 
-      ? (todayData.quests.completed / todayData.quests.total) * 100 
+  const questProgress = useMemo(() =>
+    todayData.quests.total > 0
+      ? (todayData.quests.completed / todayData.quests.total) * 100
       : 0,
     [todayData.quests.completed, todayData.quests.total]
   )
 
   // Memoized handlers
   const handleQuestClick = useCallback((type: string) => {
-    router.push(`/student/${type}`)
+    if (type === 'sleep' || type === 'water') {
+      router.push('/student/habits')
+    } else if (type === 'courage') {
+      router.push('/student/courage-log')
+    } else {
+      router.push(`/student/${type}`)
+    }
   }, [router])
 
   const handleExamPrepClick = useCallback((id: string) => {
@@ -170,7 +178,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
           <CardContent className="pt-6 text-center">
             <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
             <p className="text-red-600 mb-4 font-medium">{error}</p>
-            <Button 
+            <Button
               onClick={onRefresh}
               className="bg-gradient-to-r from-red-500 to-red-600 text-white"
             >
@@ -189,14 +197,14 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="rounded-3xl p-6 text-white shadow-2xl relative overflow-hidden"
-        style={{ 
+        style={{
           background: timeOfDay === 'midnight'
             ? 'linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 30%, #2d1b4e 60%, #1a0a2e 100%)'
-            : timeOfDay === 'morning' 
-            ? 'linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF6B6B 100%)'
-            : timeOfDay === 'afternoon'
-            ? 'linear-gradient(135deg, #4FC3F7 0%, #29B6F6 50%, #0288D1 100%)'
-            : 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)'
+            : timeOfDay === 'morning'
+              ? 'linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF6B6B 100%)'
+              : timeOfDay === 'afternoon'
+                ? 'linear-gradient(135deg, #4FC3F7 0%, #29B6F6 50%, #0288D1 100%)'
+                : 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)'
         }}
       >
         {/* Animated Background Elements */}
@@ -212,7 +220,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
             ) : (
               <div className="absolute inset-0 bg-gradient-to-br from-purple-900/30 via-indigo-900/30 to-violet-900/30" />
             )}
-            
+
             {/* Crescent moon - simplified on medium, static on low */}
             <div className="absolute top-4 right-4">
               {devicePerf.mode === 'high' && (
@@ -239,7 +247,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                 <Moon className="w-14 h-14 text-indigo-100/70" />
               )}
             </div>
-            
+
             {/* Magical fireflies/wisps - high only */}
             {devicePerf.mode === 'high' && animConfig.enableParticles && [...Array(8)].map((_, i) => (
               <motion.div
@@ -265,7 +273,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                 <div className="w-3 h-3 rounded-full bg-gradient-to-r from-yellow-200 to-amber-300 blur-sm shadow-lg shadow-yellow-400/50" />
               </motion.div>
             ))}
-            
+
             {/* Mystical stars - scaled by performance */}
             {[...Array(devicePerf.mode === 'high' ? 25 : devicePerf.mode === 'medium' ? 12 : 6)].map((_, i) => {
               const colors = ['text-purple-200', 'text-blue-200', 'text-pink-200', 'text-yellow-200', 'text-cyan-200']
@@ -306,7 +314,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                 </div>
               )
             })}
-            
+
             {/* Shooting stars - high performance only */}
             {devicePerf.mode === 'high' && animConfig.enableParticles && [...Array(4)].map((_, i) => (
               <motion.div
@@ -335,7 +343,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                 </div>
               </motion.div>
             ))}
-            
+
             {/* Mystical constellation - high performance only */}
             {devicePerf.mode === 'high' && (
               <svg className="absolute top-1/3 right-1/4 w-40 h-40 opacity-40" viewBox="0 0 120 120">
@@ -387,7 +395,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                 />
               </svg>
             )}
-            
+
             {/* Northern lights effect - simplified for medium, static for low */}
             {animConfig.enableAnimations ? (
               <>
@@ -410,7 +418,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
             ) : (
               <div className="absolute top-0 left-0 right-0 h-2/3 bg-gradient-to-b from-purple-500/15 via-violet-500/10 to-transparent" />
             )}
-            
+
             {/* Magical particles - high only */}
             {devicePerf.mode === 'high' && animConfig.enableParticles && [...Array(6)].map((_, i) => (
               <motion.div
@@ -423,7 +431,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                 <Sparkles className="w-2 h-2 text-purple-300/60" />
               </motion.div>
             ))}
-            
+
             {/* Milky way effect - simplified */}
             {animConfig.enableAnimations ? (
               <motion.div
@@ -434,12 +442,12 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
             ) : (
               <div className="absolute inset-0 bg-gradient-to-tr from-purple-900/15 via-transparent to-blue-900/15" />
             )}
-            
+
             {/* Deep mystical overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-purple-900/20" />
           </>
         )}
-        
+
         {timeOfDay === 'morning' && (
           <>
             {/* Sun with rays */}
@@ -461,7 +469,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
                 className="absolute inset-2 w-20 h-20 rounded-full bg-yellow-200/50 blur-xl"
               />
-              
+
               {/* Rotating sun */}
               <motion.div
                 animate={{ rotate: 360 }}
@@ -470,7 +478,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
               >
                 <Sun className="w-16 h-16 text-yellow-100/60" />
               </motion.div>
-              
+
               {/* Sun rays */}
               {[...Array(8)].map((_, i) => (
                 <motion.div
@@ -495,14 +503,14 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                 />
               ))}
             </div>
-            
+
             {/* Morning mist effect */}
             <motion.div
               animate={{ opacity: [0.1, 0.3, 0.1] }}
               transition={{ duration: 5, repeat: Infinity }}
               className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white/20 to-transparent"
             />
-            
+
             {/* Sparkles and particles */}
             {[...Array(8)].map((_, i) => (
               <motion.div
@@ -529,7 +537,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
             ))}
           </>
         )}
-        
+
         {timeOfDay === 'afternoon' && (
           <>
             {/* Bright afternoon sun */}
@@ -547,7 +555,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                 <Sun className="w-14 h-14 text-white/50" />
               </div>
             </motion.div>
-            
+
             {/* Gentle light rays */}
             {[...Array(6)].map((_, i) => (
               <motion.div
@@ -569,7 +577,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                 }}
               />
             ))}
-            
+
             {/* Multiple cloud layers */}
             <motion.div
               animate={{ x: [-120, 120] }}
@@ -592,7 +600,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
             >
               <Cloud className="w-16 h-16 text-white" />
             </motion.div>
-            
+
             {/* Sky sparkles */}
             {[...Array(6)].map((_, i) => (
               <motion.div
@@ -616,7 +624,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                 <Sparkles className="w-2.5 h-2.5 text-white/40" />
               </motion.div>
             ))}
-            
+
             {/* Atmospheric glow */}
             <motion.div
               animate={{ opacity: [0.2, 0.4, 0.2] }}
@@ -625,7 +633,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
             />
           </>
         )}
-        
+
         {timeOfDay === 'evening' && (
           <>
             {/* Detailed Moon with glow */}
@@ -647,7 +655,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
                 className="absolute inset-2 w-20 h-20 rounded-full bg-blue-100/40 blur-xl"
               />
-              
+
               {/* Moon */}
               <motion.div
                 animate={{
@@ -659,7 +667,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                 <Moon className="w-16 h-16 text-blue-50/60" />
               </motion.div>
             </div>
-            
+
             {/* Shooting stars */}
             {[...Array(3)].map((_, i) => (
               <motion.div
@@ -688,7 +696,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                 </div>
               </motion.div>
             ))}
-            
+
             {/* Constellation pattern */}
             <svg className="absolute top-1/4 left-1/4 w-32 h-32 opacity-30" viewBox="0 0 100 100">
               {/* Connect stars to form constellation */}
@@ -713,7 +721,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                 animate={{ pathLength: 1 }}
                 transition={{ duration: 2, delay: 1, repeat: Infinity, repeatDelay: 3 }}
               />
-              
+
               {/* Constellation stars */}
               {[[20, 20], [40, 30], [60, 25], [70, 45]].map(([cx, cy], i) => (
                 <motion.circle
@@ -725,7 +733,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                 />
               ))}
             </svg>
-            
+
             {/* Twinkling stars - varied sizes */}
             {[...Array(20)].map((_, i) => {
               const size = Math.random() > 0.7 ? 'w-4 h-4' : Math.random() > 0.4 ? 'w-3 h-3' : 'w-2 h-2'
@@ -753,7 +761,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                 </motion.div>
               )
             })}
-            
+
             {/* Aurora borealis effect */}
             <motion.div
               animate={{
@@ -771,25 +779,28 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
               transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
               className="absolute top-0 right-0 w-full h-1/3 bg-gradient-to-b from-teal-500/10 via-cyan-500/10 to-transparent"
             />
-            
+
             {/* Milky way effect */}
             <motion.div
               animate={{ opacity: [0.15, 0.25, 0.15] }}
               transition={{ duration: 6, repeat: Infinity }}
               className="absolute inset-0 bg-gradient-to-tr from-purple-900/20 via-transparent to-blue-900/20"
             />
-            
+
             {/* Deep night overlay */}
             <div className="absolute inset-0 bg-black/25" />
           </>
         )}
-        
+
         {/* Content - relative to appear above animated elements */}
         <div className="relative z-10">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2">{greeting}</h1>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-2xl sm:text-3xl font-bold">{greeting}</h1>
+            <VerificationBadge variant="white" className="backdrop-blur-md bg-white/10 border-white/20" />
+          </div>
           <p className="text-white/90 text-sm sm:text-base mb-4">{timeContext}</p>
         </div>
-        
+
         {/* Contextual prompt */}
         {upcomingAssessments.length > 0 && upcomingAssessments[0].daysUntil <= 3 && (
           <motion.div
@@ -827,13 +838,13 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
       >
-        <Card 
+        <Card
           className="border-0 shadow-xl rounded-2xl bg-gradient-to-br from-slate-700 via-slate-600 to-blue-600 cursor-pointer hover:shadow-2xl transition-all group relative overflow-hidden"
           onClick={() => router.push('/student/calendar')}
         >
           {/* Professional accent line */}
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500" />
-          
+
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div className="flex-1">
@@ -937,6 +948,19 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
         </motion.div>
       </div>
 
+      {/* Notification Prompt */}
+      {profile?.id && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="mb-6"
+        >
+          <NotificationPrompt userId={profile.id} />
+          {/* Force rebuild: FCM Integration */}
+        </motion.div>
+      )}
+
       {/* Daily Quests - Enhanced Mobile Experience */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -944,7 +968,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
         transition={{ delay: 0.3 }}
       >
         <Card className="border-0 shadow-lg rounded-2xl bg-white">
-          <CardHeader 
+          <CardHeader
             className="cursor-pointer"
             style={{ background: 'linear-gradient(to right, color-mix(in srgb, var(--theme-highlight) 20%, transparent), color-mix(in srgb, var(--theme-tertiary) 20%, transparent))' }}
             onClick={() => setQuestsExpanded(!questsExpanded)}
@@ -969,7 +993,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
               </motion.div>
             </div>
           </CardHeader>
-          
+
           <AnimatePresence>
             {questsExpanded && (
               <motion.div
@@ -1014,7 +1038,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                         disabled={quest.completed}
                         className={cn(
                           "p-4 rounded-2xl border-2 transition-all text-left shadow-sm",
-                          quest.completed 
+                          quest.completed
                             ? "cursor-not-allowed opacity-75"
                             : "bg-white border-slate-200 hover:shadow-md active:scale-[0.98] cursor-pointer"
                         )}
@@ -1052,12 +1076,12 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                           </div>
                           <div className="flex flex-col items-end">
                             <div style={quest.completed ? {
-                                backgroundColor: 'var(--theme-highlight)',
-                                color: 'var(--theme-primary)'
-                              } : {
-                                backgroundColor: 'rgb(241, 245, 249)',
-                                color: 'rgb(71, 85, 105)'
-                              }} className="text-xs px-2.5 py-0.5 rounded-full font-medium inline-flex items-center">
+                              backgroundColor: 'var(--theme-highlight)',
+                              color: 'var(--theme-primary)'
+                            } : {
+                              backgroundColor: 'rgb(241, 245, 249)',
+                              color: 'rgb(71, 85, 105)'
+                            }} className="text-xs px-2.5 py-0.5 rounded-full font-medium inline-flex items-center">
                               {quest.xp} XP
                             </div>
                             {quest.completed && (
@@ -1168,14 +1192,14 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                         </div>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        <span 
+                        <span
                           className={cn(
                             "text-xs font-medium px-2 py-0.5 rounded-md",
                             assessment.daysUntil <= 1 ? 'bg-red-600 text-white' :
-                            assessment.daysUntil <= 3 ? 'bg-amber-500 text-white' :
-                            'text-white'
+                              assessment.daysUntil <= 3 ? 'bg-amber-500 text-white' :
+                                'text-white'
                           )}
-                          style={{ 
+                          style={{
                             backgroundColor: assessment.daysUntil > 3 ? 'color-mix(in srgb, var(--theme-primary) 20%, transparent)' : undefined,
                             color: assessment.daysUntil > 3 ? 'var(--theme-primary)' : undefined
                           }}
@@ -1243,7 +1267,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                     </p>
                   </motion.div>
                 ))}
-                
+
                 {todayData.schoolUpdates?.announcements?.slice(0, 2).map((announcement: any, index: number) => (
                   <motion.div
                     key={announcement.id}
@@ -1252,7 +1276,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                     transition={{ delay: index * 0.1 }}
                     whileHover={{ x: 6, scale: 1.01 }}
                     className="group relative p-4 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden"
-                    style={{ 
+                    style={{
                       backgroundColor: 'color-mix(in srgb, var(--theme-highlight) 40%, white)',
                       borderWidth: '1.5px',
                       borderStyle: 'solid',
@@ -1265,12 +1289,12 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                       className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300"
                       style={{ background: 'linear-gradient(135deg, var(--theme-primary), var(--theme-secondary))' }}
                     />
-                    
+
                     {/* Content */}
                     <div className="relative z-10">
                       <div className="flex items-start justify-between mb-2.5">
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold shadow-sm" 
-                          style={{ 
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold shadow-sm"
+                          style={{
                             background: 'linear-gradient(135deg, var(--theme-secondary), var(--theme-primary))',
                             color: 'white'
                           }}
@@ -1284,17 +1308,17 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                           </div>
                         )}
                       </div>
-                      
+
                       <h4 className="font-semibold text-[15px] text-slate-900 line-clamp-2 leading-snug mb-2 group-hover:text-slate-700 transition-colors">
                         {announcement.title}
                       </h4>
-                      
+
                       {announcement.content && (
                         <p className="text-xs text-slate-600 line-clamp-1 mb-2">
                           {announcement.content}
                         </p>
                       )}
-                      
+
                       <div className="flex items-center gap-3 text-[11px] text-slate-500">
                         <span className="flex items-center gap-1">
                           <span className="w-1 h-1 rounded-full" style={{ backgroundColor: 'var(--theme-accent)' }}></span>
@@ -1308,7 +1332,7 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
                         )}
                       </div>
                     </div>
-                    
+
                     {/* Hover arrow indicator */}
                     <motion.div
                       className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -1345,7 +1369,7 @@ function TodayTabSkeleton() {
         <div className="h-8 bg-white/20 rounded w-48 mb-2" />
         <div className="h-4 bg-white/20 rounded w-32" />
       </div>
-      
+
       {/* Stats skeleton */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[1, 2, 3, 4].map((i) => (
@@ -1355,7 +1379,7 @@ function TodayTabSkeleton() {
           </Card>
         ))}
       </div>
-      
+
       {/* Content skeleton */}
       <Card className="p-6">
         <div className="space-y-3">

@@ -123,6 +123,8 @@ export default function WalletPage() {
   const fetchAllData = useCallback(async () => {
     if (!user || !profile) return;
 
+    console.log('📊 [Wallet] Starting data fetch for user:', user?.id);
+
     setLoading(true);
     setError(null);
 
@@ -150,7 +152,10 @@ export default function WalletPage() {
       // Handle wallet response
       if (walletResponse.status === 'fulfilled') {
         const response = walletResponse.value;
+        console.log('📦 [Wallet] API Response Status:', response.status);
         if (response.status === 404 || response.status === 401) {
+          console.log('🔄 [Wallet] Wallet not found (404/401), redirecting to create page...');
+          setLoading(false);
           router.push('/student/wallet/create');
           return;
         }
@@ -168,8 +173,12 @@ export default function WalletPage() {
             // Ensure modal is closed if password is now set
             setShowPasswordSetup(false);
           }
+        } else if (response.status === 503) {
+          setError('Service temporarily unavailable. Too many requests. Please wait a moment and try again.');
+        } else if (response.status === 429) {
+          setError('Rate limit exceeded. Please wait a moment before trying again.');
         } else {
-          throw new Error(`Wallet API error: ${response.status}`);
+          setError(`Unable to load wallet (Error ${response.status}). Please try again.`);
         }
       }
 
@@ -188,10 +197,11 @@ export default function WalletPage() {
       }
 
     } catch (error) {
-      console.error('Error fetching wallet data:', error);
+      console.error('❌ [Wallet] Error fetching wallet data:', error);
       setError('Failed to load wallet data. Please try again.');
       // Don't redirect on error, show retry option instead
     } finally {
+      console.log('✅ [Wallet] Data fetch complete, loading:', false);
       setLoading(false);
     }
   }, [user, profile, router]);
@@ -355,20 +365,21 @@ export default function WalletPage() {
           {error || "It looks like you don't have a wallet set up yet."}
         </p>
         <div className="space-y-3">
-          {!error && (
-            <button
-              onClick={() => router.push('/student/wallet/create')}
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 px-6 rounded-xl font-medium hover:opacity-90 transition-opacity"
-            >
-              Create Wallet
-            </button>
-          )}
+          <button
+            onClick={() => router.push('/student/wallet/create')}
+            className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 px-6 rounded-xl font-medium hover:opacity-90 transition-opacity"
+          >
+            Create Wallet
+          </button>
           <button
             onClick={refreshData}
             className="w-full bg-white/10 text-white py-3 px-6 rounded-xl font-medium hover:bg-white/20 transition-colors"
           >
             Try Again
           </button>
+          <p className="text-white/50 text-sm">
+            If you don't have a wallet yet, click "Create Wallet" above
+          </p>
         </div>
       </div>
     </div>
@@ -378,8 +389,14 @@ export default function WalletPage() {
     return LoadingScreen;
   }
 
-  // Show error if wallet failed to load
-  if ((!wallet && !loading && !authLoading) || error) {
+  // Redirect to create page if no wallet exists
+  if (!wallet && !loading && !authLoading && !error) {
+    router.push('/student/wallet/create');
+    return LoadingScreen; // Show loading while redirecting
+  }
+
+  // Show error screen only if there's an actual error (not just missing wallet)
+  if (error) {
     return ErrorScreen;
   }
 
@@ -591,8 +608,8 @@ export default function WalletPage() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     className={`relative flex flex-col items-center gap-0.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-medium transition-all ${activeTab === tab.id
-                        ? 'bg-gradient-to-br from-cyan-500/30 to-blue-500/30 text-cyan-300'
-                        : 'text-cyan-300/50 hover:text-cyan-300'
+                      ? 'bg-gradient-to-br from-cyan-500/30 to-blue-500/30 text-cyan-300'
+                      : 'text-cyan-300/50 hover:text-cyan-300'
                       }`}
                   >
                     <tab.icon className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -607,8 +624,8 @@ export default function WalletPage() {
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
                 className={`relative flex flex-col items-center gap-0.5 sm:gap-1 px-5 sm:px-6 py-2 sm:py-3 rounded-full font-bold transition-all flex-shrink-0 ${activeTab === 'send'
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-[0_0_30px_rgba(168,85,247,0.6)]'
-                    : 'bg-gradient-to-r from-purple-500/80 to-pink-500/80 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)]'
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-[0_0_30px_rgba(168,85,247,0.6)]'
+                  : 'bg-gradient-to-r from-purple-500/80 to-pink-500/80 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)]'
                   }`}
               >
                 <Send className="h-5 w-5 sm:h-6 sm:w-6" />
@@ -627,8 +644,8 @@ export default function WalletPage() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     className={`relative flex flex-col items-center gap-0.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-medium transition-all ${activeTab === tab.id
-                        ? 'bg-gradient-to-br from-cyan-500/30 to-blue-500/30 text-cyan-300'
-                        : 'text-cyan-300/50 hover:text-cyan-300'
+                      ? 'bg-gradient-to-br from-cyan-500/30 to-blue-500/30 text-cyan-300'
+                      : 'text-cyan-300/50 hover:text-cyan-300'
                       }`}
                   >
                     <tab.icon className="h-4 w-4 sm:h-5 sm:w-5" />

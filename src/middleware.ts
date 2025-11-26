@@ -107,7 +107,8 @@ export async function middleware(req: NextRequest) {
     '/privacy',
     '/terms',
     '/login',
-    '/register'
+    '/register',
+    '/auth'
   ]
   const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'))
 
@@ -167,11 +168,11 @@ export async function middleware(req: NextRequest) {
     // Build CSP header - exclude upgrade-insecure-requests in development
     const cspDirectives = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://*.supabase.co https://cdn.jsdelivr.net https://accounts.google.com https://apis.google.com",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://*.supabase.co https://cdn.jsdelivr.net https://accounts.google.com https://apis.google.com https://www.gstatic.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com",
       "font-src 'self' https://fonts.gstatic.com https://images.simplycodes.com data:",
       "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://*.googleusercontent.com",
-      "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co wss://*.supabase.in https://accounts.google.com https://www.googleapis.com https://fonts.googleapis.com https://fonts.gstatic.com https://images.simplycodes.com https://*.googleusercontent.com",
+      "connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co wss://*.supabase.in https://accounts.google.com https://www.googleapis.com https://fonts.googleapis.com https://fonts.gstatic.com https://images.simplycodes.com https://*.googleusercontent.com https://firebaseinstallations.googleapis.com https://fcmregistrations.googleapis.com",
       "frame-src 'self' https://accounts.google.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
@@ -201,6 +202,7 @@ export const config = {
   matcher: [
     // Match all paths except API routes, static files, and images
     // CRITICAL: Exclude /api/* to prevent redirect loops
-    '/((?!api|_next/static|_next/image|favicon.ico|sw.js|manifest.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Exclude service worker files to prevent PWA registration errors
+    '/((?!api|_next/static|_next/image|favicon.ico|sw.js|service-worker.js|manifest.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

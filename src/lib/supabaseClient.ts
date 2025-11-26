@@ -4,9 +4,9 @@ import { createBrowserClient } from '@supabase/ssr'
 export const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
 export const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
 
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
-    supabaseUrl.includes('your_supabase_url_here') || supabaseAnonKey.includes('your_supabase_anon_key_here') ||
-    supabaseUrl === 'https://placeholder.supabase.co') {
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  supabaseUrl.includes('your_supabase_url_here') || supabaseAnonKey.includes('your_supabase_anon_key_here') ||
+  supabaseUrl === 'https://placeholder.supabase.co') {
   console.warn('⚠️ Using placeholder Supabase configuration for development')
   console.warn('Please update your .env.local file with valid Supabase credentials:')
   console.warn('NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co')
@@ -34,7 +34,7 @@ if (typeof window !== 'undefined') {
     if (process.env.NODE_ENV === 'development') {
       console.log(`🔄 [AuthStateChange] Event: ${event}`, session ? 'Session active' : 'No session')
     }
-    
+
     if (event === 'TOKEN_REFRESHED') {
       // Token refresh handled silently
     } else if (event === 'SIGNED_OUT') {
@@ -49,7 +49,9 @@ if (typeof window !== 'undefined') {
         document.cookie = `${key}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`
       })
       // Clear Redux store
-      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+      if (window.location.pathname !== '/login' &&
+        window.location.pathname !== '/register' &&
+        !window.location.pathname.startsWith('/auth')) {
         window.location.href = '/login'
       }
     } else if (event === 'USER_UPDATED') {

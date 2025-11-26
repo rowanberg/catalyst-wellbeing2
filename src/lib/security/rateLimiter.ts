@@ -34,17 +34,17 @@ class RateLimiter {
     const key = this.getKey(identifier, route);
     const now = Date.now();
     const windowStart = now - this.options.interval;
-    
+
     // Get existing requests in current window
     const requests = this.cache.get(key) || [];
     const recentRequests = requests.filter(timestamp => timestamp > windowStart);
-    
+
     // Update cache with recent requests
     this.cache.set(key, recentRequests);
-    
+
     const remaining = Math.max(0, this.options.uniqueTokenPerInterval - recentRequests.length);
     const reset = now + this.options.interval;
-    
+
     return {
       limit: this.options.uniqueTokenPerInterval,
       remaining,
@@ -56,20 +56,20 @@ class RateLimiter {
     const key = this.getKey(identifier, route);
     const now = Date.now();
     const windowStart = now - this.options.interval;
-    
+
     // Get existing requests in current window
     const requests = this.cache.get(key) || [];
     const recentRequests = requests.filter(timestamp => timestamp > windowStart);
-    
+
     // Add current request
     recentRequests.push(now);
-    
+
     // Update cache
     this.cache.set(key, recentRequests);
-    
+
     const remaining = Math.max(0, this.options.uniqueTokenPerInterval - recentRequests.length);
     const reset = now + this.options.interval;
-    
+
     return {
       limit: this.options.uniqueTokenPerInterval,
       remaining,
@@ -90,25 +90,25 @@ export const rateLimiters = {
     interval: 5 * 60 * 1000, // 5 minutes
     uniqueTokenPerInterval: 20, // 20 attempts per 5 minutes (more reasonable)
   }),
-  
-  // Moderate rate limit for wallet operations
+
+  // Moderate rate limit for wallet operations (increased for page load with multiple endpoints)
   wallet: new RateLimiter({
     interval: 60 * 1000, // 1 minute
-    uniqueTokenPerInterval: 10, // 10 operations per minute
+    uniqueTokenPerInterval: 30, // 30 operations per minute (allows multiple page loads)
   }),
-  
+
   // Standard rate limit for general API calls
   general: new RateLimiter({
     interval: 60 * 1000, // 1 minute
     uniqueTokenPerInterval: 60, // 60 requests per minute
   }),
-  
+
   // Strict rate limit for help requests
   helpRequest: new RateLimiter({
     interval: 60 * 60 * 1000, // 1 hour
     uniqueTokenPerInterval: 3, // 3 help requests per hour
   }),
-  
+
   // File upload rate limit
   upload: new RateLimiter({
     interval: 60 * 60 * 1000, // 1 hour
@@ -121,12 +121,12 @@ export function getClientIdentifier(request: NextRequest): string {
   // Try to get user ID from auth
   const userId = request.headers.get('x-user-id');
   if (userId) return `user:${userId}`;
-  
+
   // Fallback to IP address
   const forwardedFor = request.headers.get('x-forwarded-for');
   const realIp = request.headers.get('x-real-ip');
   const ip = forwardedFor?.split(',')[0] || realIp || 'unknown';
-  
+
   return `ip:${ip}`;
 }
 
@@ -139,21 +139,26 @@ export async function withRateLimit(
   const limiter = rateLimiters[limiterType];
   const identifier = getClientIdentifier(request);
   const route = request.nextUrl.pathname;
-  
+
   // Skip rate limiting for session checks (read-only GET requests)
   if (route.includes('/api/auth/session') && request.method === 'GET') {
     return handler();
   }
-  
+
   // Skip rate limiting for profile fetching (read-only POST requests)
   if (route.includes('/api/get-profile') && request.method === 'POST') {
     return handler();
   }
-  
+
+  // Skip rate limiting for wallet GET requests (read-only operations)
+  if (route.includes('/api/student/wallet') && request.method === 'GET') {
+    return handler();
+  }
+
   // Check if rate limited before making the request
   if (limiter.isRateLimited(identifier, route)) {
     const info = limiter.check(identifier, route);
-    
+
     return NextResponse.json(
       {
         error: 'Too many requests',
@@ -171,16 +176,16 @@ export async function withRateLimit(
       }
     );
   }
-  
+
   // Execute handler first to check if it succeeds
   const response = await handler();
-  
+
   // Only consume rate limit on failed requests (4xx, 5xx errors) or for auth endpoints
-  const shouldConsumeLimit = 
-    response.status >= 400 || 
-    limiterType === 'helpRequest' || 
+  const shouldConsumeLimit =
+    response.status >= 400 ||
+    limiterType === 'helpRequest' ||
     limiterType === 'upload';
-  
+
   let info;
   if (shouldConsumeLimit) {
     info = limiter.consume(identifier, route);
@@ -188,12 +193,12 @@ export async function withRateLimit(
     // Just check, don't consume for successful requests
     info = limiter.check(identifier, route);
   }
-  
+
   // Add rate limit headers to response
   response.headers.set('X-RateLimit-Limit', info.limit.toString());
   response.headers.set('X-RateLimit-Remaining', info.remaining.toString());
   response.headers.set('X-RateLimit-Reset', new Date(info.reset).toISOString());
-  
+
   return response;
 }
 

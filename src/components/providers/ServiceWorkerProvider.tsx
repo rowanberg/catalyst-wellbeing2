@@ -14,7 +14,7 @@ export const ServiceWorkerProvider: React.FC<ServiceWorkerProviderProps> = ({ ch
         .register('/sw.js', { scope: '/' })
         .then((registration) => {
           console.log('[SW] Service Worker registered successfully:', registration)
-          
+
           // Check for updates
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing

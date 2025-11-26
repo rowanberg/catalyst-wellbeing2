@@ -6,11 +6,11 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { 
-  Users, 
-  AlertTriangle, 
-  BarChart3, 
-  Settings, 
+import {
+  Users,
+  AlertTriangle,
+  BarChart3,
+  Settings,
   School,
   MessageSquare,
   Megaphone,
@@ -30,7 +30,8 @@ import {
   LogOut,
   User,
   ChevronDown,
-  Shield
+  Shield,
+  CreditCard
 } from 'lucide-react'
 import { PageLoader } from '@/components/ui/loading-spinner'
 import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
@@ -78,7 +79,7 @@ function AdminDashboardContent() {
   const router = useRouter()
   const dispatch = useAppDispatch()
   const { user, profile } = useAppSelector((state) => state.auth)
-  
+
   const [schoolInfo, setSchoolInfo] = useState<SchoolInfo | null>(null)
   const [schoolDetails, setSchoolDetails] = useState<SchoolDetails | null>(null)
   const [schoolStats, setSchoolStats] = useState<SchoolStats>({
@@ -91,7 +92,7 @@ function AdminDashboardContent() {
     needsSupport: 0,
     atRisk: 0
   })
-  const [isLoading, setIsLoading] = useState(false) 
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [featureLoading, setFeatureLoading] = useState<string | null>(null)
   const [showSetupBanner, setShowSetupBanner] = useState(false)
@@ -112,7 +113,7 @@ function AdminDashboardContent() {
     const cachedSchoolInfo = sessionStorage.getItem('admin_school_info')
     const cachedSchoolStats = sessionStorage.getItem('admin_school_stats')
     const cachedSchoolDetails = sessionStorage.getItem('admin_school_details')
-    
+
     if (cachedSchoolInfo && cachedSchoolStats) {
       // Use cached data
       setSchoolInfo(JSON.parse(cachedSchoolInfo))
@@ -127,11 +128,11 @@ function AdminDashboardContent() {
     const fetchSchoolData = async () => {
       try {
         setIsLoading(true)
-        
+
         // Check for setup completion parameter
         const urlParams = new URLSearchParams(window.location.search)
         const setupCompleted = urlParams.get('setup') === 'completed'
-        
+
         // Try OfflineAPI first for PWA support
         try {
           const adminData = await OfflineAPI.fetchAdminDashboard()
@@ -145,7 +146,7 @@ function AdminDashboardContent() {
         } catch (offlineError) {
           console.log('[Admin] OfflineAPI failed, using regular fetch:', offlineError)
         }
-        
+
         // Fallback to regular fetch
         const schoolResponse = await fetch('/api/admin/school')
         if (!schoolResponse.ok) {
@@ -155,28 +156,28 @@ function AdminDashboardContent() {
         }
         const schoolData = await schoolResponse.json()
         setSchoolInfo(schoolData.school)
-        
+
         // Fetch school details to check setup completion
-        
+
         // Simple approach - let the API handle authentication via cookies
         const headers: HeadersInit = {
           'Content-Type': 'application/json'
         }
-        
+
         const detailsResponse = await fetch('/api/admin/school-details', { headers })
-        
+
         let detailsDataForCache = null
         if (detailsResponse.ok) {
           const detailsData = await detailsResponse.json()
           detailsDataForCache = detailsData.details
-          
+
           setSchoolDetails(detailsData.details)
-          
+
           // Use the status field for more precise control
           const setupStatus = detailsData.status || 'not_completed'
           const urlSetupCompleted = setupCompleted
-          
-          
+
+
           // Show banner based on status
           if (setupStatus === 'completed') {
             // Setup is completed - hide banner
@@ -190,12 +191,12 @@ function AdminDashboardContent() {
           }
         } else {
           const errorText = await detailsResponse.text()
-          
+
           // If API fails, show banner unless URL says just completed
           const shouldShowBanner = !setupCompleted
           setShowSetupBanner(shouldShowBanner)
         }
-        
+
         // Fetch school statistics
         const statsResponse = await fetch('/api/admin/stats')
         if (!statsResponse.ok) {
@@ -203,16 +204,16 @@ function AdminDashboardContent() {
         }
         const statsData = await statsResponse.json()
         setSchoolStats(statsData.stats)
-        
+
         // Cache the data in sessionStorage (use API response, not state)
         sessionStorage.setItem('admin_school_info', JSON.stringify(schoolData.school))
         sessionStorage.setItem('admin_school_stats', JSON.stringify(statsData.stats))
         if (detailsDataForCache) {
           sessionStorage.setItem('admin_school_details', JSON.stringify(detailsDataForCache))
         }
-        
+
         setDataFetched(true)
-        
+
       } catch (err: any) {
         console.error('Error fetching school data:', err)
         setError(err instanceof Error ? err.message : 'Failed to load school data')
@@ -259,7 +260,7 @@ function AdminDashboardContent() {
               <School className="w-6 h-6 text-blue-600" />
             </motion.div>
           </motion.div>
-          <motion.p 
+          <motion.p
             className="text-slate-600 font-medium text-sm font-['DM_Sans']"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -300,8 +301,8 @@ function AdminDashboardContent() {
           </div>
           <h2 className="text-xl font-bold text-slate-800 mb-2 font-['Plus_Jakarta_Sans'] tracking-tight">Unable to Load Dashboard</h2>
           <p className="text-slate-600 mb-4 font-['DM_Sans']">{error}</p>
-          <Button 
-            onClick={() => window.location.reload()} 
+          <Button
+            onClick={() => window.location.reload()}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             Try Again
@@ -316,9 +317,9 @@ function AdminDashboardContent() {
       {/* Refined Enterprise Background */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(0,0,0,0.025)_1px,transparent_0)] bg-[length:32px_32px]" />
       <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(0,0,0,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,0,0,0.02)_1px,transparent_1px)] bg-[size:80px_80px]" />
-      
+
       {/* Enterprise Header */}
-      <motion.div 
+      <motion.div
         className="sticky top-0 z-50 bg-white/95 backdrop-blur-xl border-b border-gray-200 overflow-hidden"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -327,14 +328,14 @@ function AdminDashboardContent() {
       >
         {/* Premium top accent */}
         <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#3B82F6] via-[#6366F1] to-[#8B5CF6]" />
-        
+
         <div className="relative z-10 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           <div className="py-4 sm:py-6 lg:py-8">
-            
+
             {/* Enhanced Header Section */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-4">
               <div className="flex items-center space-x-3 sm:space-x-4 w-full sm:w-auto">
-                <motion.div 
+                <motion.div
                   className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-2xl flex items-center justify-center relative overflow-hidden group"
                   style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #6366F1 100%)', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)' }}
                   initial={{ scale: 0, rotate: -180 }}
@@ -359,7 +360,7 @@ function AdminDashboardContent() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <Link href="/admin/messaging" className="flex-1 sm:flex-none">
                   <Button variant="outline" size="sm" className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white hover:bg-gray-50 border-gray-300 hover:border-gray-400 font-['DM_Sans'] font-medium transition-all">
@@ -367,7 +368,7 @@ function AdminDashboardContent() {
                     <span className="sm:inline text-gray-700">Messages</span>
                   </Button>
                 </Link>
-                
+
                 {/* Settings Dropdown Menu */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -394,7 +395,7 @@ function AdminDashboardContent() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                       onClick={handleLogout}
                       className="flex items-center text-red-600 focus:text-red-600 focus:bg-red-50"
                     >
@@ -429,8 +430,8 @@ function AdminDashboardContent() {
                             Complete Your School Setup
                           </h3>
                           <p className="text-sm text-gray-700 mb-2 font-['DM_Sans'] leading-relaxed">
-                            Welcome to Catalyst! To provide the best experience for your students and staff, 
-                            please complete your school's detailed setup including contact information, 
+                            Welcome to Catalyst! To provide the best experience for your students and staff,
+                            please complete your school's detailed setup including contact information,
                             operating hours, and academic details.
                           </p>
                           <div className="flex items-center space-x-4 text-xs text-gray-600">
@@ -474,13 +475,13 @@ function AdminDashboardContent() {
             </AnimatePresence>
 
             {/* Enhanced Quick Stats Row */}
-            <motion.div 
+            <motion.div
               className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
             >
-              <motion.div 
+              <motion.div
                 className="relative group text-center p-5 sm:p-6 bg-white rounded-2xl border border-gray-200 overflow-hidden cursor-pointer"
                 style={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' }}
                 whileHover={{ y: -6, boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.1)' }}
@@ -496,7 +497,7 @@ function AdminDashboardContent() {
                 <div className="text-xs sm:text-sm font-semibold text-gray-600 font-['DM_Sans'] uppercase" style={{ letterSpacing: '0.05em' }}>Students</div>
               </motion.div>
 
-              <motion.div 
+              <motion.div
                 className="relative group text-center p-5 sm:p-6 bg-white rounded-2xl border border-gray-200 overflow-hidden cursor-pointer"
                 style={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' }}
                 whileHover={{ y: -6, boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.1)' }}
@@ -512,7 +513,7 @@ function AdminDashboardContent() {
                 <div className="text-xs sm:text-sm font-semibold text-gray-600 font-['DM_Sans'] uppercase" style={{ letterSpacing: '0.05em' }}>Teachers</div>
               </motion.div>
 
-              <motion.div 
+              <motion.div
                 className="relative group text-center p-5 sm:p-6 bg-white rounded-2xl border border-gray-200 overflow-hidden cursor-pointer"
                 style={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' }}
                 whileHover={{ y: -6, boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.1)' }}
@@ -528,7 +529,7 @@ function AdminDashboardContent() {
                 <div className="text-xs sm:text-sm font-semibold text-gray-600 font-['DM_Sans'] uppercase" style={{ letterSpacing: '0.05em' }}>Parents</div>
               </motion.div>
 
-              <motion.div 
+              <motion.div
                 className="relative group text-center p-5 sm:p-6 bg-white rounded-2xl border border-gray-200 overflow-hidden cursor-pointer"
                 style={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' }}
                 whileHover={{ y: -6, boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.1)' }}
@@ -551,9 +552,9 @@ function AdminDashboardContent() {
       {/* Enhanced Main Content */}
       <div className="relative z-10 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
         <div className="space-y-8 sm:space-y-10 lg:space-y-12">
-          
+
           {/* Core Features Section */}
-          <motion.div 
+          <motion.div
             className="mb-8"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -568,9 +569,9 @@ function AdminDashboardContent() {
                 9 tools
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">  
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
               {/* User Management */}
-              <motion.div 
+              <motion.div
                 whileHover={{ y: -4 }}
                 whileTap={{ scale: 0.98 }}
                 transition={{ duration: 0.2 }}
@@ -591,7 +592,7 @@ function AdminDashboardContent() {
               </motion.div>
 
               {/* Settings */}
-              <motion.div 
+              <motion.div
                 whileHover={{ y: -4 }}
                 whileTap={{ scale: 0.98 }}
                 transition={{ duration: 0.2 }}
@@ -612,7 +613,7 @@ function AdminDashboardContent() {
               </motion.div>
 
               {/* Academic Schedule */}
-              <motion.div 
+              <motion.div
                 whileHover={{ y: -4 }}
                 whileTap={{ scale: 0.98 }}
                 transition={{ duration: 0.2 }}
@@ -633,7 +634,7 @@ function AdminDashboardContent() {
               </motion.div>
 
               {/* Time Table */}
-              <motion.div 
+              <motion.div
                 whileHover={{ y: -4 }}
                 whileTap={{ scale: 0.98 }}
                 transition={{ duration: 0.2 }}
@@ -654,7 +655,7 @@ function AdminDashboardContent() {
               </motion.div>
 
               {/* Announcements */}
-              <motion.div 
+              <motion.div
                 whileHover={{ y: -4 }}
                 whileTap={{ scale: 0.98 }}
                 transition={{ duration: 0.2 }}
@@ -675,7 +676,7 @@ function AdminDashboardContent() {
               </motion.div>
 
               {/* Pending Users */}
-              <motion.div 
+              <motion.div
                 whileHover={{ y: -4 }}
                 whileTap={{ scale: 0.98 }}
                 transition={{ duration: 0.2 }}
@@ -696,7 +697,7 @@ function AdminDashboardContent() {
               </motion.div>
 
               {/* Help Requests */}
-              <motion.div 
+              <motion.div
                 whileHover={{ y: -4 }}
                 whileTap={{ scale: 0.98 }}
                 transition={{ duration: 0.2 }}
@@ -722,7 +723,7 @@ function AdminDashboardContent() {
               </motion.div>
 
               {/* Incident Data */}
-              <motion.div 
+              <motion.div
                 whileHover={{ y: -4 }}
                 whileTap={{ scale: 0.98 }}
                 transition={{ duration: 0.2 }}
@@ -742,12 +743,33 @@ function AdminDashboardContent() {
                 </Link>
               </motion.div>
 
+              {/* Fees Management */}
+              <motion.div
+                whileHover={{ y: -4 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Link href="/admin/fees" className="block group">
+                  <div className="h-full bg-white rounded-xl border border-gray-200 p-5 hover:border-gray-300 transition-all" style={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' }}>
+                    <div className="flex flex-col items-center text-center space-y-3">
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center relative" style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.15)' }}>
+                        <CreditCard className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900 text-sm font-['Plus_Jakarta_Sans']" style={{ letterSpacing: '-0.01em' }}>Fees Management</p>
+                        <p className="text-xs text-gray-600 mt-1 font-['DM_Sans']">Payments & Invoices</p>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              </motion.div>
+
             </div>
           </motion.div>
 
 
           {/* Advanced Features Section */}
-          <motion.div 
+          <motion.div
             className="space-y-6"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -763,7 +785,7 @@ function AdminDashboardContent() {
               </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
-              
+
               {/* Progress Tracking */}
               <motion.div whileHover={{ y: -4 }} whileTap={{ scale: 0.98 }} transition={{ duration: 0.2 }}>
                 <Link href="/admin/progress" className="block group">
@@ -977,7 +999,7 @@ function AdminDashboardContent() {
               </motion.div>
             )}
           </AnimatePresence>
-          
+
           {/* Enhanced Mobile Navigation */}
           <div className="lg:hidden fixed bottom-4 right-4 z-50">
             <motion.div
@@ -994,7 +1016,7 @@ function AdminDashboardContent() {
               >
                 <School className="h-5 w-5" />
               </Button>
-              
+
               {/* Quick help requests access if any exist */}
               {schoolStats.helpRequests > 0 && (
                 <Link href="/admin/help-requests">

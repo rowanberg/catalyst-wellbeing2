@@ -13,7 +13,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get grade levels with student and class counts
+    // Get ALL grade levels first to log the difference
+    const { data: allGrades } = await supabaseAdmin
+      .from('grade_levels')
+      .select('id, grade_level, grade_name, is_active')
+      .eq('school_id', schoolId)
+
+    console.log(`📊 [Grade Levels API] Total grades in database: ${allGrades?.length || 0}`)
+    console.log(`📊 [Grade Levels API] Active grades: ${allGrades?.filter(g => g.is_active).length || 0}`)
+    console.log(`📊 [Grade Levels API] Inactive grades: ${allGrades?.filter(g => !g.is_active).length || 0}`)
+
+    if (allGrades) {
+      const inactive = allGrades.filter(g => !g.is_active)
+      if (inactive.length > 0) {
+        console.warn(`⚠️ [Grade Levels API] Inactive grades that won't show in registration:`,
+          inactive.map(g => `${g.grade_name} (${g.grade_level})`))
+      }
+    }
+
+    // Get ACTIVE grade levels with student and class counts (for registration)
     const { data: gradeLevels, error } = await supabaseAdmin
       .from('grade_levels')
       .select(`

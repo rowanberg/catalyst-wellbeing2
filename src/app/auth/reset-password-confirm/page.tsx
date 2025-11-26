@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/components/ui/toast'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Lock, Eye, EyeOff, CheckCircle, RefreshCw, Shield, Key, Sparkles, ArrowRight } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 
@@ -32,7 +33,7 @@ export default function ResetPasswordConfirmPage() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [isValidating, setIsValidating] = useState(true)
   const [isValidToken, setIsValidToken] = useState(false)
-  
+
   const router = useRouter()
   const searchParams = useSearchParams()
   const { addToast } = useToast()
@@ -43,45 +44,103 @@ export default function ResetPasswordConfirmPage() {
 
   const password = watch('password')
 
-  // Validate the reset token on component mount
-  useEffect(() => {
-    const validateToken = async () => {
-      const token_hash = searchParams.get('token_hash')
-      const type = searchParams.get('type')
+  const [userName, setUserName] = useState<string | null>(null)
 
-      if (!token_hash || type !== 'recovery') {
+  // Validate the session on component mount
+  useEffect(() => {
+    let authSubscription: any = null
+
+    const checkSession = async () => {
+      // 1. Check for explicit errors in URL (hash or query)
+      const hashParams = new URLSearchParams(window.location.hash.substring(1))
+      const error = hashParams.get('error') || searchParams.get('error')
+      const error_description = hashParams.get('error_description') || searchParams.get('error_description')
+
+      if (error) {
+        console.error('Reset Password Error:', error, error_description)
         setIsValidToken(false)
         setIsValidating(false)
         return
       }
 
+      // 2. Check if we have a session (Supabase handles the exchange automatically)
       try {
-        const { error } = await supabase.auth.verifyOtp({
-          type: 'recovery',
-          token_hash,
-        })
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
-        if (error) {
-          console.error('Token validation error:', error)
-          setIsValidToken(false)
-        } else {
+        if (session?.user) {
+          console.log('✅ Session found immediately, user authenticated')
           setIsValidToken(true)
+
+          // Set user name
+          const user = session.user
+          if (user.user_metadata?.first_name) {
+            setUserName(user.user_metadata.first_name)
+          } else if (user.email) {
+            setUserName(user.email.split('@')[0])
+          }
+
+          setIsValidating(false)
+          return
         }
-      } catch (error) {
-        console.error('Token validation failed:', error)
+
+        // Check for PKCE code
+        const code = searchParams.get('code')
+        if (code) {
+          console.log('🔄 PKCE code detected, waiting for exchange...')
+        }
+
+        // 3. If no session immediately, wait for auth state change (handling PKCE exchange)
+        const { data } = supabase.auth.onAuthStateChange((event, session) => {
+          console.log('Auth state change:', event)
+          if (event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') {
+            if (session?.user) {
+              console.log('✅ Session established via AuthStateChange')
+              setIsValidToken(true)
+              const user = session.user
+              if (user.user_metadata?.first_name) {
+                setUserName(user.user_metadata.first_name)
+              } else if (user.email) {
+                setUserName(user.email.split('@')[0])
+              }
+              setIsValidating(false)
+            }
+          }
+        })
+        authSubscription = data.subscription
+
+        // 4. Fallback timeout - wait longer for PKCE exchange (10s)
+        setTimeout(async () => {
+          const { data: { session } } = await supabase.auth.getSession()
+          if (!session) {
+            console.warn('❌ No session established after timeout')
+            // Only set invalid if we're still validating (didn't succeed yet)
+            setIsValidating(prev => {
+              if (prev) setIsValidToken(false)
+              return false
+            })
+          }
+        }, 10000)
+
+      } catch (err) {
+        console.error('Session check failed:', err)
         setIsValidToken(false)
-      } finally {
         setIsValidating(false)
       }
     }
 
-    validateToken()
+    checkSession()
+
+    return () => {
+      if (authSubscription) {
+        authSubscription.unsubscribe()
+      }
+    }
   }, [searchParams])
 
   const onSubmit = async (data: NewPasswordForm) => {
     setIsLoading(true)
     setSubmitError(null)
-    
+
     try {
       const { error } = await supabase.auth.updateUser({
         password: data.password
@@ -119,7 +178,7 @@ export default function ResetPasswordConfirmPage() {
   // Password strength indicator
   const getPasswordStrength = (password: string) => {
     if (!password) return { strength: 0, label: '', color: '' }
-    
+
     let strength = 0
     if (password.length >= 6) strength += 1
     if (password.length >= 8) strength += 1
@@ -205,29 +264,33 @@ export default function ResetPasswordConfirmPage() {
       <div className="relative z-10 max-w-md w-full mx-4">
         <Card className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-white/30 dark:border-slate-700/30 shadow-2xl">
           <CardHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center relative">
-                {passwordUpdated ? (
-                  <CheckCircle className="w-8 h-8 text-white" />
-                ) : (
-                  <Key className="w-8 h-8 text-white" />
-                )}
-                <div className="absolute -top-1 -right-1 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center">
-                  <Sparkles className="w-3 h-3 text-yellow-800" />
+            <div className="flex justify-center mb-6">
+              <div className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+                <div className="relative w-20 h-20 bg-white dark:bg-slate-800 rounded-2xl shadow-xl flex items-center justify-center p-2 transform transition-transform duration-500 hover:scale-105">
+                  <div className="relative w-full h-full">
+                    <Image
+                      src="/images/catalyst-logo.png"
+                      alt="CatalystWells Logo"
+                      fill // Use fill to make it cover the parent div
+                      style={{ objectFit: 'contain' }} // Apply object-fit via style prop
+                    />
+                  </div>
                 </div>
               </div>
             </div>
+
             <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
-              {passwordUpdated ? 'Password Updated!' : 'Create New Password'}
+              {passwordUpdated ? 'Password Updated!' : `Welcome Back${userName ? `, ${userName}` : ''}`}
             </CardTitle>
-            <CardDescription className="text-gray-600 dark:text-gray-400 text-base">
-              {passwordUpdated 
+            <CardDescription className="text-gray-600 dark:text-gray-400 text-base mt-2">
+              {passwordUpdated
                 ? 'Your password has been successfully changed'
-                : 'Choose a strong password for your account'
+                : 'Create a new secure password for your account'
               }
             </CardDescription>
           </CardHeader>
-          
+
           <CardContent>
             {passwordUpdated ? (
               <div className="text-center space-y-6">
@@ -238,7 +301,7 @@ export default function ResetPasswordConfirmPage() {
                     Your password has been updated successfully. You can now sign in with your new password.
                   </p>
                 </div>
-                
+
                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/30 rounded-xl p-4">
                   <p className="text-gray-600 dark:text-gray-400 text-sm">
                     Redirecting to login page in a few seconds...
@@ -286,13 +349,13 @@ export default function ResetPasswordConfirmPage() {
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
-                  
+
                   {/* Password Strength Indicator */}
                   {password && (
                     <div className="space-y-2">
                       <div className="flex items-center space-x-2">
                         <div className="flex-1 bg-white/20 rounded-full h-2">
-                          <div 
+                          <div
                             className={`h-2 rounded-full transition-all duration-300 ${passwordStrength.color}`}
                             style={{ width: `${(passwordStrength.strength / 5) * 100}%` }}
                           ></div>
@@ -301,7 +364,7 @@ export default function ResetPasswordConfirmPage() {
                       </div>
                     </div>
                   )}
-                  
+
                   {errors.password && (
                     <p className="text-red-600 dark:text-red-400 text-sm">{errors.password.message}</p>
                   )}

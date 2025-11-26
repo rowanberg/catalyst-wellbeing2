@@ -6,7 +6,7 @@ import { ToastProvider } from '@/components/ui/toast'
 import { HydrationProvider } from '@/components/providers/HydrationProvider'
 import { AuthChecker } from '@/components/providers/AuthChecker'
 import { RealtimeProvider } from '@/components/communications/RealtimeProvider'
-import { PWAUpdateBanner, OfflineIndicator } from '@/components/ui/pwa-install-prompt'
+import { OfflineIndicator } from '@/components/ui/pwa-install-prompt'
 import { AnalyticsProvider, ServiceWorkerProvider } from '@/components/providers'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -264,7 +264,6 @@ export default function RootLayout({
                   <AuthChecker>
                     <RealtimeProvider>
                       {children}
-                      <PWAUpdateBanner />
                       <OfflineIndicator />
                     </RealtimeProvider>
                   </AuthChecker>

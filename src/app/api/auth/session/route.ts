@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const accessToken = cookies.match(/sb-[^-]+-auth-token=([^;]+)/)?.[1] || ''
     const refreshToken = cookies.match(/sb-[^-]+-auth-token-code-verifier=([^;]+)/)?.[1] || ''
     const cacheKey = `session-${accessToken.slice(0, 20)}-${refreshToken.slice(0, 20)}`
-    
+
     // Check cache first
     const cached = sessionCache.get(cacheKey)
     if (cached && Date.now() - cached.timestamp < SESSION_CACHE_TTL) {
@@ -24,21 +24,30 @@ export async function GET(request: Request) {
 
     const supabase = await createSupabaseServerClient()
     const { data: { user }, error } = await supabase.auth.getUser()
-    
+
     if (error) {
       console.log('🔄 [SessionAPI] Auth error:', error.message)
-      
+
+      // Handle "Offline mode" error specifically (Supabase connectivity issue)
+      if (error.message?.includes('Offline mode')) {
+        console.error('❌ [SessionAPI] Supabase client is in offline mode')
+        return NextResponse.json({
+          error: 'Offline mode - data unavailable',
+          code: 'SUPABASE_OFFLINE'
+        }, { status: 503 })
+      }
+
       // Handle refresh token errors specifically
-      if (error.message?.includes('Invalid Refresh Token') || 
-          error.message?.includes('Refresh Token Not Found') ||
-          error.message?.includes('refresh_token_not_found')) {
+      if (error.message?.includes('Invalid Refresh Token') ||
+        error.message?.includes('Refresh Token Not Found') ||
+        error.message?.includes('refresh_token_not_found')) {
         console.log('🔄 [SessionAPI] Invalid refresh token detected')
-        return NextResponse.json({ 
-          error: 'Invalid refresh token', 
-          code: 'REFRESH_TOKEN_INVALID' 
+        return NextResponse.json({
+          error: 'Invalid refresh token',
+          code: 'REFRESH_TOKEN_INVALID'
         }, { status: 401 })
       }
-      
+
       return NextResponse.json({ error: error.message }, { status: 401 })
     }
 
@@ -49,7 +58,7 @@ export async function GET(request: Request) {
 
     // Store in cache
     sessionCache.set(cacheKey, { user, timestamp: Date.now() })
-    
+
     // Clean old cache entries (keep last 100)
     if (sessionCache.size > 100) {
       const entries = Array.from(sessionCache.entries())

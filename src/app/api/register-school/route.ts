@@ -8,15 +8,15 @@ export async function POST(request: NextRequest) {
     // Debug: Check Supabase connection
     console.log('🔍 Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
     console.log('🔍 Service key exists:', !!process.env.SUPABASE_SERVICE_ROLE_KEY)
-    
+
     // Debug: Test if tables are accessible
     const { data: testQuery, error: testError } = await supabaseAdmin
       .from('schools')
       .select('id')
       .limit(1)
-    
+
     console.log('🔍 Test query result:', { success: !testError, error: testError?.message })
-    
+
     const {
       schoolName,
       address,
@@ -58,43 +58,51 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Send verification email via SendGrid
+    // Send professional verification email via TurboSMTP
     try {
       const verificationUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/verify?token=${authData.user.id}&type=email`
-      
-      const emailResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/send-verification-email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email: adminEmail,
-          firstName: adminFirstName,
-          verificationUrl
-        })
+
+      // Import the email template generator
+      const { generateSchoolVerificationEmail } = await import('@/lib/email/templates/school-verification')
+      const { sendEmail } = await import('@/lib/email/smtp')
+
+      // Generate professional email content
+      const { html, text } = generateSchoolVerificationEmail({
+        schoolName,
+        schoolCode,
+        adminFirstName,
+        adminLastName,
+        verificationUrl
       })
-      
-      if (emailResponse.ok) {
-        console.log('✅ Verification email sent via SendGrid to:', adminEmail)
-      } else {
-        console.error('❌ Failed to send verification email:', adminEmail)
-      }
+
+      // Send via Turbo SMTP with admin@catalystwells.in as sender
+      await sendEmail({
+        to: adminEmail,
+        subject: 'Welcome to Catalyst Wells - Verify Your School Account',
+        html,
+        text,
+        from: `"Catalyst Wells" <admin@catalystwells.in>`
+      })
+
+      console.log('✅ Professional verification email sent via Turbo SMTP to:', adminEmail)
     } catch (emailError) {
-      console.error('Error sending verification email:', emailError)
+      console.error('❌ Error sending verification email:', emailError)
       // Don't fail registration if email sending fails
     }
 
     // Lookup affiliate by referral code (if provided)
     let affiliateId: string | null = null
-    
+
     if (referralCode) {
       console.log('🔍 Looking up affiliate with referral code:', referralCode)
-      
+
       const { data: affiliateData, error: affiliateError } = await supabaseAdmin
         .from('affiliates')
         .select('id, name, status')
         .eq('referral_code', referralCode)
         .eq('status', 'active') // Only active affiliates
         .single()
-      
+
       if (affiliateError) {
         console.warn('⚠️ Affiliate lookup failed:', affiliateError.message)
         // Don't fail registration if affiliate code is invalid - just log it
@@ -107,13 +115,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Create school record using admin client to bypass RLS
-    console.log('📝 Attempting to insert school:', { 
-      schoolName, 
-      schoolCode, 
+    console.log('📝 Attempting to insert school:', {
+      schoolName,
+      schoolCode,
       adminId: authData.user.id,
       referredBy: affiliateId || 'none'
     })
-    
+
     // Build school record - only include referred_by_affiliate_id if affiliate was found
     const schoolRecord: Record<string, any> = {
       name: schoolName,
@@ -123,12 +131,12 @@ export async function POST(request: NextRequest) {
       admin_id: authData.user.id,
       school_code: schoolCode,
     }
-    
+
     // Only add affiliate ID if it exists (prevents schema errors if column doesn't exist)
     if (affiliateId) {
       schoolRecord.referred_by_affiliate_id = affiliateId
     }
-    
+
     const { data: schoolData, error: schoolError } = await supabaseAdmin
       .from('schools')
       .insert(schoolRecord)
@@ -147,12 +155,12 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
-    
+
     console.log('✅ School created successfully:', schoolData.id)
 
     // Create admin profile using admin client to bypass RLS
     console.log('📝 Attempting to insert profile:', { userId: authData.user.id, schoolId: schoolData.id })
-    
+
     const { data: profileData, error: profileError } = await supabaseAdmin
       .from('profiles')
       .insert({
@@ -181,7 +189,7 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
-    
+
     console.log('✅ Profile created successfully:', profileData.id)
 
     // Create school_details record with basic information

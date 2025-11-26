@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { sendEmail } from '@/lib/email/smtp'
+import { generatePasswordResetEmail } from '@/lib/email/templates'
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,81 +23,76 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if user exists
-    const { data: users, error: getUserError } = await supabaseAdmin.auth.admin.listUsers()
-    
-    if (getUserError) {
-      console.error('Error fetching users:', getUserError)
-      return NextResponse.json(
-        { message: 'Failed to process request' },
-        { status: 500 }
-      )
-    }
+    // Normalize email
+    const normalizedEmail = email.toLowerCase().trim()
+    console.log(`🔍 [Reset Password] Processing request for: ${normalizedEmail}`)
 
-    const user = users.users.find(u => u.email === email)
-    
-    if (!user) {
-      // For security, we don't reveal if the email exists or not
-      // Always return success to prevent email enumeration attacks
-      return NextResponse.json({ 
-        message: 'If an account with that email exists, we\'ve sent password reset instructions.'
-      })
-    }
-
-    // Generate password reset link
+    // Generate password reset link directly
+    // This handles user lookup internally and avoids pagination issues with listUsers()
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: 'recovery',
-      email: email,
+      email: normalizedEmail,
       options: {
         redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/reset-password-confirm`
       }
     })
 
     if (error) {
-      console.error('Password reset error:', error)
-      return NextResponse.json(
-        { message: 'Failed to send reset email. Please try again.' },
-        { status: 500 }
-      )
+      console.warn(`⚠️ [Reset Password] Failed to generate link (User likely not found): ${error.message}`)
+      // Return success to prevent email enumeration
+      return NextResponse.json({
+        message: 'If an account with that email exists, we\'ve sent password reset instructions.'
+      })
     }
 
-    // Send password reset email via Supabase Edge Function
+    // User exists if we got here
+    const user = data.user
+
+    if (!user) {
+      console.error('❌ [Reset Password] Link generated but no user data returned')
+      return NextResponse.json({
+        message: 'If an account with that email exists, we\'ve sent password reset instructions.'
+      })
+    }
+
+    console.log(`✅ [Reset Password] User found via generateLink: ${user.id}`)
+
+    // Send password reset email via TurboSMTP
     console.log('📨 Preparing to send password reset email...')
     try {
       const resetUrl = data.properties?.action_link || ''
       const firstName = user.user_metadata?.first_name || user.email?.split('@')[0] || 'User'
       const userRole = user.user_metadata?.role || 'student' // Default to student if role not set
-      
-      console.log('📧 Email details:', { email, firstName, role: userRole, hasResetUrl: !!resetUrl })
-      
-      // Call Supabase Edge Function with role-specific template
-      const { data: emailData, error: emailError } = await supabaseAdmin.functions.invoke('send-email', {
-        body: { 
-          type: 'password-reset',
-          to: email,
-          name: firstName,
-          role: userRole,
-          url: resetUrl
-        }
+
+      console.log('📧 Email details:', { email: normalizedEmail, firstName, role: userRole, hasResetUrl: !!resetUrl })
+
+      // Generate professional email template
+      const emailHtml = generatePasswordResetEmail({
+        url: resetUrl,
+        name: firstName,
+        role: userRole
       })
-      
-      if (!emailError && emailData?.success) {
-        console.log('✅ Password reset email sent to:', email)
-      } else {
-        console.error('❌ Failed to send password reset email:', emailError || emailData?.error)
-        // Don't fail the request if email fails - the link was still generated
-      }
+
+      // Send email via TurboSMTP
+      await sendEmail({
+        to: normalizedEmail,
+        subject: 'Reset Your Password - CatalystWells',
+        html: emailHtml,
+        from: '"CatalystWells Accounts" <accounts@catalystwells.in>'
+      })
+
+      console.log('✅ Password reset email sent to:', normalizedEmail)
     } catch (emailError) {
       console.error('❌ Error sending password reset email:', emailError)
       // Don't fail the request if email sending fails
     }
-    
+
     // Log the reset link for development (remove in production)
     if (process.env.NODE_ENV === 'development') {
       console.log('🔗 Password reset link (DEV ONLY):', data.properties?.action_link)
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: 'If an account with that email exists, we\'ve sent password reset instructions.'
     })
   } catch (error) {

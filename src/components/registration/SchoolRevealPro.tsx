@@ -137,7 +137,7 @@ export default function SchoolRevealPro({
       // Stage 1: Initial load with slower progress (3s)
       await new Promise(resolve => setTimeout(resolve, 500))
       setStage(1)
-      
+
       // Slower progress animation
       const progressInterval = setInterval(() => {
         setProgress(prev => {
@@ -148,29 +148,29 @@ export default function SchoolRevealPro({
           return prev + 1 // Slower increment (was 2)
         })
       }, 25) // Slower interval for smoother animation
-      
+
       // Stage 2: Icon sequence - Let each icon breathe (3s)
       await new Promise(resolve => setTimeout(resolve, 3000))
       setStage(2)
-      
+
       // Stage 3: Welcome reveal - Hold longer (2s)
       await new Promise(resolve => setTimeout(resolve, 2500))
       setStage(3)
-      
+
       // Stage 4: Details card - Let user read (1.5s)
       await new Promise(resolve => setTimeout(resolve, 1800))
       setStage(4)
-      
+
       // Stage 5: Actions - Final breathe (1s)
       await new Promise(resolve => setTimeout(resolve, 1200))
       setStage(5)
-      
+
       // Trigger confetti
       if (!prefersReducedMotion) {
         triggerEnterpriseConfetti()
       }
     }
-    
+
     runAnimation()
   }, [prefersReducedMotion])
 
@@ -208,14 +208,14 @@ export default function SchoolRevealPro({
   }
 
   const iconVariants = [
-    { icon: Shield, label: 'Enterprise Security', color: 'from-blue-400 to-cyan-400', delay: 0 },
-    { icon: TrendingUp, label: 'Scalable Architecture', color: 'from-purple-400 to-pink-400', delay: 0.4 },
-    { icon: Award, label: 'Institutional Excellence', color: 'from-amber-400 to-orange-400', delay: 0.8 },
-    { icon: Sparkle, label: 'Advanced Analytics', color: 'from-emerald-400 to-teal-400', delay: 1.2 }
+    { icon: Shield, label: 'Secure Platform', color: 'from-blue-400 to-cyan-400', delay: 0 },
+    { icon: TrendingUp, label: 'Student Analytics', color: 'from-purple-400 to-pink-400', delay: 0.4 },
+    { icon: Award, label: 'Achievement Tracking', color: 'from-amber-400 to-orange-400', delay: 0.8 },
+    { icon: Sparkle, label: 'AI-Powered Insights', color: 'from-emerald-400 to-teal-400', delay: 1.2 }
   ]
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className="min-h-screen w-full relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950"
     >
@@ -272,40 +272,23 @@ export default function SchoolRevealPro({
               transition={{ duration: 0.5 }}
               className="text-center max-w-md w-full"
             >
-              {/* Hexagon logo animation */}
+              {/* Logo image */}
               <motion.div className="relative w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-6 sm:mb-8">
-                <svg viewBox="0 0 100 100" className="w-full h-full">
-                  <defs>
-                    <linearGradient id="hexGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#667eea" />
-                      <stop offset="100%" stopColor="#764ba2" />
-                    </linearGradient>
-                  </defs>
-                  <motion.polygon
-                    points="50 5, 90 27.5, 90 72.5, 50 95, 10 72.5, 10 27.5"
-                    fill="none"
-                    stroke="url(#hexGradient)"
-                    strokeWidth="2"
-                    initial={{ pathLength: 0, rotate: 0 }}
-                    animate={{ 
-                      pathLength: [0, 1, 1],
-                      rotate: 360,
-                    }}
-                    transition={{
-                      pathLength: { duration: 2, ease: "easeInOut" },
-                      rotate: { duration: 3, repeat: Infinity, ease: "linear" }
-                    }}
-                  />
-                  <motion.circle
-                    cx="50"
-                    cy="50"
-                    r="15"
-                    fill="url(#hexGradient)"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: [0, 1.2, 1] }}
-                    transition={{ duration: 0.6, delay: 0.5 }}
-                  />
-                </svg>
+                <motion.img
+                  src="/catalyst-logo.png"
+                  alt="Catalyst Logo"
+                  className="w-full h-full object-contain rounded-2xl"
+                  initial={{ opacity: 0, scale: 0.8, rotate: -180 }}
+                  animate={{
+                    opacity: 1,
+                    scale: 1,
+                    rotate: 0,
+                  }}
+                  transition={{
+                    duration: 1.5,
+                    ease: "easeOut"
+                  }}
+                />
               </motion.div>
 
               <motion.h2
@@ -315,7 +298,7 @@ export default function SchoolRevealPro({
                 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-3 sm:mb-4 px-2 tracking-tight"
                 style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
               >
-                Provisioning Enterprise Platform
+                Setting Up Your School Platform
               </motion.h2>
 
               {/* Progress bar */}
@@ -326,14 +309,14 @@ export default function SchoolRevealPro({
                   transition={{ duration: 0.3 }}
                 />
               </div>
-              
+
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="text-slate-400 text-xs sm:text-sm px-2 font-medium"
                 style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
               >
-                Configuring institutional infrastructure and security protocols...
+                Preparing student wellbeing tools, analytics dashboard, and admin portal...
               </motion.p>
             </motion.div>
           )}
@@ -351,8 +334,8 @@ export default function SchoolRevealPro({
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, y: 50, rotate: -180 }}
-                  animate={{ 
-                    opacity: 1, 
+                  animate={{
+                    opacity: 1,
                     y: 0,
                     rotate: 0,
                   }}
@@ -376,7 +359,7 @@ export default function SchoolRevealPro({
                   >
                     {item.label}
                   </motion.p>
-                  
+
                   {/* Connecting line */}
                   {index < iconVariants.length - 1 && (
                     <motion.div
@@ -400,8 +383,10 @@ export default function SchoolRevealPro({
               transition={{ duration: 0.6, type: "spring" }}
               className="text-center mb-6 sm:mb-8 md:mb-12 px-4"
             >
-              <motion.div
-                className="inline-flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 mb-4 sm:mb-6 relative"
+              <motion.img
+                src="/catalyst-logo.png"
+                alt="Catalyst Logo"
+                className="w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 mb-4 sm:mb-6 object-contain drop-shadow-2xl rounded-2xl"
                 animate={{
                   rotateY: [0, 360],
                 }}
@@ -409,13 +394,8 @@ export default function SchoolRevealPro({
                   duration: 2,
                   ease: "easeInOut"
                 }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl sm:rounded-3xl blur-xl opacity-50 animate-pulse" />
-                <div className="relative bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-2xl">
-                  <Building2 className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 text-white" />
-                </div>
-              </motion.div>
-              
+              />
+
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -423,9 +403,9 @@ export default function SchoolRevealPro({
                 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-3 sm:mb-4 leading-tight tracking-tight"
                 style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
               >
-                Enterprise Platform Activated
+                Welcome to Catalyst!
               </motion.h1>
-              
+
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -433,7 +413,7 @@ export default function SchoolRevealPro({
                 className="text-lg sm:text-xl md:text-2xl text-slate-300 font-medium tracking-wide"
                 style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
               >
-                Your institutional ecosystem is now operational
+                Your school is ready for digital transformation
               </motion.p>
             </motion.div>
           )}
@@ -450,7 +430,7 @@ export default function SchoolRevealPro({
               <div className="relative group">
                 {/* Animated border */}
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-2xl opacity-75 group-hover:opacity-100 blur transition duration-1000 group-hover:duration-200 animate-tilt" />
-                
+
                 <div className="relative bg-slate-900/90 backdrop-blur-xl rounded-xl sm:rounded-2xl p-5 sm:p-6 md:p-8 border border-slate-800 shadow-2xl">
                   {/* Shimmer effect */}
                   <motion.div
@@ -468,12 +448,12 @@ export default function SchoolRevealPro({
                       ease: "linear"
                     }}
                   />
-                  
+
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-4 sm:mb-5 md:mb-6">
                       <h3 className="text-base sm:text-lg md:text-xl font-bold text-white flex items-center gap-2 tracking-tight" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                         <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full animate-pulse" />
-                        Enterprise Credentials
+                        School Access Details
                       </h3>
                       <div className="flex gap-2">
                         <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
@@ -481,15 +461,15 @@ export default function SchoolRevealPro({
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="space-y-3 sm:space-y-4 md:space-y-5">
                       <div className="bg-slate-800/50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-700/50">
                         <p className="text-[10px] sm:text-xs text-slate-400 mb-1.5 sm:mb-2 uppercase tracking-widest font-semibold" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Organization Name</p>
                         <p className="text-sm sm:text-base md:text-lg font-bold text-white break-words tracking-tight" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{schoolName}</p>
                       </div>
-                      
+
                       <div className="bg-slate-800/50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-700/50">
-                        <p className="text-[10px] sm:text-xs text-slate-400 mb-1.5 sm:mb-2 uppercase tracking-widest font-semibold" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Enterprise Access Code</p>
+                        <p className="text-[10px] sm:text-xs text-slate-400 mb-1.5 sm:mb-2 uppercase tracking-widest font-semibold" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>School Access Code</p>
                         <div className="flex items-center gap-2 sm:gap-3">
                           <code className="text-base sm:text-lg md:text-xl font-mono font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 tracking-wider break-all flex-1">
                             {schoolId}
@@ -508,7 +488,7 @@ export default function SchoolRevealPro({
                           </motion.button>
                         </div>
                       </div>
-                      
+
                       <div className="bg-slate-800/50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-700/50">
                         <p className="text-[10px] sm:text-xs text-slate-400 mb-1.5 sm:mb-2 uppercase tracking-widest font-semibold" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Geographical Region</p>
                         <p className="text-sm sm:text-base md:text-lg font-semibold text-slate-200 break-words tracking-tight" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{location}</p>
@@ -539,33 +519,33 @@ export default function SchoolRevealPro({
                       <Mail className="w-8 h-8 text-white" />
                     </div>
                   </div>
-                  
+
                   {/* Verification Text */}
                   <div className="space-y-2">
                     <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                       Email Verification Required
                     </h3>
                     <p className="text-slate-300 text-sm sm:text-base max-w-md font-medium" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                      A verification message has been dispatched to your registered institutional email address. 
+                      A verification message has been dispatched to your registered institutional email address.
                       Please authenticate your account by accessing the secure verification link.
                     </p>
                   </div>
-                  
+
                   {/* Important Notice */}
                   <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 w-full">
                     <div className="flex items-start gap-2">
                       <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
                       <div className="text-left">
                         <p className="text-amber-300 text-xs sm:text-sm font-semibold tracking-wide" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                          Critical: Authentication Verification Mandatory
+                          Important: Email Verification Required
                         </p>
                         <p className="text-amber-200/70 text-xs mt-1 font-medium" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                          Email authentication must be completed before accessing your enterprise dashboard.
+                          Verify your email to access your dashboard and start inviting teachers and students.
                         </p>
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Sign In Button */}
                   <motion.button
                     whileHover={{ scale: 1.02 }}
@@ -575,14 +555,14 @@ export default function SchoolRevealPro({
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                     <span className="relative z-10 flex items-center justify-center gap-2 font-semibold tracking-wide" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                      Access Enterprise Portal
+                      Go to Admin Dashboard
                       <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </span>
                   </motion.button>
-                  
+
                   {/* Help Text */}
                   <p className="text-slate-400 text-xs mt-4 font-medium" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                    Email not received? Verify spam filters or contact enterprise support services.
+                    Email not received? Check your spam folder or contact support at support@catalystwells.in
                   </p>
                 </div>
               </div>

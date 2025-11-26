@@ -3,23 +3,24 @@ import { createClient } from '@supabase/supabase-js';
 import { authenticateStudent, isAuthError } from '@/lib/auth/api-auth';
 
 export async function GET(request: NextRequest) {
+  // No rate limiting for wallet transactions GET (read-only)
   try {
     const auth = await authenticateStudent(request);
-    
+
     if (isAuthError(auth)) {
       if (auth.status === 401) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
-      
+
       if (auth.status === 403) {
         return NextResponse.json({ error: 'Student access required' }, { status: 403 });
       }
-      
+
       return NextResponse.json({ error: auth.error || 'Authentication failed' }, { status: auth.status });
     }
-    
+
     const { userId } = auth;
-    
+
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '20', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
     const { data: transactions, error: txError } = await supabaseAdmin
       .from('wallet_transactions')
       .select('*')
-      .or(`from_wallet_id.eq.${wallet.id},to_wallet_id.eq.${wallet.id}`)
+      .or(`from_wallet_id.eq.${wallet.id}, to_wallet_id.eq.${wallet.id} `)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
 
     // Remove duplicates and format transactions
     const uniqueTransactions = new Map();
-    
+
     (transactions || []).forEach(tx => {
       // Use transaction ID as unique key to prevent duplicates
       if (!uniqueTransactions.has(tx.id)) {
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
         const isSent = tx.from_wallet_id === wallet.id;
         const isReceived = tx.to_wallet_id === wallet.id;
         const isSelfTransfer = tx.from_wallet_id === tx.to_wallet_id;
-        
+
         uniqueTransactions.set(tx.id, {
           id: tx.id,
           transactionHash: tx.transaction_hash,

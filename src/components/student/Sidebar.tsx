@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
+import { VerificationBadge } from '@/components/ui/verification-badge'
 import { useAppDispatch } from '@/lib/redux/hooks'
 import { signOut } from '@/lib/redux/slices/authSlice'
 import {
@@ -260,9 +261,12 @@ export function Sidebar({ activeTab, onTabChange, profile }: SidebarProps) {
                 }}
                 className="flex-1 min-w-0"
               >
-                <p className="font-semibold text-slate-900 text-sm truncate">
-                  {profile?.first_name} {profile?.last_name}
-                </p>
+                <div className="flex items-center gap-1.5">
+                  <p className="font-semibold text-slate-900 text-sm truncate">
+                    {profile?.first_name} {profile?.last_name}
+                  </p>
+                  <VerificationBadge size="sm" showText={false} />
+                </div>
                 <p className="text-xs text-slate-500 truncate">
                   {profile?.school?.name || 'Catalyst Wells'}
                 </p>

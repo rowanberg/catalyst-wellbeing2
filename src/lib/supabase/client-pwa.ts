@@ -27,7 +27,7 @@ const customAuthStorage = {
     }
     return null;
   },
-  
+
   setItem: async (key: string, value: string): Promise<void> => {
     if (key === 'supabase.auth.token') {
       try {
@@ -38,7 +38,7 @@ const customAuthStorage = {
       }
     }
   },
-  
+
   removeItem: async (key: string): Promise<void> => {
     if (key === 'supabase.auth.token') {
       await AuthStorage.clearSessions();
@@ -76,44 +76,49 @@ export const supabase: SupabaseClient = createClient(
  */
 if (typeof window !== 'undefined') {
   const originalFetch = window.fetch;
-  window.fetch = async function(...args: any[]): Promise<Response> {
+  window.fetch = async function (...args: any[]): Promise<Response> {
     const [resource, config] = args;
     const url = typeof resource === 'string' ? resource : resource.url;
-  
-  // Check if this is a Supabase API call
-  if (url && url.includes(supabaseUrl)) {
-    // Check online status
-    if (!navigator.onLine) {
-      // Handle offline scenario
-      const method = config?.method || 'GET';
-      
-      if (method !== 'GET') {
-        // Queue non-GET requests for later sync
-        await OfflineQueue.add({
-          url,
-          method,
-          headers: config?.headers,
-          body: config?.body
-        });
-        
-        // Return fake success response
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            offline: true,
-            message: 'Action queued for sync' 
-          }),
-          { 
-            status: 200,
-            headers: { 'Content-Type': 'application/json' }
-          }
-        );
+
+    // Check if this is a Supabase API call
+    if (url && url.includes(supabaseUrl)) {
+      // Check online status
+      if (!navigator.onLine) {
+        // Handle offline scenario
+        const method = config?.method || 'GET';
+
+        if (method !== 'GET') {
+          // Queue non-GET requests for later sync
+          await OfflineQueue.add({
+            url,
+            method,
+            headers: config?.headers,
+            body: config?.body
+          });
+
+          // Return fake success response
+          return new Response(
+            JSON.stringify({
+              success: true,
+              offline: true,
+              message: 'Action queued for sync'
+            }),
+            {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' }
+            }
+          );
+        }
       }
     }
-  }
-  
-  // Proceed with original fetch
-  return originalFetch.apply(this, args as any);
+
+    // Proceed with original fetch
+    try {
+      return await originalFetch.apply(this, args as any);
+    } catch (error) {
+      console.error(`[PWA] Fetch failed for ${url}:`, error);
+      throw error;
+    }
   };
 }
 
@@ -130,9 +135,9 @@ export const AuthHelpers = {
         email,
         password
       });
-      
+
       if (error) throw error;
-      
+
       // Session automatically saved to IndexedDB via custom storage
       return { data, error: null };
     } catch (error) {
@@ -140,7 +145,7 @@ export const AuthHelpers = {
       return { data: null, error };
     }
   },
-  
+
   /**
    * Sign up with email/password
    */
@@ -153,16 +158,16 @@ export const AuthHelpers = {
           data: metadata
         }
       });
-      
+
       if (error) throw error;
-      
+
       return { data, error: null };
     } catch (error) {
       console.error('[Auth] Sign up failed:', error);
       return { data: null, error };
     }
   },
-  
+
   /**
    * Sign out
    */
@@ -170,17 +175,17 @@ export const AuthHelpers = {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      
+
       // Clear IndexedDB session
       await AuthStorage.clearSessions();
-      
+
       return { error: null };
     } catch (error) {
       console.error('[Auth] Sign out failed:', error);
       return { error };
     }
   },
-  
+
   /**
    * Get current session with auto-refresh
    */
@@ -188,41 +193,41 @@ export const AuthHelpers = {
     try {
       // First check IndexedDB for persistent session
       const storedSession = await AuthStorage.getSession();
-      
+
       if (storedSession) {
         // Validate and refresh if needed
         const { data: { session }, error } = await supabase.auth.getSession();
-        
+
         if (error) {
           // Try to refresh using stored refresh token
           const { data, error: refreshError } = await supabase.auth.refreshSession({
             refresh_token: storedSession.refresh_token
           });
-          
+
           if (!refreshError && data.session) {
             await AuthStorage.saveSession(data.session);
             return data.session;
           }
         }
-        
+
         return session;
       }
-      
+
       // No stored session, check Supabase
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (session) {
         // Save to IndexedDB for persistence
         await AuthStorage.saveSession(session);
       }
-      
+
       return session;
     } catch (error) {
       console.error('[Auth] Failed to get session:', error);
       return null;
     }
   },
-  
+
   /**
    * Get current user
    */
@@ -230,7 +235,7 @@ export const AuthHelpers = {
     const session = await this.getSession();
     return session?.user || null;
   },
-  
+
   /**
    * Check if user is authenticated
    */
@@ -238,20 +243,20 @@ export const AuthHelpers = {
     const session = await this.getSession();
     return !!session;
   },
-  
+
   /**
    * Refresh session
    */
   async refreshSession() {
     try {
       const { data: { session }, error } = await supabase.auth.refreshSession();
-      
+
       if (error) throw error;
-      
+
       if (session) {
         await AuthStorage.saveSession(session);
       }
-      
+
       return { session, error: null };
     } catch (error) {
       console.error('[Auth] Failed to refresh session:', error);
@@ -267,11 +272,11 @@ if (typeof window !== 'undefined') {
   // Auth state change listener
   supabase.auth.onAuthStateChange(async (event, session) => {
     console.log('[Auth] State changed:', event);
-    
+
     if (session) {
       // Save session to IndexedDB on any auth change
       await AuthStorage.saveSession(session);
-      
+
       // Process offline queue when authenticated
       if (typeof navigator !== 'undefined' && navigator.onLine) {
         await OfflineQueue.processQueue();
@@ -288,7 +293,7 @@ if (typeof window !== 'undefined') {
     console.log('[Network] Back online, processing offline queue...');
     await OfflineQueue.processQueue();
   });
-  
+
   window.addEventListener('offline', () => {
     console.log('[Network] Gone offline, switching to offline mode');
   });
