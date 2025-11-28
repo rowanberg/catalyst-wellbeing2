@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { sendAbsenceNotification } from '@/lib/notifications/fcm'
 
 // Create Supabase client with cookie-based auth
 async function createSupabaseServerClient() {
   const cookieStore = await cookies()
-  
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -21,10 +22,10 @@ async function createSupabaseServerClient() {
 
 // Simple GET for testing
 export async function GET(request: NextRequest) {
-  return NextResponse.json({ 
-    message: 'Attendance GET working', 
+  return NextResponse.json({
+    message: 'Attendance GET working',
     timestamp: new Date().toISOString(),
-    url: request.url 
+    url: request.url
   })
 }
 
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
   try {
     const startTime = Date.now()
     const supabase = await createSupabaseServerClient()
-    
+
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
@@ -94,29 +95,56 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       console.error('❌ Attendance upsert error:', insertError)
-      return NextResponse.json({ 
-        error: 'Failed to save attendance', 
-        details: insertError.message 
+      return NextResponse.json({
+        error: 'Failed to save attendance',
+        details: insertError.message
       }, { status: 500 })
     }
 
     const totalMs = Date.now() - startTime
     const dbMs = Date.now() - dbStart
-    console.log(`✅ Attendance saved: ${attendanceRecords.length} records in ${totalMs}ms (DB ${dbMs}ms)`)    
-    
-    return NextResponse.json({ 
+    console.log(`✅ Attendance saved: ${attendanceRecords.length} records in ${totalMs}ms (DB ${dbMs}ms)`)
+
+    // Send absence notifications asynchronously (don't wait for completion)
+    const absentStudents = attendanceRecords.filter(record => record.status === 'absent')
+
+    if (absentStudents.length > 0) {
+      console.log(`📬 Sending absence notifications to ${absentStudents.length} student(s)`)
+
+      // Send notifications in the background without blocking the response
+      Promise.all(
+        absentStudents.map(async (record) => {
+          try {
+            const sent = await sendAbsenceNotification(record.student_id, date)
+            if (sent) {
+              console.log(`✅ Absence notification sent to student ${record.student_id}`)
+            } else {
+              console.log(`⚠️ Could not send absence notification to student ${record.student_id}`)
+            }
+          } catch (error) {
+            console.error(`❌ Error sending absence notification to ${record.student_id}:`, error)
+          }
+        })
+      ).catch(error => {
+        console.error('❌ Error in batch notification sending:', error)
+      })
+    }
+
+    return NextResponse.json({
       success: true,
       message: 'Attendance saved successfully',
       count: attendanceRecords.length,
+      absentCount: absentStudents.length,
+      notificationsSent: absentStudents.length > 0,
       duration_ms: totalMs,
       db_duration_ms: dbMs,
       timestamp: new Date().toISOString()
     })
-    
+
   } catch (error: any) {
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Internal server error',
-      details: error.message 
+      details: error.message
     }, { status: 500 })
   }
 }

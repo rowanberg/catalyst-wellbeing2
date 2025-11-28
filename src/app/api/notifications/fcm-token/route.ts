@@ -25,7 +25,8 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Upsert FCM token
+        // Upsert FCM token - use composite key (user_id, device_type) for conflict resolution
+        // This ensures one token per device type per user
         const { error: upsertError } = await supabase
             .from('fcm_tokens')
             .upsert({
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
                 is_active: true,
                 last_used_at: new Date().toISOString(),
             }, {
-                onConflict: 'token',
+                onConflict: 'user_id,device_type',
                 ignoreDuplicates: false,
             });
 
@@ -47,17 +48,6 @@ export async function POST(request: NextRequest) {
                 { error: 'Failed to save token', details: upsertError.message },
                 { status: 500 }
             );
-        }
-
-        // Try to deactivate old tokens (if RPC exists)
-        try {
-            await supabase.rpc('deactivate_old_fcm_tokens', {
-                p_user_id: user.id,
-                p_current_token: token,
-            });
-        } catch (rpcError) {
-            console.warn('RPC deactivate_old_fcm_tokens not available or failed:', rpcError);
-            // Continue anyway - not critical
         }
 
         return NextResponse.json(

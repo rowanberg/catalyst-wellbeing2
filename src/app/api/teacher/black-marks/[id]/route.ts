@@ -9,7 +9,7 @@ export async function GET(
   try {
     const { id } = await params
     const cookieStore = await cookies()
-    
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -26,7 +26,7 @@ export async function GET(
         },
       }
     )
-    
+
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -74,7 +74,7 @@ export async function PUT(
   try {
     const { id } = await params
     const cookieStore = await cookies()
-    
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -91,7 +91,7 @@ export async function PUT(
         },
       }
     )
-    
+
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -104,8 +104,8 @@ export async function PUT(
       .single()
 
     if (profileError || !profile) {
-      return NextResponse.json({ 
-        error: 'Profile not found. Please contact administrator.' 
+      return NextResponse.json({
+        error: 'Profile not found. Please contact administrator.'
       }, { status: 403 })
     }
 
@@ -116,6 +116,8 @@ export async function PUT(
     const body = await request.json()
     const { status, resolutionNotes } = body
 
+    console.log('🔍 Auth context - user.id:', user.id, 'profile.id:', profile.id, 'profile.role:', profile.role)
+
     // First verify the black mark exists and belongs to this school
     const { data: existingMark, error: fetchError } = await supabase
       .from('black_marks')
@@ -124,8 +126,11 @@ export async function PUT(
       .single()
 
     if (fetchError || !existingMark) {
+      console.error('❌ Black mark not found:', fetchError)
       return NextResponse.json({ error: 'Black mark not found' }, { status: 404 })
     }
+
+    console.log('📋 Existing mark - teacher_id:', existingMark.teacher_id, 'school_id:', existingMark.school_id)
 
     // Check if teacher has permission (created it or is admin)
     if (existingMark.school_id !== profile.school_id) {
@@ -133,6 +138,7 @@ export async function PUT(
     }
 
     if (profile.role !== 'admin' && existingMark.teacher_id !== user.id) {
+      console.log('❌ Permission denied - teacher_id mismatch:', existingMark.teacher_id, '!==', user.id)
       return NextResponse.json({ error: 'Access denied - not your black mark' }, { status: 403 })
     }
 
@@ -144,16 +150,35 @@ export async function PUT(
       updateData.resolved_at = new Date().toISOString()
     }
 
-    const { data: blackMark, error: updateError } = await supabase
+    console.log('📝 Updating black mark:', id, 'with data:', updateData)
+
+    const { data: blackMarks, error: updateError } = await supabase
       .from('black_marks')
       .update(updateData)
       .eq('id', id)
       .select()
-      .single()
 
     if (updateError) {
-      return NextResponse.json({ error: 'Failed to update black mark' }, { status: 500 })
+      console.error('❌ Update error:', updateError)
+      return NextResponse.json({
+        error: 'Failed to update black mark',
+        details: updateError.message,
+        code: updateError.code
+      }, { status: 500 })
     }
+
+    // Check if any rows were updated (RLS might have blocked it)
+    if (!blackMarks || blackMarks.length === 0) {
+      console.error('❌ No rows updated - RLS blocked or record not found')
+      return NextResponse.json({
+        error: 'Failed to update black mark - permission denied or record not found',
+        hint: 'Row Level Security may be blocking this update'
+      }, { status: 403 })
+    }
+
+    const blackMark = blackMarks[0]
+    console.log('✅ Black mark updated successfully:', blackMark)
+
 
     return NextResponse.json({
       message: 'Black mark updated successfully',
@@ -161,7 +186,11 @@ export async function PUT(
     })
 
   } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('❌ PUT /api/teacher/black-marks/[id] error:', error)
+    return NextResponse.json({
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 })
   }
 }
 

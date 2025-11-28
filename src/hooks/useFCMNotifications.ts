@@ -46,7 +46,10 @@ export function useFCMNotifications(userId: string | undefined) {
 
     // Save FCM token via API
     const saveFCMToken = useCallback(async (token: string) => {
-        if (!userId) return false
+        if (!userId) {
+            console.warn('⚠️ Cannot save FCM token: userId is missing')
+            return false
+        }
 
         try {
             // Get device info
@@ -56,6 +59,8 @@ export function useFCMNotifications(userId: string | undefined) {
                 language: navigator.language,
                 deviceName: `${navigator.platform} - ${navigator.userAgent.split(' ')[0]}`,
             }
+
+            console.log('📤 Saving FCM token to server...')
 
             const response = await fetch('/api/notifications/fcm-token', {
                 method: 'POST',
@@ -70,18 +75,35 @@ export function useFCMNotifications(userId: string | undefined) {
             })
 
             if (!response.ok) {
-                const error = await response.json()
-                console.error('Error saving FCM token:', error)
-                throw new Error(error.error || 'Failed to save token')
+                let errorDetails: { error: string; details: string | null } = { error: 'Unknown error', details: null }
+                try {
+                    errorDetails = await response.json()
+                } catch (parseError) {
+                    errorDetails = {
+                        error: `HTTP ${response.status}: ${response.statusText}`,
+                        details: 'Could not parse error response'
+                    }
+                }
+
+                console.error('❌ Error saving FCM token:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    error: errorDetails
+                })
+                throw new Error(errorDetails.error || 'Failed to save token')
             }
 
             console.log('✅ FCM token saved successfully')
             return true
         } catch (error) {
-            console.error('Failed to save FCM token:', error)
+            console.error('❌ Failed to save FCM token:', {
+                message: error instanceof Error ? error.message : 'Unknown error',
+                error: error
+            })
             return false
         }
     }, [userId])
+
 
     // Request notification permission and get FCM token
     const requestNotificationPermission = useCallback(async () => {

@@ -60,11 +60,19 @@ export async function POST(request: NextRequest) {
     // Send password reset email via TurboSMTP
     console.log('📨 Preparing to send password reset email...')
     try {
+      // Use Supabase's action_link directly - it contains the proper hashed token
+      // Don't try to reconstruct it as that breaks the PKCE flow
       const resetUrl = data.properties?.action_link || ''
+
       const firstName = user.user_metadata?.first_name || user.email?.split('@')[0] || 'User'
       const userRole = user.user_metadata?.role || 'student' // Default to student if role not set
 
-      console.log('📧 Email details:', { email: normalizedEmail, firstName, role: userRole, hasResetUrl: !!resetUrl })
+      console.log('📧 Email details:', {
+        email: normalizedEmail,
+        firstName,
+        role: userRole,
+        hasResetUrl: !!resetUrl
+      })
 
       // Generate professional email template
       const emailHtml = generatePasswordResetEmail({

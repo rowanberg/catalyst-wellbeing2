@@ -3,29 +3,29 @@
 import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ClientWrapper } from '@/components/providers/ClientWrapper'
-import { 
-  Users, 
-  Search, 
-  Filter, 
-  Grid3X3, 
-  List, 
-  Settings, 
-  Edit, 
-  MoreVertical, 
-  Trash2, 
-  Eye, 
-  Download, 
-  Upload, 
-  UserCheck, 
-  UserX, 
+import {
+  Users,
+  Search,
+  Filter,
+  Grid3X3,
+  List,
+  Settings,
+  Edit,
+  MoreVertical,
+  Trash2,
+  Eye,
+  Download,
+  Upload,
+  UserCheck,
+  UserX,
   Mail,
-  School, 
-  Phone, 
-  MapPin, 
-  Calendar, 
-  Award, 
-  TrendingUp, 
-  Activity, 
+  School,
+  Phone,
+  MapPin,
+  Calendar,
+  Award,
+  TrendingUp,
+  Activity,
   Target,
   Layers,
   BarChart3,
@@ -127,7 +127,7 @@ function UserManagementContent() {
   const [showAddUser, setShowAddUser] = useState(false)
   const [showBulkActions, setShowBulkActions] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
-  
+
   // Debug logging for tab state
   useEffect(() => {
     console.log('🔍 Admin Users - Current active tab:', activeTab)
@@ -144,52 +144,62 @@ function UserManagementContent() {
   const [messageRecipient, setMessageRecipient] = useState<User | null>(null)
   const [messageContent, setMessageContent] = useState('')
   const [messageSubject, setMessageSubject] = useState('')
-  
+
   // Export configuration state
   const [showExportConfigDialog, setShowExportConfigDialog] = useState(false)
   const [exportFields, setExportFields] = useState<string[]>([
     'user_id', 'first_name', 'last_name', 'email', 'role', 'created_at'
   ])
   const [exportRoleFilter, setExportRoleFilter] = useState<string>('all')
-  
+
   // Available export fields with categories
   const availableExportFields = [
-    { category: 'Basic Info', fields: [
-      { key: 'user_id', label: 'User ID' },
-      { key: 'first_name', label: 'First Name' },
-      { key: 'last_name', label: 'Last Name' },
-      { key: 'full_name', label: 'Full Name' },
-      { key: 'email', label: 'Email' },
-      { key: 'role', label: 'Role' },
-    ]},
-    { category: 'Contact Info', fields: [
-      { key: 'phone', label: 'Phone' },
-      { key: 'address', label: 'Address' },
-      { key: 'emergency_contact', label: 'Emergency Contact' },
-      { key: 'date_of_birth', label: 'Date of Birth' },
-    ]},
-    { category: 'Academic Info', fields: [
-      { key: 'school_id', label: 'School ID' },
-      { key: 'grade_level', label: 'Grade Level' },
-      { key: 'class_name', label: 'Class Name' },
-    ]},
-    { category: 'Gamification', fields: [
-      { key: 'current_streak', label: 'Current Streak' },
-      { key: 'total_xp', label: 'Total XP' },
-      { key: 'level', label: 'Level' },
-      { key: 'gems', label: 'Gems' },
-    ]},
-    { category: 'Account Info', fields: [
-      { key: 'status', label: 'Status' },
-      { key: 'avatar_url', label: 'Avatar URL' },
-      { key: 'created_at', label: 'Created At' },
-      { key: 'updated_at', label: 'Updated At' },
-      { key: 'last_sign_in_at', label: 'Last Sign In' },
-      { key: 'account_age', label: 'Account Age (Days)' },
-      { key: 'engagement_score', label: 'Engagement Score' },
-    ]}
+    {
+      category: 'Basic Info', fields: [
+        { key: 'user_id', label: 'User ID' },
+        { key: 'first_name', label: 'First Name' },
+        { key: 'last_name', label: 'Last Name' },
+        { key: 'full_name', label: 'Full Name' },
+        { key: 'email', label: 'Email' },
+        { key: 'role', label: 'Role' },
+      ]
+    },
+    {
+      category: 'Contact Info', fields: [
+        { key: 'phone', label: 'Phone' },
+        { key: 'address', label: 'Address' },
+        { key: 'emergency_contact', label: 'Emergency Contact' },
+        { key: 'date_of_birth', label: 'Date of Birth' },
+      ]
+    },
+    {
+      category: 'Academic Info', fields: [
+        { key: 'school_id', label: 'School ID' },
+        { key: 'grade_level', label: 'Grade Level' },
+        { key: 'class_name', label: 'Class Name' },
+      ]
+    },
+    {
+      category: 'Gamification', fields: [
+        { key: 'current_streak', label: 'Current Streak' },
+        { key: 'total_xp', label: 'Total XP' },
+        { key: 'level', label: 'Level' },
+        { key: 'gems', label: 'Gems' },
+      ]
+    },
+    {
+      category: 'Account Info', fields: [
+        { key: 'status', label: 'Status' },
+        { key: 'avatar_url', label: 'Avatar URL' },
+        { key: 'created_at', label: 'Created At' },
+        { key: 'updated_at', label: 'Updated At' },
+        { key: 'last_sign_in_at', label: 'Last Sign In' },
+        { key: 'account_age', label: 'Account Age (Days)' },
+        { key: 'engagement_score', label: 'Engagement Score' },
+      ]
+    }
   ]
-  
+
   // Deletion state
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [userToDelete, setUserToDelete] = useState<User | null>(null)
@@ -216,7 +226,7 @@ function UserManagementContent() {
   })
 
   // Toast notification state
-  const [toasts, setToasts] = useState<Array<{id: string, message: string, type: 'success' | 'error'}>>([])
+  const [toasts, setToasts] = useState<Array<{ id: string, message: string, type: 'success' | 'error' }>>([])
 
   // Helper functions
   const addToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -251,7 +261,7 @@ function UserManagementContent() {
       if (!profile) {
         return
       }
-      
+
       if (profile.role !== 'admin') {
         handleError('Access denied. Admin role required.')
         return
@@ -260,7 +270,7 @@ function UserManagementContent() {
       try {
         setLoading(true)
         setError(null)
-        
+
         const schoolId = profile.school_id
         if (!schoolId) {
           throw new Error('School ID not found for admin user')
@@ -272,11 +282,11 @@ function UserManagementContent() {
           limit: pagination.limit.toString(),
           offset: '0'
         })
-        
+
         if (roleFilter && roleFilter !== 'all') {
           params.append('role', roleFilter)
         }
-        
+
         if (debouncedSearch) {
           params.append('search', debouncedSearch)
         }
@@ -287,12 +297,12 @@ function UserManagementContent() {
             'Content-Type': 'application/json',
           },
         })
-        
+
         if (!response.ok) {
           const errorData = await response.json()
           throw new Error(errorData.error || 'Failed to fetch users')
         }
-        
+
         const data = await response.json()
         const fetchedUsers = data.users || []
         setUsers(fetchedUsers)
@@ -302,34 +312,34 @@ function UserManagementContent() {
           offset: data.pagination.offset,
           hasMore: data.pagination.hasMore
         })
-        
+
         // Calculate comprehensive stats from real data
         const currentDate = new Date()
         const lastMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
-        
-        const newThisMonth = fetchedUsers.filter((user: User) => 
+
+        const newThisMonth = fetchedUsers.filter((user: User) =>
           user.created_at && new Date(user.created_at) >= lastMonth
         ).length
-        
+
         const studentUsers = fetchedUsers.filter((u: User) => u.role === 'student')
         const totalXP = studentUsers.reduce((sum: number, user: User) => sum + (user.xp || 0), 0)
         const averageXP = studentUsers.length > 0 ? Math.round(totalXP / studentUsers.length) : 0
-        
+
         const activeUsers = fetchedUsers.filter((u: User) => {
           // Consider users active if they've been created recently or have XP
           const dateToCheck = u.updated_at || u.created_at
-          const recentlyActive = dateToCheck ? 
+          const recentlyActive = dateToCheck ?
             new Date(dateToCheck) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) : false
           return recentlyActive || (u.xp && u.xp > 0)
         })
-        
-        const engagementRate = fetchedUsers.length > 0 ? 
+
+        const engagementRate = fetchedUsers.length > 0 ?
           Math.round((activeUsers.length / fetchedUsers.length) * 100) : 0
-        
+
         const topPerformers = studentUsers
           .sort((a: User, b: User) => (b.xp || 0) - (a.xp || 0))
           .slice(0, 5).length
-        
+
         const userStats = {
           total: fetchedUsers.length,
           students: fetchedUsers.filter((u: User) => u.role === 'student').length,
@@ -344,7 +354,7 @@ function UserManagementContent() {
           topPerformers,
         }
         setStats(userStats)
-        
+
       } catch (err: any) {
         console.error('Error fetching users:', err)
         setError(err instanceof Error ? err.message : 'Failed to fetch users')
@@ -377,27 +387,27 @@ function UserManagementContent() {
 
     try {
       setLoadingMore(true)
-      
+
       const params = new URLSearchParams({
         schoolId: profile.school_id,
         limit: pagination.limit.toString(),
         offset: (pagination.offset + pagination.limit).toString()
       })
-      
+
       if (roleFilter && roleFilter !== 'all') {
         params.append('role', roleFilter)
       }
-      
+
       if (debouncedSearch) {
         params.append('search', debouncedSearch)
       }
 
       const response = await fetch(`/api/admin/users?${params}`)
       if (!response.ok) throw new Error('Failed to load more users')
-      
+
       const data = await response.json()
       const moreUsers = data.users || []
-      
+
       setUsers(prev => [...prev, ...moreUsers])
       setPagination({
         total: data.pagination.total,
@@ -456,7 +466,7 @@ function UserManagementContent() {
 
   const organizeUsers = () => {
     const organized: { [key: string]: User[] } = {}
-    
+
     filteredUsers.forEach(user => {
       let key = ''
       switch (organizationMode) {
@@ -470,7 +480,7 @@ function UserManagementContent() {
           key = user.role.charAt(0).toUpperCase() + user.role.slice(1) + 's'
           break
       }
-      
+
       if (!organized[key]) {
         organized[key] = []
       }
@@ -506,8 +516,8 @@ function UserManagementContent() {
   }
 
   const toggleUserSelection = (userId: string) => {
-    setSelectedUsers(prev => 
-      prev.includes(userId) 
+    setSelectedUsers(prev =>
+      prev.includes(userId)
         ? prev.filter(id => id !== userId)
         : [...prev, userId]
     )
@@ -585,16 +595,16 @@ function UserManagementContent() {
     setUserToDelete(user)
     setShowDeleteModal(true)
   }
-  
+
   const confirmDeleteUser = async () => {
     if (!userToDelete) return
-    
+
     setIsDeletingUser(true)
     setDeletionProgress({ stage: 'Initializing', progress: 0, details: 'Starting deletion process...' })
-    
+
     try {
       const userId = userToDelete.user_id || userToDelete.id
-      
+
       // Simulate progress stages
       const stages = [
         { stage: 'Verifying', progress: 10, details: 'Verifying user permissions...' },
@@ -608,13 +618,13 @@ function UserManagementContent() {
         { stage: 'Communications', progress: 90, details: 'Deleting messages and notifications...' },
         { stage: 'Finalizing', progress: 95, details: 'Removing user profile...' },
       ]
-      
+
       // Animate through stages
       for (const stage of stages) {
         setDeletionProgress(stage)
         await new Promise(resolve => setTimeout(resolve, 300))
       }
-      
+
       // Make actual API call
       const response = await fetch(`/api/admin/users/${userId}`, {
         method: 'DELETE',
@@ -622,27 +632,27 @@ function UserManagementContent() {
           'Content-Type': 'application/json',
         },
       })
-      
+
       const data = await response.json()
-      
+
       if (!response.ok) {
         throw new Error(data.error || data.details || 'Failed to delete user')
       }
-      
+
       setDeletionProgress({ stage: 'Complete', progress: 100, details: 'User deleted successfully!' })
-      
+
       // Wait a moment to show completion
       await new Promise(resolve => setTimeout(resolve, 1000))
-      
+
       // Remove user from local state
       setUsers(prev => prev.filter(u => u.id !== userToDelete.id))
       setFilteredUsers(prev => prev.filter(u => u.id !== userToDelete.id))
-      
+
       addToast(
         `${userToDelete.first_name} ${userToDelete.last_name} and all associated data has been permanently deleted`,
         'success'
       )
-      
+
       // Show deletion summary if available
       if (data.deletionProgress) {
         const summary = Object.entries(data.deletionProgress)
@@ -651,20 +661,20 @@ function UserManagementContent() {
           .join(', ')
         console.log('Deletion summary:', summary)
       }
-      
+
       // Close modal
       setShowDeleteModal(false)
       setUserToDelete(null)
-      
+
     } catch (error: any) {
       console.error('Delete error:', error)
-      setDeletionProgress({ 
-        stage: 'Error', 
-        progress: 0, 
+      setDeletionProgress({
+        stage: 'Error',
+        progress: 0,
         details: error.message || 'Failed to delete user'
       })
       addToast(error.message || 'Failed to delete user', 'error')
-      
+
       // Keep modal open on error so user can see what happened
       await new Promise(resolve => setTimeout(resolve, 2000))
     } finally {
@@ -696,7 +706,7 @@ function UserManagementContent() {
         apiUrl: `/api/admin/users/${selectedUser.id}`,
         willTryUserId: selectedUser.user_id ? `/api/admin/users/${selectedUser.user_id}` : 'N/A'
       })
-      
+
       // Try with user_id first if available, fallback to id
       const userId = selectedUser.user_id || selectedUser.id
       const response = await fetch(`/api/admin/users/${userId}`, {
@@ -712,20 +722,20 @@ function UserManagementContent() {
 
       if (response.ok) {
         // Update the user in the local state with the returned data
-        setUsers(prev => prev.map(u => 
+        setUsers(prev => prev.map(u =>
           u.id === selectedUser.id ? { ...u, ...data.user } : u
         ))
-        
+
         // Update filtered users as well
-        setFilteredUsers(prev => prev.map(u => 
+        setFilteredUsers(prev => prev.map(u =>
           u.id === selectedUser.id ? { ...u, ...data.user } : u
         ))
-        
+
         // Clear edit form and close modal
         setEditFormData({})
         setShowEditModal(false)
         setSelectedUser(null)
-        
+
         addToast('User information saved successfully!', 'success')
       } else {
         console.error('Save failed:', data)
@@ -772,8 +782,8 @@ function UserManagementContent() {
 
   // Helper to toggle export field
   const toggleExportField = (fieldKey: string) => {
-    setExportFields(prev => 
-      prev.includes(fieldKey) 
+    setExportFields(prev =>
+      prev.includes(fieldKey)
         ? prev.filter(f => f !== fieldKey)
         : [...prev, fieldKey]
     )
@@ -783,10 +793,10 @@ function UserManagementContent() {
   const selectCategoryFields = (category: string) => {
     const categoryData = availableExportFields.find(c => c.category === category)
     if (!categoryData) return
-    
+
     const categoryFieldKeys = categoryData.fields.map(f => f.key)
     const allSelected = categoryFieldKeys.every(key => exportFields.includes(key))
-    
+
     if (allSelected) {
       // Deselect all in category
       setExportFields(prevFields => prevFields.filter(f => !categoryFieldKeys.includes(f)))
@@ -820,13 +830,13 @@ function UserManagementContent() {
     const updatedDate = user.updated_at ? new Date(user.updated_at) : null
     const lastSignIn = user.last_sign_in_at ? new Date(user.last_sign_in_at) : null
     const accountAge = createdDate ? Math.floor((Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24)) : 0
-    
+
     // Calculate engagement score
     let engagementScore = 0
     if (user.total_xp) engagementScore += Math.min(user.total_xp / 1000, 50)
     if (user.current_streak) engagementScore += Math.min(user.current_streak * 2, 30)
     if (lastSignIn && Date.now() - lastSignIn.getTime() < 7 * 24 * 60 * 60 * 1000) engagementScore += 20
-    
+
     const fieldMap: Record<string, string | number> = {
       user_id: user.user_id || user.id || 'N/A',
       first_name: user.first_name || '',
@@ -853,7 +863,7 @@ function UserManagementContent() {
       account_age: accountAge,
       engagement_score: Math.round(engagementScore)
     }
-    
+
     return fieldMap[fieldKey] ?? ''
   }
 
@@ -864,7 +874,7 @@ function UserManagementContent() {
         addToast('Please select at least one field to export.', 'error')
         return
       }
-      
+
       if (!profile?.school_id) {
         addToast('School ID not found. Cannot export users.', 'error')
         return
@@ -872,18 +882,18 @@ function UserManagementContent() {
 
       // Show loading state
       addToast('Fetching all users for export...', 'success')
-      
+
       // Fetch ALL users from API (no pagination limit)
       const params = new URLSearchParams({
         schoolId: profile.school_id,
         limit: '10000', // Large limit to get all users
         offset: '0'
       })
-      
+
       if (exportRoleFilter && exportRoleFilter !== 'all') {
         params.append('role', exportRoleFilter)
       }
-      
+
       if (debouncedSearch) {
         params.append('search', debouncedSearch)
       }
@@ -892,10 +902,10 @@ function UserManagementContent() {
       if (!response.ok) {
         throw new Error('Failed to fetch users for export')
       }
-      
+
       const data = await response.json()
       const allUsers = data.users || []
-      
+
       if (allUsers.length === 0) {
         addToast('No users found to export. Try adjusting your filters.', 'error')
         return
@@ -912,7 +922,7 @@ function UserManagementContent() {
       // Create CSV content with proper escaping
       const csvContent = [
         headers.join(','),
-        ...csvData.map(row => 
+        ...csvData.map(row =>
           row.map(field => {
             // Escape commas, quotes, and newlines in field values
             const stringField = String(field)
@@ -931,31 +941,31 @@ function UserManagementContent() {
       // Create and download the file
       const blob = new Blob([csvWithBOM], { type: 'text/csv;charset=utf-8;' })
       const link = document.createElement('a')
-      
+
       if (link.download !== undefined) {
         const url = URL.createObjectURL(blob)
         link.setAttribute('href', url)
-        
+
         // Generate descriptive filename with filters and timestamp
         const now = new Date()
         const dateStr = now.toISOString().split('T')[0] // YYYY-MM-DD format
         const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-') // HH-MM-SS format
-        
+
         let filterStr = ''
         if (roleFilter !== 'all') filterStr += `_${roleFilter}`
         if (gradeFilter !== 'all') filterStr += `_grade${gradeFilter}`
         if (classFilter !== 'all') filterStr += `_${classFilter.replace(/\s+/g, '')}`
         if (searchTerm) filterStr += '_filtered'
-        
+
         const filename = `Wells_Users_Export_${dateStr}_${timeStr}${filterStr}.csv`
         link.setAttribute('download', filename)
-        
+
         link.style.visibility = 'hidden'
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
         URL.revokeObjectURL(url)
-        
+
         // Show success message with export details
         addToast(`Successfully exported ${allUsers.length} users to ${filename}`, 'success')
       } else {
@@ -1008,7 +1018,7 @@ function UserManagementContent() {
             <School className="w-6 h-6 text-blue-600" />
           </motion.div>
         </motion.div>
-        
+
         <motion.div
           className="flex items-center justify-center space-x-1"
           initial={{ opacity: 0 }}
@@ -1028,7 +1038,7 @@ function UserManagementContent() {
             />
           ))}
         </motion.div>
-        
+
         <motion.p
           className="text-gray-600 mt-4 font-medium"
           initial={{ opacity: 0 }}
@@ -1067,7 +1077,7 @@ function UserManagementContent() {
       <div className="sticky top-0 z-40 backdrop-blur-xl bg-white/80 border-b border-white/20 shadow-lg">
         <div className="px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               className="flex items-center space-x-3 sm:space-x-4"
@@ -1082,13 +1092,13 @@ function UserManagementContent() {
                 <p className="text-sm sm:text-base text-gray-600 mt-1 hidden sm:block">Manage students, teachers, parents, and administrators</p>
               </div>
             </motion.div>
-            
+
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <div className="flex items-center gap-2 order-2 sm:order-1">
-                <Button 
+                <Button
                   onClick={() => setShowExportConfigDialog(true)}
-                  variant="outline" 
-                  size="sm" 
+                  variant="outline"
+                  size="sm"
                   className="bg-white/50 backdrop-blur-sm hover:bg-white/80 text-xs sm:text-sm hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 hover:border-green-300"
                   title="Configure and export filtered users to CSV"
                 >
@@ -1212,26 +1222,26 @@ function UserManagementContent() {
           setActiveTab(value)
         }} className="w-full">
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 bg-white border border-gray-200 shadow-lg rounded-xl p-2 mb-6 h-auto min-h-[48px] sm:min-h-[56px]">
-            <TabsTrigger 
-              value="overview" 
+            <TabsTrigger
+              value="overview"
               className="text-xs sm:text-sm font-medium px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-all duration-200 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-blue-600 flex items-center justify-center whitespace-nowrap"
             >
               Overview
             </TabsTrigger>
-            <TabsTrigger 
-              value="users" 
+            <TabsTrigger
+              value="users"
               className="text-xs sm:text-sm font-medium px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-all duration-200 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-blue-600 flex items-center justify-center whitespace-nowrap"
             >
               Users
             </TabsTrigger>
-            <TabsTrigger 
-              value="analytics" 
+            <TabsTrigger
+              value="analytics"
               className="text-xs sm:text-sm font-medium px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-all duration-200 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-blue-600 flex items-center justify-center whitespace-nowrap"
             >
               Analytics
             </TabsTrigger>
-            <TabsTrigger 
-              value="settings" 
+            <TabsTrigger
+              value="settings"
               className="text-xs sm:text-sm font-medium px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg transition-all duration-200 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md hover:bg-gray-100 data-[state=active]:hover:bg-blue-600 flex items-center justify-center whitespace-nowrap"
             >
               Settings
@@ -1251,24 +1261,24 @@ function UserManagementContent() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="h-20 sm:h-24 flex-col space-y-1 sm:space-y-2 bg-white/50 hover:bg-white/80 border-2 hover:border-blue-300"
                     onClick={() => setShowAddUser(true)}
                   >
                     <UserPlus className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
                     <span className="font-medium text-xs sm:text-sm">Add User</span>
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="h-20 sm:h-24 flex-col space-y-1 sm:space-y-2 bg-white/50 hover:bg-white/80 border-2 hover:border-green-300"
                     onClick={() => setBulkAction('message')}
                   >
                     <Send className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
                     <span className="font-medium text-xs sm:text-sm">Message</span>
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="h-20 sm:h-24 flex-col space-y-1 sm:space-y-2 bg-white/50 hover:bg-white/80 border-2 hover:border-purple-300"
                     onClick={() => setShowExportConfigDialog(true)}
                     title="Configure and export user data to CSV report"
@@ -1276,8 +1286,8 @@ function UserManagementContent() {
                     <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
                     <span className="font-medium text-xs sm:text-sm">Export CSV</span>
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="h-20 sm:h-24 flex-col space-y-1 sm:space-y-2 bg-white/50 hover:bg-white/80 border-2 hover:border-orange-300"
                     onClick={() => setActiveTab('settings')}
                   >
@@ -1296,8 +1306,8 @@ function UserManagementContent() {
               <CardContent className="p-3 sm:p-4 lg:p-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-4 gap-2">
                   <h3 className="text-base sm:text-lg font-semibold">Search & Filter</h3>
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="sm"
                     onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
                     className="self-start sm:self-auto text-xs sm:text-sm"
@@ -1307,7 +1317,7 @@ function UserManagementContent() {
                     {showAdvancedFilters ? <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4 ml-1 sm:ml-2" /> : <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1 sm:ml-2" />}
                   </Button>
                 </div>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 mb-3 sm:mb-4">
                   <div className="relative sm:col-span-2 lg:col-span-1">
                     <Search className="absolute left-3 top-2.5 sm:top-3 h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
@@ -1458,9 +1468,9 @@ function UserManagementContent() {
                             </div>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   className="h-8 w-8 p-0"
                                 >
                                   <MoreVertical className="w-4 h-4" />
@@ -1493,7 +1503,7 @@ function UserManagementContent() {
                                     </>
                                   )}
                                 </DropdownMenuItem>
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                   onClick={() => handleDeleteUser(user)}
                                   className="text-red-600 focus:text-red-600"
                                 >
@@ -1507,8 +1517,8 @@ function UserManagementContent() {
                             <div>
                               <span className="text-gray-500 text-xs">Role:</span>
                               <div className="mt-1">
-                                <Badge 
-                                  variant="outline" 
+                                <Badge
+                                  variant="outline"
                                   className={`text-xs ${getRoleBadgeColor(user.role)}`}
                                 >
                                   {user.role}
@@ -1542,7 +1552,7 @@ function UserManagementContent() {
                       ))}
                     </div>
                   </div>
-                  
+
                   {/* Desktop Table Layout */}
                   <div className="hidden sm:block overflow-x-auto">
                     <table className="w-full min-w-[700px]">
@@ -1626,8 +1636,8 @@ function UserManagementContent() {
                               </div>
                             </td>
                             <td className="px-3 lg:px-4 py-3 lg:py-4 whitespace-nowrap">
-                              <Badge 
-                                variant="outline" 
+                              <Badge
+                                variant="outline"
                                 className={`text-xs ${getRoleBadgeColor(user.role)}`}
                               >
                                 {user.role}
@@ -1644,27 +1654,27 @@ function UserManagementContent() {
                             </td>
                             <td className="px-3 lg:px-4 py-3 lg:py-4 whitespace-nowrap text-sm font-medium">
                               <div className="flex items-center space-x-1">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   className="h-7 w-7 lg:h-8 lg:w-8 p-0"
                                   onClick={() => handleViewUser(user)}
                                   title="View Details"
                                 >
                                   <Eye className="w-3 h-3" />
                                 </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   className="h-7 w-7 lg:h-8 lg:w-8 p-0 hidden md:flex"
                                   onClick={() => handleMessageUser(user)}
                                   title="Send Message"
                                 >
                                   <MessageCircle className="w-3 h-3" />
                                 </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   className="h-7 w-7 lg:h-8 lg:w-8 p-0"
                                   onClick={() => handleEditUser(user)}
                                   title="Edit User"
@@ -1673,9 +1683,9 @@ function UserManagementContent() {
                                 </Button>
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm" 
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
                                       className="h-7 w-7 lg:h-8 lg:w-8 p-0"
                                       title="More Actions"
                                     >
@@ -1700,7 +1710,7 @@ function UserManagementContent() {
                                         </>
                                       )}
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem 
+                                    <DropdownMenuItem
                                       onClick={() => handleDeleteUser(user)}
                                       className="text-red-600 focus:text-red-600"
                                     >
@@ -1716,7 +1726,7 @@ function UserManagementContent() {
                       </tbody>
                     </table>
                   </div>
-                  
+
                   {/* Load More Button for Table View */}
                   {pagination.hasMore && (
                     <div className="p-4 border-t border-gray-200">
@@ -1770,8 +1780,8 @@ function UserManagementContent() {
                               </h3>
                               <p className="text-xs text-gray-600 truncate">{user.email}</p>
                               <div className="flex flex-wrap items-center gap-1 mt-1 sm:mt-2">
-                                <Badge 
-                                  variant="outline" 
+                                <Badge
+                                  variant="outline"
                                   className={`text-xs ${getRoleBadgeColor(user.role)}`}
                                 >
                                   {user.role}
@@ -1781,9 +1791,9 @@ function UserManagementContent() {
                             </div>
                           </div>
                           <div className="flex items-center space-x-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               className="h-7 w-7 sm:h-8 sm:w-8 p-0 sm:hidden"
                               onClick={() => handleEditUser(user)}
                               title="Edit User"
@@ -1792,9 +1802,9 @@ function UserManagementContent() {
                             </Button>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                                   title="Actions"
                                 >
@@ -1824,7 +1834,7 @@ function UserManagementContent() {
                                     </>
                                   )}
                                 </DropdownMenuItem>
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                   onClick={() => handleDeleteUser(user)}
                                   className="text-red-600 focus:text-red-600"
                                 >
@@ -1835,7 +1845,7 @@ function UserManagementContent() {
                             </DropdownMenu>
                           </div>
                         </div>
-                        
+
                         {/* User Stats - Mobile Optimized */}
                         {user.role === 'student' && (
                           <div className="mt-2 sm:mt-3 lg:mt-4 pt-2 sm:pt-3 lg:pt-4 border-t border-gray-200">
@@ -1846,7 +1856,7 @@ function UserManagementContent() {
                             <Progress value={((user.xp || 0) % 100)} className="mt-1 h-1.5 sm:h-2" />
                           </div>
                         )}
-                        
+
                         {/* Additional Info for Mobile */}
                         {(user.grade_level || user.class_name) && (
                           <div className="mt-2 sm:hidden">
@@ -1858,7 +1868,7 @@ function UserManagementContent() {
                     </Card>
                   </motion.div>
                 ))}
-                
+
                 {/* Load More Button for Grid View */}
                 {viewMode === 'grid' && pagination.hasMore && (
                   <div className="mt-6 flex justify-center">
@@ -2006,6 +2016,174 @@ function UserManagementContent() {
           </TabsContent>
         </Tabs>
 
+        {/* View User Details Modal - Mobile Optimized */}
+        <Dialog open={showViewModal} onOpenChange={setShowViewModal}>
+          <DialogContent className="w-[95vw] max-w-2xl mx-auto max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-lg">User Details</DialogTitle>
+              <DialogDescription className="text-sm">
+                Viewing information for {selectedUser?.first_name} {selectedUser?.last_name}
+              </DialogDescription>
+            </DialogHeader>
+            {selectedUser && (
+              <div className="space-y-4">
+                {/* User Profile Header */}
+                <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border-2 border-blue-200">
+                  <Avatar className="w-16 h-16 ring-4 ring-white shadow-lg">
+                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xl font-bold">
+                      {selectedUser.first_name?.[0]}{selectedUser.last_name?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-lg text-gray-900">
+                      {selectedUser.first_name} {selectedUser.last_name}
+                    </h3>
+                    <p className="text-sm text-gray-600">{selectedUser.email}</p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Badge className={getRoleBadgeColor(selectedUser.role)}>
+                        {selectedUser.role.charAt(0).toUpperCase() + selectedUser.role.slice(1)}
+                      </Badge>
+                      {renderStatusBadge(selectedUser.status || 'active')}
+                    </div>
+                  </div>
+                </div>
+
+                {/* User Information Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Basic Information */}
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wide">Basic Information</h4>
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between p-2 bg-gray-50 rounded">
+                        <span className="text-xs text-gray-600">Email</span>
+                        <span className="text-xs font-medium text-gray-900 text-right">{selectedUser.email}</span>
+                      </div>
+                      {selectedUser.phone && (
+                        <div className="flex items-start justify-between p-2 bg-gray-50 rounded">
+                          <span className="text-xs text-gray-600">Phone</span>
+                          <span className="text-xs font-medium text-gray-900 text-right">{selectedUser.phone}</span>
+                        </div>
+                      )}
+                      {selectedUser.date_of_birth && (
+                        <div className="flex items-start justify-between p-2 bg-gray-50 rounded">
+                          <span className="text-xs text-gray-600">Date of Birth</span>
+                          <span className="text-xs font-medium text-gray-900 text-right">
+                            {new Date(selectedUser.date_of_birth).toLocaleDateString()}
+                          </span>
+                        </div>
+                      )}
+                      {(selectedUser.grade_level || selectedUser.class_name) && (
+                        <div className="flex items-start justify-between p-2 bg-gray-50 rounded">
+                          <span className="text-xs text-gray-600">Grade/Class</span>
+                          <span className="text-xs font-medium text-gray-900 text-right">
+                            {selectedUser.grade_level || selectedUser.class_name}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Academic/Stats Information */}
+                  {selectedUser.role === 'student' && (
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wide">Academic Progress</h4>
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between p-2 bg-blue-50 rounded">
+                          <span className="text-xs text-gray-600">XP Points</span>
+                          <span className="text-xs font-bold text-blue-600">{selectedUser.xp || 0} XP</span>
+                        </div>
+                        <div className="flex items-start justify-between p-2 bg-purple-50 rounded">
+                          <span className="text-xs text-gray-600">Level</span>
+                          <span className="text-xs font-bold text-purple-600">Level {selectedUser.level || 1}</span>
+                        </div>
+                        <div className="flex items-start justify-between p-2 bg-yellow-50 rounded">
+                          <span className="text-xs text-gray-600">Gems</span>
+                          <span className="text-xs font-bold text-yellow-600">{selectedUser.gems || 0} 💎</span>
+                        </div>
+                        {selectedUser.current_streak !== undefined && (
+                          <div className="flex items-start justify-between p-2 bg-orange-50 rounded">
+                            <span className="text-xs text-gray-600">Current Streak</span>
+                            <span className="text-xs font-bold text-orange-600">{selectedUser.current_streak} days 🔥</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Account Information */}
+                  <div className="space-y-3 sm:col-span-2">
+                    <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wide">Account Information</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {selectedUser.created_at && (
+                        <div className="flex items-start justify-between p-2 bg-gray-50 rounded">
+                          <span className="text-xs text-gray-600">Created</span>
+                          <span className="text-xs font-medium text-gray-900 text-right">
+                            {new Date(selectedUser.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      )}
+                      {selectedUser.last_sign_in_at && (
+                        <div className="flex items-start justify-between p-2 bg-gray-50 rounded">
+                          <span className="text-xs text-gray-600">Last Sign In</span>
+                          <span className="text-xs font-medium text-gray-900 text-right">
+                            {new Date(selectedUser.last_sign_in_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      )}
+                      {selectedUser.user_id && (
+                        <div className="flex items-start justify-between p-2 bg-gray-50 rounded sm:col-span-2">
+                          <span className="text-xs text-gray-600">User ID</span>
+                          <span className="text-xs font-mono text-gray-900 text-right truncate ml-2">
+                            {selectedUser.user_id}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Contact Information */}
+                  {(selectedUser.address || selectedUser.emergency_contact) && (
+                    <div className="space-y-3 sm:col-span-2">
+                      <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wide">Contact Information</h4>
+                      <div className="space-y-2">
+                        {selectedUser.address && (
+                          <div className="p-2 bg-gray-50 rounded">
+                            <span className="text-xs text-gray-600 block mb-1">Address</span>
+                            <span className="text-xs font-medium text-gray-900">{selectedUser.address}</span>
+                          </div>
+                        )}
+                        {selectedUser.emergency_contact && (
+                          <div className="p-2 bg-gray-50 rounded">
+                            <span className="text-xs text-gray-600 block mb-1">Emergency Contact</span>
+                            <span className="text-xs font-medium text-gray-900">{selectedUser.emergency_contact}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t">
+                  <Button variant="outline" onClick={() => setShowViewModal(false)} className="text-sm">
+                    Close
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setShowViewModal(false)
+                      handleEditUser(selectedUser)
+                    }}
+                    className="text-sm"
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit User
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
         {/* Message Modal - Mobile Optimized */}
         <Dialog open={showMessageModal} onOpenChange={setShowMessageModal}>
           <DialogContent className="w-[95vw] max-w-md mx-auto">
@@ -2065,7 +2243,7 @@ function UserManagementContent() {
                 <Input
                   id="edit-first-name"
                   value={editFormData.first_name || ''}
-                  onChange={(e) => setEditFormData({...editFormData, first_name: e.target.value})}
+                  onChange={(e) => setEditFormData({ ...editFormData, first_name: e.target.value })}
                   placeholder="First name"
                   className="mt-1 text-sm"
                 />
@@ -2075,7 +2253,7 @@ function UserManagementContent() {
                 <Input
                   id="edit-last-name"
                   value={editFormData.last_name || ''}
-                  onChange={(e) => setEditFormData({...editFormData, last_name: e.target.value})}
+                  onChange={(e) => setEditFormData({ ...editFormData, last_name: e.target.value })}
                   placeholder="Last name"
                   className="mt-1 text-sm"
                 />
@@ -2086,16 +2264,16 @@ function UserManagementContent() {
                   id="edit-email"
                   type="email"
                   value={editFormData.email || ''}
-                  onChange={(e) => setEditFormData({...editFormData, email: e.target.value})}
+                  onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
                   placeholder="Email address"
                   className="mt-1 text-sm"
                 />
               </div>
               <div>
                 <Label htmlFor="edit-role" className="text-sm">Role</Label>
-                <Select 
-                  value={editFormData.role || ''} 
-                  onValueChange={(value) => setEditFormData({...editFormData, role: value})}
+                <Select
+                  value={editFormData.role || ''}
+                  onValueChange={(value) => setEditFormData({ ...editFormData, role: value })}
                 >
                   <SelectTrigger className="mt-1 text-sm">
                     <SelectValue placeholder="Select role" />
@@ -2113,7 +2291,7 @@ function UserManagementContent() {
                 <Input
                   id="edit-phone"
                   value={editFormData.phone || ''}
-                  onChange={(e) => setEditFormData({...editFormData, phone: e.target.value})}
+                  onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
                   placeholder="Phone number"
                   className="mt-1 text-sm"
                 />
@@ -2123,7 +2301,7 @@ function UserManagementContent() {
                 <Input
                   id="edit-grade"
                   value={editFormData.grade_level || ''}
-                  onChange={(e) => setEditFormData({...editFormData, grade_level: e.target.value})}
+                  onChange={(e) => setEditFormData({ ...editFormData, grade_level: e.target.value })}
                   placeholder="Grade level"
                   className="mt-1 text-sm"
                 />
@@ -2133,7 +2311,7 @@ function UserManagementContent() {
                 <Input
                   id="edit-address"
                   value={editFormData.address || ''}
-                  onChange={(e) => setEditFormData({...editFormData, address: e.target.value})}
+                  onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
                   placeholder="Address"
                   className="mt-1 text-sm"
                 />
@@ -2143,7 +2321,7 @@ function UserManagementContent() {
                 <Input
                   id="edit-emergency"
                   value={editFormData.emergency_contact || ''}
-                  onChange={(e) => setEditFormData({...editFormData, emergency_contact: e.target.value})}
+                  onChange={(e) => setEditFormData({ ...editFormData, emergency_contact: e.target.value })}
                   placeholder="Emergency contact"
                   className="mt-1 text-sm"
                 />
@@ -2293,18 +2471,17 @@ function UserManagementContent() {
                         const itemProgress = (index + 1) * 10
                         const isComplete = currentProgress >= itemProgress
                         const isCurrent = currentProgress >= itemProgress - 10 && currentProgress < itemProgress
-                        
+
                         return (
                           <motion.div
                             key={item}
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: index * 0.05 }}
-                            className={`flex items-center gap-2 text-xs py-1 px-2 rounded ${
-                              isComplete ? 'text-green-700 bg-green-50' :
-                              isCurrent ? 'text-blue-700 bg-blue-50' :
-                              'text-gray-500'
-                            }`}
+                            className={`flex items-center gap-2 text-xs py-1 px-2 rounded ${isComplete ? 'text-green-700 bg-green-50' :
+                                isCurrent ? 'text-blue-700 bg-blue-50' :
+                                  'text-gray-500'
+                              }`}
                           >
                             {isComplete ? (
                               <CheckCircle className="w-3.5 h-3.5 text-green-600" />
@@ -2348,17 +2525,17 @@ function UserManagementContent() {
                 {/* Action Buttons */}
                 {!isDeletingUser && (
                   <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-2">
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       onClick={() => {
                         setShowDeleteModal(false)
                         setUserToDelete(null)
-                      }} 
+                      }}
                       className="text-sm"
                     >
                       Cancel
                     </Button>
-                    <Button 
+                    <Button
                       onClick={confirmDeleteUser}
                       className="text-sm bg-red-600 hover:bg-red-700 text-white"
                     >
@@ -2393,11 +2570,10 @@ function UserManagementContent() {
               initial={{ opacity: 0, y: -50, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -50, scale: 0.95 }}
-              className={`px-3 sm:px-4 py-2 sm:py-3 rounded-lg shadow-lg flex items-center justify-between w-full sm:min-w-[300px] sm:max-w-md ${
-                toast.type === 'success' 
-                  ? 'bg-green-500 text-white' 
+              className={`px-3 sm:px-4 py-2 sm:py-3 rounded-lg shadow-lg flex items-center justify-between w-full sm:min-w-[300px] sm:max-w-md ${toast.type === 'success'
+                  ? 'bg-green-500 text-white'
                   : 'bg-red-500 text-white'
-              }`}
+                }`}
             >
               <div className="flex items-center space-x-2 flex-1 min-w-0">
                 {toast.type === 'success' ? (

@@ -1,4 +1,8 @@
 import nodemailer from 'nodemailer'
+import type { Transporter } from 'nodemailer'
+
+// Cache the transporter instance to avoid creating new connections
+let cachedTransporter: Transporter | null = null
 
 // Validate required environment variables
 function validateSMTPConfig() {
@@ -17,8 +21,13 @@ function validateSMTPConfig() {
     }
 }
 
-// Create reusable transporter
+// Create or return cached transporter
 export function createSMTPTransporter() {
+    // Return cached transporter if available
+    if (cachedTransporter) {
+        return cachedTransporter
+    }
+
     validateSMTPConfig()
 
     const config = {
@@ -29,21 +38,26 @@ export function createSMTPTransporter() {
             user: process.env.TURBO_SMTP_USER,
             pass: process.env.TURBO_SMTP_PASS,
         },
+        pool: true, // Use connection pooling for better performance
+        maxConnections: 5, // Allow up to 5 concurrent connections
+        maxMessages: 100, // Reuse connection for up to 100 messages
     }
 
-    console.log('🔌 [SMTP] Creating transporter with:', {
+    console.log('🔌 [SMTP] Creating new transporter with connection pooling:', {
         host: config.host,
         port: config.port,
         secure: config.secure,
         user: config.auth.user,
-        hasPass: !!config.auth.pass
+        hasPass: !!config.auth.pass,
+        pool: config.pool
     })
 
-    return nodemailer.createTransport(config)
+    cachedTransporter = nodemailer.createTransport(config)
+    return cachedTransporter
 }
 
 /**
- * Send email via TurboSMTP
+ * Send email via TurboSMTP (with connection pooling for performance)
  */
 export async function sendEmail(options: {
     to: string
@@ -56,11 +70,13 @@ export async function sendEmail(options: {
 
     const fromAddress = options.from || `"CatalystWells" <${process.env.TURBO_SMTP_FROM}>`
 
-    console.log('📧 [SMTP] Attempting to send email:', {
+    console.log('📧 [SMTP] Sending email (using pooled connection):', {
         to: options.to,
         from: fromAddress,
         subject: options.subject
     })
+
+    const startTime = Date.now()
 
     try {
         const info = await transporter.sendMail({
@@ -71,9 +87,11 @@ export async function sendEmail(options: {
             text: options.text || options.html.replace(/<[^>]*>/g, ''), // Fallback to stripped HTML
         })
 
-        console.log(`✅ [SMTP] Email sent successfully to ${options.to}. MessageID: ${info.messageId}`)
+        const duration = Date.now() - startTime
+        console.log(`✅ [SMTP] Email sent in ${duration}ms to ${options.to}. MessageID: ${info.messageId}`)
     } catch (error: any) {
-        console.error('❌ [SMTP] Failed to send email:', {
+        const duration = Date.now() - startTime
+        console.error(`❌ [SMTP] Failed to send email after ${duration}ms:`, {
             error: error.message,
             code: error.code,
             command: error.command,

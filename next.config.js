@@ -40,6 +40,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'supabase.co',
       },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
     ],
     formats: ['image/webp', 'image/avif'],
     minimumCacheTTL: 604800, // 7 days cache
