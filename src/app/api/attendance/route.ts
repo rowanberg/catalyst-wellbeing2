@@ -82,6 +82,33 @@ export async function POST(request: NextRequest) {
       notes: record.notes || null
     }))
 
+    // Defensive validation: Verify all student_id values exist in profiles table
+    const studentIdsToValidate = attendanceRecords.map(r => r.student_id)
+    const { data: existingProfiles, error: validationError } = await supabase
+      .from('profiles')
+      .select('id')
+      .in('id', studentIdsToValidate)
+
+    if (validationError) {
+      console.error('❌ Error validating student profiles:', validationError)
+      return NextResponse.json({
+        error: 'Failed to validate student profiles',
+        details: validationError.message
+      }, { status: 500 })
+    }
+
+    const existingProfileIds = new Set(existingProfiles?.map(p => p.id) || [])
+    const invalidStudentIds = studentIdsToValidate.filter(id => !existingProfileIds.has(id))
+
+    if (invalidStudentIds.length > 0) {
+      console.error('❌ Invalid student IDs detected:', invalidStudentIds)
+      return NextResponse.json({
+        error: 'Invalid student IDs detected',
+        details: `${invalidStudentIds.length} student(s) do not have valid profiles`,
+        invalid_ids: invalidStudentIds
+      }, { status: 400 })
+    }
+
     const dbStart = Date.now()
 
     // Use upsert to handle updates (UNIQUE constraint on student_id, date).

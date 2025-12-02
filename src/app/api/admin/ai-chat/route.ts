@@ -11,7 +11,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 
 export async function POST(request: NextRequest) {
   const requestStartTime = Date.now()
-  
+
   try {
     const supabase = await createClient()
 
@@ -48,9 +48,45 @@ export async function POST(request: NextRequest) {
       )
     }
 
+
     console.log('✅ User authenticated:', user.id, 'Role:', profile.role, 'School:', profile.school_id)
 
-    const { message, context, stream } = await request.json()
+    const { message, context, stream, confirmationId } = await request.json()
+
+    // Handle confirmation execution (when user approves a tool action)
+    if (confirmationId) {
+      console.log('✅ Received tool confirmation:', confirmationId)
+
+      try {
+        const { mcpClient } = await import('@/lib/mcp-client')
+        await mcpClient.connect()
+
+        // Call MCP server's confirm tool
+        const result = await mcpClient.callTool('confirm', { confirmationId })
+        const resultText = result.content
+          .map((c: any) => c.text)
+          .join('\n')
+
+        let parsedResult: any = {}
+        try {
+          parsedResult = JSON.parse(resultText)
+        } catch {
+          parsedResult = { message: resultText }
+        }
+
+        console.log('? Confirmation executed:', parsedResult)
+
+        return NextResponse.json({
+          response: parsedResult.message || '? Action completed successfully!',
+          success: parsedResult.success !== false
+        })
+      } catch (error: any) {
+        console.error('❌ Confirmation execution failed:', error)
+        return NextResponse.json({
+          response: `❌ Failed to execute confirmed action: ${error.message}`
+        })
+      }
+    }
 
     if (!message) {
       return NextResponse.json(
@@ -66,7 +102,7 @@ export async function POST(request: NextRequest) {
     // Context-Aware Data Fetching for Efficiency
     // ========================================================================
     const emptyResult = { data: [], error: null }
-    
+
     const [
       schoolResult,
       studentCountResult,
@@ -83,7 +119,7 @@ export async function POST(request: NextRequest) {
       // Always fetch
       supabase.from('schools').select('*').eq('id', profile.school_id).single(),
       supabase.from('profiles').select('id, first_name, last_name').eq('school_id', profile.school_id).eq('role', 'student'),
-      
+
       // Performance context
       (context === 'performance' || context === 'general')
         ? supabase.from('assessment_grades').select('score, percentage, letter_grade, student_id, created_at').eq('school_id', profile.school_id).order('created_at', { ascending: false })
@@ -94,7 +130,7 @@ export async function POST(request: NextRequest) {
       (context === 'performance' || context === 'general')
         ? supabase.from('profiles').select('id, first_name, last_name, grade_level, class_name').eq('school_id', profile.school_id).eq('role', 'student')
         : Promise.resolve(emptyResult),
-      
+
       // Operations context
       (context === 'operations' || context === 'general')
         ? supabase.from('attendance').select('date, status, student_id, created_at').eq('school_id', profile.school_id).gte('date', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()).order('date', { ascending: false })
@@ -105,7 +141,7 @@ export async function POST(request: NextRequest) {
       (context === 'operations' || context === 'general')
         ? supabase.from('profiles').select('id, first_name, last_name').eq('school_id', profile.school_id).eq('role', 'parent')
         : Promise.resolve(emptyResult),
-      
+
       // Wellbeing context
       (context === 'wellbeing' || context === 'general')
         ? supabase.from('mood_tracking').select('mood, user_id, created_at').gte('created_at', new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString()).order('created_at', { ascending: false })
@@ -113,20 +149,20 @@ export async function POST(request: NextRequest) {
       (context === 'wellbeing' || context === 'general')
         ? supabase.from('student_achievements').select('student_id, current_progress, completed_at, xp_earned, gems_earned').eq('is_completed', true).gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()).order('created_at', { ascending: false }).limit(100)
         : Promise.resolve(emptyResult),
-      
+
       // Always fetch recent announcements
       supabase.from('event_announcements').select('title, content, announcement_type, created_at').order('created_at', { ascending: false }).limit(10)
     ])
-    
+
     // Use the count result for basic student info if not fetching details
-    const studentsResult = (context === 'performance' || context === 'general') 
-      ? studentsDetailResult 
+    const studentsResult = (context === 'performance' || context === 'general')
+      ? studentsDetailResult
       : studentCountResult
 
     // ========================================================================
     // Process Data & Debug Errors
     // ========================================================================
-    
+
     // Log any query errors
     if (schoolResult?.error) console.error('❌ School query error:', schoolResult.error)
     if (studentsResult?.error) console.error('❌ Students query error:', studentsResult.error)
@@ -138,7 +174,7 @@ export async function POST(request: NextRequest) {
     if (assessmentsResult?.error) console.error('❌ Assessments query error:', assessmentsResult.error)
     if (announcementsResult?.error) console.error('❌ Announcements query error:', announcementsResult.error)
     if (achievementsResult?.error) console.error('❌ Achievements query error:', achievementsResult.error)
-    
+
     const school = schoolResult?.data || null
     const students = studentsResult?.data || []
     const teachers = teachersResult?.data || []
@@ -149,7 +185,7 @@ export async function POST(request: NextRequest) {
     const assessments = assessmentsResult?.data || []
     const announcements = announcementsResult?.data || []
     const achievements = achievementsResult?.data || []
-    
+
     // Debug: Log data counts
     console.log('📊 Data fetched for context "' + context + '":', {
       school: school?.name || 'Not found',
@@ -167,12 +203,12 @@ export async function POST(request: NextRequest) {
     // ========================================================================
     // Calculate Comprehensive Metrics
     // ========================================================================
-    
+
     // Basic counts
     const totalStudents = students.length
     const totalTeachers = teachers.length
     const totalParents = parents.length
-    
+
     // Class/Section breakdown
     const classSections = new Map<string, Set<string>>()
     students.forEach((s: any) => {
@@ -185,7 +221,7 @@ export async function POST(request: NextRequest) {
         }
       }
     })
-    
+
     const classBreakdown = Array.from(classSections.entries()).map(([grade, sections]) => ({
       grade,
       sections: Array.from(sections).sort(),
@@ -195,7 +231,7 @@ export async function POST(request: NextRequest) {
       const gradeB = parseInt(b.grade, 10) || 0
       return gradeA - gradeB
     })
-    
+
     // Gender distribution - not available in profiles schema
     const genderStats = {
       male: 0,
@@ -203,16 +239,16 @@ export async function POST(request: NextRequest) {
       other: 0,
       unspecified: totalStudents
     }
-    
+
     // Grade analytics (simplified - without subject breakdown for now)
     const allGradePercentages = grades
       .filter((g: any) => g.percentage !== null && g.percentage !== undefined)
       .map((g: any) => parseFloat(g.percentage))
-    
+
     const gradesBySubject: Record<string, number[]> = {
       'All Subjects': allGradePercentages
     }
-    
+
     const subjectAverages = Object.entries(gradesBySubject).map(([subject, grades]) => {
       const avg = grades.reduce((a, b) => a + b, 0) / grades.length
       const sorted = [...grades].sort((a, b) => a - b)
@@ -233,7 +269,7 @@ export async function POST(request: NextRequest) {
       absent: attendance.filter(a => a.status === 'absent').length,
       late: attendance.filter(a => a.status === 'late').length,
       total: attendance.length,
-      rate: attendance.length > 0 
+      rate: attendance.length > 0
         ? ((attendance.filter(a => a.status === 'present').length / attendance.length) * 100).toFixed(1)
         : 0
     }
@@ -243,15 +279,15 @@ export async function POST(request: NextRequest) {
     const moodTrends: Record<string, { thisWeek: number; lastWeek: number }> = {}
     const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
-    
+
     wellbeing.forEach(w => {
       if (w.mood) {
         moodCounts[w.mood] = (moodCounts[w.mood] || 0) + 1
-        
+
         if (!moodTrends[w.mood]) {
           moodTrends[w.mood] = { thisWeek: 0, lastWeek: 0 }
         }
-        
+
         const moodDate = new Date(w.created_at)
         if (moodDate >= oneWeekAgo) {
           moodTrends[w.mood].thisWeek++
@@ -260,7 +296,7 @@ export async function POST(request: NextRequest) {
         }
       }
     })
-    
+
     const wellbeingScore = wellbeing.length > 0
       ? ((moodCounts['happy'] || 0) * 1 + (moodCounts['neutral'] || 0) * 0.5 + (moodCounts['sad'] || 0) * 0) / wellbeing.length * 100
       : 0
@@ -269,12 +305,12 @@ export async function POST(request: NextRequest) {
     const now = new Date()
     const upcomingAssessments = assessments.filter((a: any) => a.due_date && new Date(a.due_date) > now)
     const completedAssessments = grades.length // Use actual grades count
-    
+
     const assessmentStats = {
       total: assessments.length,
       completed: completedAssessments,
       upcoming: upcomingAssessments.length,
-      averageScore: allGradePercentages.length > 0 
+      averageScore: allGradePercentages.length > 0
         ? allGradePercentages.reduce((sum: number, p: number) => sum + p, 0) / allGradePercentages.length
         : 0,
       byType: assessments.reduce((acc: Record<string, number>, a: any) => {
@@ -282,7 +318,7 @@ export async function POST(request: NextRequest) {
         return acc
       }, {} as Record<string, number>)
     }
-    
+
     // Achievement analytics
     const achievementStats = {
       total: achievements.length,
@@ -295,13 +331,29 @@ export async function POST(request: NextRequest) {
         }, new Map<string, number>())
       ).sort((a, b) => (b[1] as number) - (a[1] as number)).slice(0, 5)
     }
-    
+
     // Recent announcements summary
     const recentAnnouncements = announcements.slice(0, 5).map((a: any) => ({
       title: a.title,
       type: a.announcement_type || 'general',
       date: new Date(a.created_at).toLocaleDateString()
     }))
+
+    // ========================================================================
+    // Initialize MCP Client and Load Tools
+    // ========================================================================
+    console.log('🔧 Initializing MCP client...')
+    const { mcpClient } = await import('@/lib/mcp-client')
+    let geminiFunctions: any[] = []
+
+    try {
+      await mcpClient.connect()
+      const tools = await mcpClient.listTools()
+      geminiFunctions = mcpClient.toGeminiFunctions()
+      console.log(`✅ MCP: ${tools.length} tools available:`, tools.map(t => t.name).join(', '))
+    } catch (mcpError) {
+      console.warn('⚠️ MCP unavailable, continuing without tools:', mcpError)
+    }
 
     // Build context for Gemini
     const systemContext = `You are a professional school data analyst assistant. Analyze the provided school data and respond to queries with clear, actionable insights.
@@ -328,8 +380,8 @@ Timezone: ${school?.timezone || 'N/A'}
 ${classBreakdown.length > 0 ? classBreakdown.map(c => `- Grade ${c.grade}: ${c.studentCount} students across ${c.sections.length} section(s) (${c.sections.join(', ')})`).join('\n') : '- Class/grade information not available in current schema'}
 
 **STUDENT DEMOGRAPHICS:**
-- Male: ${genderStats.male} (${totalStudents > 0 ? ((genderStats.male/totalStudents)*100).toFixed(1) : 0}%)
-- Female: ${genderStats.female} (${totalStudents > 0 ? ((genderStats.female/totalStudents)*100).toFixed(1) : 0}%)
+- Male: ${genderStats.male} (${totalStudents > 0 ? ((genderStats.male / totalStudents) * 100).toFixed(1) : 0}%)
+- Female: ${genderStats.female} (${totalStudents > 0 ? ((genderStats.female / totalStudents) * 100).toFixed(1) : 0}%)
 - Other/Unspecified: ${genderStats.other + genderStats.unspecified}
 
 **ATTENDANCE METRICS (Last 90 days):**
@@ -348,12 +400,12 @@ ${subjectAverages.slice(0, 15).map(s => `- ${s.subject}: Avg ${s.average.toFixed
 - Total Check-ins: ${wellbeing.length}
 - Overall Wellbeing Score: ${wellbeingScore.toFixed(1)}%
 - Mood Distribution:
-${Object.entries(moodCounts).sort((a, b) => b[1] - a[1]).map(([mood, count]) => `  - ${mood}: ${count} (${wellbeing.length > 0 ? ((count/wellbeing.length)*100).toFixed(1) : 0}%)`).join('\n')}
+${Object.entries(moodCounts).sort((a, b) => b[1] - a[1]).map(([mood, count]) => `  - ${mood}: ${count} (${wellbeing.length > 0 ? ((count / wellbeing.length) * 100).toFixed(1) : 0}%)`).join('\n')}
 - Recent Trends:
 ${Object.entries(moodTrends).filter(([_, t]) => t.thisWeek > 0 || t.lastWeek > 0).map(([mood, trend]) => {
-  const change = trend.lastWeek > 0 ? ((trend.thisWeek - trend.lastWeek) / trend.lastWeek * 100).toFixed(0) : 'N/A'
-  return `  - ${mood}: This week ${trend.thisWeek} | Last week ${trend.lastWeek} | Change: ${change}%`
-}).join('\n') || '  - Not enough data for trends'}
+      const change = trend.lastWeek > 0 ? ((trend.thisWeek - trend.lastWeek) / trend.lastWeek * 100).toFixed(0) : 'N/A'
+      return `  - ${mood}: This week ${trend.thisWeek} | Last week ${trend.lastWeek} | Change: ${change}%`
+    }).join('\n') || '  - Not enough data for trends'}
 
 **ASSESSMENT STATUS:**
 - Total Assessments: ${assessmentStats.total}
@@ -428,18 +480,68 @@ Overall academic performance shows **positive trends** with a school average of 
 2. **Short-term**: Implement peer tutoring program in underperforming subjects
 3. **Long-term**: Review Science curriculum and teaching methodologies
 
-REMEMBER: Always present data in table format. Do not use plain text or bullet points for numeric data.`
+REMEMBER: Always present data in table format. Do not use plain text or bullet points for numeric data.
+
+**🔧 MCP TOOLS - ${geminiFunctions.length} AVAILABLE:**
+
+${geminiFunctions.length > 0 ? `You have access to ${geminiFunctions.length} administrative tools. When users request ACTIONS (not just information), YOU MUST use the appropriate tool.
+
+**CRITICAL: For School Announcements/Broadcasts:**
+When user says: "send announcement", "broadcast", "create announcement", "announce", "notify school"
+→ YOU MUST call: \`broadcastToSchool\` tool
+→ AUTO-GENERATE professional title and content based on their request
+→ DO NOT ask user for title or content - generate it yourself
+
+**Tool: broadcastToSchool**
+- Purpose: Send school-wide announcements to all students and staff
+- Required params: school_id (auto-filled), title (you generate), content (you generate)
+- Optional: priority ("high", "medium", "low")
+- Returns: Confirmation request for user approval
+
+**Title Generation Examples:**
+- "holiday tomorrow" → "School Holiday Notice - [Tomorrow's Date]"
+- "exam schedule" → "Examination Schedule - [Current Month]"
+- "parent meeting" → "Parent-Teacher Meeting Announcement"
+- "sports day" → "Annual Sports Day Event Notification"
+
+**Content Format (Auto-generate):**
+Dear Students, Parents, and Staff,
+
+[Opening sentence about the announcement]
+
+Key Details:
+- Date: [specific date]
+- Time: [if applicable]
+- Venue: [if applicable]
+- Instructions: [specific instructions]
+
+[Closing message]
+
+Best regards,
+School Administration
+
+**Usage Examples:**
+User: "Send announcement about holiday tomorrow"
+→ Call: broadcastToSchool({ school_id: "[auto]", title: "School Holiday Notice - December 3rd", content: "Dear Students, Parents, and Staff,\\n\\nWe would like to inform you that the school will be closed tomorrow, December 3rd, due to a public holiday...\\n\\nBest regards,\\nSchool Administration", priority: "high" })
+
+User: "Broadcast the exam schedule"
+→ Call: broadcastToSchool({ school_id: "[auto]", title: "Examination Schedule - December 2024", content: "...", priority: "medium" })
+
+**IMPORTANT:** 
+- Always call tools for ACTION requests
+- Never create text-based confirmation boxes - the system handles confirmations via UI
+- Generate professional, complete content yourself` : 'No administrative tools currently available. Respond with analysis only.'}`
 
     const prompt = `${systemContext}\n\nUser Question: ${message}\n\nProvide a detailed, data-driven response with actionable insights.`
-    
+
     // ========================================================================
     // Get API Key from Intelligent Router
     // ========================================================================
     console.log('🔑 Requesting API key from intelligent router...')
-    
+
     // Estimate tokens (rough: 4 chars per token)
     const estimatedTokens = Math.ceil((prompt.length + 2048) / 4)
-    
+
     const routerResponse = await fetch(
       `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/intelligent-ai-router`,
       {
@@ -449,7 +551,7 @@ REMEMBER: Always present data in table format. Do not use plain text or bullet p
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'gemini-2.5-flash',
+          model: 'gemini-2.0-flash',
           tokens: estimatedTokens,
           prompt: message.substring(0, 100),
           userId: user.id,
@@ -461,31 +563,31 @@ REMEMBER: Always present data in table format. Do not use plain text or bullet p
     if (!routerResponse.ok) {
       const errorData = await routerResponse.json()
       console.error('❌ Router error:', errorData)
-      
+
       if (routerResponse.status === 429) {
         return NextResponse.json(
-          { 
+          {
             error: 'All API keys are currently rate-limited. Please try again in a moment.',
             retryAfter: errorData.retryAfter || 60
           },
           { status: 429 }
         )
       }
-      
+
       throw new Error(`Router error: ${errorData.error || 'Unknown error'}`)
     }
 
     const routerData = await routerResponse.json()
-    const { 
-      api_key, 
-      model_used, 
-      fallback_count, 
-      key_id, 
-      usage 
+    const {
+      api_key,
+      model_used,
+      fallback_count,
+      key_id,
+      usage
     } = routerData
 
     console.log('✅ API key obtained:', {
-      model_requested: 'gemini-2.5-flash',
+      model_requested: 'gemini-2.0-flash',
       model_used,
       fallback_count,
       key_id: key_id?.substring(0, 8) + '...',
@@ -497,9 +599,9 @@ REMEMBER: Always present data in table format. Do not use plain text or bullet p
     // Generate AI Response with Obtained Key
     // ========================================================================
     console.log('🤖 Initializing Gemini with managed API key...')
-    
+
     const genAI = new GoogleGenerativeAI(api_key)
-    const model = genAI.getGenerativeModel({ 
+    const model = genAI.getGenerativeModel({
       model: model_used,
       generationConfig: {
         temperature: 0.7,
@@ -509,15 +611,29 @@ REMEMBER: Always present data in table format. Do not use plain text or bullet p
       }
     })
 
+    // Create model with tools for non-streaming requests
+    const finalModel = geminiFunctions.length > 0
+      ? genAI.getGenerativeModel({
+        model: model_used,
+        generationConfig: {
+          temperature: 0.7,
+          topP: 0.8,
+          topK: 40,
+          maxOutputTokens: 2048,
+        },
+        tools: [{ functionDeclarations: geminiFunctions }]
+      })
+      : model
+
     console.log('📝 Generating AI response...')
-    
+
     // ========================================================================
     // Streaming Response Support
     // ========================================================================
     if (stream) {
       try {
         const result = await model.generateContentStream(prompt)
-        
+
         // Create a readable stream
         const encoder = new TextEncoder()
         const readable = new ReadableStream({
@@ -530,7 +646,7 @@ REMEMBER: Always present data in table format. Do not use plain text or bullet p
               }
               controller.enqueue(encoder.encode('data: [DONE]\n\n'))
               controller.close()
-              
+
               console.log('✅ Streaming response completed')
             } catch (error) {
               console.error('❌ Streaming error:', error)
@@ -538,7 +654,7 @@ REMEMBER: Always present data in table format. Do not use plain text or bullet p
             }
           }
         })
-        
+
         return new Response(readable, {
           headers: {
             'Content-Type': 'text/event-stream',
@@ -554,31 +670,205 @@ REMEMBER: Always present data in table format. Do not use plain text or bullet p
         )
       }
     }
-    
+
     // ========================================================================
-    // Non-Streaming Response (Original)
+    // Non-Streaming Response with MCP Tool Calling Loop
     // ========================================================================
-    let response: string
+    let response: string = ''
     let actualTokensUsed = 0
-    
+    const maxIterations = 5 // Prevent infinite loops
+    let iteration = 0
+    let conversationHistory: any[] = []
+
     try {
-      const result = await model.generateContent(prompt)
-      response = result.response.text()
-      
+      // Initial user message
+      conversationHistory.push({ role: 'user', parts: [{ text: prompt }] })
+
+      // Function calling loop
+      while (iteration < maxIterations) {
+        iteration++
+        console.log(`🔄 AI iteration ${iteration}/${maxIterations}`)
+
+        const result = await finalModel.generateContent({
+          contents: conversationHistory
+        })
+
+        const candidate = result.response.candidates?.[0]
+        if (!candidate) {
+          throw new Error('No response candidate from Gemini')
+        }
+
+        // Add model response to history
+        conversationHistory.push({
+          role: 'model',
+          parts: candidate.content.parts
+        })
+
+        // Check for function calls
+        const functionCalls = candidate.content.parts.filter(
+          (part: any) => part.functionCall
+        )
+
+        if (functionCalls.length === 0) {
+          // No more function calls, extract final text response
+          const textParts = candidate.content.parts.filter(
+            (part: any) => part.text
+          )
+          response = textParts.map((part: any) => part.text).join('')
+          console.log('✅ AI response completed (no tool calls)')
+          break
+        }
+
+        // Execute all function calls
+        console.log(`🔧 Executing ${functionCalls.length} tool call(s)...`)
+        const functionResponses: any[] = []
+
+        for (const functionCall of functionCalls) {
+          const toolName = functionCall.functionCall?.name
+          const toolArgs = functionCall.functionCall?.args || {}
+
+          if (!toolName) {
+            console.warn('   ⚠️ Skipping function call with no name')
+            continue
+          }
+
+          console.log(`   → Calling tool: ${toolName}`, toolArgs)
+
+          try {
+            // Inject authentication context into tool arguments
+            const enrichedArgs = {
+              ...toolArgs,
+              school_id: profile.school_id,
+              user_id: user.id,
+              role: profile.role
+            }
+
+            // Execute MCP tool
+            const toolResult = await mcpClient.callTool(toolName, enrichedArgs)
+
+            // Extract text from tool result
+            const resultText = toolResult.content
+              .map((c: any) => c.text)
+              .join('\n')
+
+            console.log(`   ?? Raw tool result (first 300 chars):`, resultText.substring(0, 300))
+
+            // Check if tool result contains confirmation request  
+            let parsedResult: any = {}
+            try {
+              parsedResult = JSON.parse(resultText)
+            } catch {
+              // Not valid JSON directly, try to extract from markdown code blocks
+              const jsonMatch = resultText.match(/```json\n([\s\S]*?)\n```/) ||
+                resultText.match(/```\n([\s\S]*?)\n```/) ||
+                resultText.match(/\{[\s\S]*\}/) // Try to find the first JSON object
+
+              if (jsonMatch) {
+                try {
+                  parsedResult = JSON.parse(jsonMatch[1] || jsonMatch[0])
+                } catch {
+                  // Still failed to parse
+                  console.warn('   ?? Failed to parse tool result as JSON')
+                }
+              }
+            }
+
+            // If tool requires confirmation, return immediately without AI response
+            if (parsedResult.requiresConfirmation) {
+              console.log('   ?? Tool requires confirmation - returning to frontend immediately')
+
+              // Log usage for this partial request
+              await supabase.from('api_usage_logs').insert({
+                model_requested: 'gemini-2.0-flash',
+                model_used,
+                key_id,
+                table_name: 'gemini_25_flash_keys',
+                tokens_used: actualTokensUsed,
+                status: 'success',
+                user_id: user.id,
+                endpoint: '/api/admin/ai-chat',
+                request_duration_ms: Date.now() - requestStartTime
+              })
+
+              // Return immediately with confirmation request - no AI response needed
+              return NextResponse.json({
+                response: 'I need your confirmation to proceed with this action. Please review the details above.',
+                confirmationRequest: parsedResult.request,
+                confirmationId: parsedResult.confirmationId, // Include the ID needed for approval
+                metadata: {
+                  dataType: [],
+                  metrics: {
+                    totalStudents,
+                    totalTeachers,
+                    attendanceRate: attendanceStats.rate,
+                    assessmentAverage: assessmentStats.averageScore.toFixed(1)
+                  },
+                  aiRouting: {
+                    model_requested: 'gemini-2.0-flash',
+                    model_used,
+                    fallback_count,
+                    tokens_used: actualTokensUsed,
+                    key_usage: {
+                      rpm: `${usage.current_rpm}/${usage.rpm_limit}`,
+                      rpd: `${usage.current_rpd}/${usage.rpd_limit}`
+                    },
+                    request_duration_ms: Date.now() - requestStartTime
+                  }
+                }
+              })
+            } else {
+              console.log(`   ✅ Tool result:`, resultText.substring(0, 200))
+
+              functionResponses.push({
+                functionResponse: {
+                  name: toolName,
+                  response: {
+                    result: resultText
+                  }
+                }
+              })
+            }
+          } catch (toolError: any) {
+            console.error(`   ❌ Tool error: ${toolName}`, toolError)
+            functionResponses.push({
+              functionResponse: {
+                name: toolName,
+                response: {
+                  error: toolError.message || 'Tool execution failed'
+                }
+              }
+            })
+          }
+        }
+
+        // Add function responses to conversation history
+        conversationHistory.push({
+          role: 'user',
+          parts: functionResponses
+        })
+      }
+
+      if (iteration >= maxIterations && !response) {
+        response = 'I apologize, but I encountered an issue processing your request. Please try rephrasing your question.'
+        console.warn('⚠️ Max iterations reached without final response')
+      }
+
       // Estimate actual tokens used
       actualTokensUsed = Math.ceil((prompt.length + response.length) / 4)
-      
+
       console.log('✅ AI response generated:', {
         length: response.length,
         estimated_tokens: actualTokensUsed,
+        iterations: iteration,
         duration_ms: Date.now() - requestStartTime
       })
+
     } catch (geminiError) {
       console.error('❌ Gemini API Error:', geminiError)
-      
+
       // Log the failed attempt
       await supabase.from('api_usage_logs').insert({
-        model_requested: 'gemini-2.5-flash',
+        model_requested: 'gemini-2.0-flash',
         model_used,
         key_id,
         table_name: 'gemini_25_flash_keys',
@@ -589,19 +879,15 @@ REMEMBER: Always present data in table format. Do not use plain text or bullet p
         endpoint: '/api/admin/ai-chat',
         request_duration_ms: Date.now() - requestStartTime
       })
-      
-      throw new Error(
-        geminiError instanceof Error 
-          ? `Gemini API Error: ${geminiError.message}` 
-          : 'Failed to generate AI response'
-      )
+
+      throw geminiError
     }
 
     // ========================================================================
     // Update Usage Logs with Actual Token Count
     // ========================================================================
     await supabase.from('api_usage_logs')
-      .update({ 
+      .update({
         tokens_used: actualTokensUsed,
         request_duration_ms: Date.now() - requestStartTime
       })
@@ -629,7 +915,7 @@ REMEMBER: Always present data in table format. Do not use plain text or bullet p
           assessmentAverage: assessmentStats.averageScore.toFixed(1)
         },
         aiRouting: {
-          model_requested: 'gemini-2.5-flash',
+          model_requested: 'gemini-2.0-flash',
           model_used,
           fallback_count,
           tokens_used: actualTokensUsed,
@@ -644,16 +930,16 @@ REMEMBER: Always present data in table format. Do not use plain text or bullet p
 
   } catch (error) {
     console.error('❌ AI Chat Error:', error)
-    
+
     // Return detailed error information
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    const statusCode = errorMessage.includes('Unauthorized') ? 401 
-      : errorMessage.includes('Admin access') ? 403 
-      : errorMessage.includes('Gemini API') ? 502 
-      : 500
-    
+    const statusCode = errorMessage.includes('Unauthorized') ? 401
+      : errorMessage.includes('Admin access') ? 403
+        : errorMessage.includes('Gemini API') ? 502
+          : 500
+
     return NextResponse.json(
-      { 
+      {
         error: errorMessage,
         details: error instanceof Error ? error.stack : undefined,
         timestamp: new Date().toISOString()

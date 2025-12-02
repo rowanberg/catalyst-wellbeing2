@@ -18,11 +18,33 @@ import {
 import { cn } from '@/lib/utils'
 import { VerificationBadge } from '@/components/ui/verification-badge'
 
-// Tab Components (will be enhanced)
-import { TodayTab } from '@/components/student/tabs/TodayTab'
-import { GrowthTab } from '@/components/student/tabs/GrowthTab'
-import { WellbeingTab } from '@/components/student/tabs/WellbeingTab'
-import { ProfileTab } from '@/components/student/tabs/ProfileTab'
+import dynamic from 'next/dynamic'
+
+// Lazy load Tab Components for performance
+const TodayTab = dynamic(() => import('@/components/student/tabs/TodayTab').then(mod => mod.TodayTab), {
+  loading: () => <TabSkeleton />
+})
+const GrowthTab = dynamic(() => import('@/components/student/tabs/GrowthTab').then(mod => mod.GrowthTab), {
+  loading: () => <TabSkeleton />
+})
+const WellbeingTab = dynamic(() => import('@/components/student/tabs/WellbeingTab').then(mod => mod.WellbeingTab), {
+  loading: () => <TabSkeleton />
+})
+const ProfileTab = dynamic(() => import('@/components/student/tabs/ProfileTab').then(mod => mod.ProfileTab), {
+  loading: () => <TabSkeleton />
+})
+
+// Skeleton for tab loading
+const TabSkeleton = () => (
+  <div className="space-y-4 animate-pulse">
+    <div className="h-32 bg-slate-200/50 rounded-2xl" />
+    <div className="grid grid-cols-2 gap-4">
+      <div className="h-24 bg-slate-200/50 rounded-2xl" />
+      <div className="h-24 bg-slate-200/50 rounded-2xl" />
+    </div>
+    <div className="h-64 bg-slate-200/50 rounded-2xl" />
+  </div>
+)
 
 // Responsive Components
 import { Sidebar } from '@/components/student/Sidebar'
@@ -84,10 +106,7 @@ const MobileHeader = memo(({
   onMenuToggle,
   activeTab
 }: any) => (
-  <motion.header
-    initial={{ y: -60 }}
-    animate={{ y: 0 }}
-    transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}  // 250ms standard
+  <header
     className="fixed top-0 left-0 right-0 z-40 shadow-sm"
     style={{
       background: 'linear-gradient(to right, var(--theme-highlight), var(--theme-tertiary))',
@@ -176,7 +195,7 @@ const MobileHeader = memo(({
         </span>
       </div>
     </div>
-  </motion.header>
+  </header>
 ))
 MobileHeader.displayName = 'MobileHeader'
 
@@ -259,9 +278,64 @@ export default function EnhancedStudentDashboard() {
   const [isPullRefreshing, setIsPullRefreshing] = useState(false)
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null)
 
-  // Refs for pull-to-refresh
+  // Refs for gestures
   const pullYRef = useRef(0)
   const startY = useRef(0)
+  const startX = useRef(0)
+
+  // Gesture handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    startX.current = e.touches[0].clientX
+    if (window.scrollY === 0) {
+      startY.current = e.touches[0].clientY
+    }
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (startY.current > 0) {
+      const currentY = e.touches[0].clientY
+      const diff = currentY - startY.current
+      if (diff > 0 && diff < 150) {
+        pullYRef.current = diff
+      }
+    }
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    // Handle Swipe Navigation
+    const endX = e.changedTouches[0].clientX
+    const endY = e.changedTouches[0].clientY
+    const diffX = startX.current - endX
+    const diffY = startY.current - endY // Positive if scrolled down/swiped up
+
+    // Check for horizontal swipe (threshold 50px, and horizontal motion > vertical motion)
+    // We check Math.abs(diffY) < 100 to ensure we don't trigger swipe during a long scroll
+    if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
+      const currentIndex = tabs.findIndex(t => t.id === activeTab)
+
+      if (diffX > 0) {
+        // Swipe Left -> Next Tab
+        if (currentIndex < tabs.length - 1) {
+          handleTabChange(tabs[currentIndex + 1].id)
+        }
+      } else {
+        // Swipe Right -> Previous Tab
+        if (currentIndex > 0) {
+          handleTabChange(tabs[currentIndex - 1].id)
+        }
+      }
+    }
+
+    // Handle Pull-to-Refresh
+    if (pullYRef.current > 80) {
+      handleRefresh()
+    }
+
+    // Reset
+    startY.current = 0
+    startX.current = 0
+    pullYRef.current = 0
+  }
 
   const [tabLoading, setTabLoading] = useState<Record<TabData['id'], boolean>>({
     today: true,
@@ -401,30 +475,7 @@ export default function EnhancedStudentDashboard() {
     setTimeout(() => setIsPullRefreshing(false), 500)
   }
 
-  // Pull-to-refresh gesture handlers
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (window.scrollY === 0) {
-      startY.current = e.touches[0].clientY
-    }
-  }
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (startY.current > 0) {
-      const currentY = e.touches[0].clientY
-      const diff = currentY - startY.current
-      if (diff > 0 && diff < 150) {
-        pullYRef.current = diff
-      }
-    }
-  }
-
-  const handleTouchEnd = () => {
-    if (pullYRef.current > 80) {
-      handleRefresh()
-    }
-    startY.current = 0
-    pullYRef.current = 0
-  }
 
   // Show loading skeleton during SSR, hydration, or auth loading
   if (!mounted || authLoading) {
@@ -592,10 +643,7 @@ export default function EnhancedStudentDashboard() {
 
       {/* Mobile Bottom Navigation - Professional Minimal Design */}
       {!isDesktop && (
-        <motion.nav
-          initial={{ y: 100 }}
-          animate={{ y: 0 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+        <nav
           className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-[#FBC4AB]/20 shadow-[0_-2px_10px_rgba(240,128,128,0.08)] safe-area-bottom"
         >
           <div className="flex items-center justify-around px-3 py-2">
@@ -609,7 +657,7 @@ export default function EnhancedStudentDashboard() {
               />
             ))}
           </div>
-        </motion.nav>
+        </nav>
       )}
 
       {/* Mobile Menu Overlay */}
@@ -812,18 +860,49 @@ export default function EnhancedStudentDashboard() {
 // Enhanced Loading Skeleton with shimmer effect
 function LoadingSkeleton() {
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight, #FFF5EE) 30%, transparent), white, color-mix(in srgb, var(--theme-tertiary, #FBC4AB) 20%, transparent))' }} suppressHydrationWarning>
-      <div className="text-center">
-        <div className="relative w-20 h-20 mx-auto mb-8">
-          <div className="absolute inset-0 border-4 rounded-full" style={{ borderColor: 'var(--theme-tertiary, #FBC4AB)' }} />
-          <div className="absolute inset-0 border-4 border-transparent rounded-full animate-spin" style={{ borderTopColor: 'var(--theme-primary, #F08080)' }} />
+    <div className="min-h-screen bg-white">
+      {/* Header Skeleton */}
+      <div className="h-[72px] px-4 py-3 border-b border-slate-100 flex items-center justify-between safe-area-top">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-slate-100 animate-pulse" />
+          <div className="space-y-1">
+            <div className="w-32 h-4 bg-slate-100 rounded animate-pulse" />
+            <div className="w-24 h-3 bg-slate-100 rounded animate-pulse" />
+          </div>
         </div>
-        <h2 className="text-2xl font-semibold text-slate-800 mb-2">
-          Loading Dashboard
-        </h2>
-        <p className="text-slate-500 text-sm">
-          Preparing your experience...
-        </p>
+        <div className="flex gap-2">
+          <div className="w-9 h-9 rounded-lg bg-slate-100 animate-pulse" />
+          <div className="w-9 h-9 rounded-lg bg-slate-100 animate-pulse" />
+        </div>
+      </div>
+
+      {/* Content Skeleton */}
+      <div className="p-6 space-y-6">
+        {/* Greeting */}
+        <div className="w-48 h-8 bg-slate-100 rounded-lg animate-pulse" />
+
+        {/* Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="h-40 bg-slate-100 rounded-2xl animate-pulse" />
+          <div className="h-40 bg-slate-100 rounded-2xl animate-pulse" />
+        </div>
+
+        {/* List Items */}
+        <div className="space-y-3">
+          <div className="h-20 bg-slate-100 rounded-xl animate-pulse" />
+          <div className="h-20 bg-slate-100 rounded-xl animate-pulse" />
+          <div className="h-20 bg-slate-100 rounded-xl animate-pulse" />
+        </div>
+      </div>
+
+      {/* Bottom Nav Skeleton (Mobile) */}
+      <div className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-slate-100 md:hidden flex justify-around items-center px-4 safe-area-bottom">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="flex flex-col items-center gap-1">
+            <div className="w-6 h-6 rounded-full bg-slate-100 animate-pulse" />
+            <div className="w-10 h-2 rounded bg-slate-100 animate-pulse" />
+          </div>
+        ))}
       </div>
     </div>
   )

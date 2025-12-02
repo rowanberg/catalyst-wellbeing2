@@ -7,39 +7,58 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const timeRange = searchParams.get('timeRange') || '7d'
     const grade = searchParams.get('grade') || 'all'
+    const schoolIdParam = searchParams.get('school_id') // For MCP tools
 
-    // Get current user and verify admin role
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Check for MCP/Service Role authentication
+    const authHeader = request.headers.get('authorization')
+    const isMCPRequest = authHeader?.startsWith('Bearer ') && authHeader.includes('eyJ')
+
+    let schoolId: string
+    let adminProfile: any
+
+    if (isMCPRequest && schoolIdParam) {
+      // MCP tool request with service role - use provided school_id
+      console.log('=== MCP REQUEST DETECTED ===')
+      console.log('Using school_id from params:', schoolIdParam)
+      schoolId = schoolIdParam
+
+      // Create a mock admin profile for MCP requests
+      adminProfile = {
+        role: 'admin',
+        school_id: schoolId,
+        user_id: 'mcp-service'
+      }
+    } else {
+      // Regular user request - verify authentication
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      if (userError || !user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+
+      // Get admin profile with school_id
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role, school_id, user_id')
+        .eq('user_id', user.id)
+        .single()
+
+      if (profileError || !profile) {
+        console.error('Profile lookup error:', profileError)
+        return NextResponse.json({ error: 'Profile not found' }, { status: 403 })
+      }
+
+      // Allow both admin and super_admin roles
+      if (profile.role !== 'admin' && profile.role !== 'super_admin') {
+        console.error('Invalid role:', profile.role)
+        return NextResponse.json({
+          error: 'Unauthorized - Admin access required',
+          currentRole: profile.role
+        }, { status: 403 })
+      }
+
+      adminProfile = profile
+      schoolId = profile.school_id
     }
-
-    // Get admin profile with school_id
-    const { data: adminProfile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role, school_id, user_id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (profileError) {
-      console.error('Profile lookup error:', profileError)
-      return NextResponse.json({ error: 'Profile not found', details: profileError.message }, { status: 403 })
-    }
-
-    if (!adminProfile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 403 })
-    }
-
-    // Allow both admin and super_admin roles
-    if (adminProfile.role !== 'admin' && adminProfile.role !== 'super_admin') {
-      console.error('Invalid role:', adminProfile.role)
-      return NextResponse.json({ 
-        error: 'Unauthorized - Admin access required', 
-        currentRole: adminProfile.role 
-      }, { status: 403 })
-    }
-
-    const schoolId = adminProfile.school_id
 
     console.log('=== WELLBEING ANALYTICS DEBUG ===')
     console.log('Admin school_id:', schoolId)
@@ -55,7 +74,7 @@ export async function GET(request: NextRequest) {
       .from('profiles')
       .select('id, role, school_id, first_name, last_name')
       .limit(5)
-    
+
     console.log('Sample profiles in database:', allProfiles?.length || 0)
     if (allProfiles && allProfiles.length > 0) {
       console.log('First profile:', {
@@ -97,7 +116,7 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('Students found with school_id + role=student:', students?.length || 0)
-    
+
     // Log student details if found
     if (students && students.length > 0) {
       console.log('Student details:', students.map(s => ({
@@ -107,7 +126,7 @@ export async function GET(request: NextRequest) {
         class_name: s.class_name
       })))
     }
-    
+
     // If no students found, try alternative query without school_id check
     if (!students || students.length === 0) {
       const { data: allStudents } = await supabase
@@ -115,7 +134,7 @@ export async function GET(request: NextRequest) {
         .select('id, school_id, role, first_name, last_name')
         .eq('role', 'student')
         .limit(10)
-      
+
       console.log('Total students in DB (any school):', allStudents?.length || 0)
       if (allStudents && allStudents.length > 0) {
         console.log('Sample student schools:', allStudents.map(s => s.school_id))
@@ -126,7 +145,7 @@ export async function GET(request: NextRequest) {
         .from('profiles')
         .select('id, role, first_name, last_name')
         .eq('school_id', schoolId)
-      
+
       console.log('All profiles for this school:', schoolProfiles?.length || 0)
       if (schoolProfiles && schoolProfiles.length > 0) {
         const roleCount = schoolProfiles.reduce((acc: any, p) => {
@@ -149,11 +168,11 @@ export async function GET(request: NextRequest) {
 
     console.log('Mood data entries:', moodData?.length || 0)
     console.log('Date range filter:', startDate.toISOString().split('T')[0], 'to', new Date().toISOString().split('T')[0])
-    
+
     if (moodError) {
       console.error('Mood data error:', moodError)
     }
-    
+
     if (moodData && moodData.length > 0) {
       console.log('Sample mood entries:', moodData.slice(0, 3))
     } else {
@@ -162,7 +181,7 @@ export async function GET(request: NextRequest) {
         .from('mood_tracking')
         .select('user_id, mood_emoji, date')
         .limit(5)
-      
+
       console.log('Any mood entries in DB:', anyMoods?.length || 0)
       if (anyMoodsError) {
         console.error('Error checking mood_tracking table:', anyMoodsError)
@@ -214,13 +233,13 @@ export async function GET(request: NextRequest) {
 
     // Calculate metrics
     const totalStudents = students?.length || 0
-    
+
     // Mood analysis
     const moodEmojis = moodData?.map(m => m.mood_emoji) || []
     const positiveMoods = ['😊', '😄', '😆', '🥰', '😍', '🤗', '😌', '😎']
     const neutralMoods = ['😐', '😑', '🙂', '😶']
     const negativeMoods = ['😢', '😭', '😰', '😨', '😡', '😤', '😔', '😞']
-    
+
     const positiveCount = moodEmojis.filter(emoji => positiveMoods.includes(emoji)).length
     const neutralCount = moodEmojis.filter(emoji => neutralMoods.includes(emoji)).length
     const negativeCount = moodEmojis.filter(emoji => negativeMoods.includes(emoji)).length
@@ -246,13 +265,13 @@ export async function GET(request: NextRequest) {
     const engagementRate = totalStudents > 0 ? (activeStudents / totalStudents) * 100 : 0
 
     // Calculate wellbeing score (1-10 scale)
-    const wellbeingScore = totalMoodEntries > 0 
-      ? Math.min(10, Math.max(1, 
-          5 + (positiveCount - negativeCount) / totalMoodEntries * 5 + 
-          (questCompletionRate / 100) * 2 + 
-          (engagementRate / 100) * 1.5 - 
-          (urgentRequests / Math.max(totalStudents, 1)) * 3
-        ))
+    const wellbeingScore = totalMoodEntries > 0
+      ? Math.min(10, Math.max(1,
+        5 + (positiveCount - negativeCount) / totalMoodEntries * 5 +
+        (questCompletionRate / 100) * 2 +
+        (engagementRate / 100) * 1.5 -
+        (urgentRequests / Math.max(totalStudents, 1)) * 3
+      ))
       : 7.5
 
     // Fetch all classes for the school from classes table
@@ -272,7 +291,7 @@ export async function GET(request: NextRequest) {
     const { count: assignmentCount, error: countError } = await supabase
       .from('student_class_assignments')
       .select('*', { count: 'exact', head: true })
-    
+
     console.log('Assignment table count query result:', assignmentCount)
     if (countError) {
       console.error('Error counting student_class_assignments:', countError)
@@ -284,12 +303,12 @@ export async function GET(request: NextRequest) {
       .from('student_class_assignments')
       .select('*')
       .limit(10)
-    
+
     if (assignmentsError) {
       console.error('Error fetching student_class_assignments:', assignmentsError)
       console.log('Trying alternative approach without RLS...')
     }
-    
+
     console.log('Total assignments in DB:', allAssignments?.length || 0)
     if (allAssignments && allAssignments.length > 0) {
       console.log('First assignment structure:', Object.keys(allAssignments[0]))
@@ -309,26 +328,26 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('Student class assignments for school classes:', studentClassAssignments?.length || 0)
-    
+
     // If we have assignments but no students, the student_id might reference user_id directly
     if (studentClassAssignments && studentClassAssignments.length > 0 && students?.length === 0) {
       console.log('FOUND ASSIGNMENTS BUT NO STUDENTS - checking if student_id references exist')
       const assignmentStudentIds = Array.from(new Set(studentClassAssignments.map(a => a.student_id)))
       console.log('Unique student IDs in assignments:', assignmentStudentIds.length)
-      
+
       // Try to find these users in auth.users via profiles.user_id
       const { data: profilesByUserId } = await supabase
         .from('profiles')
         .select('id, user_id, role, first_name, last_name, school_id')
         .in('user_id', assignmentStudentIds)
-      
+
       console.log('Profiles matching assignment student_ids:', profilesByUserId?.length || 0)
       if (profilesByUserId && profilesByUserId.length > 0) {
         console.log('Profile roles found:', profilesByUserId.map(p => p.role))
         console.log('Profile school_ids:', profilesByUserId.map(p => p.school_id))
         console.log('Expected school_id:', schoolId)
         console.log('School_id match:', profilesByUserId.map(p => p.school_id === schoolId))
-        
+
         // Use these students instead of the empty students array
         console.log('OVERRIDING students array with profiles found via assignments')
         // Override the students variable - this is a workaround
@@ -338,21 +357,21 @@ export async function GET(request: NextRequest) {
           .from('profiles')
           .select('id, user_id, first_name, last_name, school_id, role')
           .in('user_id', assignmentStudentIds)
-        
+
         console.log('Students found without school filter:', studentsNoFilter?.length || 0)
         if (studentsNoFilter && studentsNoFilter.length > 0) {
           console.log('Student school_ids:', studentsNoFilter.map(s => ({ name: s.first_name, school: s.school_id })))
         } else {
           console.log('CRITICAL: Cannot find students even without filters')
           console.log('Checking if specific user_id exists:', assignmentStudentIds[0])
-          
+
           // Try direct query for one specific student
           const { data: directCheck, error: directError } = await supabase
             .from('profiles')
             .select('*')
             .eq('user_id', '72bb3f5a-86be-4236-ab66-ec90e8c2ab11')
             .single()
-          
+
           console.log('Direct check for Hunter:', directCheck ? 'FOUND' : 'NOT FOUND')
           if (directError) {
             console.error('Direct check error:', directError)
@@ -366,12 +385,12 @@ export async function GET(request: NextRequest) {
 
     // Build class analytics from actual classes table
     const classesByName: any = {}
-    
+
     schoolClasses?.forEach((schoolClass: any) => {
       // Use class_name field from database
       const className = schoolClass.class_name || `Class ${schoolClass.id.slice(0, 8)}`
       const gradeLevel = schoolClass.grade_level || 'Unknown'
-      
+
       const classStudents = students?.filter(s => {
         // Check if student is assigned to this class using user_id
         const isAssigned = studentClassAssignments?.some(
@@ -396,16 +415,16 @@ export async function GET(request: NextRequest) {
     // Calculate class-level metrics
     Object.values(classesByName).forEach((classData: any) => {
       const classStudentIds = classData.students.map((s: any) => s.user_id).filter(Boolean)
-      
+
       console.log(`Class ${classData.className}: ${classStudentIds.length} student IDs`, classStudentIds)
-      
+
       // Class mood data
       const classMoodData = moodData?.filter(m => classStudentIds.includes(m.user_id)) || []
       const classPositiveMoods = classMoodData.filter(m => positiveMoods.includes(m.mood_emoji)).length
       const classTotalMoods = classMoodData.length
-      
+
       console.log(`Class ${classData.className}: ${classTotalMoods} mood entries, ${classPositiveMoods} positive`)
-      
+
       classData.trends.mood = classTotalMoods > 0 ? (classPositiveMoods / classTotalMoods) * 100 : 50
 
       // Class engagement
@@ -420,8 +439,8 @@ export async function GET(request: NextRequest) {
 
       // Class wellbeing score
       classData.wellbeingScore = Number((
-        (classData.trends.mood / 100) * 4 + 
-        (classData.trends.engagement / 100) * 3 + 
+        (classData.trends.mood / 100) * 4 +
+        (classData.trends.engagement / 100) * 3 +
         Math.max(0, 3 - (classData.trends.helpRequests / Math.max(classData.totalStudents, 1)) * 10)
       ).toFixed(1))
 
@@ -432,7 +451,7 @@ export async function GET(request: NextRequest) {
     })
 
     console.log('Class analytics prepared:', Object.keys(classesByName).length, 'classes')
-    
+
     // Log each class details for debugging
     Object.values(classesByName).forEach((c: any) => {
       console.log(`Class ${c.className}: ${c.totalStudents} students, score: ${c.wellbeingScore}, mood: ${c.trends.mood}%`)
@@ -482,52 +501,52 @@ export async function GET(request: NextRequest) {
       const studentMoods = moodData?.filter(m => m.user_id === student.user_id) || []
       const studentQuests = questsData?.filter(q => q.user_id === student.user_id) || []
       const studentHelp = helpRequests?.filter(hr => hr.student_id === student.user_id) || []
-      
+
       // Calculate activity completion rates
       const studentGratitude = gratitudeEntries?.filter(g => g.user_id === student.user_id) || []
       const studentKindness = kindnessData?.filter(k => k.user_id === student.user_id) || []
       const studentCourage = courageEntries?.filter(c => c.user_id === student.user_id) || []
       const studentHabits = habitData?.filter(h => h.user_id === student.user_id) || []
       const studentMindfulness = mindfulnessData?.filter(m => m.user_id === student.user_id && m.session_type === 'breathing') || []
-      
+
       const recentMoods = studentMoods.slice(-5)
       const negativeMoodCount = recentMoods.filter(m => negativeMoods.includes(m.mood_emoji)).length
-      const questCompletionRate = studentQuests.length > 0 ? 
+      const questCompletionRate = studentQuests.length > 0 ?
         (studentQuests.filter(q => q.completed).length / studentQuests.length) * 100 : 0
-      
+
       const concerns: string[] = []
       const strengths: string[] = []
-      
+
       if (negativeMoodCount >= 3) concerns.push('Frequent negative mood indicators')
       if (questCompletionRate < 50) concerns.push('Low quest completion rate')
       if (studentHelp.length > 0) concerns.push('Recent help requests submitted')
       if (student.streak_days === 0) concerns.push('No current activity streak')
-      
+
       if (questCompletionRate >= 80) strengths.push('High quest completion rate')
       if (student.streak_days >= 7) strengths.push('Strong activity streak')
       if (student.pet_happiness >= 80) strengths.push('High pet happiness score')
       if (recentMoods.filter(m => positiveMoods.includes(m.mood_emoji)).length >= 3) {
         strengths.push('Consistently positive mood')
       }
-      
+
       let riskLevel: 'low' | 'medium' | 'high' = 'low'
       if (concerns.length >= 3) riskLevel = 'high'
       else if (concerns.length >= 1) riskLevel = 'medium'
-      
+
       // Calculate activity scores (0-100)
       const gratitudeScore = Math.min(100, (studentGratitude.length / daysBack) * 100 * 7) // 1 per day target
       const kindnessScore = Math.min(100, (studentKindness.reduce((sum, k) => sum + (k.count || 0), 0) / daysBack) * 100 / 3) // 3 acts per day target
       const breathingScore = Math.min(100, (studentMindfulness.length / daysBack) * 100 * 7) // 1 per day target
       const courageScore = Math.min(100, (studentCourage.length / daysBack) * 100 * 7) // 1 per day target
-      
+
       // Sleep and hydration from habit tracker
-      const avgSleepHours = studentHabits.length > 0 
-        ? studentHabits.reduce((sum, h) => sum + (h.sleep_hours || 0), 0) / studentHabits.length 
+      const avgSleepHours = studentHabits.length > 0
+        ? studentHabits.reduce((sum, h) => sum + (h.sleep_hours || 0), 0) / studentHabits.length
         : 0
       const avgWaterGlasses = studentHabits.length > 0
         ? studentHabits.reduce((sum, h) => sum + (h.water_glasses || 0), 0) / studentHabits.length
         : 0
-      
+
       const sleepScore = Math.min(100, (avgSleepHours / 8) * 100) // 8 hours target
       const hydrationScore = Math.min(100, (avgWaterGlasses / 8) * 100) // 8 glasses target
 
@@ -550,7 +569,7 @@ export async function GET(request: NextRequest) {
         }
       }
     }).filter(student => student.riskLevel === 'high' || student.riskLevel === 'medium')
-    .slice(0, 10) || [] // Limit to top 10 students needing attention
+      .slice(0, 10) || [] // Limit to top 10 students needing attention
 
     // Calculate trend data for charts (last 7 days)
     const trendData: any[] = []
@@ -559,18 +578,18 @@ export async function GET(request: NextRequest) {
       const dateStr = date.toISOString().split('T')[0]
       const dayMoods = moodData?.filter(m => m.date === dateStr) || []
       const dayQuests = questsData?.filter(q => q.date === dateStr) || []
-      
+
       const dayPositive = dayMoods.filter(m => positiveMoods.includes(m.mood_emoji)).length
       const dayTotal = dayMoods.length
       const dayScore = dayTotal > 0 ? (dayPositive / dayTotal) * 10 : 7
-      
+
       // Calculate engagement for this day
       const dayActiveStudents = new Set([
         ...dayMoods.map(m => m.user_id),
         ...dayQuests.map(q => q.user_id)
       ]).size
       const dayEngagement = totalStudents > 0 ? (dayActiveStudents / totalStudents) * 100 : 0
-      
+
       trendData.push({
         date: date.toLocaleDateString('en-US', { weekday: 'short' }),
         score: Number(dayScore.toFixed(1)),
@@ -583,35 +602,35 @@ export async function GET(request: NextRequest) {
     // Calculate activity breakdown for radar chart
     const totalActivityDays = daysBack * totalStudents
     const activityBreakdown = [
-      { 
-        subject: 'Gratitude', 
+      {
+        subject: 'Gratitude',
         A: totalActivityDays > 0 ? Math.round((gratitudeEntries?.length || 0) / totalActivityDays * 100 * 7) : 0,
-        fullMark: 100 
+        fullMark: 100
       },
-      { 
-        subject: 'Kindness', 
+      {
+        subject: 'Kindness',
         A: totalActivityDays > 0 ? Math.round((kindnessData?.reduce((sum, k) => sum + (k.count || 0), 0) || 0) / totalActivityDays * 100 / 3) : 0,
-        fullMark: 100 
+        fullMark: 100
       },
-      { 
-        subject: 'Courage', 
+      {
+        subject: 'Courage',
         A: totalActivityDays > 0 ? Math.round((courageEntries?.length || 0) / totalActivityDays * 100 * 7) : 0,
-        fullMark: 100 
+        fullMark: 100
       },
-      { 
-        subject: 'Breathing', 
+      {
+        subject: 'Breathing',
         A: totalActivityDays > 0 ? Math.round((mindfulnessData?.filter(m => m.session_type === 'breathing').length || 0) / totalActivityDays * 100 * 7) : 0,
-        fullMark: 100 
+        fullMark: 100
       },
-      { 
-        subject: 'Habits', 
+      {
+        subject: 'Habits',
         A: totalActivityDays > 0 ? Math.round((habitData?.length || 0) / totalActivityDays * 100 * 7) : 0,
-        fullMark: 100 
+        fullMark: 100
       },
-      { 
-        subject: 'Mindfulness', 
+      {
+        subject: 'Mindfulness',
         A: totalActivityDays > 0 ? Math.round((mindfulnessData?.length || 0) / totalActivityDays * 100 * 7) : 0,
-        fullMark: 100 
+        fullMark: 100
       }
     ]
 
@@ -621,14 +640,14 @@ export async function GET(request: NextRequest) {
     for (let i = 0; i < weeksCount; i++) {
       const weekStart = new Date(now.getTime() - ((i + 1) * 7 * 24 * 60 * 60 * 1000))
       const weekEnd = new Date(now.getTime() - (i * 7 * 24 * 60 * 60 * 1000))
-      
+
       const weekRequests = helpRequests?.filter(hr => {
         const requestDate = new Date(hr.created_at)
         return requestDate >= weekStart && requestDate < weekEnd
       }) || []
-      
+
       const weekResolved = weekRequests.filter(hr => hr.status === 'resolved' || hr.status === 'completed').length
-      
+
       helpRequestsTimeline.unshift({
         date: `Week ${weeksCount - i}`,
         requests: weekRequests.length,
@@ -638,7 +657,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate trend changes (compare current to previous period)
     const previousStartDate = new Date(startDate.getTime() - (daysBack * 24 * 60 * 60 * 1000))
-    
+
     // Get previous period data
     const { data: prevMoodData } = await supabase
       .from('mood_tracking')
@@ -646,26 +665,26 @@ export async function GET(request: NextRequest) {
       .in('user_id', studentUserIds)
       .gte('date', previousStartDate.toISOString().split('T')[0])
       .lt('date', startDate.toISOString().split('T')[0])
-    
+
     const { data: prevQuestsData } = await supabase
       .from('daily_quests')
       .select('completed')
       .in('user_id', studentUserIds)
       .gte('date', previousStartDate.toISOString().split('T')[0])
       .lt('date', startDate.toISOString().split('T')[0])
-    
+
     const prevPositiveCount = prevMoodData?.filter(m => positiveMoods.includes(m.mood_emoji)).length || 0
     const prevTotalMoods = prevMoodData?.length || 1
     const prevWellbeingScore = 5 + (prevPositiveCount / prevTotalMoods) * 5
-    
+
     const prevCompletedQuests = prevQuestsData?.filter(q => q.completed).length || 0
     const prevTotalQuests = prevQuestsData?.length || 1
     const prevQuestCompletionRate = (prevCompletedQuests / prevTotalQuests) * 100
-    
+
     const wellbeingChange = prevWellbeingScore > 0 ? ((wellbeingScore - prevWellbeingScore) / prevWellbeingScore) * 100 : 0
     const engagementChange = engagementRate - 75 // Compare to baseline of 75%
     const questChange = prevQuestCompletionRate > 0 ? ((questCompletionRate - prevQuestCompletionRate) / prevQuestCompletionRate) * 100 : 0
-    
+
     let helpRequestsChange = 0
     if (helpRequests && helpRequests.length > 0) {
       const { data: prevHelpRequests } = await supabase
@@ -674,7 +693,7 @@ export async function GET(request: NextRequest) {
         .in('student_id', studentUserIds)
         .gte('created_at', previousStartDate.toISOString())
         .lt('created_at', startDate.toISOString())
-      
+
       const prevHelpCount = prevHelpRequests?.length || 1
       helpRequestsChange = ((helpRequests.length - prevHelpCount) / prevHelpCount) * 100
     }

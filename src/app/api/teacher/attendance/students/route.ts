@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
       .select('student_id, status, notes, marked_at')
       .in('student_id', studentIds)
       .eq('date', date)
-    
+
     if (attendanceError) {
       console.error('Error fetching attendance records:', attendanceError)
     }
@@ -209,8 +209,8 @@ export async function POST(request: NextRequest) {
 
     // Validate attendance data size for performance
     if (attendance_data.length > 100) {
-      return NextResponse.json({ 
-        error: 'Too many students. Please process in batches of 100 or less.' 
+      return NextResponse.json({
+        error: 'Too many students. Please process in batches of 100 or less.'
       }, { status: 400 })
     }
 
@@ -227,6 +227,33 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString()
     }))
 
+    // Defensive validation: Verify all student_id values exist in profiles table
+    const studentIdsToValidate = attendanceRecords.map(r => r.student_id)
+    const { data: existingProfiles, error: validationError } = await supabase
+      .from('profiles')
+      .select('id')
+      .in('id', studentIdsToValidate)
+
+    if (validationError) {
+      console.error('❌ Error validating student profiles:', validationError)
+      return NextResponse.json({
+        error: 'Failed to validate student profiles',
+        details: validationError.message
+      }, { status: 500 })
+    }
+
+    const existingProfileIds = new Set(existingProfiles?.map(p => p.id) || [])
+    const invalidStudentIds = studentIdsToValidate.filter(id => !existingProfileIds.has(id))
+
+    if (invalidStudentIds.length > 0) {
+      console.error('❌ Invalid student IDs detected:', invalidStudentIds)
+      return NextResponse.json({
+        error: 'Invalid student IDs detected',
+        details: `${invalidStudentIds.length} student(s) do not have valid profiles`,
+        invalid_ids: invalidStudentIds
+      }, { status: 400 })
+    }
+
     console.log('📝 Saving attendance for', attendanceRecords.length, 'students on', attendanceDate)
 
     // Upsert attendance records with correct conflict resolution
@@ -241,16 +268,16 @@ export async function POST(request: NextRequest) {
     if (upsertError) {
       console.error('❌ Error upserting attendance:', upsertError)
       console.error('Error details:', JSON.stringify(upsertError, null, 2))
-      return NextResponse.json({ 
-        error: 'Failed to save attendance', 
-        details: upsertError.message 
+      return NextResponse.json({
+        error: 'Failed to save attendance',
+        details: upsertError.message
       }, { status: 500 })
     }
 
     console.log('✅ Successfully saved attendance for', attendanceRecords.length, 'students')
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: `Attendance marked for ${attendanceRecords.length} students`,
       date: attendanceDate,
       class_id: class_id,

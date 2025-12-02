@@ -122,6 +122,7 @@ export default function WellbeingSeverityPage() {
   const [heatmapData, setHeatmapData] = useState<any[][]>([])
   const [realTimeUpdates, setRealTimeUpdates] = useState(true)
   const [darkMode, setDarkMode] = useState(false)
+  const [neonMode, setNeonMode] = useState(false)
   const [particleSystem, setParticleSystem] = useState(true)
 
   // Responsive
@@ -548,6 +549,78 @@ export default function WellbeingSeverityPage() {
           to { opacity: 1; transform: translateY(0); }
         }
         
+        /* Neon Theme Styles */
+        .neon-card {
+          background: rgba(0, 0, 0, 0.8);
+          border: 1px solid rgba(6, 182, 212, 0.3);
+          box-shadow: 
+            0 0 20px rgba(6, 182, 212, 0.2),
+            inset 0 0 20px rgba(6, 182, 212, 0.05);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .neon-card:hover {
+          border-color: rgba(6, 182, 212, 0.6);
+          box-shadow: 
+            0 0 30px rgba(6, 182, 212, 0.4),
+            0 0 60px rgba(6, 182, 212, 0.2),
+            inset 0 0 30px rgba(6, 182, 212, 0.1);
+          transform: translateY(-4px);
+        }
+        
+        .neon-border-top {
+          position: relative;
+        }
+        
+        .neon-border-top::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 2px;
+          background: linear-gradient(90deg, 
+            transparent, 
+            rgba(6, 182, 212, 0.8), 
+            rgba(59, 130, 246, 0.8),
+            transparent
+          );
+          box-shadow: 0 0 10px rgba(6, 182, 212, 0.8);
+        }
+        
+        @keyframes neon-pulse {
+          0%, 100% {
+            box-shadow: 
+              0 0 20px rgba(6, 182, 212, 0.4),
+              inset 0 0 20px rgba(6, 182, 212, 0.1);
+          }
+          50% {
+            box-shadow: 
+              0 0 40px rgba(6, 182, 212, 0.6),
+              0 0 80px rgba(6, 182, 212, 0.3),
+              inset 0 0 30px rgba(6, 182, 212, 0.2);
+          }
+        }
+        
+        .neon-pulse {
+          animation: neon-pulse 2s ease-in-out infinite;
+        }
+        
+        .neon-text {
+          color: rgba(6, 182, 212, 1);
+          text-shadow: 
+            0 0 10px rgba(6, 182, 212, 0.8),
+            0 0 20px rgba(6, 182, 212, 0.4),
+            0 0 30px rgba(6, 182, 212, 0.2);
+        }
+        
+        .neon-glow {
+          box-shadow: 
+            0 0 15px rgba(6, 182, 212, 0.5),
+            0 0 30px rgba(6, 182, 212, 0.3),
+            0 0 45px rgba(6, 182, 212, 0.1);
+        }
+        
         .enterprise-fade-in {
           animation: enterprise-fade-in 0.6s ease-out;
         }
@@ -605,16 +678,28 @@ export default function WellbeingSeverityPage() {
       `}</style>
 
       <div
-        className={`min-h-screen transition-all duration-1000 ${darkMode
-          ? 'bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900'
-          : 'bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50'
+        className={`min-h-screen transition-all duration-1000 ${neonMode
+          ? 'bg-black'
+          : darkMode
+            ? 'bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900'
+            : 'bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50'
           }`}
         style={{
-          backgroundImage: particleSystem ? `
-            radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.1) 0%, transparent 50%),
-            radial-gradient(circle at 40% 80%, rgba(120, 219, 255, 0.1) 0%, transparent 50%)
-          ` : undefined
+          backgroundImage: neonMode
+            ? `
+              linear-gradient(rgba(6, 182, 212, 0.03) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(6, 182, 212, 0.03) 1px, transparent 1px),
+              radial-gradient(circle at 20% 50%, rgba(6, 182, 212, 0.15) 0%, transparent 50%),
+              radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.15) 0%, transparent 50%)
+            `
+            : particleSystem
+              ? `
+              radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
+              radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.1) 0%, transparent 50%),
+              radial-gradient(circle at 40% 80%, rgba(120, 219, 255, 0.1) 0%, transparent 50%)
+            `
+              : undefined,
+          backgroundSize: neonMode ? '50px 50px, 50px 50px, 100% 100%, 100% 100%' : undefined
         }}
       >
         {/* Futuristic Neural Header */}
@@ -627,9 +712,11 @@ export default function WellbeingSeverityPage() {
           </div>
 
           {/* Glassmorphism Header */}
-          <div className={`relative backdrop-blur-xl border-b ${darkMode
-            ? 'bg-white/5 border-white/10'
-            : 'bg-white/80 border-white/20'
+          <div className={`relative backdrop-blur-xl border-b transition-all duration-500 ${neonMode
+            ? 'bg-black/95 border-cyan-500/30 shadow-[0_0_50px_rgba(6,182,212,0.3)]'
+            : darkMode
+              ? 'bg-white/5 border-white/10'
+              : 'bg-white/80 border-white/20'
             } shadow-2xl sticky top-0 z-10`}>
             <div className="relative z-10">
               <div className="max-w-7xl mx-auto mobile-optimized py-4 md:py-8">
@@ -637,7 +724,8 @@ export default function WellbeingSeverityPage() {
                 <motion.div
                   initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="enterprise-card rounded-2xl p-4 md:p-6 mb-4 md:mb-8"
+                  className={`rounded-2xl p-4 md:p-6 mb-4 md:mb-8 transition-all duration-500 ${neonMode ? 'neon-card neon-border-top' : 'enterprise-card'
+                    }`}
                 >
                   <div className="flex flex-col gap-4">
                     {/* Mobile Header Row */}
@@ -655,7 +743,11 @@ export default function WellbeingSeverityPage() {
                         </Link>
 
                         <div>
-                          <h1 className={`text-lg md:text-2xl lg:text-3xl font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'
+                          <h1 className={`text-lg md:text-2xl lg:text-3xl font-bold tracking-tight transition-all duration-500 ${neonMode
+                            ? 'neon-text'
+                            : darkMode
+                              ? 'text-white'
+                              : 'text-slate-900'
                             }`}>
                             Student Wellbeing
                           </h1>
@@ -672,6 +764,18 @@ export default function WellbeingSeverityPage() {
 
                       {/* Mobile Actions */}
                       <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setNeonMode(!neonMode)}
+                          className={`touch-target p-2 transition-all duration-500 ${neonMode
+                            ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.6)] hover:shadow-[0_0_30px_rgba(6,182,212,0.8)]'
+                            : 'border-gray-300 hover:border-cyan-400'
+                            }`}
+                          title="Toggle Neon Mode"
+                        >
+                          <Zap className={`h-4 w-4 transition-all duration-500 ${neonMode ? 'text-white animate-pulse' : ''}`} />
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -809,20 +913,29 @@ export default function WellbeingSeverityPage() {
                     lightBg: 'bg-indigo-50',
                     darkBg: 'bg-indigo-950/50'
                   }
-                ].map((kpi) => (
+                ].map((kpi, index) => (
                   <div
-                    key={kpi.label}
-                    className={`enterprise-card metric-card relative overflow-hidden rounded-xl ${isMobile ? 'p-3' : 'p-3 md:p-4 lg:p-6'} ${darkMode ? kpi.darkBg : kpi.lightBg
-                      } border border-white/20 shadow-lg hover:shadow-xl`}
+                    key={index}
+                    className={`rounded-xl ${isMobile ? 'p-3' : 'p-4 md:p-6'} backdrop-blur-sm transition-all duration-500 hover:scale-105 ${neonMode
+                      ? 'neon-card'
+                      : darkMode
+                        ? `${kpi.darkBg} border border-white/10 shadow-lg hover:shadow-xl`
+                        : `${kpi.lightBg} border border-white/20 shadow-lg hover:shadow-xl`
+                      }`}
                   >
                     <div className={`flex items-start justify-between ${isMobile ? 'mb-2' : 'mb-4'}`}>
-                      <div className={`${isMobile ? 'p-2' : 'p-3'} rounded-xl ${kpi.color} shadow-lg`}>
-                        <kpi.icon className={`text-white ${isMobile ? 'h-4 w-4' : 'h-5 w-5'}`} />
+                      <div className={`${isMobile ? 'p-2' : 'p-3'} rounded-xl shadow-lg transition-all duration-500 ${neonMode ? 'bg-cyan-500/20 border border-cyan-500/50' : kpi.color
+                        }`}>
+                        <kpi.icon className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'} ${neonMode ? 'text-cyan-400' : 'text-white'}`} />
                       </div>
                       {!isMobile && (
                         <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${kpi.trend === 'up'
-                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
-                          : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                          ? neonMode
+                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                            : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                          : neonMode
+                            ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                            : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
                           }`}>
                           {kpi.trend === 'up' ? (
                             <TrendingUp className="h-3 w-3" />
@@ -835,16 +948,16 @@ export default function WellbeingSeverityPage() {
                     </div>
 
                     <div className={`space-y-1 ${isMobile ? 'space-y-0.5' : 'space-y-2'}`}>
-                      <div className={`font-bold ${isMobile ? 'text-xl' : 'text-3xl'} ${darkMode ? 'text-white' : 'text-gray-900'
+                      <div className={`font-bold ${isMobile ? 'text-xl' : 'text-3xl'} transition-all duration-500 ${neonMode ? 'neon-text' : darkMode ? 'text-white' : 'text-gray-900'
                         }`}>
                         {kpi.value}
                       </div>
-                      <div className={`font-semibold ${isMobile ? 'text-xs' : 'text-sm'} ${darkMode ? 'text-gray-200' : 'text-gray-700'
+                      <div className={`font-semibold ${isMobile ? 'text-xs' : 'text-sm'} transition-all duration-500 ${neonMode ? 'text-cyan-300' : darkMode ? 'text-gray-200' : 'text-gray-700'
                         } ${isMobile ? 'leading-tight' : ''}`}>
                         {isMobile ? kpi.label.split(' ').slice(0, 2).join(' ') : kpi.label}
                       </div>
                       {!isMobile && (
-                        <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'
+                        <div className={`text-xs transition-all duration-500 ${neonMode ? 'text-cyan-400/70' : darkMode ? 'text-gray-400' : 'text-gray-500'
                           }`}>
                           {kpi.subtitle}
                         </div>
@@ -852,9 +965,11 @@ export default function WellbeingSeverityPage() {
                     </div>
 
                     {/* Progress indicator */}
-                    <div className="mt-4 h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div className={`mt-4 h-1 rounded-full overflow-hidden ${neonMode ? 'bg-cyan-900/30' : 'bg-gray-200 dark:bg-gray-700'
+                      }`}>
                       <div
-                        className={`h-full rounded-full ${kpi.color}`}
+                        className={`h-full rounded-full transition-all duration-500 ${neonMode ? 'bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.8)]' : kpi.color
+                          }`}
                         style={{ width: `${Math.min((Number(kpi.value) / (summary.total || 1)) * 100, 100)}%` }}
                       />
                     </div>
@@ -865,7 +980,8 @@ export default function WellbeingSeverityPage() {
 
             {/* Professional Search & Analytics Controls */}
             <div
-              className={`enterprise-card rounded-xl space-y-4 md:space-y-6 ${isMobile ? 'p-3' : 'p-3 md:p-4 lg:p-6'}`}
+              className={`rounded-xl space-y-4 md:space-y-6 transition-all duration-500 ${isMobile ? 'p-3' : 'p-3 md:p-4 lg:p-6'} ${neonMode ? 'neon-card' : 'enterprise-card'
+                }`}
             >
               {/* Search Section */}
               <div className={`space-y-3 ${isMobile ? 'space-y-2' : 'space-y-4'}`}>
@@ -1015,7 +1131,8 @@ export default function WellbeingSeverityPage() {
                     return (
                       <div
                         key={analytic.id}
-                        className={`enterprise-card metric-card rounded-xl cursor-pointer group enterprise-fade-in ${isMobile ? 'p-3' : 'p-3 md:p-4 lg:p-6'}`}
+                        className={`rounded-xl cursor-pointer group enterprise-fade-in transition-all duration-500 ${isMobile ? 'p-3' : 'p-3 md:p-4 lg:p-6'} ${neonMode ? 'neon-card hover:neon-pulse' : 'enterprise-card metric-card'
+                          }`}
                         onClick={() => setSelectedStudent(analytic)}
                       >
                         {/* Student Header */}
@@ -1029,27 +1146,29 @@ export default function WellbeingSeverityPage() {
                                   alt={analytic.student_name}
                                   width={48}
                                   height={48}
-                                  className={`object-cover border-2 border-white shadow-sm ${isMobile ? 'w-8 h-8 rounded-lg' : 'w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 rounded-lg md:rounded-xl'}`}
+                                  className={`object-cover border-2 shadow-sm transition-all duration-500 ${neonMode ? 'border-cyan-500/50' : 'border-white'
+                                    } ${isMobile ? 'w-8 h-8 rounded-lg' : 'w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 rounded-lg md:rounded-xl'}`}
                                 />
                               ) : (
                                 <div className={`bg-gradient-to-r ${riskColor} flex items-center justify-center shadow-sm ${isMobile ? 'w-8 h-8 rounded-lg' : 'w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 rounded-lg md:rounded-xl'}`}>
                                   <User className="h-4 w-4 md:h-5 md:w-5 lg:h-6 lg:w-6 text-white" />
                                 </div>
                               )}
-                              <div className={`absolute -bottom-0.5 -right-0.5 md:-bottom-1 md:-right-1 w-3 h-3 md:w-4 md:h-4 rounded-full border-2 border-white ${analytic.risk_level === 'critical' ? 'bg-red-500' :
-                                analytic.risk_level === 'high' ? 'bg-orange-500' :
-                                  analytic.risk_level === 'medium' ? 'bg-yellow-500' :
-                                    analytic.risk_level === 'low' ? 'bg-green-500' :
-                                      'bg-emerald-500'
+                              <div className={`absolute -bottom-0.5 -right-0.5 md:-bottom-1 md:-right-1 w-3 h-3 md:w-4 md:h-4 rounded-full border-2 transition-all duration-500 ${neonMode ? 'border-black' : 'border-white'
+                                } ${analytic.risk_level === 'critical' ? 'bg-red-500' :
+                                  analytic.risk_level === 'high' ? 'bg-orange-500' :
+                                    analytic.risk_level === 'medium' ? 'bg-yellow-500' :
+                                      analytic.risk_level === 'low' ? 'bg-green-500' :
+                                        'bg-emerald-500'
                                 }`}></div>
                             </div>
 
                             <div className="flex-1 min-w-0">
-                              <h3 className={`font-semibold truncate ${isMobile ? 'text-sm' : 'text-sm md:text-base'} ${darkMode ? 'text-white' : 'text-gray-900'
+                              <h3 className={`font-semibold truncate ${isMobile ? 'text-sm' : 'text-sm md:text-base'} transition-all duration-500 ${neonMode ? 'text-cyan-300' : darkMode ? 'text-white' : 'text-gray-900'
                                 }`}>
                                 {analytic.student_name}
                               </h3>
-                              <p className={`${isMobile ? 'text-xs' : 'text-xs md:text-sm'} ${darkMode ? 'text-gray-400' : 'text-gray-600'
+                              <p className={`${isMobile ? 'text-xs' : 'text-xs md:text-sm'} transition-all duration-500 ${neonMode ? 'text-cyan-400/70' : darkMode ? 'text-gray-400' : 'text-gray-600'
                                 }`}>
                                 {isMobile ? analytic.student_grade.replace('Grade ', 'G') : analytic.student_grade} • {analytic.student_id.slice(-4)}
                               </p>
@@ -1058,11 +1177,17 @@ export default function WellbeingSeverityPage() {
 
                           {/* Risk Status */}
                           <div className={`flex flex-col items-end ${isMobile ? 'gap-1' : 'gap-2'}`}>
-                            <div className={`${isMobile ? 'px-1.5 py-0.5' : 'px-2 py-1'} rounded-lg ${isMobile ? 'text-[10px]' : 'text-xs'} font-medium ${analytic.risk_level === 'critical' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
-                              analytic.risk_level === 'high' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' :
-                                analytic.risk_level === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
-                                  analytic.risk_level === 'low' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
-                                    'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
+                            <div className={`${isMobile ? 'px-1.5 py-0.5' : 'px-2 py-1'} rounded-lg ${isMobile ? 'text-[10px]' : 'text-xs'} font-medium transition-all duration-500 ${neonMode
+                                ? analytic.risk_level === 'critical' ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
+                                  analytic.risk_level === 'high' ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30' :
+                                    analytic.risk_level === 'medium' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' :
+                                      analytic.risk_level === 'low' ? 'bg-green-500/20 text-green-300 border border-green-500/30' :
+                                        'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                : analytic.risk_level === 'critical' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
+                                  analytic.risk_level === 'high' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' :
+                                    analytic.risk_level === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                                      analytic.risk_level === 'low' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                                        'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
                               }`}>
                               {isMobile ? analytic.risk_level.charAt(0).toUpperCase() + analytic.risk_level.slice(1) : analytic.risk_level.toUpperCase()}
                             </div>

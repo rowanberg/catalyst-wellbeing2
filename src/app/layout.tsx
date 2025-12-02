@@ -114,6 +114,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5, // Allow zoom for accessibility
   userScalable: true, // Enable user zoom
+  viewportFit: 'cover', // Enable full-screen on notched devices
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#3b82f6' },
     { media: '(prefers-color-scheme: dark)', color: '#1e40af' }
