@@ -40,20 +40,20 @@ type ThemeName = keyof typeof THEMES
 function applyTheme(themeName: ThemeName) {
   const root = document.documentElement
   const colors = THEMES[themeName]
-  
+
   root.style.setProperty('--theme-primary', colors.primary)
   root.style.setProperty('--theme-secondary', colors.secondary)
   root.style.setProperty('--theme-tertiary', colors.tertiary)
   root.style.setProperty('--theme-accent', colors.accent)
   root.style.setProperty('--theme-highlight', colors.highlight)
-  
+
   console.log('✅ Theme applied:', themeName, colors)
 }
 
 // Apply theme immediately on module load (before React hydration)
 if (typeof window !== 'undefined') {
   const storedTheme = localStorage.getItem('catalyst-theme-preference') as ThemeName | null
-  const theme = storedTheme && THEMES[storedTheme] ? storedTheme : 'fiery-rose'
+  const theme = storedTheme && THEMES[storedTheme] ? storedTheme : 'fresh-meadow'
   applyTheme(theme)
 }
 
@@ -61,9 +61,9 @@ export function ThemeLoader() {
   useEffect(() => {
     // Re-apply theme on mount to ensure it's set
     const storedTheme = localStorage.getItem('catalyst-theme-preference') as ThemeName | null
-    const theme = storedTheme && THEMES[storedTheme] ? storedTheme : 'fiery-rose'
+    const theme = storedTheme && THEMES[storedTheme] ? storedTheme : 'fresh-meadow'
     applyTheme(theme)
-    
+
     // Listen for custom theme change events (for same-window changes)
     const handleThemeChange = (e: CustomEvent) => {
       const newTheme = e.detail.theme as ThemeName
@@ -71,7 +71,7 @@ export function ThemeLoader() {
         applyTheme(newTheme)
       }
     }
-    
+
     // Listen for storage events (for cross-window changes)
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'catalyst-theme-preference' && e.newValue) {
@@ -81,15 +81,15 @@ export function ThemeLoader() {
         }
       }
     }
-    
+
     window.addEventListener('themeChange', handleThemeChange as EventListener)
     window.addEventListener('storage', handleStorageChange)
-    
+
     return () => {
       window.removeEventListener('themeChange', handleThemeChange as EventListener)
       window.removeEventListener('storage', handleStorageChange)
     }
   }, [])
-  
+
   return null // This component doesn't render anything
 }

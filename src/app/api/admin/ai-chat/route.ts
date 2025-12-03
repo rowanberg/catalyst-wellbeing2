@@ -114,7 +114,8 @@ export async function POST(request: NextRequest) {
       parentsResult,
       wellbeingResult,
       achievementsResult,
-      announcementsResult
+      announcementsResult,
+      wellbeingAnalyticsResult
     ] = await Promise.all([
       // Always fetch
       supabase.from('schools').select('*').eq('id', profile.school_id).single(),
@@ -151,7 +152,17 @@ export async function POST(request: NextRequest) {
         : Promise.resolve(emptyResult),
 
       // Always fetch recent announcements
-      supabase.from('event_announcements').select('title, content, announcement_type, created_at').order('created_at', { ascending: false }).limit(10)
+      supabase.from('event_announcements').select('title, content, announcement_type, created_at').order('created_at', { ascending: false }).limit(10),
+
+      // Wellbeing Analytics Context (Risk Levels)
+      (context === 'wellbeing' || context === 'general')
+        ? supabase.from('student_wellbeing_analytics_enhanced')
+          .select('risk_level, student_id')
+          .eq('school_id', profile.school_id)
+          .eq('period_type', 'weekly')
+          .order('analysis_date', { ascending: false })
+          .limit(200)
+        : Promise.resolve(emptyResult)
     ])
 
     // Use the count result for basic student info if not fetching details
@@ -174,6 +185,7 @@ export async function POST(request: NextRequest) {
     if (assessmentsResult?.error) console.error('❌ Assessments query error:', assessmentsResult.error)
     if (announcementsResult?.error) console.error('❌ Announcements query error:', announcementsResult.error)
     if (achievementsResult?.error) console.error('❌ Achievements query error:', achievementsResult.error)
+    if (wellbeingAnalyticsResult?.error) console.error('❌ Wellbeing Analytics query error:', wellbeingAnalyticsResult.error)
 
     const school = schoolResult?.data || null
     const students = studentsResult?.data || []
@@ -185,6 +197,7 @@ export async function POST(request: NextRequest) {
     const assessments = assessmentsResult?.data || []
     const announcements = announcementsResult?.data || []
     const achievements = achievementsResult?.data || []
+    const wellbeingAnalytics = wellbeingAnalyticsResult?.data || []
 
     // Debug: Log data counts
     console.log('📊 Data fetched for context "' + context + '":', {
@@ -301,6 +314,14 @@ export async function POST(request: NextRequest) {
       ? ((moodCounts['happy'] || 0) * 1 + (moodCounts['neutral'] || 0) * 0.5 + (moodCounts['sad'] || 0) * 0) / wellbeing.length * 100
       : 0
 
+    // Wellbeing Risk Analytics
+    const riskStats = {
+      total: wellbeingAnalytics.length,
+      high: wellbeingAnalytics.filter((w: any) => w.risk_level === 'high' || w.risk_level === 'critical').length,
+      medium: wellbeingAnalytics.filter((w: any) => w.risk_level === 'medium').length,
+      low: wellbeingAnalytics.filter((w: any) => w.risk_level === 'low' || w.risk_level === 'thriving').length
+    }
+
     // Assessment analytics with upcoming
     const now = new Date()
     const upcomingAssessments = assessments.filter((a: any) => a.due_date && new Date(a.due_date) > now)
@@ -396,7 +417,14 @@ ${subjectAverages.slice(0, 15).map(s => `- ${s.subject}: Avg ${s.average.toFixed
 - Total Grades Recorded: ${grades.length}
 - Average Across All Subjects: ${subjectAverages.length > 0 ? (subjectAverages.reduce((sum, s) => sum + s.average, 0) / subjectAverages.length).toFixed(1) : 0}%
 
-**WELLBEING & MOOD TRACKING:**
+**WELLBEING ANALYTICS (Risk Assessment):**
+- Students Analyzed: ${riskStats.total}
+- High/Critical Risk: ${riskStats.high} (Immediate attention needed)
+- Medium Risk: ${riskStats.medium}
+- Low/Thriving: ${riskStats.low}
+*For detailed analysis and specific student identification, use the 'getWellbeingSeverity' tool.*
+
+**STUDENT SELF-REPORTED MOODS (Check-ins):**
 - Total Check-ins: ${wellbeing.length}
 - Overall Wellbeing Score: ${wellbeingScore.toFixed(1)}%
 - Mood Distribution:

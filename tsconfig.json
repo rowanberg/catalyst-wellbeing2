@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "es5",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "noImplicitOverride": false,
@@ -33,7 +37,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ]
     }
   },
   "include": [
@@ -47,6 +53,7 @@
     "__tests__",
     "firebase",
     "supabase/functions",
-    "scripts"
+    "scripts",
+    "mcp-server"
   ]
 }

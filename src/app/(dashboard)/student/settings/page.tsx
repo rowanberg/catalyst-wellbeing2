@@ -10,8 +10,8 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { ThemeLoader } from '@/components/student/ThemeLoader'
-import { 
-  Settings, 
+import {
+  Settings,
   ArrowLeft,
   User,
   Shield,
@@ -63,15 +63,15 @@ const NOTIFICATION_SETTINGS = [
 ] as const
 
 // Memoized setting item component
-const SettingItem = memo(({ 
-  settingKey, 
-  label, 
-  description, 
-  icon: Icon, 
-  checked, 
+const SettingItem = memo(({
+  settingKey,
+  label,
+  description,
+  icon: Icon,
+  checked,
   onChange,
   iconColor = 'blue'
-}: { 
+}: {
   settingKey: string
   label: string
   description: string
@@ -80,7 +80,7 @@ const SettingItem = memo(({
   onChange: (checked: boolean) => void
   iconColor?: 'blue' | 'green'
 }) => {
-  
+
   return (
     <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl border" style={{ backgroundColor: 'color-mix(in srgb, var(--theme-highlight) 50%, transparent)', borderColor: 'color-mix(in srgb, var(--theme-accent) 20%, transparent)' }}>
       {/* Mobile Layout */}
@@ -162,15 +162,15 @@ const StudentSettingsPage = () => {
   const [showStudentId, setShowStudentId] = useState(false)
   const [copiedStudentId, setCopiedStudentId] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-  
+
   const [whatsappConfig, setWhatsappConfig] = useState<WhatsAppConfig>({
     phoneNumber: '',
     whatsappLink: '',
     isEnabled: false
   })
-  
+
   const [settings, setSettings] = useState<SettingsState>({
-    theme: 'fiery-rose',
+    theme: 'fresh-meadow',
     notifications: true,
     soundEffects: true,
     privateProfile: false,
@@ -206,12 +206,12 @@ const StudentSettingsPage = () => {
     try {
       const response = await fetch('/api/student/whatsapp-config', {
         method: 'GET',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache'
         }
       })
-      
+
       if (response.ok) {
         const whatsappData = await response.json()
         setWhatsappConfig({
@@ -230,17 +230,17 @@ const StudentSettingsPage = () => {
       setSaving(true)
       const response = await fetch('/api/student/whatsapp-config', {
         method: 'PUT',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache'
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           phoneNumber: config.phoneNumber,
           whatsappLink: config.whatsappLink,
           isEnabled: config.isEnabled
         })
       })
-      
+
       if (response.ok) {
         showToast('WhatsApp configuration saved successfully!', 'success')
         setHasUnsavedChanges(false)
@@ -281,11 +281,11 @@ const StudentSettingsPage = () => {
   const fetchProfileAndSettings = useCallback(async () => {
     try {
       setLoading(true)
-      
+
       // Check cache first
       const cachedProfile = getCachedData('profile')
       const cachedSettings = getCachedData('settings')
-      
+
       if (cachedProfile && cachedSettings) {
         setProfile(cachedProfile)
         setSettings(prev => ({ ...prev, ...cachedSettings }))
@@ -338,23 +338,23 @@ const StudentSettingsPage = () => {
 
   // Debounced save settings with optimistic updates
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
-  
+
   const saveSettings = useCallback(async (settingsToSave = settings) => {
     try {
       setSaving(true)
-      
+
       // Optimistic update to cache
       setCachedData('settings', settingsToSave)
-      
+
       const response = await fetch('/api/student/settings', {
         method: 'PUT',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache'
         },
         body: JSON.stringify({ settings: settingsToSave })
       })
-      
+
       if (response.ok) {
         showToast('Settings saved successfully!', 'success')
         setHasUnsavedChanges(false) // Clear unsaved changes flag
@@ -387,20 +387,19 @@ const StudentSettingsPage = () => {
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     const toast = document.createElement('div')
-    toast.className = `fixed top-4 right-4 px-6 py-3 rounded-2xl shadow-2xl z-[10000] transform transition-all duration-500 backdrop-blur-xl border ${
-      type === 'success' 
-        ? 'bg-green-500/90 text-white border-green-400/50' 
+    toast.className = `fixed top-4 right-4 px-6 py-3 rounded-2xl shadow-2xl z-[10000] transform transition-all duration-500 backdrop-blur-xl border ${type === 'success'
+        ? 'bg-green-500/90 text-white border-green-400/50'
         : 'bg-red-500/90 text-white border-red-400/50'
-    }`
+      }`
     toast.textContent = message
     toast.style.transform = 'translateX(100%)'
-    
+
     document.body.appendChild(toast)
-    
+
     setTimeout(() => {
       toast.style.transform = 'translateX(0)'
     }, 100)
-    
+
     setTimeout(() => {
       toast.style.transform = 'translateX(100%)'
       setTimeout(() => {
@@ -426,16 +425,16 @@ const StudentSettingsPage = () => {
     setSettings(prev => {
       // Early return if value hasn't changed (prevent unnecessary re-renders)
       if (prev[key] === value) return prev
-      
+
       const newSettings = { ...prev, [key]: value }
-      
+
       // Batch DOM updates using requestAnimationFrame
       requestAnimationFrame(() => {
         // Apply theme changes immediately with cross-account persistence
         if (key === 'theme') {
           // Apply custom theme colors using CSS variables
           const root = document.documentElement
-          
+
           if (value === 'fiery-rose') {
             root.style.setProperty('--theme-primary', '#F08080')
             root.style.setProperty('--theme-secondary', '#F4978E')
@@ -461,35 +460,35 @@ const StudentSettingsPage = () => {
             root.style.setProperty('--theme-accent', '#81171b')
             root.style.setProperty('--theme-highlight', '#540804')
           }
-          
+
           // Store theme preference globally for cross-account consistency
           localStorage.setItem('catalyst-theme-preference', value)
-          
+
           // Dispatch custom event for same-window theme changes
           window.dispatchEvent(new CustomEvent('themeChange', { detail: { theme: value } }))
         }
-        
+
         // Apply font size changes immediately with accessibility persistence
         if (key === 'fontSize') {
           document.documentElement.style.fontSize = `${value}px`
           localStorage.setItem('catalyst-font-size', value.toString())
         }
-        
+
         // Apply language changes with cross-account support
         if (key === 'language') {
           document.documentElement.lang = value.toLowerCase().substring(0, 2)
           localStorage.setItem('catalyst-language', value)
         }
-        
+
         // Haptic feedback with user preference respect
         if (newSettings.hapticFeedback && 'vibrate' in navigator) {
           navigator.vibrate(50)
         }
       })
-      
+
       return newSettings
     })
-    
+
     // Mark as having unsaved changes
     setHasUnsavedChanges(true)
   }, [])
@@ -498,11 +497,11 @@ const StudentSettingsPage = () => {
   const handleSignOut = async () => {
     try {
       console.log('🚪 [SIGN-OUT] Signing out user...')
-      
+
       // Sign out from Supabase
       const { supabase } = await import('@/lib/supabaseClient')
       const { error } = await supabase.auth.signOut()
-      
+
       if (error) {
         console.error('Sign out error:', error)
         showToast('There was an error signing out. Please try again.', 'error')
@@ -512,12 +511,12 @@ const StudentSettingsPage = () => {
       // Clear any local storage or session data
       localStorage.clear()
       sessionStorage.clear()
-      
+
       showToast('You have been signed out safely.', 'success')
-      
+
       // Redirect to login page
       router.push('/login')
-      
+
     } catch (error) {
       console.error('Sign out error:', error)
       showToast('There was an error signing out. Please try again.', 'error')
@@ -530,10 +529,10 @@ const StudentSettingsPage = () => {
     const storedTheme = localStorage.getItem('catalyst-theme-preference') as 'fiery-rose' | 'ocean-sunset' | 'fresh-meadow' | 'autumn-ember' | null
     const storedFontSize = localStorage.getItem('catalyst-font-size')
     const storedLanguage = localStorage.getItem('catalyst-language')
-    
+
     if (storedTheme && ['fiery-rose', 'ocean-sunset', 'fresh-meadow', 'autumn-ember'].includes(storedTheme)) {
       const root = document.documentElement
-      
+
       if (storedTheme === 'fiery-rose') {
         root.style.setProperty('--theme-primary', '#F08080')
         root.style.setProperty('--theme-secondary', '#F4978E')
@@ -559,17 +558,17 @@ const StudentSettingsPage = () => {
         root.style.setProperty('--theme-accent', '#81171b')
         root.style.setProperty('--theme-highlight', '#540804')
       }
-      
+
       setSettings(prev => ({ ...prev, theme: storedTheme }))
     }
-    
+
     if (storedFontSize) {
       const fontSize = parseInt(storedFontSize)
       if (fontSize >= 12 && fontSize <= 24) {
         document.documentElement.style.fontSize = `${fontSize}px`
       }
     }
-    
+
     if (storedLanguage) {
       document.documentElement.lang = storedLanguage.toLowerCase().substring(0, 2)
     }
@@ -595,16 +594,16 @@ const StudentSettingsPage = () => {
       <div className="min-h-screen relative overflow-hidden" style={{ background: 'linear-gradient(to bottom right, var(--theme-highlight), color-mix(in srgb, var(--theme-secondary) 20%, white), var(--theme-tertiary))' }}>
         {/* Theme Loader */}
         <ThemeLoader />
-        
+
         {/* Premium Background */}
         <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-primary) 10%, transparent), color-mix(in srgb, var(--theme-secondary) 10%, transparent), color-mix(in srgb, var(--theme-tertiary) 10%, transparent))' }} />
         <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, color-mix(in srgb, var(--theme-primary) 8%, transparent) 1px, transparent 0)', backgroundSize: '32px 32px' }} />
-        
+
         <div className="relative z-10 px-3 py-4 sm:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto">
-            
+
             {/* Mobile-Optimized Header */}
-            <motion.div 
+            <motion.div
               className="mb-4 sm:mb-8"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -632,7 +631,7 @@ const StudentSettingsPage = () => {
                       size="sm"
                       className="border-0 rounded-xl px-4 py-2 font-semibold transition-all text-white shadow-md"
                       style={{
-                        background: hasUnsavedChanges 
+                        background: hasUnsavedChanges
                           ? 'linear-gradient(to right, var(--theme-primary), var(--theme-secondary))'
                           : 'rgba(209, 213, 219, 0.5)',
                         color: hasUnsavedChanges ? 'white' : 'rgb(107, 114, 128)',
@@ -649,7 +648,7 @@ const StudentSettingsPage = () => {
                       <span className="text-xs">{saving ? 'Saving' : hasUnsavedChanges ? 'Save' : 'Saved'}</span>
                     </Button>
                   </div>
-                  
+
                   {/* Title Row */}
                   <div className="flex items-center space-x-3">
                     <div className="p-3 rounded-xl shadow-lg" style={{ background: 'linear-gradient(to bottom right, var(--theme-primary), var(--theme-secondary), var(--theme-accent))' }}>
@@ -690,13 +689,13 @@ const StudentSettingsPage = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <Button
                     onClick={() => saveSettings()}
                     disabled={saving || !hasUnsavedChanges}
                     className="border-0 rounded-2xl px-6 py-3 font-bold transition-all shadow-lg text-white"
                     style={{
-                      background: hasUnsavedChanges 
+                      background: hasUnsavedChanges
                         ? 'linear-gradient(to right, var(--theme-primary), var(--theme-secondary))'
                         : 'rgba(209, 213, 219, 0.5)',
                       color: hasUnsavedChanges ? 'white' : 'rgb(107, 114, 128)',
@@ -718,7 +717,7 @@ const StudentSettingsPage = () => {
 
             {/* Optimized Settings Grid - Responsive & Organized Layout */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-              
+
               {/* Profile Section */}
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
@@ -745,7 +744,7 @@ const StudentSettingsPage = () => {
                         }}
                       />
                     </Suspense>
-                    
+
                     {/* Mobile-Optimized Student ID */}
                     <div className="space-y-2 sm:space-y-3">
                       <label className="text-slate-700 font-medium text-xs sm:text-sm">Student ID</label>
@@ -865,26 +864,24 @@ const StudentSettingsPage = () => {
                         <p className="text-slate-800 font-medium text-sm sm:text-base mb-1">Theme Preference</p>
                         <p className="text-slate-600 text-xs sm:text-sm">Choose your preferred color scheme</p>
                       </div>
-                      
+
                       {/* Theme Options */}
                       <div className="grid grid-cols-2 gap-2 sm:gap-3">
                         {/* Fiery Rose Theme - Default */}
                         <button
                           onClick={() => handleSettingChange('theme', 'fiery-rose')}
-                          className={`relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 ${
-                            settings.theme === 'fiery-rose'
+                          className={`relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 ${settings.theme === 'fiery-rose'
                               ? 'border-[#F08080] bg-[#F08080]/10 shadow-lg shadow-[#F08080]/20'
                               : 'border-slate-200 hover:border-[#F08080]/50 hover:bg-[#FBC4AB]/5'
-                          }`}
+                            }`}
                         >
                           <div className="flex flex-col items-center space-y-2">
                             <div className="p-2 sm:p-2.5 rounded-lg" style={{ background: 'linear-gradient(135deg, #F08080, #F4978E, #FBC4AB, #FFF5EE)' }}>
                               <Star className="h-4 w-4 sm:h-5 sm:w-5 text-[#F08080]" />
                             </div>
                             <div className="text-center">
-                              <p className={`text-xs sm:text-sm font-medium ${
-                                settings.theme === 'fiery-rose' ? 'text-[#F08080]' : 'text-slate-700'
-                              }`}>Fiery Rose</p>
+                              <p className={`text-xs sm:text-sm font-medium ${settings.theme === 'fiery-rose' ? 'text-[#F08080]' : 'text-slate-700'
+                                }`}>Fiery Rose</p>
                             </div>
                           </div>
                           {settings.theme === 'fiery-rose' && (
@@ -897,20 +894,18 @@ const StudentSettingsPage = () => {
                         {/* Ocean Sunset Theme */}
                         <button
                           onClick={() => handleSettingChange('theme', 'ocean-sunset')}
-                          className={`relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 ${
-                            settings.theme === 'ocean-sunset'
+                          className={`relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 ${settings.theme === 'ocean-sunset'
                               ? 'border-[#ffc300] bg-[#ffc300]/10 shadow-lg shadow-[#ffc300]/20'
                               : 'border-slate-200 hover:border-[#ffc300]/50 hover:bg-[#ffd60a]/5'
-                          }`}
+                            }`}
                         >
                           <div className="flex flex-col items-center space-y-2">
                             <div className="p-2 sm:p-2.5 rounded-lg" style={{ background: 'linear-gradient(135deg, #000814, #001d3d, #003566, #ffc300)' }}>
                               <Sun className="h-4 w-4 sm:h-5 sm:w-5 text-[#ffd60a]" />
                             </div>
                             <div className="text-center">
-                              <p className={`text-xs sm:text-sm font-medium ${
-                                settings.theme === 'ocean-sunset' ? 'text-[#ffc300]' : 'text-slate-700'
-                              }`}>Ocean Sunset</p>
+                              <p className={`text-xs sm:text-sm font-medium ${settings.theme === 'ocean-sunset' ? 'text-[#ffc300]' : 'text-slate-700'
+                                }`}>Ocean Sunset</p>
                             </div>
                           </div>
                           {settings.theme === 'ocean-sunset' && (
@@ -923,20 +918,18 @@ const StudentSettingsPage = () => {
                         {/* Fresh Meadow Theme */}
                         <button
                           onClick={() => handleSettingChange('theme', 'fresh-meadow')}
-                          className={`relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 ${
-                            settings.theme === 'fresh-meadow'
+                          className={`relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 ${settings.theme === 'fresh-meadow'
                               ? 'border-[#38a3a5] bg-[#38a3a5]/10 shadow-lg shadow-[#38a3a5]/20'
                               : 'border-slate-200 hover:border-[#38a3a5]/50 hover:bg-[#57cc99]/5'
-                          }`}
+                            }`}
                         >
                           <div className="flex flex-col items-center space-y-2">
                             <div className="p-2 sm:p-2.5 rounded-lg" style={{ background: 'linear-gradient(135deg, #22577a, #38a3a5, #57cc99, #c7f9cc)' }}>
                               <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-[#c7f9cc]" />
                             </div>
                             <div className="text-center">
-                              <p className={`text-xs sm:text-sm font-medium ${
-                                settings.theme === 'fresh-meadow' ? 'text-[#38a3a5]' : 'text-slate-700'
-                              }`}>Fresh Meadow</p>
+                              <p className={`text-xs sm:text-sm font-medium ${settings.theme === 'fresh-meadow' ? 'text-[#38a3a5]' : 'text-slate-700'
+                                }`}>Fresh Meadow</p>
                             </div>
                           </div>
                           {settings.theme === 'fresh-meadow' && (
@@ -949,20 +942,18 @@ const StudentSettingsPage = () => {
                         {/* Autumn Ember Theme */}
                         <button
                           onClick={() => handleSettingChange('theme', 'autumn-ember')}
-                          className={`relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 ${
-                            settings.theme === 'autumn-ember'
+                          className={`relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 ${settings.theme === 'autumn-ember'
                               ? 'border-[#ea8c55] bg-[#ea8c55]/10 shadow-lg shadow-[#ea8c55]/20'
                               : 'border-slate-200 hover:border-[#ea8c55]/50 hover:bg-[#c75146]/5'
-                          }`}
+                            }`}
                         >
                           <div className="flex flex-col items-center space-y-2">
                             <div className="p-2 sm:p-2.5 rounded-lg" style={{ background: 'linear-gradient(135deg, #ea8c55, #c75146, #ad2e24, #540804)' }}>
                               <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-[#ea8c55]" />
                             </div>
                             <div className="text-center">
-                              <p className={`text-xs sm:text-sm font-medium ${
-                                settings.theme === 'autumn-ember' ? 'text-[#ea8c55]' : 'text-slate-700'
-                              }`}>Autumn Ember</p>
+                              <p className={`text-xs sm:text-sm font-medium ${settings.theme === 'autumn-ember' ? 'text-[#ea8c55]' : 'text-slate-700'
+                                }`}>Autumn Ember</p>
                             </div>
                           </div>
                           {settings.theme === 'autumn-ember' && (
@@ -1084,7 +1075,7 @@ const StudentSettingsPage = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6 pb-6">
-                    
+
                     {/* Phone Number Input */}
                     <div className="space-y-2">
                       <label className="text-slate-700 text-sm font-medium flex items-center space-x-2">
@@ -1097,18 +1088,17 @@ const StudentSettingsPage = () => {
                         value={whatsappConfig.phoneNumber}
                         onChange={(e) => {
                           const formatted = formatPhoneNumber(e.target.value)
-                          setWhatsappConfig(prev => ({ 
-                            ...prev, 
+                          setWhatsappConfig(prev => ({
+                            ...prev,
                             phoneNumber: formatted,
                             whatsappLink: generateWhatsAppLink(formatted)
                           }))
                           setHasUnsavedChanges(true)
                         }}
-                        className={`bg-white border-[#F8AD9D]/30 text-slate-800 placeholder-slate-400 rounded-xl ${
-                          whatsappConfig.phoneNumber && !validatePhoneNumber(whatsappConfig.phoneNumber)
+                        className={`bg-white border-[#F8AD9D]/30 text-slate-800 placeholder-slate-400 rounded-xl ${whatsappConfig.phoneNumber && !validatePhoneNumber(whatsappConfig.phoneNumber)
                             ? 'border-red-400 focus:border-red-400'
                             : 'focus:border-[#F08080]'
-                        }`}
+                          }`}
                       />
                       {whatsappConfig.phoneNumber && !validatePhoneNumber(whatsappConfig.phoneNumber) && (
                         <p className="text-red-300 text-xs flex items-center space-x-1">
@@ -1184,11 +1174,10 @@ const StudentSettingsPage = () => {
                       <Button
                         onClick={() => saveWhatsAppConfig(whatsappConfig)}
                         disabled={saving || (!whatsappConfig.phoneNumber && !whatsappConfig.whatsappLink)}
-                        className={`px-6 py-2 rounded-xl font-medium transition-all shadow-md ${
-                          (whatsappConfig.phoneNumber || whatsappConfig.whatsappLink)
-                            ? 'bg-gradient-to-r from-[#F08080] to-[#F4978E] hover:from-[#F4978E] hover:to-[#F8AD9D] text-white' 
+                        className={`px-6 py-2 rounded-xl font-medium transition-all shadow-md ${(whatsappConfig.phoneNumber || whatsappConfig.whatsappLink)
+                            ? 'bg-gradient-to-r from-[#F08080] to-[#F4978E] hover:from-[#F4978E] hover:to-[#F8AD9D] text-white'
                             : 'bg-gray-300/50 text-gray-500 cursor-not-allowed'
-                        }`}
+                          }`}
                       >
                         {saving ? (
                           <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -1217,7 +1206,7 @@ const StudentSettingsPage = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6 pb-6">
-                    
+
                     {/* Sign Out Section */}
                     <div className="p-4 sm:p-6 bg-red-50 border border-red-200 rounded-xl sm:rounded-2xl">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

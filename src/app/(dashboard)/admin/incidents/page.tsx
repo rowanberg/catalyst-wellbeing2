@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  Shield, AlertTriangle, BookOpen, Star, Search, 
+import {
+  Shield, AlertTriangle, BookOpen, Star, Search,
   Filter, Download, Calendar, Clock, User, FileText,
   ChevronDown, ChevronRight, School, ArrowLeft,
   TrendingUp, CheckCircle, XCircle
@@ -36,6 +36,173 @@ interface IncidentLog {
   class_name?: string
   resolution_status?: 'pending' | 'in_progress' | 'resolved'
 }
+
+// Helper functions moved outside component to avoid recreation
+const getTypeColor = (type: string) => {
+  switch (type) {
+    case 'behavioral': return 'from-red-500 to-red-600'
+    case 'academic': return 'from-blue-500 to-blue-600'
+    case 'positive': return 'from-green-500 to-green-600'
+    default: return 'from-gray-500 to-gray-600'
+  }
+}
+
+const getTypeIcon = (type: string) => {
+  switch (type) {
+    case 'behavioral': return AlertTriangle
+    case 'academic': return BookOpen
+    case 'positive': return Star
+    default: return FileText
+  }
+}
+
+const getSeverityBadge = (severity: string) => {
+  switch (severity) {
+    case 'high':
+      return <Badge className="bg-red-100 text-red-700 border-red-200">High Priority</Badge>
+    case 'medium':
+      return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">Medium</Badge>
+    case 'low':
+      return <Badge className="bg-green-100 text-green-700 border-green-200">Low</Badge>
+    default:
+      return null
+  }
+}
+
+// Memoized Incident Item Component for performance
+const IncidentItem = memo(({
+  incident,
+  isExpanded,
+  onToggle
+}: {
+  incident: IncidentLog
+  isExpanded: boolean
+  onToggle: () => void
+}) => {
+  const TypeIcon = getTypeIcon(incident.type)
+
+  return (
+    <motion.div
+      layout="position"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className={`
+        group border border-gray-200 rounded-lg sm:rounded-xl bg-white
+        hover:shadow-lg hover:border-blue-200/50 transition-all duration-200 ease-out
+        ${isExpanded ? 'ring-2 ring-blue-500/10 shadow-md' : ''}
+      `}
+    >
+      <div
+        className="p-3 sm:p-4 cursor-pointer"
+        onClick={onToggle}
+      >
+        <div className="flex items-start gap-3 sm:gap-4">
+          <div className={`
+            p-2 rounded-lg bg-gradient-to-r ${getTypeColor(incident.type)} text-white flex-shrink-0
+            shadow-sm group-hover:shadow-md transition-shadow duration-200
+          `}>
+            <TypeIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-col gap-2 mb-2">
+              <div className="flex items-start justify-between gap-2">
+                <h4 className="font-semibold text-sm sm:text-base text-slate-800 group-hover:text-blue-700 transition-colors">
+                  {incident.student_name}
+                </h4>
+                <div className="flex items-center gap-1 text-xs text-slate-500 flex-shrink-0 bg-slate-50 px-2 py-1 rounded-full">
+                  <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+                  {new Date(incident.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                {getSeverityBadge(incident.severity)}
+                <Badge variant="outline" className="capitalize text-xs bg-slate-50">
+                  {incident.type}
+                </Badge>
+                {incident.class_name && (
+                  <Badge variant="outline" className="text-xs bg-slate-50">
+                    <School className="h-3 w-3 mr-1" />
+                    {incident.class_name}
+                  </Badge>
+                )}
+                {incident.teacher_name && (
+                  <Badge variant="outline" className="text-xs bg-slate-50">
+                    <User className="h-3 w-3 mr-1" />
+                    {incident.teacher_name}
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            <p className="text-slate-600 text-xs sm:text-sm line-clamp-2 leading-relaxed">
+              {incident.description}
+            </p>
+          </div>
+
+          <div className={`
+            flex-shrink-0 text-slate-400 transition-transform duration-200
+            ${isExpanded ? 'rotate-180 text-blue-500' : 'group-hover:text-slate-600'}
+          `}>
+            <ChevronDown className="h-5 w-5" />
+          </div>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-gray-100 p-4 bg-slate-50/50 rounded-b-xl">
+              <div className="space-y-4">
+                <div>
+                  <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Full Description</h5>
+                  <p className="text-slate-700 text-sm leading-relaxed bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                    {incident.description}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-4 text-sm pt-2 border-t border-slate-100">
+                  <div className="flex items-center gap-2 text-slate-600 bg-white px-3 py-1.5 rounded-full border border-slate-100 shadow-sm">
+                    <Calendar className="h-4 w-4 text-slate-400" />
+                    <span>
+                      {new Date(incident.created_at).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                  </div>
+                  {incident.teacher_name && (
+                    <div className="flex items-center gap-2 text-slate-600 bg-white px-3 py-1.5 rounded-full border border-slate-100 shadow-sm">
+                      <User className="h-4 w-4 text-slate-400" />
+                      <span>Reported by {incident.teacher_name}</span>
+                    </div>
+                  )}
+                  {incident.class_name && (
+                    <div className="flex items-center gap-2 text-slate-600 bg-white px-3 py-1.5 rounded-full border border-slate-100 shadow-sm">
+                      <School className="h-4 w-4 text-slate-400" />
+                      <span>{incident.class_name}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
+})
+IncidentItem.displayName = 'IncidentItem'
 
 export default function AdminIncidentsPage() {
   const { profile } = useAppSelector((state) => state.auth)
@@ -93,7 +260,7 @@ export default function AdminIncidentsPage() {
       filtered = filtered.filter(incident => {
         const incidentDate = new Date(incident.created_at)
         const daysDiff = Math.floor((now.getTime() - incidentDate.getTime()) / (1000 * 60 * 60 * 24))
-        
+
         switch (dateFilter) {
           case 'today':
             return daysDiff === 0
@@ -118,11 +285,11 @@ export default function AdminIncidentsPage() {
       const response = await fetch('/api/admin/incidents', {
         next: { revalidate: 60 } // Cache for 60 seconds
       })
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch incidents')
       }
-      
+
       const data = await response.json()
       setIncidents(data.incidents || [])
     } catch (error) {
@@ -138,46 +305,25 @@ export default function AdminIncidentsPage() {
     fetchIncidents()
   }, [fetchIncidents])
 
-  // Statistics
-  const stats = useMemo(() => ({
-    total: incidents.length,
-    behavioral: incidents.filter(i => i.type === 'behavioral').length,
-    academic: incidents.filter(i => i.type === 'academic').length,
-    positive: incidents.filter(i => i.type === 'positive').length,
-    high: incidents.filter(i => i.severity === 'high').length,
-    pending: incidents.filter(i => i.resolution_status === 'pending').length,
-  }), [incidents])
-
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'behavioral': return 'from-red-500 to-red-600'
-      case 'academic': return 'from-blue-500 to-blue-600'
-      case 'positive': return 'from-green-500 to-green-600'
-      default: return 'from-gray-500 to-gray-600'
-    }
-  }
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'behavioral': return AlertTriangle
-      case 'academic': return BookOpen
-      case 'positive': return Star
-      default: return FileText
-    }
-  }
-
-  const getSeverityBadge = (severity: string) => {
-    switch (severity) {
-      case 'high':
-        return <Badge className="bg-red-100 text-red-700 border-red-200">High Priority</Badge>
-      case 'medium':
-        return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">Medium</Badge>
-      case 'low':
-        return <Badge className="bg-green-100 text-green-700 border-green-200">Low</Badge>
-      default:
-        return null
-    }
-  }
+  // Optimized Statistics Calculation (Single Pass)
+  const stats = useMemo(() => {
+    return incidents.reduce((acc, curr) => {
+      acc.total++
+      if (curr.type === 'behavioral') acc.behavioral++
+      if (curr.type === 'academic') acc.academic++
+      if (curr.type === 'positive') acc.positive++
+      if (curr.severity === 'high') acc.high++
+      if (curr.resolution_status === 'pending') acc.pending++
+      return acc
+    }, {
+      total: 0,
+      behavioral: 0,
+      academic: 0,
+      positive: 0,
+      high: 0,
+      pending: 0
+    })
+  }, [incidents])
 
   const exportToCSV = useCallback(() => {
     const headers = ['Date', 'Student', 'Class', 'Teacher', 'Type', 'Severity', 'Description', 'Status']
@@ -206,9 +352,14 @@ export default function AdminIncidentsPage() {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-    
+
     toast.success('Incidents exported to CSV')
   }, [filteredIncidents])
+
+  // Callback for toggling to prevent recreating function on every render
+  const handleToggle = useCallback((id: string) => {
+    setExpandedIncident(prev => prev === id ? null : id)
+  }, [])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4 sm:p-6 lg:p-8">
@@ -224,7 +375,7 @@ export default function AdminIncidentsPage() {
               </Link>
               <div>
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-800 mb-1 sm:mb-2 flex items-center gap-2 sm:gap-3">
-                  <div className="p-2 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl text-white">
+                  <div className="p-2 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl text-white shadow-lg shadow-orange-500/20">
                     <Shield className="h-6 w-6 sm:h-7 sm:w-7" />
                   </div>
                   Incident Data
@@ -233,10 +384,10 @@ export default function AdminIncidentsPage() {
               </div>
             </div>
 
-            <Button 
+            <Button
               onClick={exportToCSV}
               variant="outline"
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto hover:bg-slate-50"
               disabled={filteredIncidents.length === 0}
             >
               <Download className="h-4 w-4 mr-2" />
@@ -261,9 +412,9 @@ export default function AdminIncidentsPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className={`${stat.bgColor} rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-100`}
+                  className={`${stat.bgColor} rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-100 hover:shadow-md transition-shadow duration-200`}
                 >
-                  <div className={`inline-flex p-2 rounded-lg bg-gradient-to-r ${stat.color} text-white mb-2`}>
+                  <div className={`inline-flex p-2 rounded-lg bg-gradient-to-r ${stat.color} text-white mb-2 shadow-sm`}>
                     <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
                   </div>
                   <h3 className="text-xs sm:text-sm font-semibold text-slate-700 mb-1">{stat.title}</h3>
@@ -284,14 +435,14 @@ export default function AdminIncidentsPage() {
                 placeholder="Search by student, teacher, class, or description..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
               />
             </div>
 
             {/* Filter Row */}
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3">
               <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="text-xs sm:text-sm">
+                <SelectTrigger className="text-xs sm:text-sm border-slate-200">
                   <SelectValue placeholder="Type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -303,7 +454,7 @@ export default function AdminIncidentsPage() {
               </Select>
 
               <Select value={filterSeverity} onValueChange={setFilterSeverity}>
-                <SelectTrigger className="text-xs sm:text-sm">
+                <SelectTrigger className="text-xs sm:text-sm border-slate-200">
                   <SelectValue placeholder="Severity" />
                 </SelectTrigger>
                 <SelectContent>
@@ -315,7 +466,7 @@ export default function AdminIncidentsPage() {
               </Select>
 
               <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="text-xs sm:text-sm">
+                <SelectTrigger className="text-xs sm:text-sm border-slate-200">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -327,7 +478,7 @@ export default function AdminIncidentsPage() {
               </Select>
 
               <Select value={dateFilter} onValueChange={setDateFilter}>
-                <SelectTrigger className="text-xs sm:text-sm">
+                <SelectTrigger className="text-xs sm:text-sm border-slate-200">
                   <SelectValue placeholder="Date Range" />
                 </SelectTrigger>
                 <SelectContent>
@@ -339,8 +490,8 @@ export default function AdminIncidentsPage() {
                 </SelectContent>
               </Select>
 
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   setSearchTerm('')
                   setFilterType('all')
@@ -348,7 +499,7 @@ export default function AdminIncidentsPage() {
                   setFilterStatus('all')
                   setDateFilter('all')
                 }}
-                className="text-xs sm:text-sm"
+                className="text-xs sm:text-sm hover:bg-slate-50 border-slate-200"
               >
                 Clear All
               </Button>
@@ -360,7 +511,7 @@ export default function AdminIncidentsPage() {
         <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border-0 p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4 sm:mb-6">
             <h3 className="text-lg sm:text-xl font-bold text-slate-800">All Incidents</h3>
-            <Badge variant="outline" className="text-slate-600">
+            <Badge variant="outline" className="text-slate-600 bg-slate-50">
               {filteredIncidents.length} {filteredIncidents.length === 1 ? 'record' : 'records'}
             </Badge>
           </div>
@@ -398,112 +549,15 @@ export default function AdminIncidentsPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              <AnimatePresence>
-                {filteredIncidents.map((incident, index) => {
-                  const TypeIcon = getTypeIcon(incident.type)
-                  const isExpanded = expandedIncident === incident.id
-
-                  return (
-                    <div
-                      key={incident.id}
-                      className="border border-gray-200 rounded-lg sm:rounded-xl hover:shadow-md transition-shadow"
-                    >
-                      <div
-                        className="p-3 sm:p-4 cursor-pointer"
-                        onClick={() => setExpandedIncident(isExpanded ? null : incident.id)}
-                      >
-                        <div className="flex items-start gap-3 sm:gap-4">
-                          <div className={`p-2 rounded-lg bg-gradient-to-r ${getTypeColor(incident.type)} text-white flex-shrink-0`}>
-                            <TypeIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-col gap-2 mb-2">
-                              <div className="flex items-start justify-between gap-2">
-                                <h4 className="font-semibold text-sm sm:text-base text-slate-800">{incident.student_name}</h4>
-                                <div className="flex items-center gap-1 text-xs text-slate-500 flex-shrink-0">
-                                  <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
-                                  {new Date(incident.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                                </div>
-                              </div>
-                              
-                              <div className="flex items-center gap-2 flex-wrap">
-                                {getSeverityBadge(incident.severity)}
-                                <Badge variant="outline" className="capitalize text-xs">
-                                  {incident.type}
-                                </Badge>
-                                {incident.class_name && (
-                                  <Badge variant="outline" className="text-xs">
-                                    <School className="h-3 w-3 mr-1" />
-                                    {incident.class_name}
-                                  </Badge>
-                                )}
-                                {incident.teacher_name && (
-                                  <Badge variant="outline" className="text-xs">
-                                    <User className="h-3 w-3 mr-1" />
-                                    {incident.teacher_name}
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-
-                            <p className="text-slate-600 text-xs sm:text-sm line-clamp-2">{incident.description}</p>
-                          </div>
-
-                          {isExpanded ? (
-                            <ChevronDown className="h-5 w-5 text-slate-400 flex-shrink-0" />
-                          ) : (
-                            <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0" />
-                          )}
-                        </div>
-                      </div>
-
-                      <AnimatePresence>
-                        {isExpanded && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="border-t border-gray-200 p-4 bg-gray-50"
-                          >
-                            <div className="space-y-3">
-                              <div>
-                                <h5 className="text-sm font-semibold text-slate-700 mb-2">Full Description</h5>
-                                <p className="text-slate-600 text-sm">{incident.description}</p>
-                              </div>
-
-                              <div className="flex flex-wrap gap-4 text-sm">
-                                <div className="flex items-center gap-2">
-                                  <Calendar className="h-4 w-4 text-slate-400" />
-                                  <span className="text-slate-600">
-                                    {new Date(incident.created_at).toLocaleString('en-US', { 
-                                      month: 'short', 
-                                      day: 'numeric', 
-                                      hour: 'numeric', 
-                                      minute: '2-digit' 
-                                    })}
-                                  </span>
-                                </div>
-                                {incident.teacher_name && (
-                                  <div className="flex items-center gap-2">
-                                    <User className="h-4 w-4 text-slate-400" />
-                                    <span className="text-slate-600">Reported by {incident.teacher_name}</span>
-                                  </div>
-                                )}
-                                {incident.class_name && (
-                                  <div className="flex items-center gap-2">
-                                    <School className="h-4 w-4 text-slate-400" />
-                                    <span className="text-slate-600">{incident.class_name}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  )
-                })}
+              <AnimatePresence mode="popLayout">
+                {filteredIncidents.map((incident) => (
+                  <IncidentItem
+                    key={incident.id}
+                    incident={incident}
+                    isExpanded={expandedIncident === incident.id}
+                    onToggle={() => handleToggle(incident.id)}
+                  />
+                ))}
               </AnimatePresence>
             </div>
           )}

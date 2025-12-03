@@ -1,7 +1,7 @@
 'use client'
 
 export const dynamic = 'force-dynamic'
-// Fast Refresh: v1.0.1
+// Fast Refresh: v1.0.2
 
 import { useState, useRef, useEffect, useCallback, memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'

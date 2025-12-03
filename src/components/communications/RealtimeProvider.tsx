@@ -1,11 +1,11 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { useAuth } from '@/lib/hooks/useAuth';
-import { 
-  RealtimeManager, 
-  RealtimeMessage, 
-  RealtimeNotification, 
+import { useAppSelector } from '@/lib/redux/hooks';
+import {
+  RealtimeManager,
+  RealtimeMessage,
+  RealtimeNotification,
   RealtimeEmergencyIncident,
   getRealtimeManager,
   showBrowserNotification,
@@ -37,7 +37,7 @@ interface RealtimeProviderProps {
 }
 
 export function RealtimeProvider({ children }: RealtimeProviderProps) {
-  const { user, profile } = useAuth();
+  const { user, profile } = useAppSelector((state) => state.auth);
   const [manager, setManager] = useState<RealtimeManager | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
@@ -49,18 +49,18 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
       try {
         const realtimeManager = getRealtimeManager();
         await realtimeManager.initialize(user.id);
-        
+
         // Set up notification handler
         realtimeManager.onNotification((notification: RealtimeNotification) => {
           // Update unread count
           updateUnreadCount();
-          
+
           // Show browser notification
           showBrowserNotification(notification.title, notification.message, {
             tag: notification.type,
             requireInteraction: notification.type === 'emergency'
           });
-          
+
           // Play sound for emergency notifications
           if (notification.type === 'emergency') {
             playEmergencySound();
@@ -80,10 +80,10 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
                 icon: '/emergency-icon.png'
               }
             );
-            
+
             // Play emergency sound
             playEmergencySound();
-            
+
             // Update unread count
             updateUnreadCount();
           });
@@ -91,10 +91,10 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
 
         setManager(realtimeManager);
         setIsConnected(true);
-        
+
         // Get initial unread count
         updateUnreadCount();
-        
+
       } catch (error) {
         console.error('Failed to initialize realtime:', error);
         setIsConnected(false);

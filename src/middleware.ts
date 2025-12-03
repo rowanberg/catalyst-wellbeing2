@@ -112,6 +112,13 @@ export async function middleware(req: NextRequest) {
   ]
   const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'))
 
+  // Explicitly allow register page to prevent any redirect issues
+  // This ensures that even if the generic check fails, register is always accessible
+  if (pathname === '/register' || pathname.startsWith('/register/')) {
+    // Continue to headers
+  }
+
+
   // Handle root path - allow public access for SEO
   if (pathname === '/') {
     if (user) {
@@ -130,7 +137,7 @@ export async function middleware(req: NextRequest) {
     }
   }
   // For other non-public routes, redirect to login if not authenticated
-  else if (!isPublicRoute && !user) {
+  else if (!isPublicRoute && pathname !== '/register' && !pathname.startsWith('/register/') && !user) {
     return NextResponse.redirect(new URL('/login', req.url))
   }
 

@@ -195,10 +195,69 @@ export const getWellbeingOverview = {
     },
 }
 
+/**
+ * Tool 5: Get Wellbeing Severity Analytics
+ * Retrieves detailed wellbeing severity data for analysis
+ */
+export const getWellbeingSeverity = {
+    name: 'getWellbeingSeverity',
+    description: 'Get detailed wellbeing severity analytics including risk levels, trends, and intervention recommendations',
+
+    inputSchema: {
+        type: 'object',
+        properties: {
+            school_id: {
+                type: 'string',
+                description: 'School UUID identifier',
+            },
+            period_type: {
+                type: 'string',
+                description: 'Analysis period (weekly, monthly, term)',
+                enum: ['weekly', 'monthly', 'term'],
+            },
+            risk_level: {
+                type: 'string',
+                description: 'Filter by risk level',
+                enum: ['all', 'thriving', 'low', 'medium', 'high', 'critical'],
+            },
+            limit: {
+                type: 'number',
+                description: 'Maximum number of records to return (default: 50)',
+            },
+        },
+        required: ['school_id'],
+    },
+
+    async execute(args: { school_id: string; period_type?: string; risk_level?: string; limit?: number }) {
+        try {
+            const params: any = {
+                school_id: args.school_id,
+                period_type: args.period_type || 'weekly',
+                risk_level: args.risk_level || 'all',
+                limit: args.limit || 50,
+            }
+
+            // We use the same endpoint as the frontend
+            const analytics = await apiClient.get('/admin/wellbeing-severity', params)
+
+            return {
+                success: true,
+                data: analytics,
+            }
+        } catch (error: any) {
+            return {
+                success: false,
+                error: error.message || 'Failed to fetch wellbeing severity data',
+            }
+        }
+    },
+}
+
 // Export all dashboard tools
 export const dashboardTools = [
     getAdminDashboard,
     getSchoolStats,
     getAttendanceOverview,
     getWellbeingOverview,
+    getWellbeingSeverity,
 ]
