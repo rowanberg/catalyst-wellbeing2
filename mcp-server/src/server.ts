@@ -19,6 +19,8 @@ import { communicationTools } from './tools/communication-tools.js'
 import { securityTools } from './tools/security-tools.js'
 import { systemTools } from './tools/system-tools.js'
 import { adminTools } from './tools/admin-tools.js'
+import { incidentTools } from './tools/incident-tools.js'
+import { helpRequestTools } from './tools/help-request-tools.js'
 
 // Load environment variables
 dotenv.config()
@@ -50,6 +52,8 @@ const allTools = [
     ...securityTools,
     ...systemTools,
     ...adminTools,
+    ...incidentTools,
+    ...helpRequestTools,
 ]
 
 // Create a map for quick tool lookup

@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
@@ -7,44 +8,75 @@ export const dynamic = 'force-dynamic'
 // GET - Fetch wellbeing severity analytics for admin's school
 export async function GET(request: Request) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      }
-    )
-
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    // Get admin profile and verify role
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, school_id, role')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!profile || profile.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Only admins can view wellbeing severity data' },
-        { status: 403 }
-      )
-    }
-
     const { searchParams } = new URL(request.url)
+
+    // Check for service role authentication (MCP access)
+    const authHeader = request.headers.get('authorization')
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const isServiceRole = authHeader === `Bearer ${serviceRoleKey}` && serviceRoleKey
+
+    let schoolId: string | null = null
+    let supabase: any
+
+    if (isServiceRole) {
+      // Service role authentication (from MCP)
+      // Get school_id from query params (passed by MCP)
+      schoolId = searchParams.get('school_id')
+
+      if (!schoolId) {
+        return NextResponse.json(
+          { error: 'school_id required for service role access' },
+          { status: 400 }
+        )
+      }
+
+      // Use service role client for database access
+      supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        serviceRoleKey!
+      )
+    } else {
+      // Cookie-based authentication (from browser)
+      const cookieStore = await cookies()
+      supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            get(name: string) {
+              return cookieStore.get(name)?.value
+            },
+          },
+        }
+      )
+
+      // Get authenticated user
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+      if (authError || !user) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+
+      // Get admin profile and verify role
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, school_id, role')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!profile || profile.role !== 'admin') {
+        return NextResponse.json(
+          { error: 'Only admins can view wellbeing severity data' },
+          { status: 403 }
+        )
+      }
+
+      schoolId = profile.school_id
+    }
+
     const period_type = searchParams.get('period_type') || 'weekly'
     const risk_level = searchParams.get('risk_level') || 'all'
     const sort_by = searchParams.get('sort_by') || 'risk_score'
@@ -98,7 +130,7 @@ export async function GET(request: Request) {
         created_at,
         updated_at
       `)
-      .eq('school_id', profile.school_id)
+      .eq('school_id', schoolId)
       .eq('period_type', period_type)
       .order('analysis_date', { ascending: false })
 
@@ -170,7 +202,7 @@ export async function GET(request: Request) {
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, user_id, first_name, last_name, avatar_url, role')
-        .eq('school_id', profile.school_id)
+        .eq('school_id', schoolId)
         .eq('role', 'student')
         .or(`user_id.in.(${studentIds.join(',')}),id.in.(${studentIds.join(',')})`)
 
@@ -185,7 +217,7 @@ export async function GET(request: Request) {
             grade_level
           )
         `)
-        .eq('school_id', profile.school_id)
+        .eq('school_id', schoolId)
         .eq('is_active', true)
         .or(`student_id.in.(${studentIds.join(',')})`)
 

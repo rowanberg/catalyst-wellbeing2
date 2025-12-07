@@ -33,12 +33,12 @@ const LOCAL_CACHE_TTL = 30 * 60 * 1000 // 30 minutes in milliseconds
 function getFromLocalCache<T>(key: string): T | null {
   const entry = localTeacherCache.get(key)
   if (!entry) return null
-  
+
   if (Date.now() > entry.expiresAt) {
     localTeacherCache.delete(key)
     return null
   }
-  
+
   return entry.data as T
 }
 
@@ -108,14 +108,14 @@ export const TeacherCacheTTL = {
  */
 export async function getCachedTeacherAssignments(teacherId: string) {
   const cacheKey = TeacherCacheKeys.assignments(teacherId)
-  
+
   // Tier 1: Check local memory cache first (ULTRA FAST)
   const localData = getFromLocalCache(cacheKey)
   if (localData) {
     console.log(`⚡ [Local Cache] INSTANT HIT for teacher: ${teacherId} (0ms)`)
     return localData
   }
-  
+
   // Tier 2: Check Redis cache (FAST)
   try {
     const redisData = await redisTeachers.get(cacheKey)
@@ -145,12 +145,12 @@ export async function getCachedTeacherAssignments(teacherId: string) {
  */
 export async function setCachedTeacherAssignments(teacherId: string, data: any) {
   const cacheKey = TeacherCacheKeys.assignments(teacherId)
-  
+
   // Store in BOTH cache tiers
   // Tier 1: Local memory (instant access)
   setToLocalCache(cacheKey, data)
   console.log(`💾 [Local Cache] Stored assignments for teacher ${teacherId} (30min TTL)`)
-  
+
   // Tier 2: Redis (persistent)
   try {
     await redisTeachers.set(cacheKey, data, { ex: TeacherCacheTTL.ASSIGNMENTS })
@@ -175,12 +175,12 @@ export async function setCachedTeacherAssignments(teacherId: string, data: any) 
  */
 export async function invalidateTeacherAssignments(teacherId: string) {
   const cacheKey = TeacherCacheKeys.assignments(teacherId)
-  
+
   // Clear from BOTH cache tiers
   // Tier 1: Local memory
   clearFromLocalCache(cacheKey)
   console.log(`🗑️ [Local Cache] Cleared assignments for teacher: ${teacherId}`)
-  
+
   // Tier 2: Redis
   try {
     await redisTeachers.del(cacheKey)
@@ -205,7 +205,7 @@ export async function invalidateMultipleTeacherAssignments(teacherIds: string[])
     clearFromLocalCache(key)
   })
   console.log(`🗑️ [Local Cache] Cleared assignments for ${teacherIds.length} teachers`)
-  
+
   // Then clear from Redis
   try {
     const keys = teacherIds.map(id => TeacherCacheKeys.assignments(id))

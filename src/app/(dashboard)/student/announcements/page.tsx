@@ -559,13 +559,13 @@ export default function StudentAnnouncementsPage() {
             borderBottom: '1px solid rgba(0, 0, 0, 0.08)'
           }}
         >
-          <div className="px-4 py-4 sm:px-6 sm:py-4">
-            <div className="flex items-center gap-3">
+          <div className="px-5 py-5 sm:px-6 sm:py-4">
+            <div className="flex items-center gap-4">
               <Button
                 onClick={() => router.push('/student')}
                 variant="ghost"
                 size="sm"
-                className="p-2 rounded-lg transition-all duration-200"
+                className="p-3 rounded-lg transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center"
                 style={{
                   color: 'var(--theme-primary)',
                   background: 'rgba(255, 255, 255, 0.9)'
@@ -577,9 +577,9 @@ export default function StudentAnnouncementsPage() {
                   e.currentTarget.style.background = 'rgba(255, 255, 255, 0.9)'
                 }}
               >
-                <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+                <ArrowLeft className="h-5 w-5" />
               </Button>
-              <h1 className="text-lg sm:text-xl sm:text-2xl font-bold" style={{ color: 'var(--theme-primary)' }}>
+              <h1 className="text-xl sm:text-2xl font-bold" style={{ color: 'var(--theme-primary)' }}>
                 School Hub
               </h1>
             </div>
@@ -735,79 +735,79 @@ export default function StudentAnnouncementsPage() {
                                           {announcement.content}
                                         </p>
                                         {announcement.content.length > 150 && (
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={(e) => {
-                                              e.stopPropagation()
-                                              toggleExpanded(announcement.id)
-                                            }}
-                                            className="text-blue-600 hover:text-blue-800 p-0 h-auto font-medium mt-2"
-                                          >
-                                            {expandedAnnouncements.has(announcement.id) ? 'Read Less' : 'Read More'}
-                                          </Button>
+                                          <div className="flex justify-center mt-3">
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                toggleExpanded(announcement.id)
+                                              }}
+                                              className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-4 py-2.5 h-auto font-medium rounded-lg min-h-[44px]"
+                                            >
+                                              {expandedAnnouncements.has(announcement.id) ? 'Read Less' : 'Read More'}
+                                            </Button>
+                                          </div>
                                         )}
                                       </div>
 
                                       {/* Mobile-Optimized Action Buttons */}
-                                      <div className="flex items-center justify-between mb-3">
-                                        <div className="flex items-center gap-2">
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={(e) => {
-                                              e.stopPropagation()
-                                              toggleLike(announcement.id)
-                                            }}
-                                            className={`p-2 rounded-full transition-all duration-200 ${likedItems.has(announcement.id)
+                                      <div className="flex items-center justify-center gap-3 mb-4">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            toggleLike(announcement.id)
+                                          }}
+                                          className={`p-3 rounded-full transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center ${likedItems.has(announcement.id)
                                               ? 'bg-red-50 text-red-600 hover:bg-red-100'
                                               : 'hover:bg-gray-100 text-gray-500'
-                                              }`}
-                                          >
-                                            <Heart className={`h-4 w-4 ${likedItems.has(announcement.id) ? 'fill-current' : ''}`} />
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={(e) => {
-                                              e.stopPropagation()
-                                              toggleBookmark(announcement.id)
-                                            }}
-                                            className={`p-2 rounded-full transition-all duration-200 ${bookmarkedItems.has(announcement.id)
+                                            }`}
+                                        >
+                                          <Heart className={`h-5 w-5 ${likedItems.has(announcement.id) ? 'fill-current' : ''}`} />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            toggleBookmark(announcement.id)
+                                          }}
+                                          className={`p-3 rounded-full transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center ${bookmarkedItems.has(announcement.id)
                                               ? 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100'
                                               : 'hover:bg-gray-100 text-gray-500'
-                                              }`}
-                                          >
-                                            <Bookmark className={`h-4 w-4 ${bookmarkedItems.has(announcement.id) ? 'fill-current' : ''}`} />
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={(e) => {
-                                              e.stopPropagation()
-                                              // Share functionality
-                                              if (navigator.share) {
-                                                navigator.share({
-                                                  title: announcement.title,
-                                                  text: announcement.content,
-                                                })
-                                              }
-                                            }}
-                                            className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-all duration-200"
-                                          >
-                                            <Share2 className="h-4 w-4" />
-                                          </Button>
-                                        </div>
+                                            }`}
+                                        >
+                                          <Bookmark className={`h-5 w-5 ${bookmarkedItems.has(announcement.id) ? 'fill-current' : ''}`} />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            // Share functionality
+                                            if (navigator.share) {
+                                              navigator.share({
+                                                title: announcement.title,
+                                                text: announcement.content,
+                                              })
+                                            }
+                                          }}
+                                          className="p-3 rounded-full hover:bg-gray-100 text-gray-500 transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                        >
+                                          <Share2 className="h-5 w-5" />
+                                        </Button>
                                       </div>
 
                                       {/* Mobile-Optimized Footer */}
-                                      <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-2 text-xs text-gray-500 pt-3 border-t border-gray-200/50">
+                                      <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-3 text-sm text-gray-600 pt-4 border-t border-gray-200/50">
                                         <div className="flex items-center gap-2">
-                                          <Users className="h-3 w-3" />
+                                          <Users className="h-4 w-4" />
                                           <span className="font-medium truncate">{announcement.author}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                          <Calendar className="h-3 w-3" />
+                                          <Calendar className="h-4 w-4" />
                                           <span>{new Date(announcement.created_at).toLocaleDateString('en-US', {
                                             month: 'short',
                                             day: 'numeric'

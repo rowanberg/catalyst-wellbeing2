@@ -19,10 +19,10 @@ export async function fetchProfileWithCache(userId: string): Promise<any> {
     if (cached) {
       return cached; // Cache HIT - no API call needed!
     }
-    
+
     // Step 2: Cache MISS - fetch from API
     console.log('[ProfileAPI] Fetching from server for user:', userId);
-    
+
     const response = await fetch('/api/get-profile/', {
       method: 'POST',
       headers: {
@@ -30,21 +30,25 @@ export async function fetchProfileWithCache(userId: string): Promise<any> {
       },
       body: JSON.stringify({ userId }),
     });
-    
+
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Unknown error' }));
       throw new Error(error.message || `HTTP ${response.status}`);
     }
-    
+
     const profile = await response.json();
-    
+
     // Step 3: Store in IndexedDB for next time
     await ProfileCache.set(userId, profile);
-    
+
     return profile;
   } catch (error) {
-    console.error('[ProfileAPI] Error fetching profile:', error);
-    throw error;
+    // Don't log "profile not found" as an error - it's expected for new Google OAuth users
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    if (!errorMessage.includes('Profile not found') && !errorMessage.includes('not be fully set up')) {
+      console.error('[ProfileAPI] Error fetching profile:', error)
+    }
+    throw error
   }
 }
 

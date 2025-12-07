@@ -41,12 +41,12 @@ const LOCAL_CACHE_TTL = {
 function getFromLocalCache<T>(key: string): T | null {
   const entry = localParentCache.get(key)
   if (!entry) return null
-  
+
   if (Date.now() > entry.expiresAt) {
     localParentCache.delete(key)
     return null
   }
-  
+
   return entry.data as T
 }
 
@@ -97,16 +97,16 @@ export const redisParents = new Redis({
 export const ParentCacheKeys = {
   // Parent settings (profile + children list)
   settings: (parentId: string) => `parent:${parentId}:settings`,
-  
+
   // Student dashboard data
   dashboard: (studentId: string) => `student:${studentId}:dashboard`,
-  
+
   // Student analytics
   analytics: (studentId: string) => `student:${studentId}:analytics`,
   wellbeing: (studentId: string) => `student:${studentId}:wellbeing`,
-  
+
   // Community feed (per school per page)
-  communityFeed: (schoolId: string, page: number, filters?: string) => 
+  communityFeed: (schoolId: string, page: number, filters?: string) =>
     `community:${schoolId}:page:${page}${filters ? `:${filters}` : ''}`,
 }
 
@@ -129,14 +129,14 @@ export const ParentCacheTTL = {
  */
 export async function getCachedParentSettings(parentId: string) {
   const cacheKey = ParentCacheKeys.settings(parentId)
-  
+
   // Tier 1: Check local memory cache first (ULTRA FAST)
   const localData = getFromLocalCache(cacheKey)
   if (localData) {
     console.log(`⚡ [Local Cache] INSTANT HIT - Parent settings: ${parentId} (0ms)`)
     return localData
   }
-  
+
   // Tier 2: Check Redis cache (FAST)
   try {
     const redisData = await redisParents.get(cacheKey)
@@ -159,11 +159,11 @@ export async function getCachedParentSettings(parentId: string) {
  */
 export async function setCachedParentSettings(parentId: string, data: any) {
   const cacheKey = ParentCacheKeys.settings(parentId)
-  
+
   // Tier 1: Local memory
   setToLocalCache(cacheKey, data, LOCAL_CACHE_TTL.SETTINGS)
   console.log(`💾 [Local Cache] Stored parent settings: ${parentId} (30min TTL)`)
-  
+
   // Tier 2: Redis
   try {
     await redisParents.set(cacheKey, data, { ex: ParentCacheTTL.SETTINGS })
@@ -179,10 +179,10 @@ export async function setCachedParentSettings(parentId: string, data: any) {
  */
 export async function invalidateParentSettings(parentId: string) {
   const cacheKey = ParentCacheKeys.settings(parentId)
-  
+
   clearFromLocalCache(cacheKey)
   console.log(`🗑️ [Local Cache] Cleared parent settings: ${parentId}`)
-  
+
   try {
     await redisParents.del(cacheKey)
     console.log(`🗑️ [Parents Redis] Invalidated settings: ${parentId}`)
@@ -201,14 +201,14 @@ export async function invalidateParentSettings(parentId: string) {
  */
 export async function getCachedStudentDashboard(studentId: string) {
   const cacheKey = ParentCacheKeys.dashboard(studentId)
-  
+
   // Tier 1: Local cache
   const localData = getFromLocalCache(cacheKey)
   if (localData) {
     console.log(`⚡ [Local Cache] INSTANT HIT - Dashboard: ${studentId} (0ms)`)
     return localData
   }
-  
+
   // Tier 2: Redis
   try {
     const redisData = await redisParents.get(cacheKey)
@@ -230,11 +230,11 @@ export async function getCachedStudentDashboard(studentId: string) {
  */
 export async function setCachedStudentDashboard(studentId: string, data: any) {
   const cacheKey = ParentCacheKeys.dashboard(studentId)
-  
+
   // Tier 1: Local memory (5 min - frequently changing data)
   setToLocalCache(cacheKey, data, LOCAL_CACHE_TTL.DASHBOARD)
   console.log(`💾 [Local Cache] Stored dashboard: ${studentId} (5min TTL)`)
-  
+
   // Tier 2: Redis
   try {
     await redisParents.set(cacheKey, data, { ex: ParentCacheTTL.DASHBOARD })
@@ -250,10 +250,10 @@ export async function setCachedStudentDashboard(studentId: string, data: any) {
  */
 export async function invalidateStudentDashboard(studentId: string) {
   const cacheKey = ParentCacheKeys.dashboard(studentId)
-  
+
   clearFromLocalCache(cacheKey)
   console.log(`🗑️ [Local Cache] Cleared dashboard: ${studentId}`)
-  
+
   try {
     await redisParents.del(cacheKey)
     console.log(`🗑️ [Parents Redis] Invalidated dashboard: ${studentId}`)
@@ -272,14 +272,14 @@ export async function invalidateStudentDashboard(studentId: string) {
  */
 export async function getCachedStudentAnalytics(studentId: string) {
   const cacheKey = ParentCacheKeys.analytics(studentId)
-  
+
   // Tier 1: Local cache
   const localData = getFromLocalCache(cacheKey)
   if (localData) {
     console.log(`⚡ [Local Cache] INSTANT HIT - Analytics: ${studentId} (0ms)`)
     return localData
   }
-  
+
   // Tier 2: Redis
   try {
     const redisData = await redisParents.get(cacheKey)
@@ -301,11 +301,11 @@ export async function getCachedStudentAnalytics(studentId: string) {
  */
 export async function setCachedStudentAnalytics(studentId: string, data: any) {
   const cacheKey = ParentCacheKeys.analytics(studentId)
-  
+
   // Tier 1: Local memory (15 min - expensive calculations)
   setToLocalCache(cacheKey, data, LOCAL_CACHE_TTL.ANALYTICS)
   console.log(`💾 [Local Cache] Stored analytics: ${studentId} (15min TTL)`)
-  
+
   // Tier 2: Redis
   try {
     await redisParents.set(cacheKey, data, { ex: ParentCacheTTL.ANALYTICS })
@@ -321,10 +321,10 @@ export async function setCachedStudentAnalytics(studentId: string, data: any) {
  */
 export async function invalidateStudentAnalytics(studentId: string) {
   const cacheKey = ParentCacheKeys.analytics(studentId)
-  
+
   clearFromLocalCache(cacheKey)
   console.log(`🗑️ [Local Cache] Cleared analytics: ${studentId}`)
-  
+
   try {
     await redisParents.del(cacheKey)
     console.log(`🗑️ [Parents Redis] Invalidated analytics: ${studentId}`)
@@ -395,14 +395,14 @@ export async function invalidateStudentWellbeing(studentId: string) {
  */
 export async function getCachedCommunityFeed(schoolId: string, page: number, filters?: string) {
   const cacheKey = ParentCacheKeys.communityFeed(schoolId, page, filters)
-  
+
   // Tier 1: Local cache
   const localData = getFromLocalCache(cacheKey)
   if (localData) {
     console.log(`⚡ [Local Cache] INSTANT HIT - Feed: ${schoolId} page ${page} (0ms)`)
     return localData
   }
-  
+
   // Tier 2: Redis
   try {
     const redisData = await redisParents.get(cacheKey)
@@ -424,11 +424,11 @@ export async function getCachedCommunityFeed(schoolId: string, page: number, fil
  */
 export async function setCachedCommunityFeed(schoolId: string, page: number, data: any, filters?: string) {
   const cacheKey = ParentCacheKeys.communityFeed(schoolId, page, filters)
-  
+
   // Tier 1: Local memory (5 min - real-time content)
   setToLocalCache(cacheKey, data, LOCAL_CACHE_TTL.COMMUNITY)
   console.log(`💾 [Local Cache] Stored feed: ${schoolId} page ${page} (5min TTL)`)
-  
+
   // Tier 2: Redis
   try {
     await redisParents.set(cacheKey, data, { ex: ParentCacheTTL.COMMUNITY_FEED })
@@ -452,7 +452,7 @@ export async function invalidateCommunityFeed(schoolId: string) {
   }
   keysToDelete.forEach(key => clearFromLocalCache(key))
   console.log(`🗑️ [Local Cache] Cleared ${keysToDelete.length} community feed pages for school: ${schoolId}`)
-  
+
   // Clear from Redis (scan for all pages)
   try {
     const pattern = `community:${schoolId}:*`
@@ -489,12 +489,12 @@ const ATTENDANCE_CACHE_TTL = 15 * 60 * 1000 // 15 minutes
 export function getCachedAttendance(studentId: string, year: number, month: number) {
   const cacheKey = `attendance:${studentId}:${year}:${month}`
   const cached = getFromLocalCache(cacheKey)
-  
+
   if (cached) {
     console.log(`⚡ [Local Cache] Attendance HIT: ${studentId} (${year}-${month}) - 0ms`)
     return cached
   }
-  
+
   console.log(`💾 [Local Cache] Attendance MISS: ${studentId} (${year}-${month})`)
   return null
 }
@@ -550,12 +550,12 @@ const COMMUNITY_FEED_CACHE_TTL = 15 * 60 * 1000 // 15 minutes
 export function getCachedCommunityFeedLocal(schoolId: string, page: number, filters?: string) {
   const cacheKey = `community-local:${schoolId}:page:${page}${filters ? `:${filters}` : ''}`
   const cached = getFromLocalCache(cacheKey)
-  
+
   if (cached) {
     console.log(`⚡ [Local Cache] Community feed HIT: ${schoolId} page ${page} - 0ms`)
     return cached
   }
-  
+
   console.log(`💾 [Local Cache] Community feed MISS: ${schoolId} page ${page}`)
   return null
 }

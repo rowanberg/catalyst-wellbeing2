@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
 // ============================================================================
@@ -15,6 +16,12 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
 
+    // Create admin client with service role for tables with RLS (like help_requests)
+    const supabaseAdmin = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
@@ -26,11 +33,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user profile and verify admin role
+    // Include schools relation to get school_code (help_requests uses school_code for filtering)
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('role, school_id')
+      .select(`
+        role, 
+        school_id, 
+        school_code,
+        schools!profiles_school_id_fkey (
+          id,
+          school_code
+        )
+      `)
       .eq('user_id', user.id)
       .single()
+
+    // Get school_code from profile or schools relation
+    const adminSchoolCode = profile?.school_code || (profile?.schools as any)?.school_code || null
 
     if (profileError) {
       console.error('❌ Profile fetch error:', profileError)
@@ -49,7 +68,7 @@ export async function POST(request: NextRequest) {
     }
 
 
-    console.log('✅ User authenticated:', user.id, 'Role:', profile.role, 'School:', profile.school_id)
+    console.log('✅ User authenticated:', user.id, 'Role:', profile.role, 'School ID:', profile.school_id, 'Admin School Code:', adminSchoolCode)
 
     const { message, context, stream, confirmationId } = await request.json()
 
@@ -115,7 +134,8 @@ export async function POST(request: NextRequest) {
       wellbeingResult,
       achievementsResult,
       announcementsResult,
-      wellbeingAnalyticsResult
+      wellbeingAnalyticsResult,
+      incidentsResult
     ] = await Promise.all([
       // Always fetch
       supabase.from('schools').select('*').eq('id', profile.school_id).single(),
@@ -136,12 +156,9 @@ export async function POST(request: NextRequest) {
       (context === 'operations' || context === 'general')
         ? supabase.from('attendance').select('date, status, student_id, created_at').eq('school_id', profile.school_id).gte('date', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()).order('date', { ascending: false })
         : Promise.resolve(emptyResult),
-      (context === 'operations' || context === 'general')
-        ? supabase.from('profiles').select('id, first_name, last_name, email').eq('school_id', profile.school_id).eq('role', 'teacher')
-        : Promise.resolve(emptyResult),
-      (context === 'operations' || context === 'general')
-        ? supabase.from('profiles').select('id, first_name, last_name').eq('school_id', profile.school_id).eq('role', 'parent')
-        : Promise.resolve(emptyResult),
+      // Always fetch teachers and parents for complete school overview
+      supabase.from('profiles').select('id, first_name, last_name, email').eq('school_id', profile.school_id).eq('role', 'teacher'),
+      supabase.from('profiles').select('id, first_name, last_name').eq('school_id', profile.school_id).eq('role', 'parent'),
 
       // Wellbeing context
       (context === 'wellbeing' || context === 'general')
@@ -162,8 +179,46 @@ export async function POST(request: NextRequest) {
           .eq('period_type', 'weekly')
           .order('analysis_date', { ascending: false })
           .limit(200)
-        : Promise.resolve(emptyResult)
+        : Promise.resolve(emptyResult),
+
+      // Incidents Context - Always fetch for comprehensive overview
+      supabase.from('incident_reports')
+        .select('id, incident_type, severity, description, student_name_text, class_name, status, created_at')
+        .eq('school_id', profile.school_id)
+        .neq('incident_type', 'wellbeing_alert')
+        .order('created_at', { ascending: false })
+        .limit(100)
     ])
+
+    // Fetch help requests separately using admin client (bypasses RLS)
+    // Note: help_requests table primarily uses school_code for associations
+    const helpRequestsQuery = adminSchoolCode
+      ? supabaseAdmin.from('help_requests')
+        .select('id, message, urgency, status, student_id, created_at, resolved_at, resolver')
+        .eq('school_code', adminSchoolCode)
+        .order('created_at', { ascending: false })
+        .limit(50)
+      : supabaseAdmin.from('help_requests')
+        .select('id, message, urgency, status, student_id, created_at, resolved_at, resolver')
+        .eq('school_id', profile.school_id)
+        .order('created_at', { ascending: false })
+        .limit(50)
+
+    console.log('🔍 Help Requests Query Filter:', {
+      usingSchoolCode: !!adminSchoolCode,
+      filterValue: adminSchoolCode || profile.school_id,
+      adminSchoolCode,
+      profileSchoolId: profile.school_id
+    })
+
+    const helpRequestsResult = await helpRequestsQuery
+
+    console.log('📋 Help Requests Result:', {
+      count: helpRequestsResult?.data?.length || 0,
+      error: helpRequestsResult?.error,
+      firstItem: helpRequestsResult?.data?.[0]
+    })
+
 
     // Use the count result for basic student info if not fetching details
     const studentsResult = (context === 'performance' || context === 'general')
@@ -186,6 +241,8 @@ export async function POST(request: NextRequest) {
     if (announcementsResult?.error) console.error('❌ Announcements query error:', announcementsResult.error)
     if (achievementsResult?.error) console.error('❌ Achievements query error:', achievementsResult.error)
     if (wellbeingAnalyticsResult?.error) console.error('❌ Wellbeing Analytics query error:', wellbeingAnalyticsResult.error)
+    if (incidentsResult?.error) console.error('❌ Incidents query error:', incidentsResult.error)
+    if (helpRequestsResult?.error) console.error('❌ Help Requests query error:', helpRequestsResult.error)
 
     const school = schoolResult?.data || null
     const students = studentsResult?.data || []
@@ -198,6 +255,8 @@ export async function POST(request: NextRequest) {
     const announcements = announcementsResult?.data || []
     const achievements = achievementsResult?.data || []
     const wellbeingAnalytics = wellbeingAnalyticsResult?.data || []
+    const incidents = incidentsResult?.data || []
+    const helpRequests = helpRequestsResult?.data || []
 
     // Debug: Log data counts
     console.log('📊 Data fetched for context "' + context + '":', {
@@ -210,7 +269,17 @@ export async function POST(request: NextRequest) {
       wellbeing: wellbeing.length,
       assessments: assessments.length,
       announcements: announcements.length,
-      achievements: achievements.length
+      achievements: achievements.length,
+      incidents: incidents.length,
+      helpRequests: helpRequests.length
+    })
+
+    // Debug: Help Requests specific logging
+    console.log('🆘 Help Requests Debug:', {
+      count: helpRequests.length,
+      schoolCode: profile.school_code,
+      schoolId: profile.school_id,
+      firstRequest: helpRequests[0] ? { id: helpRequests[0].id, status: helpRequests[0].status, urgency: helpRequests[0].urgency } : 'none'
     })
 
     // ========================================================================
@@ -360,6 +429,81 @@ export async function POST(request: NextRequest) {
       date: new Date(a.created_at).toLocaleDateString()
     }))
 
+    // Incident analytics
+    const incidentStats = {
+      total: incidents.length,
+      byType: {
+        behavioral: incidents.filter((i: any) => i.incident_type === 'behavioral').length,
+        academic: incidents.filter((i: any) => i.incident_type === 'academic').length,
+        positive: incidents.filter((i: any) => i.incident_type === 'positive').length,
+      },
+      bySeverity: {
+        high: incidents.filter((i: any) => i.severity === 'high').length,
+        medium: incidents.filter((i: any) => i.severity === 'medium').length,
+        low: incidents.filter((i: any) => i.severity === 'low').length,
+      },
+      byStatus: {
+        pending: incidents.filter((i: any) => i.status === 'open').length,
+        inProgress: incidents.filter((i: any) => i.status === 'investigating').length,
+        resolved: incidents.filter((i: any) => i.status === 'resolved' || i.status === 'closed').length,
+      },
+      recentIncidents: incidents.slice(0, 5).map((i: any) => ({
+        type: i.incident_type || 'unknown',
+        severity: i.severity || 'medium',
+        student: i.student_name_text || 'Unknown Student',
+        class: i.class_name || 'N/A',
+        description: (i.description && typeof i.description === 'string')
+          ? i.description.substring(0, 80).replace(/\s+/g, ' ').trim()
+          : 'No description',
+        date: i.created_at ? new Date(i.created_at).toLocaleDateString() : 'N/A'
+      }))
+    }
+
+    // Helper function to calculate time ago
+    const getTimeAgo = (date: Date): string => {
+      const now = new Date()
+      const diffMs = now.getTime() - date.getTime()
+      const diffMins = Math.floor(diffMs / 60000)
+      const diffHours = Math.floor(diffMs / 3600000)
+      const diffDays = Math.floor(diffMs / 86400000)
+
+      if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+      if (diffHours > 0) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+      if (diffMins > 0) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`
+      return 'Just now'
+    }
+
+    // Help Request analytics
+    const helpRequestStats = {
+      total: helpRequests.length,
+      byStatus: {
+        pending: helpRequests.filter((r: any) => r.status === 'pending').length,
+        inProgress: helpRequests.filter((r: any) => r.status === 'in_progress').length,
+        resolved: helpRequests.filter((r: any) => r.status === 'resolved').length,
+      },
+      byUrgency: {
+        high: helpRequests.filter((r: any) => r.urgency === 'high').length,
+        medium: helpRequests.filter((r: any) => r.urgency === 'medium').length,
+        low: helpRequests.filter((r: any) => r.urgency === 'low').length,
+      },
+      // Include all requests with full content for AI to reference
+      allRequests: helpRequests.slice(0, 20).map((r: any) => ({
+        id: r.id,
+        urgency: r.urgency || 'medium',
+        status: r.status || 'pending',
+        message: (r.message && typeof r.message === 'string')
+          ? r.message.substring(0, 200).replace(/\s+/g, ' ').trim()
+          : 'No message',
+        fullMessage: r.message || 'No message',
+        studentId: r.student_id,
+        createdAt: r.created_at,
+        resolvedAt: r.resolved_at,
+        resolver: r.resolver,
+        date: r.created_at ? new Date(r.created_at).toLocaleDateString() : 'N/A',
+        timeAgo: r.created_at ? getTimeAgo(new Date(r.created_at)) : 'N/A'
+      }))
+    }
+
     // ========================================================================
     // Initialize MCP Client and Load Tools
     // ========================================================================
@@ -451,11 +595,40 @@ ${Object.entries(moodTrends).filter(([_, t]) => t.thisWeek > 0 || t.lastWeek > 0
 **RECENT ANNOUNCEMENTS:**
 ${recentAnnouncements.map((a: any) => `- [${a.type}] ${a.title} (${a.date})`).join('\n') || '- No recent announcements'}
 
+**INCIDENTS OVERVIEW:**
+- Total Incidents: ${incidentStats.total}
+- By Type: Behavioral (${incidentStats.byType.behavioral}), Academic (${incidentStats.byType.academic}), Positive (${incidentStats.byType.positive})
+- By Severity: High (${incidentStats.bySeverity.high}), Medium (${incidentStats.bySeverity.medium}), Low (${incidentStats.bySeverity.low})
+- By Status: Pending (${incidentStats.byStatus.pending}), In Progress (${incidentStats.byStatus.inProgress}), Resolved (${incidentStats.byStatus.resolved})
+${incidentStats.recentIncidents.length > 0 ? `- Recent Incidents:
+${incidentStats.recentIncidents.map((i: any) => `  - [${i.type}/${i.severity}] ${i.student} (${i.class || 'N/A'}): ${i.description}... (${i.date})`).join('\n')}` : '- No recent incidents'}
+
+**HELP REQUESTS OVERVIEW:**
+- Total Help Requests: ${helpRequestStats.total}
+- By Status: Pending (${helpRequestStats.byStatus.pending}), In Progress (${helpRequestStats.byStatus.inProgress}), Resolved (${helpRequestStats.byStatus.resolved})
+- By Urgency: High (${helpRequestStats.byUrgency.high}), Medium (${helpRequestStats.byUrgency.medium}), Low (${helpRequestStats.byUrgency.low})
+
+**ALL HELP REQUESTS WITH FULL MESSAGES:**
+IMPORTANT: When users ask about help requests, ALWAYS display the EXACT MESSAGE content shown below. Do NOT summarize or truncate these messages - show them verbatim.
+
+${helpRequestStats.allRequests.length > 0 ? helpRequestStats.allRequests.map((r: any, idx: number) => `
+Request #${idx + 1}:
+- ID: ${r.id}
+- Urgency: ${r.urgency.toUpperCase()}
+- Status: ${r.status}
+- FULL MESSAGE: "${r.fullMessage}"
+- Student ID: ${r.studentId || 'Anonymous'}
+- Created: ${r.date} (${r.timeAgo})
+- Resolved: ${r.resolvedAt ? new Date(r.resolvedAt).toLocaleDateString() : 'Not yet'}
+- Resolver: ${r.resolver || 'Unassigned'}`).join('\n---\n') : '- No help requests recorded'}
+
 **DATA FRESHNESS:**
 - Grades: ${grades.length} total records
 - Attendance: ${attendance.length} records (last 90 days)
 - Wellbeing: ${wellbeing.length} check-ins (last 6 months)
 - Achievements: ${achievements.length} recent entries
+- Incidents: ${incidents.length} total records
+- Help Requests: ${helpRequests.length} total records
 
 RESPONSE FORMATTING GUIDELINES:
 
@@ -510,9 +683,87 @@ Overall academic performance shows **positive trends** with a school average of 
 
 REMEMBER: Always present data in table format. Do not use plain text or bullet points for numeric data.
 
+**CRITICAL: NATURAL LANGUAGE COMMUNICATION GUIDELINES 🗣️**
+
+When communicating with users, you MUST follow these principles:
+
+1. **NEVER Expose Technical Tool Names**: Do NOT mention tool names like "get_wellbeing_severity", "getStudentInfo", or any technical function names
+   ❌ BAD: "I can use the get_student_risk_profile tool to get more details"
+   ✅ GOOD: "Would you like me to get more details about this student's risk factors?"
+
+2. **Use Conversational Language**: Speak naturally as a helpful assistant
+   ❌ BAD: "I'll call the searchStudents tool with your parameters"
+   ✅ GOOD: "Let me search for that student for you"
+
+3. **Offer Help Naturally**: When suggesting additional actions, frame them as helpful offers
+   ❌ BAD: "You can use get_wellbeing_analytics to see trends"
+   ✅ GOOD: "Would you like me to show you the wellbeing trends over time?"
+
+4. **Explain Capabilities Without Technical Jargon**:
+   ❌ BAD: "The broadcastToSchool tool lets you send announcements"
+   ✅ GOOD: "I can help you send a school-wide announcement if you'd like"
+
+5. **Natural Follow-up Suggestions**:
+   ❌ BAD: "Next steps: Call getStudentAttendance, updateStudentInfo, or sendEmail"
+   ✅ GOOD: "Would you like me to:
+      - Check this student's attendance history?
+      - Update their information?
+      - Send an email to their parents?"
+
+6. **Present Recommendations as Actions, Not Tool Calls**:
+   ❌ BAD: "Recommendation: Use bulk_update_interventions for these students"
+   ✅ GOOD: "I recommend updating intervention plans for these students. Shall I proceed?"
+
+**Examples of Natural Communication:**
+
+User: "Show me high-risk students"
+❌ BAD Response: "I'll use get_wellbeing_severity with risk_level='high' parameter..."
+✅ GOOD Response: "Let me get the list of high-risk students for you.
+
+[Shows data]
+
+For any of these students, I can help you:
+- View their detailed risk profile and history
+- See their recent attendance and academic performance
+- Create intervention plans or send alerts to counselors
+
+Just let me know which student you'd like to focus on!"
+
+User: "Tell me about Lirish Raghav"
+❌ BAD Response: "I can call getStudentInfo and get_student_risk_profile..."
+✅ GOOD Response: "I'll pull up Lirish Raghav's information for you.
+
+[Shows data]
+
+I notice some concerning patterns. Would you like me to:
+- Get a detailed breakdown of their wellbeing factors?
+- Check their recent attendance patterns?
+- Review their academic performance?"
+
+**REMEMBER**: Users should NEVER see technical implementation details. Your responses should feel like talking to a knowledgeable human assistant, not a robotic API wrapper.
+
 **🔧 MCP TOOLS - ${geminiFunctions.length} AVAILABLE:**
 
 ${geminiFunctions.length > 0 ? `You have access to ${geminiFunctions.length} administrative tools. When users request ACTIONS (not just information), YOU MUST use the appropriate tool.
+
+**⚠️ CRITICAL - AUTOMATIC CONTEXT INJECTION:**
+The following parameters are AUTOMATICALLY INJECTED for ALL tool calls - DO NOT ASK THE USER FOR THESE:
+- school_id: Always auto-filled from the user's session (current school: "${profile.school_id}")
+- user_id: Always auto-filled from the authenticated user
+- role: Always auto-filled from the user's profile
+
+**NEVER ask the user for school_id - just call the tool and it will be automatically provided!**
+
+**Available Tool Categories:**
+- Dashboard: getAdminDashboard, getSchoolStats, getAttendanceOverview, getWellbeingOverview, getWellbeingSeverity
+- Students: searchStudents, getStudentInfo, updateStudentInfo, addStudent, disableStudent, getStudentAttendance, getStudentWellbeing, getStudentFees
+- Attendance: getTodayAttendance, getAttendanceByDate, getClassAttendance, updateAttendance, markClassAttendance
+- Classes: getClassList, createClass, updateClass, deleteClass, getClassDetails, getTimetable
+- Teachers: searchTeachers, getTeacherProfile, addTeacher, updateTeacher, getTeacherTimetable
+- Communication: sendEmail, sendNotification, broadcastToClass, broadcastToSchool
+- Security: getAdminList, createAdmin, updateAdmin, getAuditLogs
+- Incidents: getIncidentsList, getIncidentStats, getIncidentDetails, searchIncidents
+- Admin: get_school_statistics, get_school_overview, get_activity_monitor, search_users, create_user, update_user, delete_user, bulk_create_users, export_users, get_wellbeing_severity, get_wellbeing_analytics, get_wellbeing_insights, get_student_risk_profile, bulk_update_interventions
 
 **CRITICAL: For School Announcements/Broadcasts:**
 When user says: "send announcement", "broadcast", "create announcement", "announce", "notify school"
@@ -555,12 +806,30 @@ User: "Send announcement about holiday tomorrow"
 User: "Broadcast the exam schedule"
 → Call: broadcastToSchool({ school_id: "[auto]", title: "Examination Schedule - December 2024", content: "...", priority: "medium" })
 
+User: "List all admin accounts"
+→ Call: getAdminList({ school_id: "[auto]" })  // school_id is auto-injected!
+
+User: "Show all classes"
+→ Call: getClassList({ school_id: "[auto]" })  // school_id is auto-injected!
+
 **IMPORTANT:** 
 - Always call tools for ACTION requests
 - Never create text-based confirmation boxes - the system handles confirmations via UI
-- Generate professional, complete content yourself` : 'No administrative tools currently available. Respond with analysis only.'}`
+- Generate professional, complete content yourself
+- NEVER ask user for school_id - it is ALWAYS auto-injected` : 'No administrative tools currently available. Respond with analysis only.'}`
+
 
     const prompt = `${systemContext}\n\nUser Question: ${message}\n\nProvide a detailed, data-driven response with actionable insights.`
+
+    // Debug: Log the help requests section of the system context
+    console.log('📝 Help Requests in System Context:', {
+      totalRequests: helpRequestStats.allRequests.length,
+      firstRequest: helpRequestStats.allRequests[0] ? {
+        id: helpRequestStats.allRequests[0].id,
+        fullMessage: helpRequestStats.allRequests[0].fullMessage,
+        studentId: helpRequestStats.allRequests[0].studentId
+      } : 'none'
+    })
 
     // ========================================================================
     // Get API Key from Intelligent Router

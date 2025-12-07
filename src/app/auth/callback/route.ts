@@ -73,61 +73,41 @@ export async function GET(request: NextRequest) {
     const user = sessionData.user
     console.log('✅ [OAuth Callback] User authenticated:', user.email)
 
+    // Extract user metadata from Google OAuth
+    const googleUserData = {
+      email: user.email || '',
+      firstName: user.user_metadata?.given_name || user.user_metadata?.first_name || user.user_metadata?.full_name?.split(' ')[0] || '',
+      lastName: user.user_metadata?.family_name || user.user_metadata?.last_name || user.user_metadata?.full_name?.split(' ').slice(1).join(' ') || '',
+      avatarUrl: user.user_metadata?.avatar_url || user.user_metadata?.picture || '',
+      providerId: user.id,
+    }
+
     // Try to get existing profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('role, id')
+      .select('role, id, school_id, first_name, last_name')
       .eq('user_id', user.id)
       .maybeSingle()
-
-    let userRole = 'student' // default
 
     if (profileError) {
       console.error('⚠️ [OAuth Callback] Profile query error:', profileError.message)
     }
 
-    if (profile?.role) {
-      // Profile exists with role
-      userRole = profile.role
-      console.log('✅ [OAuth Callback] Found existing profile with role:', userRole)
-    } else {
-      // No profile or no role - detect from email
-      userRole = getRoleFromEmail(user.email || '')
-      console.log('🔍 [OAuth Callback] Detected role from email:', userRole)
+    // Check if user has a complete profile with school association
+    if (!profile || !profile.school_id) {
+      // User is not fully registered - redirect to registration with Google data
+      console.log('🔄 [OAuth Callback] User not registered with school, redirecting to registration')
 
-      // Create or update profile
-      if (!profile) {
-        // Create new profile - use minimal fields
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert({
-            user_id: user.id,
-            email: user.email,
-            first_name: user.user_metadata?.first_name || user.user_metadata?.full_name?.split(' ')[0] || user.email?.split('@')[0] || 'User',
-            last_name: user.user_metadata?.last_name || user.user_metadata?.full_name?.split(' ').slice(1).join(' ') || '',
-            avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture,
-            role: userRole,
-          })
+      // Encode Google user data as URL-safe base64 for the redirect
+      const encodedData = Buffer.from(JSON.stringify(googleUserData)).toString('base64url')
 
-        if (insertError) {
-          console.error('❌ [OAuth Callback] Profile creation error:', insertError.message)
-        } else {
-          console.log('✅ [OAuth Callback] Created new profile for user')
-        }
-      } else {
-        // Update existing profile with role
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ role: userRole })
-          .eq('id', profile.id)
-
-        if (updateError) {
-          console.error('❌ [OAuth Callback] Profile update error:', updateError.message)
-        } else {
-          console.log('✅ [OAuth Callback] Updated profile with role')
-        }
-      }
+      // Redirect to an intermediate client-side page that will store data and redirect to /register
+      return NextResponse.redirect(`${origin}/auth/google-register?data=${encodedData}`)
     }
+
+    // User has a profile with school - proceed with normal login flow
+    let userRole = profile.role || 'student'
+    console.log('✅ [OAuth Callback] Found existing profile with role:', userRole)
 
     // Redirect based on role
     const dashboards: Record<string, string> = {

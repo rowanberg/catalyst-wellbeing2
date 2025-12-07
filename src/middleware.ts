@@ -108,6 +108,7 @@ export async function middleware(req: NextRequest) {
     '/terms',
     '/login',
     '/register',
+    '/register/wizard',
     '/auth'
   ]
   const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'))

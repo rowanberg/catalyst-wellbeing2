@@ -404,7 +404,7 @@ export const exportUsers = {
 
 export const getWellbeingSeverity = {
     name: 'get_wellbeing_severity',
-    description: 'Get comprehensive wellbeing severity analytics with risk levels, scores, and intervention recommendations',
+    description: 'Get FULL wellbeing severity analytics with ALL risk levels, scores, intervention recommendations, and student details - exactly as shown on the wellbeing-severity admin page',
 
     inputSchema: {
         type: 'object',
@@ -413,7 +413,7 @@ export const getWellbeingSeverity = {
             risk_level: { type: 'string', description: 'Filter by risk level', enum: ['all', 'minimal', 'low', 'moderate', 'high', 'critical'] },
             sort_by: { type: 'string', description: 'Sort field', enum: ['risk_score', 'overall_wellbeing_score', 'student_name'] },
             sort_order: { type: 'string', description: 'Sort order', enum: ['asc', 'desc'] },
-            limit: { type: 'number', description: 'Maximum records to return' }
+            limit: { type: 'number', description: 'Maximum records to return (default: 100 for full access)' }
         }
     },
 
@@ -424,7 +424,8 @@ export const getWellbeingSeverity = {
                 risk_level: args.risk_level || 'all',
                 sort_by: args.sort_by || 'risk_score',
                 sort_order: args.sort_order || 'desc',
-                limit: args.limit || 50
+                limit: args.limit || 100,
+                school_id: args.school_id // Required for service role authentication
             }
 
             const response = await apiClient.get(`/admin/wellbeing-severity`, params)
@@ -436,20 +437,104 @@ export const getWellbeingSeverity = {
                 }
             }
 
+            // Return COMPLETE data exactly as the page receives it
             return {
                 success: true,
                 data: {
-                    analytics: response.analytics || [],
-                    summary: response.summary || {},
-                    metadata: response.metadata || {},
-                    insights: {
-                        high_risk_students: response.summary?.high_risk_count || 0,
+                    // Full analytics array with ALL student details
+                    students: (response.analytics || []).map((student: any) => ({
+                        // Student identification
+                        id: student.id,
+                        student_id: student.student_id,
+                        student_name: student.student_name,
+                        student_grade: student.student_grade,
+                        student_class: student.student_class,
+                        student_avatar: student.student_avatar,
+
+                        // Risk assessment
+                        risk_level: student.risk_level,
+                        risk_score: student.risk_score,
+                        risk_trend: student.risk_trend,
+                        risk_factors: student.risk_factors || [],
+                        risk_factor_count: student.risk_factor_count || student.risk_factors_count || 0,
+                        protective_factors: student.protective_factors || [],
+                        protective_factor_count: student.protective_factor_count || student.protective_factors_count || 0,
+
+                        // All wellbeing dimension scores
+                        overall_wellbeing_score: student.overall_wellbeing_score,
+                        emotional_wellbeing_score: student.emotional_wellbeing_score,
+                        academic_wellbeing_score: student.academic_wellbeing_score,
+                        engagement_wellbeing_score: student.engagement_wellbeing_score,
+                        social_wellbeing_score: student.social_wellbeing_score,
+                        behavioral_wellbeing_score: student.behavioral_wellbeing_score,
+
+                        // Intervention details
+                        intervention_recommended: student.intervention_recommended,
+                        intervention_type: student.intervention_type,
+                        intervention_priority: student.intervention_priority,
+                        recommended_actions: student.recommended_actions || [],
+
+                        // Early warning system
+                        early_warning_flags: student.early_warning_flags || [],
+                        warning_flag_count: student.warning_flag_count || 0,
+
+                        // Predictions
+                        predicted_next_score: student.predicted_next_score,
+                        predicted_risk_level: student.predicted_risk_level,
+                        confidence_level: student.confidence_level,
+
+                        // Trends
+                        overall_score_trend: student.overall_score_trend,
+                        score_change_from_previous: student.score_change_from_previous,
+
+                        // Percentiles
+                        school_percentile: student.school_percentile,
+                        grade_percentile: student.grade_percentile,
+
+                        // Activity metrics
+                        mood_score_avg: student.mood_score_avg,
+                        gpa: student.gpa,
+                        attendance_rate: student.attendance_rate,
+                        quest_completion_rate: student.quest_completion_rate,
+                        xp_earned: student.xp_earned,
+                        incident_count: student.incident_count,
+                        help_requests_count: student.help_requests_count,
+                        urgent_help_requests_count: student.urgent_help_requests_count,
+
+                        // Data quality
+                        data_quality_score: student.data_quality_score,
+                        data_completeness_percentage: student.data_completeness_percentage,
+
+                        // Timestamps
+                        analysis_date: student.analysis_date,
+                        period_type: student.period_type,
+                        created_at: student.created_at,
+                        updated_at: student.updated_at
+                    })),
+
+                    // Complete summary statistics
+                    summary: {
+                        total_students: response.summary?.total || 0,
+                        by_risk_level: response.summary?.by_risk_level || {},
+                        by_intervention_priority: response.summary?.by_intervention_priority || {},
+                        average_scores: response.summary?.average_scores || {},
                         interventions_needed: response.summary?.interventions_needed || 0,
+                        high_risk_count: response.summary?.high_risk_count || 0,
                         improving_trend: response.summary?.improving_trend || 0,
                         declining_trend: response.summary?.declining_trend || 0
+                    },
+
+                    // Metadata
+                    metadata: {
+                        period_type: response.metadata?.period_type || params.period_type,
+                        risk_level_filter: response.metadata?.risk_level_filter || params.risk_level,
+                        sort_by: response.metadata?.sort_by || params.sort_by,
+                        sort_order: response.metadata?.sort_order || params.sort_order,
+                        limit: response.metadata?.limit || params.limit,
+                        last_updated: response.metadata?.last_updated
                     }
                 },
-                message: `Retrieved wellbeing data for ${response.analytics?.length || 0} students`
+                message: `Retrieved FULL wellbeing data for ${response.analytics?.length || 0} students including all risk factors, scores, and interventions`
             }
         } catch (error: any) {
             return {
@@ -526,25 +611,41 @@ export const getWellbeingInsights = {
 
 export const getStudentRiskProfile = {
     name: 'get_student_risk_profile',
-    description: 'Get detailed risk profile for a specific student with all wellbeing dimensions',
+    description: 'Get detailed risk profile for a specific student with all wellbeing dimensions, risk factors, and intervention recommendations',
 
     inputSchema: {
         type: 'object',
         properties: {
-            student_id: { type: 'string', description: 'Student UUID' }
-        },
-        required: ['student_id']
+            student_id: { type: 'string', description: 'Student UUID' },
+            student_name: { type: 'string', description: 'Student name to search (alternative to ID)' }
+        }
     },
 
-    async execute(args: { student_id: string }) {
+    async execute(args: { student_id?: string; student_name?: string; school_id?: string }) {
         try {
-            const response = await apiClient.get(`/admin/wellbeing-severity`, { limit: 1 })
-            const studentData = response.analytics?.find((a: any) => a.student_id === args.student_id)
+            // Fetch with high limit to find the specific student
+            const response = await apiClient.get(`/admin/wellbeing-severity`, {
+                limit: 500,
+                school_id: args.school_id // Required for service role authentication
+            })
+
+            // Find student by ID or name
+            let studentData = null
+            if (args.student_id) {
+                studentData = response.analytics?.find((a: any) => a.student_id === args.student_id)
+            } else if (args.student_name) {
+                const searchName = args.student_name.toLowerCase()
+                studentData = response.analytics?.find((a: any) =>
+                    a.student_name?.toLowerCase().includes(searchName)
+                )
+            }
 
             if (!studentData) {
                 return {
                     success: false,
-                    error: 'Student risk profile not found'
+                    error: args.student_id
+                        ? `Student with ID ${args.student_id} not found in wellbeing data`
+                        : `Student "${args.student_name}" not found in wellbeing data`
                 }
             }
 
@@ -555,13 +656,17 @@ export const getStudentRiskProfile = {
                         id: studentData.student_id,
                         name: studentData.student_name,
                         grade: studentData.student_grade,
-                        class: studentData.student_class
+                        class: studentData.student_class,
+                        avatar: studentData.student_avatar
                     },
                     risk_profile: {
                         risk_level: studentData.risk_level,
                         risk_score: studentData.risk_score,
+                        risk_trend: studentData.risk_trend,
                         risk_factors: studentData.risk_factors || [],
-                        protective_factors: studentData.protective_factors || []
+                        protective_factors: studentData.protective_factors || [],
+                        early_warning_flags: studentData.early_warning_flags || [],
+                        predicted_risk_level: studentData.predicted_risk_level
                     },
                     wellbeing_scores: {
                         overall: studentData.overall_wellbeing_score,
@@ -571,14 +676,33 @@ export const getStudentRiskProfile = {
                         social: studentData.social_wellbeing_score,
                         behavioral: studentData.behavioral_wellbeing_score
                     },
+                    trends: {
+                        overall_score_trend: studentData.overall_score_trend,
+                        score_change: studentData.score_change_from_previous,
+                        predicted_next_score: studentData.predicted_next_score,
+                        confidence_level: studentData.confidence_level
+                    },
                     intervention: {
                         recommended: studentData.intervention_recommended,
                         type: studentData.intervention_type,
                         priority: studentData.intervention_priority,
                         actions: studentData.recommended_actions || []
-                    }
+                    },
+                    activity_metrics: {
+                        attendance_rate: studentData.attendance_rate,
+                        gpa: studentData.gpa,
+                        mood_score_avg: studentData.mood_score_avg,
+                        incident_count: studentData.incident_count,
+                        help_requests_count: studentData.help_requests_count,
+                        urgent_help_requests: studentData.urgent_help_requests_count
+                    },
+                    percentiles: {
+                        school: studentData.school_percentile,
+                        grade: studentData.grade_percentile
+                    },
+                    analysis_date: studentData.analysis_date
                 },
-                message: `Retrieved risk profile for ${studentData.student_name}`
+                message: `Retrieved comprehensive risk profile for ${studentData.student_name}`
             }
         } catch (error: any) {
             return {

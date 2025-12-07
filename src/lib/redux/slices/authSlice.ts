@@ -80,9 +80,16 @@ export const checkAuth = createAsyncThunk(
     if (!session?.user) return null
 
     // Fetch user profile with deduplication
-    const profile = await fetchProfileWithCache(session.user.id)
-    console.log('CheckAuth - Session restored:', { user: session.user, profile })
-    return { user: session.user, profile }
+    // Handle missing profile gracefully for new Google OAuth users who haven't completed registration
+    try {
+      const profile = await fetchProfileWithCache(session.user.id)
+      console.log('CheckAuth - Session restored:', { user: session.user, profile })
+      return { user: session.user, profile }
+    } catch (profileError: any) {
+      // If profile not found, user may be a new Google OAuth user who needs to complete registration
+      console.log('CheckAuth - No profile found, user may need to complete registration:', session.user.email)
+      return { user: session.user, profile: null }
+    }
   }
 )
 

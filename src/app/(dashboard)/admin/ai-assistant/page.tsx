@@ -175,8 +175,6 @@ interface ChatSession {
 // CONSTANTS
 // ============================================
 
-const SESSIONS_KEY = 'catalyst_admin_chat_sessions'
-const RETENTION_MONTHS = 12
 const MAX_CONTEXT_MESSAGES = 20  // Extended for longer conversations
 
 // Admin-specific suggestions (exactly 8 like in image)
@@ -192,29 +190,87 @@ const SUGGESTIONS = [
 ]
 
 // ============================================
-// UTILITY FUNCTIONS
+// UTILITY FUNCTIONS (API-BASED)
 // ============================================
 
-const loadSessions = (): ChatSession[] => {
-  if (typeof window === 'undefined') return []
+// Fetch sessions from server API
+const fetchSessions = async (): Promise<ChatSession[]> => {
   try {
-    const stored = localStorage.getItem(SESSIONS_KEY)
-    if (!stored) return []
-    const sessions: ChatSession[] = JSON.parse(stored)
-    const retentionDate = new Date()
-    retentionDate.setMonth(retentionDate.getMonth() - RETENTION_MONTHS)
-    return sessions.filter(s => new Date(s.createdAt) > retentionDate)
-  } catch {
+    const response = await fetch('/api/admin/chat-sessions')
+    if (!response.ok) {
+      console.error('Failed to fetch sessions:', response.status)
+      return []
+    }
+    const data = await response.json()
+    // Transform API response to ChatSession format
+    return (data.sessions || []).map((s: any) => ({
+      id: s.id,
+      title: s.title,
+      messages: [], // Messages loaded on demand
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt
+    }))
+  } catch (error) {
+    console.error('Error fetching sessions:', error)
     return []
   }
 }
 
-const saveSessions = (sessions: ChatSession[]) => {
-  if (typeof window === 'undefined') return
+// Load session messages from server
+const fetchSessionMessages = async (sessionId: string): Promise<Message[]> => {
   try {
-    localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions))
+    const response = await fetch(`/api/admin/chat-sessions/${sessionId}`)
+    if (!response.ok) return []
+    const data = await response.json()
+    return data.session?.messages || []
   } catch (error) {
-    console.error('Failed to save sessions:', error)
+    console.error('Error fetching session messages:', error)
+    return []
+  }
+}
+
+// Create a new session on server
+const createSession = async (title: string, messages: Message[]): Promise<string | null> => {
+  try {
+    const response = await fetch('/api/admin/chat-sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, messages })
+    })
+    if (!response.ok) return null
+    const data = await response.json()
+    return data.session?.id || null
+  } catch (error) {
+    console.error('Error creating session:', error)
+    return null
+  }
+}
+
+// Add messages to existing session
+const addMessagesToSession = async (sessionId: string, messages: Message[]): Promise<boolean> => {
+  try {
+    const response = await fetch(`/api/admin/chat-sessions/${sessionId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages })
+    })
+    return response.ok
+  } catch (error) {
+    console.error('Error adding messages:', error)
+    return false
+  }
+}
+
+// Delete session from server
+const deleteSession = async (sessionId: string): Promise<boolean> => {
+  try {
+    const response = await fetch(`/api/admin/chat-sessions/${sessionId}`, {
+      method: 'DELETE'
+    })
+    return response.ok
+  } catch (error) {
+    console.error('Error deleting session:', error)
+    return false
   }
 }
 
@@ -761,6 +817,7 @@ export default function AIAssistantPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingSessions, setIsLoadingSessions] = useState(true)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [pendingConfirmation, setPendingConfirmation] = useState<{ messageId: string; confirmation: ConfirmationRequest } | null>(null)
@@ -769,38 +826,32 @@ export default function AIAssistantPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Load sessions
+  // Load sessions from API on mount
   useEffect(() => {
-    const loaded = loadSessions()
-    setSessions(loaded.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()))
-    if (loaded.length > 0 && !currentSessionId) {
-      setCurrentSessionId(loaded[0].id)
-      setMessages(loaded[0].messages)
+    const loadFromServer = async () => {
+      setIsLoadingSessions(true)
+      try {
+        const loaded = await fetchSessions()
+        setSessions(loaded.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()))
+        // Load messages for the most recent session if exists
+        if (loaded.length > 0 && !currentSessionId) {
+          setCurrentSessionId(loaded[0].id)
+          const sessionMessages = await fetchSessionMessages(loaded[0].id)
+          setMessages(sessionMessages)
+        }
+      } catch (error) {
+        console.error('Failed to load sessions:', error)
+      } finally {
+        setIsLoadingSessions(false)
+      }
     }
+    loadFromServer()
   }, [])
 
   // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
-
-  // Auto-save current session
-  useEffect(() => {
-    if (currentSessionId && messages.length > 0) {
-      const timer = setTimeout(() => {
-        const updatedSessions = sessions.map(s =>
-          s.id === currentSessionId
-            ? { ...s, messages, updatedAt: new Date().toISOString() }
-            : s
-        )
-        setSessions(updatedSessions)
-        saveSessions(updatedSessions)
-      }, 1000) // Auto-save after 1 second of inactivity
-
-      return () => clearTimeout(timer)
-    }
-    return undefined
-  }, [messages, currentSessionId, sessions])
 
   // Send message with extended context
   const sendMessage = useCallback(async (content: string) => {
@@ -956,8 +1007,8 @@ export default function AIAssistantPage() {
         m.id === assistantId ? { ...m, isStreaming: false } : m
       ))
 
-      // Create or update session
-      const finalMessages = [...messages, userMessage, {
+      // Create or update session via API
+      const messagesToSave = [userMessage, {
         id: assistantId,
         role: 'assistant' as const,
         content: fullText,
@@ -965,25 +1016,29 @@ export default function AIAssistantPage() {
       }]
 
       if (!currentSessionId) {
-        const newSession: ChatSession = {
-          id: `session-${Date.now()}`,
-          title: content.slice(0, 60) + (content.length > 60 ? '...' : ''),
-          messages: finalMessages,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+        // Create new session on server
+        const title = content.slice(0, 60) + (content.length > 60 ? '...' : '')
+        const newSessionId = await createSession(title, messagesToSave)
+        if (newSessionId) {
+          const newSession: ChatSession = {
+            id: newSessionId,
+            title,
+            messages: [...messages, ...messagesToSave],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }
+          setSessions(prev => [newSession, ...prev])
+          setCurrentSessionId(newSessionId)
         }
-        const newSessions = [newSession, ...sessions]
-        setSessions(newSessions)
-        setCurrentSessionId(newSession.id)
-        saveSessions(newSessions)
       } else {
-        const updatedSessions = sessions.map(s =>
+        // Add messages to existing session
+        await addMessagesToSession(currentSessionId, messagesToSave)
+        // Update local state
+        setSessions(prev => prev.map(s =>
           s.id === currentSessionId
-            ? { ...s, messages: finalMessages, updatedAt: new Date().toISOString() }
+            ? { ...s, messages: [...messages, ...messagesToSave], updatedAt: new Date().toISOString() }
             : s
-        )
-        setSessions(updatedSessions)
-        saveSessions(updatedSessions)
+        ))
       }
     } catch (error) {
       console.error('Chat error:', error)
@@ -1004,24 +1059,26 @@ export default function AIAssistantPage() {
     setShowHistory(false)
   }
 
-  const handleSessionSelect = (id: string) => {
-    const session = sessions.find(s => s.id === id)
-    if (session) {
-      setCurrentSessionId(id)
-      setMessages(session.messages)
-    }
-  }
+  const handleSessionSelect = useCallback(async (id: string) => {
+    setCurrentSessionId(id)
+    // Fetch messages from API
+    const sessionMessages = await fetchSessionMessages(id)
+    setMessages(sessionMessages)
+  }, [])
 
-  const handleSessionDelete = (id: string) => {
-    const updatedSessions = sessions.filter(s => s.id !== id)
-    setSessions(updatedSessions)
-    saveSessions(updatedSessions)
-
-    if (currentSessionId === id) {
-      setMessages([])
-      setCurrentSessionId(null)
+  const handleSessionDelete = useCallback(async (id: string) => {
+    // Delete from server first
+    const success = await deleteSession(id)
+    if (success) {
+      setSessions(prev => prev.filter(s => s.id !== id))
+      if (currentSessionId === id) {
+        setMessages([])
+        setCurrentSessionId(null)
+      }
+    } else {
+      toast.error('Failed to delete session')
     }
-  }
+  }, [currentSessionId])
 
   const handleHistoryToggle = () => {
     setShowHistory(prev => !prev)

@@ -42,12 +42,12 @@ const LOCAL_CACHE_TTL = 30 * 60 * 1000 // 30 minutes in milliseconds
 function getFromLocalCache<T>(key: string): T | null {
   const entry = localRosterCache.get(key)
   if (!entry) return null
-  
+
   if (Date.now() > entry.expiresAt) {
     localRosterCache.delete(key)
     return null
   }
-  
+
   return entry.data as T
 }
 
@@ -122,14 +122,14 @@ export const RosterCacheTTL = {
  */
 export async function getCachedClassRoster(classId: string, schoolId: string) {
   const cacheKey = RosterCacheKeys.roster(classId, schoolId)
-  
+
   // Tier 1: Check local memory cache first (ULTRA FAST)
   const localData = getFromLocalCache(cacheKey)
   if (localData) {
     console.log(`⚡ [Local Cache] INSTANT HIT for class: ${classId} (0ms)`)
     return localData
   }
-  
+
   // Tier 2: Check Redis cache (FAST)
   try {
     const redisData = await redisRosters.get(cacheKey)
@@ -160,12 +160,12 @@ export async function getCachedClassRoster(classId: string, schoolId: string) {
  */
 export async function setCachedClassRoster(classId: string, schoolId: string, data: any) {
   const cacheKey = RosterCacheKeys.roster(classId, schoolId)
-  
+
   // Store in BOTH cache tiers
   // Tier 1: Local memory (instant access for repeated calls)
   setToLocalCache(cacheKey, data)
   console.log(`💾 [Local Cache] Stored roster for class ${classId} (30min TTL)`)
-  
+
   // Tier 2: Redis (persistent)
   try {
     await redisRosters.set(cacheKey, data, { ex: RosterCacheTTL.ROSTER })
@@ -192,12 +192,12 @@ export async function setCachedClassRoster(classId: string, schoolId: string, da
  */
 export async function invalidateClassRoster(classId: string, schoolId: string) {
   const cacheKey = RosterCacheKeys.roster(classId, schoolId)
-  
+
   // Clear from BOTH cache tiers
   // Tier 1: Local memory
   clearFromLocalCache(cacheKey)
   console.log(`🗑️ [Local Cache] Cleared roster for class: ${classId}`)
-  
+
   // Tier 2: Redis
   try {
     await redisRosters.del(cacheKey)
@@ -223,7 +223,7 @@ export async function invalidateMultipleClassRosters(classIds: string[], schoolI
     clearFromLocalCache(key)
   })
   console.log(`🗑️ [Local Cache] Cleared ${classIds.length} class rosters`)
-  
+
   // Then clear from Redis
   try {
     const keys = classIds.map(id => RosterCacheKeys.roster(id, schoolId))
@@ -245,14 +245,14 @@ export async function invalidateMultipleClassRosters(classIds: string[], schoolI
  */
 export async function invalidateStudentRosters(studentClassIds: string[], schoolId: string) {
   if (studentClassIds.length === 0) return
-  
+
   // Clear from local cache
   studentClassIds.forEach(classId => {
     const key = RosterCacheKeys.roster(classId, schoolId)
     clearFromLocalCache(key)
   })
   console.log(`🗑️ [Local Cache] Cleared ${studentClassIds.length} rosters for student update`)
-  
+
   // Clear from Redis
   try {
     const keys = studentClassIds.map(classId => RosterCacheKeys.roster(classId, schoolId))
