@@ -23,7 +23,7 @@ export async function fetchProfileWithCache(userId: string): Promise<any> {
     // Step 2: Cache MISS - fetch from API
     console.log('[ProfileAPI] Fetching from server for user:', userId);
 
-    const response = await fetch('/api/get-profile/', {
+    const response = await fetch('/api/get-profile', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

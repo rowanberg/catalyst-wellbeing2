@@ -19,11 +19,11 @@ const nextConfig = {
   reactStrictMode: true,
 
   // ESLint configuration
-  eslint: {
-    // Enable linting during builds
-    ignoreDuringBuilds: false,
-    dirs: ['src']
-  },
+  // eslint: {
+  //   // Enable linting during builds
+  //   ignoreDuringBuilds: false,
+  //   dirs: ['src']
+  // },
 
   // Static export DISABLED - Capacitor uses live backend URL instead
   // APK loads from https://catalystwells.netlify.app (configured in capacitor.config.ts)
@@ -109,64 +109,64 @@ const nextConfig = {
   },
 
   // Custom webpack configuration to handle hydration issues
-  webpack: (config, { dev, isServer }) => {
-    if (dev && !isServer) {
-      // Suppress hydration warnings in development for form elements
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        'react-dom$': 'react-dom/profiling',
-        'scheduler/tracing': 'scheduler/tracing-profiling',
-      }
-    }
+  // webpack: (config, { dev, isServer }) => {
+  //   if (dev && !isServer) {
+  //     // Suppress hydration warnings in development for form elements
+  //     config.resolve.alias = {
+  //       ...config.resolve.alias,
+  //       'react-dom$': 'react-dom/profiling',
+  //       'scheduler/tracing': 'scheduler/tracing-profiling',
+  //     }
+  //   }
 
-    // Handle Html import issues during build
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      fs: false,
-      net: false,
-      tls: false,
-    }
+  //   // Handle Html import issues during build
+  //   config.resolve.fallback = {
+  //     ...config.resolve.fallback,
+  //     fs: false,
+  //     net: false,
+  //     tls: false,
+  //   }
 
-    // Prevent chunk corruption with streaming routes during dev hot reload
-    if (dev) {
-      config.optimization = {
-        ...config.optimization,
-        removeAvailableModules: false,
-        removeEmptyChunks: false,
-        splitChunks: false,
-      }
+  //   // Prevent chunk corruption with streaming routes during dev hot reload
+  //   if (dev) {
+  //     config.optimization = {
+  //       ...config.optimization,
+  //       removeAvailableModules: false,
+  //       removeEmptyChunks: false,
+  //       splitChunks: false,
+  //     }
 
-      // Enable webpack caching for faster rebuilds in dev
-      config.cache = {
-        type: 'filesystem',
-        cacheDirectory: path.join(__dirname, '.next/cache/webpack'),
-        buildDependencies: {
-          config: [__filename],
-        },
-      }
-    }
+  //     // Enable webpack caching for faster rebuilds in dev
+  //     config.cache = {
+  //       type: 'filesystem',
+  //       cacheDirectory: path.join(__dirname, '.next/cache/webpack'),
+  //       buildDependencies: {
+  //         config: [__filename],
+  //       },
+  //     }
+  //   }
 
-    // Optimize for client components in production
-    if (!isServer && !dev) {
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: {
-          ...config.optimization.splitChunks,
-          cacheGroups: {
-            ...config.optimization.splitChunks?.cacheGroups,
-            client: {
-              name: 'client-components',
-              test: /[\\/]components[\\/]ui[\\/]/,
-              chunks: 'all',
-              priority: 10,
-            },
-          },
-        },
-      }
-    }
+  //   // Optimize for client components in production
+  //   if (!isServer && !dev) {
+  //     config.optimization = {
+  //       ...config.optimization,
+  //       splitChunks: {
+  //         ...config.optimization.splitChunks,
+  //         cacheGroups: {
+  //           ...config.optimization.splitChunks?.cacheGroups,
+  //           client: {
+  //             name: 'client-components',
+  //             test: /[\\/]components[\\/]ui[\\/]/,
+  //             chunks: 'all',
+  //             priority: 10,
+  //           },
+  //         },
+  //       },
+  //     }
+  //   }
 
-    return config
-  },
+  //   return config
+  // },
 
   // Optimize build for production
   compiler: {
@@ -204,26 +204,26 @@ const nextConfig = {
   },
 
   // Enable build caching for faster builds
-  experimental: {
-    // Optimize CSS
-    optimizeCss: true,
+  // experimental: {
+  //   // Optimize CSS
+  //   optimizeCss: true,
 
-    // Enable modern optimizations for faster compilation
-    optimizePackageImports: [
-      // 'lucide-react', // Disabled due to webpack barrel optimization conflicts
-      'framer-motion',
-      'recharts',
-      '@supabase/supabase-js',
-      'date-fns'
-    ],
+  //   // Enable modern optimizations for faster compilation
+  //   optimizePackageImports: [
+  //     // 'lucide-react', // Disabled due to webpack barrel optimization conflicts
+  //     'framer-motion',
+  //     'recharts',
+  //     '@supabase/supabase-js',
+  //     'date-fns'
+  //   ],
 
-    // Enable webpack build cache for much faster rebuilds
-    webpackBuildWorker: true,
+  //   // Enable webpack build cache for much faster rebuilds
+  //   webpackBuildWorker: false,
 
-    // Enable parallel compilation
-    parallelServerCompiles: true,
-    parallelServerBuildTraces: true,
-  },
+  //   // Enable parallel compilation
+  //   parallelServerCompiles: false,
+  //   parallelServerBuildTraces: false,
+  // },
 
   // Performance optimizations
   poweredByHeader: false,
