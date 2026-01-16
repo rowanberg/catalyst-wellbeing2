@@ -43,11 +43,14 @@ import {
   LogOut,
   MessageCircle,
   Phone,
-  Link
+  Link,
+  FileText,
+  ChevronRight
 } from 'lucide-react'
 
 // Lazy load heavy components
 const AdvancedProfilePictureUpload = lazy(() => import('@/components/ui/advanced-profile-picture-upload').then(mod => ({ default: mod.AdvancedProfilePictureUpload })))
+const StudentInfoWizard = lazy(() => import('@/components/student/settings/StudentInfoWizard').then(mod => ({ default: mod.StudentInfoWizard })))
 
 // Static configuration data (outside component for performance)
 const PRIVACY_SETTINGS = [
@@ -388,8 +391,8 @@ const StudentSettingsPage = () => {
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     const toast = document.createElement('div')
     toast.className = `fixed top-4 right-4 px-6 py-3 rounded-2xl shadow-2xl z-[10000] transform transition-all duration-500 backdrop-blur-xl border ${type === 'success'
-        ? 'bg-green-500/90 text-white border-green-400/50'
-        : 'bg-red-500/90 text-white border-red-400/50'
+      ? 'bg-green-500/90 text-white border-green-400/50'
+      : 'bg-red-500/90 text-white border-red-400/50'
       }`
     toast.textContent = message
     toast.style.transform = 'translateX(100%)'
@@ -844,6 +847,56 @@ const StudentSettingsPage = () => {
                 </Card>
               </motion.div>
 
+              {/* Your Info Section - Link to Wizard */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.15 }}
+              >
+                <Card className="bg-white/95 backdrop-blur-xl shadow-xl border border-[#F8AD9D]/30 rounded-xl sm:rounded-2xl h-full">
+                  <CardHeader className="p-3 pb-2 sm:p-6 sm:pb-4">
+                    <CardTitle className="flex items-center space-x-2 sm:space-x-3 text-sm sm:text-base lg:text-lg text-slate-800">
+                      <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-violet-500" />
+                      <span className="truncate">Your Info</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 sm:space-y-4 p-3 sm:px-6 sm:pb-6">
+                    <p className="text-xs sm:text-sm text-slate-600">
+                      Complete your student profile with academic details, guardian contacts, and privacy preferences.
+                    </p>
+                    <div
+                      className="p-3 sm:p-4 rounded-xl sm:rounded-2xl border cursor-pointer transition-all hover:shadow-md group"
+                      style={{ backgroundColor: 'color-mix(in srgb, var(--theme-highlight) 70%, transparent)', borderColor: 'color-mix(in srgb, var(--theme-accent) 30%, transparent)' }}
+                      onClick={() => {
+                        // Scroll to wizard section or open modal
+                        const wizardSection = document.getElementById('your-info-wizard')
+                        if (wizardSection) {
+                          wizardSection.scrollIntoView({ behavior: 'smooth' })
+                        }
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600">
+                            <User className="h-4 w-4 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-slate-800 text-sm">Complete Your Profile</p>
+                            <p className="text-xs text-slate-500">7 steps • ~5 minutes</p>
+                          </div>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-violet-500 transition-colors" />
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2 p-2 bg-blue-50 rounded-lg border border-blue-100">
+                      <Shield className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-blue-700">
+                        Your data is encrypted with AES-256 and stored securely.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
 
               {/* Appearance & Theme */}
               <motion.div
@@ -871,8 +924,8 @@ const StudentSettingsPage = () => {
                         <button
                           onClick={() => handleSettingChange('theme', 'fiery-rose')}
                           className={`relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 ${settings.theme === 'fiery-rose'
-                              ? 'border-[#F08080] bg-[#F08080]/10 shadow-lg shadow-[#F08080]/20'
-                              : 'border-slate-200 hover:border-[#F08080]/50 hover:bg-[#FBC4AB]/5'
+                            ? 'border-[#F08080] bg-[#F08080]/10 shadow-lg shadow-[#F08080]/20'
+                            : 'border-slate-200 hover:border-[#F08080]/50 hover:bg-[#FBC4AB]/5'
                             }`}
                         >
                           <div className="flex flex-col items-center space-y-2">
@@ -895,8 +948,8 @@ const StudentSettingsPage = () => {
                         <button
                           onClick={() => handleSettingChange('theme', 'ocean-sunset')}
                           className={`relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 ${settings.theme === 'ocean-sunset'
-                              ? 'border-[#ffc300] bg-[#ffc300]/10 shadow-lg shadow-[#ffc300]/20'
-                              : 'border-slate-200 hover:border-[#ffc300]/50 hover:bg-[#ffd60a]/5'
+                            ? 'border-[#ffc300] bg-[#ffc300]/10 shadow-lg shadow-[#ffc300]/20'
+                            : 'border-slate-200 hover:border-[#ffc300]/50 hover:bg-[#ffd60a]/5'
                             }`}
                         >
                           <div className="flex flex-col items-center space-y-2">
@@ -919,8 +972,8 @@ const StudentSettingsPage = () => {
                         <button
                           onClick={() => handleSettingChange('theme', 'fresh-meadow')}
                           className={`relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 ${settings.theme === 'fresh-meadow'
-                              ? 'border-[#38a3a5] bg-[#38a3a5]/10 shadow-lg shadow-[#38a3a5]/20'
-                              : 'border-slate-200 hover:border-[#38a3a5]/50 hover:bg-[#57cc99]/5'
+                            ? 'border-[#38a3a5] bg-[#38a3a5]/10 shadow-lg shadow-[#38a3a5]/20'
+                            : 'border-slate-200 hover:border-[#38a3a5]/50 hover:bg-[#57cc99]/5'
                             }`}
                         >
                           <div className="flex flex-col items-center space-y-2">
@@ -943,8 +996,8 @@ const StudentSettingsPage = () => {
                         <button
                           onClick={() => handleSettingChange('theme', 'autumn-ember')}
                           className={`relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 ${settings.theme === 'autumn-ember'
-                              ? 'border-[#ea8c55] bg-[#ea8c55]/10 shadow-lg shadow-[#ea8c55]/20'
-                              : 'border-slate-200 hover:border-[#ea8c55]/50 hover:bg-[#c75146]/5'
+                            ? 'border-[#ea8c55] bg-[#ea8c55]/10 shadow-lg shadow-[#ea8c55]/20'
+                            : 'border-slate-200 hover:border-[#ea8c55]/50 hover:bg-[#c75146]/5'
                             }`}
                         >
                           <div className="flex flex-col items-center space-y-2">
@@ -1096,8 +1149,8 @@ const StudentSettingsPage = () => {
                           setHasUnsavedChanges(true)
                         }}
                         className={`bg-white border-[#F8AD9D]/30 text-slate-800 placeholder-slate-400 rounded-xl ${whatsappConfig.phoneNumber && !validatePhoneNumber(whatsappConfig.phoneNumber)
-                            ? 'border-red-400 focus:border-red-400'
-                            : 'focus:border-[#F08080]'
+                          ? 'border-red-400 focus:border-red-400'
+                          : 'focus:border-[#F08080]'
                           }`}
                       />
                       {whatsappConfig.phoneNumber && !validatePhoneNumber(whatsappConfig.phoneNumber) && (
@@ -1175,8 +1228,8 @@ const StudentSettingsPage = () => {
                         onClick={() => saveWhatsAppConfig(whatsappConfig)}
                         disabled={saving || (!whatsappConfig.phoneNumber && !whatsappConfig.whatsappLink)}
                         className={`px-6 py-2 rounded-xl font-medium transition-all shadow-md ${(whatsappConfig.phoneNumber || whatsappConfig.whatsappLink)
-                            ? 'bg-gradient-to-r from-[#F08080] to-[#F4978E] hover:from-[#F4978E] hover:to-[#F8AD9D] text-white'
-                            : 'bg-gray-300/50 text-gray-500 cursor-not-allowed'
+                          ? 'bg-gradient-to-r from-[#F08080] to-[#F4978E] hover:from-[#F4978E] hover:to-[#F8AD9D] text-white'
+                          : 'bg-gray-300/50 text-gray-500 cursor-not-allowed'
                           }`}
                       >
                         {saving ? (
@@ -1252,7 +1305,31 @@ const StudentSettingsPage = () => {
                 </Card>
               </motion.div>
             </div>
+
+            {/* Your Info Wizard Section */}
+            <motion.div
+              id="your-info-wizard"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.7 }}
+              className="mt-6"
+            >
+              <div className="mb-4">
+                <h2 className="text-xl sm:text-2xl font-bold bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(to right, var(--theme-primary), var(--theme-secondary))' }}>
+                  Your Information
+                </h2>
+                <p className="text-sm text-slate-600 mt-1">Complete your student profile to personalize your experience</p>
+              </div>
+              <Suspense fallback={
+                <div className="flex items-center justify-center p-12 bg-white/95 rounded-2xl border border-slate-200">
+                  <div className="animate-spin rounded-full h-10 w-10 border-2 border-violet-200 border-t-violet-500"></div>
+                </div>
+              }>
+                <StudentInfoWizard embedded={true} />
+              </Suspense>
+            </motion.div>
           </div>
+
         </div>
       </div>
     </UnifiedAuthGuard>

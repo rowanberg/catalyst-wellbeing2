@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 
     // Get user from session
     const { data: { user }, error: userError } = await supabase.auth.getUser()
-    
+
     if (userError || !user) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (!profile) {
-      return NextResponse.json({ message: 'Profile not found' }, { status: 404 })
+      return NextResponse.json({ message: 'Profile not found', error: 'auth_failed' }, { status: 401 })
     }
 
     // Check cache first
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
         .select('*')
         .eq('student_id', profile.id)
         .eq('date', new Date().toISOString().split('T')[0]),
-      
+
       // Upcoming exams (next 7 days)
       supabase
         .from('assessments')
@@ -80,14 +80,14 @@ export async function GET(request: NextRequest) {
         .lte('due_date', new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString())
         .order('due_date', { ascending: true })
         .limit(5),
-      
+
       // Weekly progress
       supabase
         .from('student_progress')
         .select('weekly_xp, class_rank, streak_days')
         .eq('student_id', profile.id)
         .single(),
-      
+
       // Polls - Using supabaseAdmin for consistency
       supabaseAdmin
         .from('polls')
@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
         .in('target_audience', ['all', 'students'])
         .order('created_at', { ascending: false })
         .limit(2),
-      
+
       // Announcements - Using supabaseAdmin (same as working announcements page API)
       supabaseAdmin
         .from('school_announcements')
@@ -155,14 +155,14 @@ export async function GET(request: NextRequest) {
     const progress = progressRes.status === 'fulfilled' ? progressRes.value.data : null
     const pollsData = pollsRes.status === 'fulfilled' ? pollsRes.value.data || [] : []
     const announcementsData = announcementsRes.status === 'fulfilled' ? announcementsRes.value.data || [] : []
-    
+
     console.log('📊 Today API - Raw data:', {
       pollsCount: pollsData.length,
       announcementsCount: announcementsData.length,
       pollsError: pollsRes.status === 'rejected' ? pollsRes.reason : null,
       announcementsError: announcementsRes.status === 'rejected' ? announcementsRes.reason : null
     })
-    
+
     // Format polls and announcements exactly like dashboard-data API
     const polls = pollsData.map(poll => ({
       id: poll.id,
@@ -174,19 +174,19 @@ export async function GET(request: NextRequest) {
       allowMultipleResponses: poll.allow_multiple_responses,
       type: poll.type
     }))
-    
+
     const announcements = announcementsData.map(announcement => ({
       id: announcement.id,
       title: announcement.title,
       content: announcement.content,
       type: 'general',
       priority: announcement.priority || 'medium',
-      author: announcement.author_name || 
-              ((announcement as any).profiles ? `${(announcement as any).profiles.first_name} ${(announcement as any).profiles.last_name}` : 'School Admin'),
+      author: announcement.author_name ||
+        ((announcement as any).profiles ? `${(announcement as any).profiles.first_name} ${(announcement as any).profiles.last_name}` : 'School Admin'),
       created_at: announcement.created_at,
       expires_at: announcement.expires_at
     }))
-    
+
     console.log('📊 Today API - Formatted school updates:', {
       polls: polls.length,
       announcements: announcements.length,

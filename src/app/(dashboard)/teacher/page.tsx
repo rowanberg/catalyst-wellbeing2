@@ -94,7 +94,8 @@ import {
   X,
   MapPin,
   LayoutGrid,
-  RefreshCw
+  RefreshCw,
+  CreditCard
 } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 import { ProfileDropdown } from '@/components/ui/profile-dropdown'
@@ -761,6 +762,7 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
         <nav className="flex-1 p-3 sm:p-4 space-y-1.5 sm:space-y-2 overflow-y-auto">
           {[
             { id: 'overview', label: 'Overview', icon: School, color: 'text-blue-600', bgColor: 'bg-blue-50' },
+            { id: 'digital-id', label: 'Digital ID', icon: CreditCard, color: 'text-indigo-600', bgColor: 'bg-indigo-50', isLink: true, href: '/teacher/digital-id' },
             { id: 'roster', label: 'Students', icon: Users, color: 'text-emerald-600', bgColor: 'bg-emerald-50', isLink: true, href: '/teacher/students' },
             { id: 'attendance', label: 'Attendance', icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-50', isLink: true, href: '/teacher/attendance' },
             { id: 'wellbeing', label: 'Wellbeing', icon: Heart, color: 'text-pink-600', bgColor: 'bg-pink-50' },
@@ -850,8 +852,8 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: 100, scale: 0.8 }}
             className={`p-3 sm:p-4 rounded-xl shadow-xl mb-2 backdrop-blur-sm border ${notification.type === 'success'
-                ? 'bg-gradient-to-r from-emerald-500 to-green-500 text-white border-emerald-400/20'
-                : 'bg-gradient-to-r from-rose-500 to-red-500 text-white border-rose-400/20'
+              ? 'bg-gradient-to-r from-emerald-500 to-green-500 text-white border-emerald-400/20'
+              : 'bg-gradient-to-r from-rose-500 to-red-500 text-white border-rose-400/20'
               }`}>
             <div className="flex items-start justify-between">
               <span className="text-sm sm:text-base pr-2">{notification.message}</span>
@@ -1049,8 +1051,8 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                                   </div>
 
                                   <div className={`inline-flex px-2 py-1 rounded-full text-xs font-bold ${stat.trend.startsWith('+')
-                                      ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400'
-                                      : 'bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-400'
+                                    ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400'
+                                    : 'bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-400'
                                     }`}>
                                     {stat.trend}
                                   </div>
@@ -1064,8 +1066,8 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                                     <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
                                   </div>
                                   <div className={`px-2 py-1 rounded-full text-xs font-semibold backdrop-blur-sm ${stat.trend.startsWith('+')
-                                      ? 'bg-gradient-to-r from-emerald-100 to-green-100 dark:from-emerald-900/50 dark:to-green-900/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
-                                      : 'bg-gradient-to-r from-rose-100 to-red-100 dark:from-rose-900/50 dark:to-red-900/50 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
+                                    ? 'bg-gradient-to-r from-emerald-100 to-green-100 dark:from-emerald-900/50 dark:to-green-900/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                                    : 'bg-gradient-to-r from-rose-100 to-red-100 dark:from-rose-900/50 dark:to-red-900/50 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
                                     }`}>
                                     {stat.trend}
                                   </div>
@@ -1157,10 +1159,10 @@ function TeacherDashboardContentOld({ user, profile }: { user: any, profile: any
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: index * 0.1 }}
                               className={`p-3 sm:p-4 rounded-xl border transition-all duration-300 ${classItem.status === 'current'
-                                  ? 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/40 dark:to-indigo-900/40 border-blue-200 dark:border-blue-600 shadow-md ring-2 ring-blue-100 dark:ring-blue-700/50'
-                                  : classItem.status === 'completed'
-                                    ? 'bg-gray-50/50 dark:bg-slate-700/40 border-gray-200 dark:border-slate-600 opacity-70'
-                                    : 'bg-white dark:bg-slate-700/30 border-gray-200 dark:border-slate-600 hover:border-blue-200 dark:hover:border-blue-600 hover:shadow-md hover:bg-blue-50/30 dark:hover:bg-blue-900/20'
+                                ? 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/40 dark:to-indigo-900/40 border-blue-200 dark:border-blue-600 shadow-md ring-2 ring-blue-100 dark:ring-blue-700/50'
+                                : classItem.status === 'completed'
+                                  ? 'bg-gray-50/50 dark:bg-slate-700/40 border-gray-200 dark:border-slate-600 opacity-70'
+                                  : 'bg-white dark:bg-slate-700/30 border-gray-200 dark:border-slate-600 hover:border-blue-200 dark:hover:border-blue-600 hover:shadow-md hover:bg-blue-50/30 dark:hover:bg-blue-900/20'
                                 }`}
                             >
                               <div className="flex items-center justify-between">

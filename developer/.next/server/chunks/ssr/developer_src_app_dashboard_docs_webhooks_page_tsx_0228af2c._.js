@@ -1,0 +1,75 @@
+module.exports=[2165,a=>{"use strict";var b=a.i(87924),c=a.i(72131),d=a.i(46271),e=a.i(38246),f=a.i(59407),g=a.i(5151),h=a.i(33441),i=a.i(3314),j=a.i(1027),k=a.i(69520),l=a.i(41710),m=a.i(95756),n=a.i(80208),o=a.i(50522),p=a.i(23312),q=a.i(43108);let r=[{category:"Student Events",events:[{name:"student.created",description:"A new student was added"},{name:"student.updated",description:"Student profile was modified"},{name:"student.deleted",description:"Student was removed from the system"}]},{category:"Attendance Events",events:[{name:"attendance.marked",description:"Attendance was marked for a student"},{name:"attendance.updated",description:"Attendance record was modified"},{name:"attendance.bulk_marked",description:"Bulk attendance was processed"}]},{category:"Academic Events",events:[{name:"grade.published",description:"New grades were published"},{name:"grade.updated",description:"Grade was modified"},{name:"report.generated",description:"Report card was generated"}]},{category:"Wellbeing Events",events:[{name:"wellbeing.alert",description:"Wellbeing alert was triggered"},{name:"mood.logged",description:"Student logged their mood"},{name:"behavior.recorded",description:"Behavior note was added"}]},{category:"Authorization Events",events:[{name:"consent.granted",description:"User granted consent to your app"},{name:"consent.revoked",description:"User revoked consent"},{name:"token.refreshed",description:"Access token was refreshed"}]}],s=[{icon:j.Zap,title:"Real-time Delivery",description:"Events are delivered within seconds of occurrence"},{icon:k.RefreshCw,title:"Automatic Retries",description:"Failed deliveries are retried with exponential backoff"},{icon:i.Shield,title:"Signature Verification",description:"All payloads are signed for authenticity"},{icon:l.Clock,title:"Event History",description:"30-day history of all webhook deliveries"}];function t(){let[a,i]=(0,c.useState)(null),j=async(a,b)=>{await navigator.clipboard.writeText(a),i(b),setTimeout(()=>i(null),2e3)},k=`{
+  "id": "evt_abc123xyz",
+  "type": "attendance.marked",
+  "created": "2026-01-16T10:30:00Z",
+  "data": {
+    "student_id": "stu_123",
+    "student_name": "John Doe",
+    "class_id": "cls_456",
+    "date": "2026-01-16",
+    "status": "present",
+    "marked_by": "teacher_789",
+    "marked_at": "2026-01-16T10:30:00Z"
+  },
+  "school": {
+    "id": "sch_001",
+    "name": "Demo High School"
+  }
+}`,l=`import crypto from 'crypto';
+
+function verifyWebhookSignature(payload, signature, secret) {
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(payload)
+    .digest('hex');
+  
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(\`sha256=\${expectedSignature}\`)
+  );
+}
+
+// In your webhook handler
+app.post('/webhooks', (req, res) => {
+  const signature = req.headers['x-catalystwells-signature'];
+  const payload = JSON.stringify(req.body);
+  
+  if (!verifyWebhookSignature(payload, signature, WEBHOOK_SECRET)) {
+    return res.status(401).send('Invalid signature');
+  }
+  
+  // Process the webhook
+  const event = req.body;
+  console.log(\`Received event: \${event.type}\`);
+  
+  // Acknowledge receipt
+  res.status(200).send('OK');
+});`,t=`import hmac
+import hashlib
+from flask import Flask, request
+
+app = Flask(__name__)
+WEBHOOK_SECRET = 'your_webhook_secret'
+
+def verify_signature(payload, signature, secret):
+    expected = hmac.new(
+        secret.encode(),
+        payload.encode(),
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(f'sha256={expected}', signature)
+
+@app.route('/webhooks', methods=['POST'])
+def handle_webhook():
+    signature = request.headers.get('X-CatalystWells-Signature')
+    payload = request.get_data(as_text=True)
+    
+    if not verify_signature(payload, signature, WEBHOOK_SECRET):
+        return 'Invalid signature', 401
+    
+    event = request.get_json()
+    print(f"Received event: {event['type']}")
+    
+    return 'OK', 200`;return(0,b.jsxs)("div",{className:"max-w-5xl mx-auto space-y-10",children:[(0,b.jsxs)(d.motion.div,{initial:{opacity:0,y:20},animate:{opacity:1,y:0},children:[(0,b.jsxs)("div",{className:"flex items-center gap-3 mb-4",children:[(0,b.jsx)("div",{className:"p-2.5 bg-purple-500/10 rounded-xl",children:(0,b.jsx)(f.Webhook,{className:"w-6 h-6 text-purple-400"})}),(0,b.jsx)("h1",{className:"text-3xl sm:text-4xl font-bold text-white",children:"Webhooks"})]}),(0,b.jsx)("p",{className:"text-lg text-slate-400 max-w-3xl",children:"Receive real-time notifications when events occur in connected schools. Webhooks enable you to build reactive integrations without polling."})]}),(0,b.jsx)(d.motion.div,{initial:{opacity:0,y:20},animate:{opacity:1,y:0},transition:{delay:.1},className:"grid grid-cols-2 md:grid-cols-4 gap-4",children:s.map((a,c)=>(0,b.jsxs)("div",{className:"bg-slate-800/30 border border-slate-700/50 rounded-xl p-4",children:[(0,b.jsx)(a.icon,{className:"w-6 h-6 text-purple-400 mb-2"}),(0,b.jsx)("h3",{className:"font-medium text-white text-sm",children:a.title}),(0,b.jsx)("p",{className:"text-xs text-slate-400 mt-1",children:a.description})]},c))}),(0,b.jsxs)(d.motion.div,{initial:{opacity:0,y:20},animate:{opacity:1,y:0},transition:{delay:.15},className:"bg-gradient-to-br from-purple-600/10 to-pink-600/10 border border-purple-500/20 rounded-2xl p-6",children:[(0,b.jsx)("h2",{className:"text-xl font-semibold text-white mb-4",children:"Quick Setup"}),(0,b.jsxs)("ol",{className:"space-y-4",children:[(0,b.jsxs)("li",{className:"flex items-start gap-4",children:[(0,b.jsx)("span",{className:"w-6 h-6 bg-purple-500/20 text-purple-400 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0",children:"1"}),(0,b.jsxs)("div",{children:[(0,b.jsx)("p",{className:"text-white font-medium",children:"Create an endpoint"}),(0,b.jsx)("p",{className:"text-sm text-slate-400",children:"Set up a publicly accessible HTTPS URL to receive webhooks"})]})]}),(0,b.jsxs)("li",{className:"flex items-start gap-4",children:[(0,b.jsx)("span",{className:"w-6 h-6 bg-purple-500/20 text-purple-400 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0",children:"2"}),(0,b.jsxs)("div",{children:[(0,b.jsx)("p",{className:"text-white font-medium",children:"Register your webhook"}),(0,b.jsx)("p",{className:"text-sm text-slate-400",children:"Add your endpoint URL in the dashboard and select events"})]})]}),(0,b.jsxs)("li",{className:"flex items-start gap-4",children:[(0,b.jsx)("span",{className:"w-6 h-6 bg-purple-500/20 text-purple-400 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0",children:"3"}),(0,b.jsxs)("div",{children:[(0,b.jsx)("p",{className:"text-white font-medium",children:"Verify signatures"}),(0,b.jsx)("p",{className:"text-sm text-slate-400",children:"Use your webhook secret to verify payload authenticity"})]})]})]}),(0,b.jsxs)(e.default,{href:"/dashboard/webhooks",className:"inline-flex items-center gap-2 mt-6 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold text-sm transition-colors",children:[(0,b.jsx)(p.Bell,{className:"w-4 h-4"}),"Configure Webhooks"]})]}),(0,b.jsxs)(d.motion.div,{initial:{opacity:0,y:20},animate:{opacity:1,y:0},transition:{delay:.2},className:"space-y-6",children:[(0,b.jsx)("h2",{className:"text-2xl font-semibold text-white",children:"Event Types"}),(0,b.jsx)("div",{className:"space-y-4",children:r.map((a,c)=>(0,b.jsxs)("div",{className:"bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden",children:[(0,b.jsx)("div",{className:"px-5 py-3 bg-slate-900/50 border-b border-slate-700/50",children:(0,b.jsx)("h3",{className:"font-semibold text-white",children:a.category})}),(0,b.jsx)("div",{className:"divide-y divide-slate-700/30",children:a.events.map((a,c)=>(0,b.jsxs)("div",{className:"px-5 py-3 flex items-center justify-between hover:bg-slate-700/20",children:[(0,b.jsx)("code",{className:"text-sm text-purple-400 font-mono",children:a.name}),(0,b.jsx)("span",{className:"text-sm text-slate-400",children:a.description})]},c))})]},c))})]}),(0,b.jsxs)(d.motion.div,{initial:{opacity:0,y:20},animate:{opacity:1,y:0},transition:{delay:.25},className:"space-y-4",children:[(0,b.jsx)("h2",{className:"text-2xl font-semibold text-white",children:"Payload Structure"}),(0,b.jsx)("p",{className:"text-slate-400",children:"All webhook payloads follow a consistent structure with event metadata and data."}),(0,b.jsxs)("div",{className:"bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden",children:[(0,b.jsxs)("div",{className:"flex items-center justify-between p-4 bg-slate-900/50 border-b border-slate-700/50",children:[(0,b.jsx)("span",{className:"text-sm text-slate-400 font-mono",children:"Example Payload"}),(0,b.jsx)("button",{onClick:()=>j(k,"payload"),className:"flex items-center gap-1.5 text-xs text-slate-400 hover:text-white",children:"payload"===a?(0,b.jsxs)(b.Fragment,{children:[(0,b.jsx)(h.Check,{className:"w-3.5 h-3.5 text-green-400"}),(0,b.jsx)("span",{className:"text-green-400",children:"Copied!"})]}):(0,b.jsxs)(b.Fragment,{children:[(0,b.jsx)(g.Copy,{className:"w-3.5 h-3.5"}),(0,b.jsx)("span",{children:"Copy"})]})})]}),(0,b.jsx)("pre",{className:"p-5 overflow-x-auto",children:(0,b.jsx)("code",{className:"text-sm text-slate-300 font-mono",children:k})})]})]}),(0,b.jsxs)(d.motion.div,{initial:{opacity:0,y:20},animate:{opacity:1,y:0},transition:{delay:.3},className:"space-y-4",children:[(0,b.jsxs)("div",{className:"flex items-center gap-3",children:[(0,b.jsx)(q.Lock,{className:"w-6 h-6 text-green-400"}),(0,b.jsx)("h2",{className:"text-2xl font-semibold text-white",children:"Signature Verification"})]}),(0,b.jsxs)("p",{className:"text-slate-400",children:["Every webhook request includes a signature in the ",(0,b.jsx)("code",{className:"text-blue-400",children:"X-CatalystWells-Signature"})," header. Always verify this signature before processing events."]}),(0,b.jsxs)("div",{className:"bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-start gap-3",children:[(0,b.jsx)(n.AlertTriangle,{className:"w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5"}),(0,b.jsxs)("div",{children:[(0,b.jsx)("p",{className:"text-sm text-amber-300 font-medium",children:"Security Warning"}),(0,b.jsx)("p",{className:"text-sm text-amber-200/80 mt-1",children:"Never skip signature verification in production. Unverified webhooks can lead to security vulnerabilities."})]})]}),(0,b.jsxs)("div",{className:"bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden",children:[(0,b.jsxs)("div",{className:"flex items-center justify-between p-4 bg-slate-900/50 border-b border-slate-700/50",children:[(0,b.jsx)("span",{className:"text-sm text-slate-400",children:"JavaScript / Node.js"}),(0,b.jsx)("button",{onClick:()=>j(l,"js-verify"),className:"flex items-center gap-1.5 text-xs text-slate-400 hover:text-white",children:"js-verify"===a?(0,b.jsxs)(b.Fragment,{children:[(0,b.jsx)(h.Check,{className:"w-3.5 h-3.5 text-green-400"}),(0,b.jsx)("span",{className:"text-green-400",children:"Copied!"})]}):(0,b.jsxs)(b.Fragment,{children:[(0,b.jsx)(g.Copy,{className:"w-3.5 h-3.5"}),(0,b.jsx)("span",{children:"Copy"})]})})]}),(0,b.jsx)("pre",{className:"p-5 overflow-x-auto max-h-96 sidebar-scroll",children:(0,b.jsx)("code",{className:"text-sm text-slate-300 font-mono",children:l})})]}),(0,b.jsxs)("div",{className:"bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden",children:[(0,b.jsxs)("div",{className:"flex items-center justify-between p-4 bg-slate-900/50 border-b border-slate-700/50",children:[(0,b.jsx)("span",{className:"text-sm text-slate-400",children:"Python / Flask"}),(0,b.jsx)("button",{onClick:()=>j(t,"py-verify"),className:"flex items-center gap-1.5 text-xs text-slate-400 hover:text-white",children:"py-verify"===a?(0,b.jsxs)(b.Fragment,{children:[(0,b.jsx)(h.Check,{className:"w-3.5 h-3.5 text-green-400"}),(0,b.jsx)("span",{className:"text-green-400",children:"Copied!"})]}):(0,b.jsxs)(b.Fragment,{children:[(0,b.jsx)(g.Copy,{className:"w-3.5 h-3.5"}),(0,b.jsx)("span",{children:"Copy"})]})})]}),(0,b.jsx)("pre",{className:"p-5 overflow-x-auto max-h-80 sidebar-scroll",children:(0,b.jsx)("code",{className:"text-sm text-slate-300 font-mono",children:t})})]})]}),(0,b.jsxs)(d.motion.div,{initial:{opacity:0,y:20},animate:{opacity:1,y:0},transition:{delay:.35},className:"bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6",children:[(0,b.jsx)("h2",{className:"text-xl font-semibold text-white mb-4",children:"Best Practices"}),(0,b.jsxs)("ul",{className:"space-y-3",children:[(0,b.jsxs)("li",{className:"flex items-start gap-3",children:[(0,b.jsx)(m.CheckCircle,{className:"w-5 h-5 text-green-400 flex-shrink-0 mt-0.5"}),(0,b.jsxs)("div",{children:[(0,b.jsx)("p",{className:"text-white font-medium",children:"Respond quickly"}),(0,b.jsx)("p",{className:"text-sm text-slate-400",children:"Return a 2xx response within 30 seconds. Process events asynchronously."})]})]}),(0,b.jsxs)("li",{className:"flex items-start gap-3",children:[(0,b.jsx)(m.CheckCircle,{className:"w-5 h-5 text-green-400 flex-shrink-0 mt-0.5"}),(0,b.jsxs)("div",{children:[(0,b.jsx)("p",{className:"text-white font-medium",children:"Handle duplicates"}),(0,b.jsx)("p",{className:"text-sm text-slate-400",children:"Events may be delivered multiple times. Use the event ID for idempotency."})]})]}),(0,b.jsxs)("li",{className:"flex items-start gap-3",children:[(0,b.jsx)(m.CheckCircle,{className:"w-5 h-5 text-green-400 flex-shrink-0 mt-0.5"}),(0,b.jsxs)("div",{children:[(0,b.jsx)("p",{className:"text-white font-medium",children:"Use HTTPS"}),(0,b.jsx)("p",{className:"text-sm text-slate-400",children:"Webhook endpoints must use HTTPS with a valid SSL certificate."})]})]}),(0,b.jsxs)("li",{className:"flex items-start gap-3",children:[(0,b.jsx)(m.CheckCircle,{className:"w-5 h-5 text-green-400 flex-shrink-0 mt-0.5"}),(0,b.jsxs)("div",{children:[(0,b.jsx)("p",{className:"text-white font-medium",children:"Monitor deliveries"}),(0,b.jsx)("p",{className:"text-sm text-slate-400",children:"Check the webhook logs dashboard to debug delivery issues."})]})]})]})]}),(0,b.jsxs)(d.motion.div,{initial:{opacity:0,y:20},animate:{opacity:1,y:0},transition:{delay:.4},className:"flex items-center justify-between pt-6 border-t border-slate-700/50",children:[(0,b.jsx)(e.default,{href:"/dashboard/docs/authentication",className:"text-slate-400 hover:text-white transition-colors",children:"← Authentication"}),(0,b.jsxs)(e.default,{href:"/dashboard/docs/scopes",className:"text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1",children:["OAuth Scopes ",(0,b.jsx)(o.ChevronRight,{className:"w-4 h-4"})]})]})]})}a.s(["default",()=>t])}];
+
+//# sourceMappingURL=developer_src_app_dashboard_docs_webhooks_page_tsx_0228af2c._.js.map

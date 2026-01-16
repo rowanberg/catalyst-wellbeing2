@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "catalystwells"
+version = "1.0.0"
+description = "Official Python SDK for CatalystWells Education Platform API"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "CatalystWells", email = "developers@catalystwells.com"}
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Education",
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
+keywords = ["catalystwells", "education", "api", "sdk", "school", "student", "oauth"]
+requires-python = ">=3.9"
+dependencies = [
+    "httpx>=0.25.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "mypy>=1.0.0",
+    "ruff>=0.1.0"
+]
+
+[project.urls]
+Homepage = "https://developer.catalystwells.com"
+Documentation = "https://developer.catalystwells.com/docs/sdk/python"
+Repository = "https://github.com/catalystwells/sdk-python"
+Issues = "https://github.com/catalystwells/sdk-python/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["catalystwells*"]
+
+[tool.black]
+line-length = 100
+target-version = ["py39", "py310", "py311", "py312"]
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "W", "I", "N", "D"]
+
+[tool.mypy]
+python_version = "3.9"
+strict = true

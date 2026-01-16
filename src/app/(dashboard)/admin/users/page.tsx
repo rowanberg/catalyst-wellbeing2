@@ -52,7 +52,9 @@ import {
   AlertCircle,
   RefreshCw,
   BookOpen,
-  Zap
+  Zap,
+  Wifi,
+  CreditCard
 } from 'lucide-react'
 import { useAppSelector } from '@/lib/redux/hooks'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -95,6 +97,9 @@ interface User {
   class_name?: string
   grade_level?: string
   status?: string
+  nfc_card_id?: string
+  nfc_linked_at?: string
+  student_tag?: string
 }
 
 function UserManagementContent() {
@@ -144,6 +149,13 @@ function UserManagementContent() {
   const [messageRecipient, setMessageRecipient] = useState<User | null>(null)
   const [messageContent, setMessageContent] = useState('')
   const [messageSubject, setMessageSubject] = useState('')
+
+  // NFC linking state
+  const [showNFCModal, setShowNFCModal] = useState(false)
+  const [nfcTargetUser, setNFCTargetUser] = useState<User | null>(null)
+  const [isScanning, setIsScanning] = useState(false)
+  const [nfcError, setNFCError] = useState<string | null>(null)
+  const [nfcSuccess, setNFCSuccess] = useState(false)
 
   // Export configuration state
   const [showExportConfigDialog, setShowExportConfigDialog] = useState(false)
@@ -692,6 +704,146 @@ function UserManagementContent() {
       addToast('Failed to update user status', 'error')
     }
   }
+
+  // Handle NFC Card Linking (AegisX Digital ID)
+  const handleNFCLink = (user: User) => {
+    setNFCTargetUser(user)
+    setNFCError(null)
+    setNFCSuccess(false)
+    setShowNFCModal(true)
+  }
+
+  const startNFCScan = async () => {
+    if (!nfcTargetUser) return
+
+    setIsScanning(true)
+    setNFCError(null)
+    setNFCSuccess(false)
+
+    // Check if NFC is supported
+    if (!('NDEFReader' in window)) {
+      setNFCError('NFC is not supported on this device. Please use a device with NFC capability.')
+      setIsScanning(false)
+      return
+    }
+
+    try {
+      // @ts-ignore - Web NFC API not fully typed in TypeScript
+      const ndef = new NDEFReader()
+      await ndef.scan()
+
+      addToast('Ready to scan NFC card. Please tap the card now.', 'success')
+
+      // @ts-ignore
+      ndef.addEventListener('reading', async ({ serialNumber }: { serialNumber: string }) => {
+        // Sanitize the card ID
+        const cardId = serialNumber.replace(/[^a-zA-Z0-9:-]/g, '').toUpperCase()
+
+        if (!cardId) {
+          setNFCError('Invalid NFC card. Unable to read serial number.')
+          setIsScanning(false)
+          return
+        }
+
+        // Vibrate to indicate successful scan
+        if ('vibrate' in navigator) {
+          navigator.vibrate([100, 50, 100])
+        }
+
+        // Save the NFC card ID to the user's profile
+        try {
+          const userId = nfcTargetUser.user_id || nfcTargetUser.id
+          const response = await fetch('/api/admin/link-nfc', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: userId,
+              cardId: cardId
+            })
+          })
+
+          if (!response.ok) {
+            const errorData = await response.json()
+            throw new Error(errorData.error || 'Failed to link NFC card')
+          }
+
+          // Update local user state
+          setUsers(prev => prev.map(u =>
+            u.id === nfcTargetUser.id
+              ? { ...u, nfc_card_id: cardId, nfc_linked_at: new Date().toISOString() }
+              : u
+          ))
+
+          setNFCSuccess(true)
+          addToast(`NFC card linked successfully to ${nfcTargetUser.first_name} ${nfcTargetUser.last_name}!`, 'success')
+
+          // Close modal after a short delay
+          setTimeout(() => {
+            setShowNFCModal(false)
+            setNFCTargetUser(null)
+          }, 2000)
+
+        } catch (error: any) {
+          setNFCError(error.message || 'Failed to save NFC card ID')
+        }
+
+        setIsScanning(false)
+      })
+
+      // @ts-ignore
+      ndef.addEventListener('readingerror', () => {
+        setNFCError('Failed to read NFC card. Please try again.')
+        setIsScanning(false)
+      })
+
+    } catch (error: any) {
+      if (error.name === 'NotAllowedError') {
+        setNFCError('NFC scanning was denied. Please allow NFC access and try again.')
+      } else if (error.name === 'NotSupportedError') {
+        setNFCError('NFC is not supported on this device.')
+      } else {
+        setNFCError(error.message || 'Failed to start NFC scanning')
+      }
+      setIsScanning(false)
+    }
+  }
+
+  const handleUnlinkNFC = async () => {
+    if (!nfcTargetUser) return
+
+    if (!confirm(`Are you sure you want to unlink the NFC card from ${nfcTargetUser.first_name} ${nfcTargetUser.last_name}?`)) {
+      return
+    }
+
+    try {
+      const userId = nfcTargetUser.user_id || nfcTargetUser.id
+      const response = await fetch('/api/admin/link-nfc', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to unlink NFC card')
+      }
+
+      // Update local user state
+      setUsers(prev => prev.map(u =>
+        u.id === nfcTargetUser.id
+          ? { ...u, nfc_card_id: undefined, nfc_linked_at: undefined }
+          : u
+      ))
+
+      addToast(`NFC card unlinked from ${nfcTargetUser.first_name} ${nfcTargetUser.last_name}`, 'success')
+      setShowNFCModal(false)
+      setNFCTargetUser(null)
+
+    } catch (error: any) {
+      setNFCError(error.message || 'Failed to unlink NFC card')
+    }
+  }
+
 
   const handleSaveUser = async () => {
     if (!selectedUser || isSaving) return
@@ -1489,6 +1641,11 @@ function UserManagementContent() {
                                   <MessageCircle className="w-4 h-4 mr-2" />
                                   Send Message
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleNFCLink(user)}>
+                                  <CreditCard className="w-4 h-4 mr-2" />
+                                  AegisX Digital ID
+                                  {user.nfc_card_id && <Wifi className="w-3 h-3 ml-auto text-emerald-500" />}
+                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={() => handleToggleUserStatus(user)}>
                                   {user.status === 'active' ? (
@@ -1697,6 +1854,12 @@ function UserManagementContent() {
                                       <MessageCircle className="w-4 h-4 mr-2" />
                                       Send Message
                                     </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleNFCLink(user)}>
+                                      <CreditCard className="w-4 h-4 mr-2" />
+                                      AegisX Digital ID
+                                      {user.nfc_card_id && <Wifi className="w-3 h-3 ml-auto text-emerald-500" />}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
                                     <DropdownMenuItem onClick={() => handleToggleUserStatus(user)}>
                                       {user.status === 'active' ? (
                                         <>
@@ -2479,8 +2642,8 @@ function UserManagementContent() {
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: index * 0.05 }}
                             className={`flex items-center gap-2 text-xs py-1 px-2 rounded ${isComplete ? 'text-green-700 bg-green-50' :
-                                isCurrent ? 'text-blue-700 bg-blue-50' :
-                                  'text-gray-500'
+                              isCurrent ? 'text-blue-700 bg-blue-50' :
+                                'text-gray-500'
                               }`}
                           >
                             {isComplete ? (
@@ -2562,6 +2725,232 @@ function UserManagementContent() {
           onRoleFilterChange={setExportRoleFilter}
         />
 
+        {/* AegisX Digital ID / NFC Linking Modal */}
+        <Dialog open={showNFCModal} onOpenChange={(open) => {
+          if (!open) {
+            setShowNFCModal(false)
+            setNFCTargetUser(null)
+            setIsScanning(false)
+            setNFCError(null)
+            setNFCSuccess(false)
+          }
+        }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
+                  <CreditCard className="w-5 h-5 text-white" />
+                </div>
+                AegisX Digital ID
+              </DialogTitle>
+              <DialogDescription>
+                Link or manage NFC card for {nfcTargetUser?.first_name} {nfcTargetUser?.last_name}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              {/* User Info */}
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <Avatar className="w-12 h-12 ring-2 ring-white shadow-md">
+                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
+                    {nfcTargetUser?.first_name?.[0]}{nfcTargetUser?.last_name?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-semibold text-slate-900">
+                    {nfcTargetUser?.first_name} {nfcTargetUser?.last_name}
+                  </p>
+                  <p className="text-sm text-slate-500">{nfcTargetUser?.email}</p>
+                  {nfcTargetUser?.student_tag && (
+                    <Badge variant="outline" className="mt-1 text-xs">
+                      {nfcTargetUser.student_tag}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              {/* Current NFC Status */}
+              {nfcTargetUser?.nfc_card_id && !nfcSuccess && (
+                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-full bg-emerald-500">
+                        <Wifi className="w-4 h-4 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-emerald-800">NFC Card Active</p>
+                        <p className="text-sm text-emerald-600 font-mono">{nfcTargetUser.nfc_card_id}</p>
+                        {nfcTargetUser.nfc_linked_at && (
+                          <p className="text-xs text-emerald-500 mt-0.5">
+                            Linked: {new Date(nfcTargetUser.nfc_linked_at).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <Badge className="bg-emerald-500 text-white">Active</Badge>
+                  </div>
+                </div>
+              )}
+
+              {/* Access Stats - Quick Overview */}
+              {nfcTargetUser?.nfc_card_id && !nfcSuccess && (
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="p-3 rounded-xl bg-blue-50 border border-blue-100 text-center">
+                    <p className="text-xl font-bold text-blue-600">--</p>
+                    <p className="text-[10px] text-blue-500">Total Scans</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-purple-50 border border-purple-100 text-center">
+                    <p className="text-xl font-bold text-purple-600">--</p>
+                    <p className="text-[10px] text-purple-500">Locations</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-amber-50 border border-amber-100 text-center">
+                    <p className="text-xl font-bold text-amber-600">--</p>
+                    <p className="text-[10px] text-amber-500">This Week</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Recent Access History */}
+              {nfcTargetUser?.nfc_card_id && !nfcSuccess && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                    <Activity className="w-4 h-4" />
+                    Recent Access History
+                  </h4>
+                  <div className="rounded-xl border border-slate-200 bg-white p-3">
+                    <div className="text-center text-slate-400 py-2">
+                      <Activity className="w-6 h-6 mx-auto mb-1 opacity-50" />
+                      <p className="text-xs">No access history yet</p>
+                      <p className="text-[10px] mt-0.5">Data appears when card is used at NFC readers</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Success State */}
+              {nfcSuccess && (
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="p-6 rounded-xl bg-emerald-50 border border-emerald-200 text-center"
+                >
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', duration: 0.5 }}
+                    className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500 flex items-center justify-center"
+                  >
+                    <Check className="w-8 h-8 text-white" />
+                  </motion.div>
+                  <p className="text-lg font-semibold text-emerald-800">NFC Card Linked Successfully!</p>
+                  <p className="text-sm text-emerald-600 mt-1">The digital ID is now active.</p>
+                </motion.div>
+              )}
+
+              {/* Scanning State */}
+              {isScanning && !nfcSuccess && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="p-6 rounded-xl bg-blue-50 border border-blue-200 text-center"
+                >
+                  <motion.div
+                    animate={{
+                      scale: [1, 1.2, 1],
+                      opacity: [1, 0.7, 1]
+                    }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                    className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center"
+                  >
+                    <Wifi className="w-10 h-10 text-white" />
+                  </motion.div>
+                  <p className="text-lg font-semibold text-blue-800">Ready to Scan</p>
+                  <p className="text-sm text-blue-600 mt-1">Hold the NFC card near this device</p>
+                </motion.div>
+              )}
+
+              {/* Error State */}
+              {nfcError && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 rounded-xl bg-red-50 border border-red-200"
+                >
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-red-800">Error</p>
+                      <p className="text-sm text-red-600">{nfcError}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Actions */}
+              {!isScanning && !nfcSuccess && (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      onClick={startNFCScan}
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                    >
+                      <Wifi className="w-4 h-4 mr-1.5" />
+                      {nfcTargetUser?.nfc_card_id ? 'Replace Card' : 'Scan Card'}
+                    </Button>
+
+                    {nfcTargetUser?.nfc_card_id && (
+                      <Button
+                        variant="outline"
+                        onClick={handleUnlinkNFC}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1.5" />
+                        Unlink
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Additional Actions for linked cards */}
+                  {nfcTargetUser?.nfc_card_id && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-slate-600"
+                        onClick={() => addToast('Access history export coming soon', 'success')}
+                      >
+                        <Download className="w-3.5 h-3.5 mr-1.5" />
+                        Export History
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 border-amber-200"
+                        onClick={() => addToast('Card suspend feature coming soon', 'success')}
+                      >
+                        <Ban className="w-3.5 h-3.5 mr-1.5" />
+                        Suspend Card
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Cancel scanning */}
+              {isScanning && (
+                <Button
+                  variant="outline"
+                  onClick={() => setIsScanning(false)}
+                  className="w-full"
+                >
+                  Cancel Scanning
+                </Button>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+
         {/* Toast Notifications - Mobile Optimized */}
         <div className="fixed top-4 left-4 right-4 sm:top-4 sm:right-4 sm:left-auto z-50 space-y-2">
           {toasts.map((toast) => (
@@ -2571,8 +2960,8 @@ function UserManagementContent() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -50, scale: 0.95 }}
               className={`px-3 sm:px-4 py-2 sm:py-3 rounded-lg shadow-lg flex items-center justify-between w-full sm:min-w-[300px] sm:max-w-md ${toast.type === 'success'
-                  ? 'bg-green-500 text-white'
-                  : 'bg-red-500 text-white'
+                ? 'bg-green-500 text-white'
+                : 'bg-red-500 text-white'
                 }`}
             >
               <div className="flex items-center space-x-2 flex-1 min-w-0">

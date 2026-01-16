@@ -6,6 +6,7 @@
 
 import { cache } from 'react'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { createClient } from '@supabase/supabase-js'
 
 // Types
 export interface Profile {
@@ -94,12 +95,40 @@ export const getCachedProfile = cache(async (userId: string): Promise<Profile | 
   if (cached) return cached
 
   try {
-    const supabase = await createSupabaseServerClient()
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .single()
+    const supabaseUser = await createSupabaseServerClient()
+
+    // Check if current user
+    const { data: { user } } = await supabaseUser.auth.getUser()
+    const isCurrentUser = user?.id === userId
+
+    let data, error
+
+    if (isCurrentUser) {
+      // Use Service Role to bypass RLS recursion
+      const supabaseAdmin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { persistSession: false } }
+      )
+
+      const result = await supabaseAdmin
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single()
+
+      data = result.data
+      error = result.error
+    } else {
+      const result = await supabaseUser
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single()
+
+      data = result.data
+      error = result.error
+    }
 
     if (error) {
       // PGRST116 means no rows found - expected for unauthenticated users
@@ -135,20 +164,57 @@ export const getProfileWithSchool = cache(async (userId: string): Promise<Profil
   if (cached) return cached
 
   try {
-    const supabase = await createSupabaseServerClient()
-    const { data, error } = await supabase
-      .from('profiles')
-      .select(`
-        *,
-        schools!fk_profiles_school_id (
-          id,
-          name,
-          school_code,
-          logo_url
-        )
-      `)
-      .eq('user_id', userId)
-      .single()
+    const supabaseUser = await createSupabaseServerClient()
+
+    // Check if we are fetching the CURRENT user's profile
+    const { data: { user } } = await supabaseUser.auth.getUser()
+    const isCurrentUser = user?.id === userId
+
+    let data, error
+
+    if (isCurrentUser) {
+      // Use Service Role to bypass RLS recursion for current user
+      const supabaseAdmin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { persistSession: false } }
+      )
+
+      const result = await supabaseAdmin
+        .from('profiles')
+        .select(`
+          *,
+          schools!fk_profiles_school_id (
+            id,
+            name,
+            school_code,
+            logo_url
+          )
+        `)
+        .eq('user_id', userId)
+        .single()
+
+      data = result.data
+      error = result.error
+    } else {
+      // Use standard RLS for other users
+      const result = await supabaseUser
+        .from('profiles')
+        .select(`
+          *,
+          schools!fk_profiles_school_id (
+            id,
+            name,
+            school_code,
+            logo_url
+          )
+        `)
+        .eq('user_id', userId)
+        .single()
+
+      data = result.data
+      error = result.error
+    }
 
     if (error) {
       // PGRST116 means no rows found - this is expected for unauthenticated users

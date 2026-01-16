@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { MoodHistoryTracker } from '@/components/student/MoodHistoryTracker'
+import { WellbeingSurveys } from '@/components/student/wellbeing/WellbeingSurveys'
 import {
   Heart, Smile, Frown, Meh, Angry, Laugh, Shield, AlertCircle,
   Wind, Sparkles, Moon, Droplets, Brain, HelpCircle, ChevronRight,
@@ -593,6 +594,15 @@ export function WellbeingTab({ data, loading, error, onRefresh, profile }: Wellb
         transition={{ delay: 0.25 }}
       >
         <MoodHistoryTracker className="mb-6" />
+      </motion.div>
+
+      {/* Well-being Surveys */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <WellbeingSurveys className="mb-6" />
       </motion.div>
 
       {/* Mindfulness Activities */}

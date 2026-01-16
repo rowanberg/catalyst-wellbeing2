@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { RankData } from '@/components/student/RankCard'
 
 export function useStudentRank(studentId: string | undefined) {
   const [rankData, setRankData] = useState<RankData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const fetchAttempted = useRef(false)
 
   useEffect(() => {
     if (!studentId) {
@@ -12,12 +13,24 @@ export function useStudentRank(studentId: string | undefined) {
       return
     }
 
+    // Only attempt fetch once to prevent repeated calls on auth failure
+    if (fetchAttempted.current) {
+      return
+    }
+    fetchAttempted.current = true
+
     const fetchRankData = async () => {
       try {
         setLoading(true)
         setError(null)
 
         const response = await fetch(`/api/student/rank?student_id=${studentId}`)
+
+        // Handle auth errors silently - don't retry
+        if (response.status === 401 || response.status === 403) {
+          setError('Please log in to view rank data')
+          return
+        }
 
         if (!response.ok) {
           // Handle specific error codes gracefully

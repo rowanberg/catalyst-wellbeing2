@@ -31,7 +31,12 @@ import {
   User,
   ChevronDown,
   Shield,
-  CreditCard
+  CreditCard,
+  Wifi,
+  MapPin,
+  Utensils,
+  BookMarked,
+  DoorOpen
 } from 'lucide-react'
 import { PageLoader } from '@/components/ui/loading-spinner'
 import { UnifiedAuthGuard } from '@/components/auth/unified-auth-guard'
@@ -764,6 +769,118 @@ function AdminDashboardContent() {
                 </Link>
               </motion.div>
 
+            </div>
+          </motion.div>
+
+          {/* AegisX Digital Systems Section */}
+          <motion.div
+            className="mb-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%)', boxShadow: '0 4px 12px rgba(99, 102, 241, 0.25)' }}>
+                  <Wifi className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 font-['Plus_Jakarta_Sans']" style={{ letterSpacing: '-0.025em' }}>AegisX Digital Systems</h2>
+                  <p className="text-sm text-gray-600 font-['DM_Sans']">Smart NFC reader management for campus access</p>
+                </div>
+              </div>
+              <Link href="/admin/aegisx">
+                <Button size="sm" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Configure
+                </Button>
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+              {/* Library Entry */}
+              <motion.div whileHover={{ y: -4 }} whileTap={{ scale: 0.98 }} transition={{ duration: 0.2 }}>
+                <Link href="/admin/aegisx?location=library" className="block group">
+                  <div className="h-full bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100 p-4 hover:border-blue-200 transition-all" style={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' }}>
+                    <div className="flex flex-col items-center text-center space-y-2">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)' }}>
+                        <BookMarked className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">Library Entry</p>
+                        <p className="text-[10px] text-gray-500 mt-0.5">0 readers</p>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              </motion.div>
+
+              {/* Canteen / Mess */}
+              <motion.div whileHover={{ y: -4 }} whileTap={{ scale: 0.98 }} transition={{ duration: 0.2 }}>
+                <Link href="/admin/aegisx?location=canteen" className="block group">
+                  <div className="h-full bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-100 p-4 hover:border-amber-200 transition-all" style={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' }}>
+                    <div className="flex flex-col items-center text-center space-y-2">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)' }}>
+                        <Utensils className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">Canteen / Mess</p>
+                        <p className="text-[10px] text-gray-500 mt-0.5">0 readers</p>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              </motion.div>
+
+              {/* School Gate Entry */}
+              <motion.div whileHover={{ y: -4 }} whileTap={{ scale: 0.98 }} transition={{ duration: 0.2 }}>
+                <Link href="/admin/aegisx?location=gate" className="block group">
+                  <div className="h-full bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-100 p-4 hover:border-emerald-200 transition-all" style={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' }}>
+                    <div className="flex flex-col items-center text-center space-y-2">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}>
+                        <DoorOpen className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">School Gate</p>
+                        <p className="text-[10px] text-gray-500 mt-0.5">0 readers</p>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              </motion.div>
+
+              {/* Lab Access */}
+              <motion.div whileHover={{ y: -4 }} whileTap={{ scale: 0.98 }} transition={{ duration: 0.2 }}>
+                <Link href="/admin/aegisx?location=lab" className="block group">
+                  <div className="h-full bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl border border-purple-100 p-4 hover:border-purple-200 transition-all" style={{ boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)' }}>
+                    <div className="flex flex-col items-center text-center space-y-2">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)' }}>
+                        <MapPin className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">Lab Access</p>
+                        <p className="text-[10px] text-gray-500 mt-0.5">0 readers</p>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              </motion.div>
+            </div>
+
+            {/* Quick Stats Row */}
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              <div className="bg-white rounded-xl border border-gray-200 p-3 text-center">
+                <p className="text-2xl font-bold text-gray-900">--</p>
+                <p className="text-xs text-gray-500">Active Readers</p>
+              </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-3 text-center">
+                <p className="text-2xl font-bold text-gray-900">--</p>
+                <p className="text-xs text-gray-500">Scans Today</p>
+              </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-3 text-center">
+                <p className="text-2xl font-bold text-gray-900">--</p>
+                <p className="text-xs text-gray-500">Linked Cards</p>
+              </div>
             </div>
           </motion.div>
 

@@ -15,7 +15,7 @@
 import { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 // ============================================================================
 // Types
@@ -74,7 +74,7 @@ class AuthCache {
 
   get(key: string): AuthenticatedUser | null {
     const entry = this.cache.get(key)
-    
+
     if (!entry) {
       return null
     }
@@ -123,14 +123,14 @@ export async function authenticateRequest(
     allowedRoles?: Array<'student' | 'teacher' | 'parent' | 'admin' | 'super_admin'>
   } = {}
 ): Promise<AuthenticatedUser | AuthError> {
-  
+
   const startTime = Date.now()
-  
+
   try {
     // Get auth token from request
     const authHeader = request.headers.get('authorization')
     const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined
-    
+
     let cacheKey: string
 
     if (bearerToken) {
@@ -175,7 +175,7 @@ export async function authenticateRequest(
 
     try {
       const authData = await authPromise
-      
+
       // Validate role if required
       if (options.requiredRole && authData.role !== options.requiredRole) {
         return { error: `Forbidden: Requires ${options.requiredRole} role`, status: 403 }
@@ -187,11 +187,11 @@ export async function authenticateRequest(
 
       // Cache the result
       authCache.set(cacheKey, authData)
-      
-      console.log('✅ [Auth] Authenticated', { 
-        userId: authData.userId, 
+
+      console.log('✅ [Auth] Authenticated', {
+        userId: authData.userId,
         role: authData.role,
-        duration: Date.now() - startTime 
+        duration: Date.now() - startTime
       })
 
       return authData
@@ -208,6 +208,10 @@ export async function authenticateRequest(
       return { error: error.message, status: 401 }
     }
 
+    if (error?.message === 'Profile not found') {
+      return { error: error.message, status: 401 }
+    }
+
     return { error: error.message || 'Authentication failed', status: 500 }
   }
 }
@@ -219,7 +223,7 @@ export async function authenticateRequest(
 
 async function fetchAuthData(cacheKey: string, bearerToken?: string): Promise<AuthenticatedUser> {
   const cookieStore = await cookies()
-  
+
   // Create Supabase client
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -247,23 +251,48 @@ async function fetchAuthData(cacheKey: string, bearerToken?: string): Promise<Au
     data: { user },
     error: userError
   } = bearerToken
-    ? await supabase.auth.getUser(bearerToken)
-    : await supabase.auth.getUser()
-  
+      ? await supabase.auth.getUser(bearerToken)
+      : await supabase.auth.getUser()
+
   if (userError || !user) {
     throw new Error('Invalid or expired session')
   }
 
   // Fetch profile with specific fields (faster than SELECT *)
+  console.log('🔍 [Auth] Looking up profile for user_id:', user.id, 'email:', user.email)
+
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('id, user_id, school_id, role, first_name, last_name, email, xp, gems, level, total_quests_completed')
     .eq('user_id', user.id)
     .single()
 
+  if (profileError) {
+    console.error('❌ [Auth] Profile lookup error:', {
+      user_id: user.id,
+      email: user.email,
+      error: profileError,
+      message: profileError.message,
+      details: profileError.details,
+      hint: profileError.hint,
+      code: profileError.code
+    })
+  }
+
+  if (!profile) {
+    console.error('❌ [Auth] Profile is null/undefined for user:', user.id)
+  }
+
   if (profileError || !profile) {
     throw new Error('Profile not found')
   }
+
+  console.log('✅ [Auth] Profile found:', {
+    profile_id: profile.id,
+    user_id: profile.user_id,
+    email: profile.email,
+    role: profile.role
+  })
 
   return {
     userId: user.id,

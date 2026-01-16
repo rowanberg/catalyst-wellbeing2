@@ -217,25 +217,22 @@ export function Sidebar({ activeTab, onTabChange, profile }: SidebarProps) {
           )}>
             <div className="relative shrink-0">
               <div className={cn(
-                "rounded-full flex items-center justify-center text-white font-semibold shadow-sm overflow-hidden",
+                "rounded-full flex items-center justify-center text-white font-semibold shadow-sm overflow-hidden relative",
                 isCollapsed ? "w-10 h-10 text-sm" : "w-11 h-11 text-base"
               )} style={{ background: 'linear-gradient(to bottom right, var(--theme-primary), var(--theme-secondary))' }}>
-                {profile?.profilePicture || profile?.avatar_url ? (
-                  <Image
-                    src={profile?.profilePicture || profile?.avatar_url}
+                {(profile?.profilePicture || profile?.avatar_url || profile?.profile_picture_url) ? (
+                  <img
+                    src={profile?.profilePicture || profile?.avatar_url || profile?.profile_picture_url}
                     alt={`${profile?.first_name || 'User'}'s profile`}
-                    width={isCollapsed ? 40 : 44}
-                    height={isCollapsed ? 40 : 44}
-                    className="w-full h-full object-cover"
-                    priority
-                    placeholder="blur"
-                    blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDQiIGhlaWdodD0iNDQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj48c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojOTMzM2VhO3N0b3Atb3BhY2l0eTowLjMiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiM2MzY2ZjE7c3RvcC1vcGFjaXR5OjAuMyIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPSI0NCIgaGVpZ2h0PSI0NCIgZmlsbD0idXJsKCNnKSIvPjwvc3ZnPg=="
-                    quality={90}
-                    loading="eager"
+                    className="w-full h-full object-cover absolute inset-0"
+                    onError={(e) => {
+                      // Hide broken image to reveal the initial behind it
+                      e.currentTarget.style.display = 'none'
+                    }}
                   />
-                ) : (
-                  <span>{profile?.first_name?.charAt(0) || 'S'}</span>
-                )}
+                ) : null}
+                {/* Initial letter - always visible as background, image covers it when loaded */}
+                <span>{profile?.first_name?.charAt(0) || 'S'}</span>
               </div>
               <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white" style={{ backgroundColor: 'var(--theme-secondary)' }} />
             </div>

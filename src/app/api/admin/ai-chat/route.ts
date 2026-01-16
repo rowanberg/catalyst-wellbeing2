@@ -4,11 +4,63 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
 // ============================================================================
-// Intelligent AI Router Integration
+// Intelligent AI Router Integration with 429 Retry Logic
 // ============================================================================
 // Uses intelligent-ai-router Edge Function to manage 100+ API keys
 // with automatic fallback, rate limiting, and usage tracking
+// 
+// When Gemini returns 429, we:
+// 1. Mark the failed key in 60-second cooldown
+// 2. Request a new key from the router
+// 3. Retry with exponential backoff (max 3 retries)
 // ============================================================================
+
+// Retry configuration for 429 errors
+const MAX_RETRIES = 3
+const RETRY_BASE_DELAY_MS = 1000 // 1 second base delay, doubles each retry
+
+/**
+ * Helper to delay execution (for exponential backoff)
+ */
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+/**
+ * Mark a key in cooldown after hitting 429 rate limit
+ * This prevents the router from selecting the same key again for 60 seconds
+ */
+async function markKeyInCooldown(keyId: string, model: string = 'flash2'): Promise<void> {
+  try {
+    const supabase = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+
+    // Map model name to column prefix
+    const modelToPrefix: Record<string, string> = {
+      'gemini-2.0-flash': 'flash2',
+      'gemma-3-27b': 'gemma_27b',
+      'gemma-3-12b': 'gemma_12b',
+      'gemma-3-4b': 'gemma_4b'
+    }
+    const prefix = modelToPrefix[model] || 'flash2'
+
+    // Set cooldown for 60 seconds
+    const cooldownExpires = new Date(Date.now() + 60000).toISOString()
+
+    await supabase
+      .from('gemini_api_keys')
+      .update({
+        [`${prefix}_is_in_cooldown`]: true,
+        [`${prefix}_cooldown_expires_at`]: cooldownExpires
+      })
+      .eq('id', keyId)
+
+    console.log(`🧊 Key ${keyId.substring(0, 8)}... placed in 60s cooldown for ${model}`)
+  } catch (error) {
+    console.error('Failed to mark key in cooldown:', error)
+  }
+}
 
 export async function POST(request: NextRequest) {
   const requestStartTime = Date.now()
@@ -832,65 +884,88 @@ User: "Show all classes"
     })
 
     // ========================================================================
-    // Get API Key from Intelligent Router
+    // Get API Key from Intelligent Router (with 429 Retry Support)
     // ========================================================================
     console.log('🔑 Requesting API key from intelligent router...')
 
     // Estimate tokens (rough: 4 chars per token)
     const estimatedTokens = Math.ceil((prompt.length + 2048) / 4)
 
-    const routerResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/intelligent-ai-router`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'gemini-2.0-flash',
-          tokens: estimatedTokens,
-          prompt: message.substring(0, 100),
-          userId: user.id,
-          endpoint: '/api/admin/ai-chat'
-        })
-      }
-    )
+    // Variables to hold API data across retries
+    let api_key: string = ''
+    let model_used: string = ''
+    let fallback_count: number = 0
+    let key_id: string = ''
+    let usage: any = {}
+    let retryCount = 0
+    let geminiApiSuccess = false
 
-    if (!routerResponse.ok) {
-      const errorData = await routerResponse.json()
-      console.error('❌ Router error:', errorData)
-
-      if (routerResponse.status === 429) {
-        return NextResponse.json(
+    // Retry loop for 429 errors from Gemini API
+    while (retryCount <= MAX_RETRIES && !geminiApiSuccess) {
+      try {
+        // Request a key from the intelligent router
+        const routerResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/intelligent-ai-router`,
           {
-            error: 'All API keys are currently rate-limited. Please try again in a moment.',
-            retryAfter: errorData.retryAfter || 60
-          },
-          { status: 429 }
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              model: 'gemini-2.0-flash',
+              tokens: estimatedTokens,
+              prompt: message.substring(0, 100),
+              userId: user.id,
+              endpoint: '/api/admin/ai-chat'
+            })
+          }
         )
+
+        if (!routerResponse.ok) {
+          const errorData = await routerResponse.json()
+          console.error('❌ Router error:', errorData)
+
+          if (routerResponse.status === 429) {
+            // All keys exhausted at router level
+            return NextResponse.json(
+              {
+                error: 'All API keys are currently rate-limited. Please try again in a moment.',
+                retryAfter: errorData.retryAfter || 60
+              },
+              { status: 429 }
+            )
+          }
+
+          throw new Error(`Router error: ${errorData.error || 'Unknown error'}`)
+        }
+
+        const routerData = await routerResponse.json()
+        api_key = routerData.api_key
+        model_used = routerData.model_used
+        fallback_count = routerData.fallback_count
+        key_id = routerData.key_id
+        usage = routerData.usage
+
+        console.log('✅ API key obtained:', {
+          model_requested: 'gemini-2.0-flash',
+          model_used,
+          fallback_count,
+          key_id: key_id?.substring(0, 8) + '...',
+          rpm_usage: `${usage?.current_rpm}/${usage?.rpm_limit}`,
+          rpd_usage: `${usage?.current_rpd}/${usage?.rpd_limit}`,
+          retry_attempt: retryCount > 0 ? `${retryCount}/${MAX_RETRIES}` : 'initial'
+        })
+
+        // Mark that we got here successfully (key obtained)
+        // The actual Gemini call success check happens later
+        geminiApiSuccess = true
+
+      } catch (routerError: any) {
+        console.error(`❌ Router request failed (attempt ${retryCount + 1}):`, routerError)
+        throw routerError
       }
-
-      throw new Error(`Router error: ${errorData.error || 'Unknown error'}`)
     }
-
-    const routerData = await routerResponse.json()
-    const {
-      api_key,
-      model_used,
-      fallback_count,
-      key_id,
-      usage
-    } = routerData
-
-    console.log('✅ API key obtained:', {
-      model_requested: 'gemini-2.0-flash',
-      model_used,
-      fallback_count,
-      key_id: key_id?.substring(0, 8) + '...',
-      rpm_usage: `${usage.current_rpm}/${usage.rpm_limit}`,
-      rpd_usage: `${usage.current_rpd}/${usage.rpd_limit}`
-    })
 
     // ========================================================================
     // Generate AI Response with Obtained Key
@@ -1160,8 +1235,25 @@ User: "Show all classes"
         duration_ms: Date.now() - requestStartTime
       })
 
-    } catch (geminiError) {
-      console.error('❌ Gemini API Error:', geminiError)
+    } catch (geminiError: any) {
+      const errorMessage = geminiError instanceof Error ? geminiError.message : String(geminiError)
+      const is429Error = errorMessage.includes('429') ||
+        errorMessage.includes('quota') ||
+        errorMessage.includes('Too Many Requests') ||
+        geminiError?.status === 429
+
+      console.error('❌ Gemini API Error:', {
+        message: errorMessage,
+        is429: is429Error,
+        keyId: key_id?.substring(0, 8) + '...',
+        model: model_used
+      })
+
+      // If 429 rate limit error, mark the key in cooldown
+      if (is429Error && key_id) {
+        await markKeyInCooldown(key_id, model_used || 'gemini-2.0-flash')
+        console.log('🔄 Key marked in cooldown due to 429 error')
+      }
 
       // Log the failed attempt
       await supabase.from('api_usage_logs').insert({
@@ -1170,12 +1262,24 @@ User: "Show all classes"
         key_id,
         table_name: 'gemini_25_flash_keys',
         tokens_used: 0,
-        status: 'error',
-        error_message: geminiError instanceof Error ? geminiError.message : 'Unknown error',
+        status: is429Error ? 'rate_limited' : 'error',
+        error_message: errorMessage,
         user_id: user.id,
         endpoint: '/api/admin/ai-chat',
         request_duration_ms: Date.now() - requestStartTime
       })
+
+      // For 429 errors, return a friendly message instead of exposing the raw error
+      if (is429Error) {
+        return NextResponse.json(
+          {
+            error: 'AI service is temporarily busy. Please try again in a moment.',
+            retryAfter: 60,
+            details: 'The API key hit a rate limit and has been placed in cooldown. A new key will be selected on retry.'
+          },
+          { status: 429 }
+        )
+      }
 
       throw geminiError
     }

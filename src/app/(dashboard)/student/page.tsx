@@ -392,8 +392,25 @@ export default function EnhancedStudentDashboard() {
     }
   }, [authLoading, user, profile, router])
 
-  // Load tab data with performance optimization
+  // Track auth failures to prevent repeated API calls
+  const [authFailed, setAuthFailed] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
+  const MAX_RETRIES = 2
+
+  // Load tab data with performance optimization and auth error handling
   const loadTabData = useCallback(async (tabId: TabData['id'], forceRefresh = false) => {
+    // Don't make API calls if auth has failed
+    if (authFailed) {
+      console.log(`Skipping ${tabId} fetch - auth previously failed`)
+      return
+    }
+
+    // Don't retry more than MAX_RETRIES times
+    if (retryCount >= MAX_RETRIES) {
+      console.log(`Skipping ${tabId} fetch - max retries reached`)
+      return
+    }
+
     if (!forceRefresh) {
       const cachedData = cache.get(tabId)
       if (cachedData) {
@@ -414,10 +431,32 @@ export default function EnhancedStudentDashboard() {
         }
       })
 
+      // Handle auth errors specifically - stop further requests
+      if (response.status === 401 || response.status === 403) {
+        console.error(`Auth failed for ${tabId} - stopping further API calls`)
+        setAuthFailed(true)
+        setTabErrors(prev => ({ ...prev, [tabId]: 'Authentication required. Please log in again.' }))
+        // Redirect to login after a short delay
+        setTimeout(() => router.push('/login'), 2000)
+        return
+      }
+
+      // Handle 404 - endpoint not found or data missing - treat as fatal to prevent retry loops
+      if (response.status === 404) {
+        console.error(`404 error for ${tabId} - marking as auth failed to prevent retries`)
+        setAuthFailed(true) // Prevent further API calls
+        const errorData = await response.json().catch(() => ({}))
+        setTabErrors(prev => ({ ...prev, [tabId]: errorData.error || errorData.message || `${tabId} data not available` }))
+        return
+      }
+
       if (!response.ok) {
+        setRetryCount(prev => prev + 1)
         throw new Error(`Failed to load ${tabId} data`)
       }
 
+      // Success - reset retry count
+      setRetryCount(0)
       const data = await response.json()
       cache.set(tabId, data)
       setTabData(prev => ({ ...prev, [tabId]: data }))
@@ -437,21 +476,21 @@ export default function EnhancedStudentDashboard() {
     } finally {
       setTabLoading(prev => ({ ...prev, [tabId]: false }))
     }
-  }, [cache])
+  }, [cache, authFailed, retryCount, router])
 
-  // Load initial tab data (only today tab)
+  // Load initial tab data (only today tab) - only if user exists and auth hasn't failed
   useEffect(() => {
-    if (!authLoading && user) {
+    if (!authLoading && user && !authFailed && profile?.role === 'student') {
       loadTabData('today')
     }
-  }, [authLoading, user, loadTabData])
+  }, [authLoading, user, authFailed, profile, loadTabData])
 
-  // Load data on demand when tab changes
+  // Load data on demand when tab changes - only if auth is valid
   useEffect(() => {
-    if (activeTab && !tabData[activeTab] && !tabLoading[activeTab]) {
+    if (activeTab && !tabData[activeTab] && !tabLoading[activeTab] && !authFailed && user) {
       loadTabData(activeTab)
     }
-  }, [activeTab, tabData, tabLoading, loadTabData])
+  }, [activeTab, tabData, tabLoading, loadTabData, authFailed, user])
 
   // Handle tab change with direction-aware animations
   const handleTabChange = useCallback((newTab: TabData['id']) => {

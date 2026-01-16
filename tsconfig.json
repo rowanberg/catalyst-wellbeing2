@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "target": "es5",
+    "downlevelIteration": true,
     "lib": [
       "dom",
       "dom.iterable",
@@ -55,6 +56,8 @@
     "firebase",
     "supabase/functions",
     "scripts",
-    "mcp-server"
+    "mcp-server",
+    "developer",
+    "tutor"
   ]
 }

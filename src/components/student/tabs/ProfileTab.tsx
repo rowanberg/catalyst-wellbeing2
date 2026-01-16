@@ -7,12 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { 
+import {
   Camera, Mail, MapPin, Calendar, Trophy, Star,
   Award, Target, Flame, Gift, Users, MessageCircle,
   Settings, ChevronRight, Wallet, GraduationCap,
   Clock, Sparkles, Zap, Activity, Medal, Shield, BookOpen,
-  LayoutGrid
+  LayoutGrid, CreditCard
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -46,7 +46,7 @@ const ProfileInfoCard = memo(({ profileData, imageError, setImageError, uploadin
                 console.log('Avatar URL:', avatarUrl)
                 console.log('Image Error State:', imageError)
                 console.log('Should show image:', !!avatarUrl && !imageError)
-                
+
                 if (avatarUrl && !imageError) {
                   return (
                     <Image
@@ -73,7 +73,7 @@ const ProfileInfoCard = memo(({ profileData, imageError, setImageError, uploadin
               })()}
             </div>
             {/* Upload Button */}
-            <button 
+            <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
               className="absolute bottom-0 right-0 p-1.5 rounded-full text-white shadow-md transition-all hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed group"
@@ -118,7 +118,7 @@ const ProfileInfoCard = memo(({ profileData, imageError, setImageError, uploadin
                 </div>
               </div>
             </div>
-            
+
             {/* Grade and Class Badges */}
             <div className="flex flex-wrap justify-center sm:justify-start items-center gap-2">
               {profileData.profile.grade_level && (
@@ -177,7 +177,7 @@ const QuickActionsCard = memo(({ router }: any) => (
         </div>
       </CardHeader>
       <CardContent className="p-4">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           <button
             onClick={() => router.push('/student/settings')}
             className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all active:scale-95"
@@ -209,6 +209,16 @@ const QuickActionsCard = memo(({ router }: any) => (
             <span className="text-xs font-medium text-slate-700">Wallet</span>
           </button>
           <button
+            onClick={() => router.push('/aegisx')}
+            className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all active:scale-95"
+            style={{ background: 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 20%, transparent), color-mix(in srgb, var(--theme-tertiary) 20%, transparent))', borderWidth: '1px', borderStyle: 'solid', borderColor: 'color-mix(in srgb, var(--theme-tertiary) 30%, transparent)' }}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 40%, transparent), color-mix(in srgb, var(--theme-tertiary) 40%, transparent))'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 20%, transparent), color-mix(in srgb, var(--theme-tertiary) 20%, transparent))'}
+          >
+            <CreditCard className="h-6 w-6" style={{ color: 'var(--theme-primary)' }} />
+            <span className="text-xs font-medium text-slate-700">Digital ID</span>
+          </button>
+          <button
             onClick={() => router.push('/student/quests')}
             className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all active:scale-95"
             style={{ background: 'linear-gradient(to bottom right, color-mix(in srgb, var(--theme-highlight) 20%, transparent), color-mix(in srgb, var(--theme-tertiary) 20%, transparent))', borderWidth: '1px', borderStyle: 'solid', borderColor: 'color-mix(in srgb, var(--theme-tertiary) 30%, transparent)' }}
@@ -234,7 +244,7 @@ export function ProfileTab({ data, loading, error, onRefresh, profile }: Profile
   const [errors, setErrors] = useState(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  
+
   // Fetch student rank data for grade rank display
   const { rankData, loading: rankLoading } = useStudentRank(profile?.id)
 
@@ -246,7 +256,7 @@ export function ProfileTab({ data, loading, error, onRefresh, profile }: Profile
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
       reader.readAsDataURL(image)
-      
+
       reader.onload = () => {
         const imageDataUrl = reader.result as string
         const imageElement = document.createElement('img')
@@ -255,22 +265,22 @@ export function ProfileTab({ data, loading, error, onRefresh, profile }: Profile
         imageElement.onload = () => {
           const canvas = document.createElement('canvas')
           const context = canvas.getContext('2d')
-          
+
           if (!context) {
             reject(new Error('Failed to get canvas context'))
             return
           }
-          
+
           const maxWidth = 800
           const maxHeight = 800
           let { width, height } = imageElement
-          
+
           if (width > maxWidth || height > maxHeight) {
             const ratio = Math.min(maxWidth / width, maxHeight / height)
             width = width * ratio
             height = height * ratio
           }
-          
+
           canvas.width = width
           canvas.height = height
           context.drawImage(imageElement, 0, 0, width, height)
@@ -283,10 +293,10 @@ export function ProfileTab({ data, loading, error, onRefresh, profile }: Profile
             }
           }, 'image/jpeg', 0.85)
         }
-        
+
         imageElement.onerror = () => reject(new Error('Failed to load image'))
       }
-      
+
       reader.onerror = () => reject(new Error('Failed to read file'))
     })
   }, [])
@@ -355,7 +365,7 @@ export function ProfileTab({ data, loading, error, onRefresh, profile }: Profile
       school: { name: null },
       bio: null,
     }
-    
+
     return {
       profile: profileObj,
       stats: data?.stats || {
@@ -370,7 +380,7 @@ export function ProfileTab({ data, loading, error, onRefresh, profile }: Profile
     }
   }, [profile, data])
 
-  const xpProgress = useMemo(() => 
+  const xpProgress = useMemo(() =>
     (profileData.stats.xp / profileData.stats.nextLevelXP) * 100,
     [profileData.stats.xp, profileData.stats.nextLevelXP]
   )

@@ -38,35 +38,56 @@ export function TodayTab({ data, loading, error, onRefresh, profile }: TodayTabP
   const devicePerf = useMemo(() => detectDevicePerformance(), [])
   const animConfig = useMemo(() => getAnimationConfig(devicePerf.mode), [devicePerf.mode])
 
-  // Fetch student rank data
-  const { rankData, loading: rankLoading } = useStudentRank(profile?.id)
+  // Fetch student rank data - use user_id not profile id
+  const { rankData, loading: rankLoading } = useStudentRank(profile?.user_id)
 
-  // Fetch upcoming assessments
+  // Fetch upcoming assessments - with auth error handling
   useEffect(() => {
+    let cancelled = false
+
     const fetchUpcomingAssessments = async () => {
       if (!profile?.id) return
 
       try {
         setAssessmentsLoading(true)
         const response = await fetch('/api/student/upcoming-assessments')
+
+        if (cancelled) return
+
+        // Don't log errors for auth failures - they're expected when profile is missing
+        if (response.status === 401 || response.status === 403 || response.status === 404) {
+          console.log('⏭️ Skipping assessments fetch - auth required or not found')
+          return
+        }
+
         if (response.ok) {
           const data = await response.json()
-          console.log('📅 Upcoming assessments received:', {
-            count: data.count,
-            assessments: data.assessments
-          })
-          setUpcomingAssessments(data.assessments || [])
+          if (!cancelled) {
+            console.log('📅 Upcoming assessments received:', {
+              count: data.count,
+              assessments: data.assessments
+            })
+            setUpcomingAssessments(data.assessments || [])
+          }
         } else {
           console.error('❌ Failed to fetch assessments:', response.status, response.statusText)
         }
       } catch (error) {
-        console.error('Error fetching upcoming assessments:', error)
+        if (!cancelled) {
+          console.error('Error fetching upcoming assessments:', error)
+        }
       } finally {
-        setAssessmentsLoading(false)
+        if (!cancelled) {
+          setAssessmentsLoading(false)
+        }
       }
     }
 
     fetchUpcomingAssessments()
+
+    return () => {
+      cancelled = true
+    }
   }, [profile?.id])
 
   // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS

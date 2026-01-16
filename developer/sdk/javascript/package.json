@@ -1,0 +1,57 @@
+{
+    "name": "@catalystwells/sdk",
+    "version": "1.0.0",
+    "description": "Official JavaScript/TypeScript SDK for CatalystWells Education Platform API",
+    "main": "dist/index.js",
+    "module": "dist/index.mjs",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "import": "./dist/index.mjs",
+            "require": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        }
+    },
+    "scripts": {
+        "build": "tsup src/index.ts --format cjs,esm --dts",
+        "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+        "lint": "eslint src/",
+        "test": "vitest",
+        "prepublishOnly": "npm run build"
+    },
+    "keywords": [
+        "catalystwells",
+        "education",
+        "api",
+        "sdk",
+        "school",
+        "student",
+        "attendance",
+        "oauth"
+    ],
+    "author": "CatalystWells <developers@catalystwells.com>",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/catalystwells/sdk-javascript"
+    },
+    "homepage": "https://developer.catalystwells.com/docs/sdk/javascript",
+    "bugs": {
+        "url": "https://github.com/catalystwells/sdk-javascript/issues"
+    },
+    "devDependencies": {
+        "@types/node": "^20.10.0",
+        "tsup": "^8.0.0",
+        "typescript": "^5.3.0",
+        "vitest": "^1.0.0",
+        "eslint": "^8.55.0"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "files": [
+        "dist",
+        "README.md",
+        "LICENSE"
+    ]
+}
